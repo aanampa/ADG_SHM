@@ -1,0 +1,537 @@
+@model SHM.AppWebHonorarioMedico.Models.TablaDetalleIndexViewModel
+@{
+    ViewData["Title"] = "Tabla Detalle";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 titulo-formulario">
+                            <i class="fas fa-list-alt mr-2"></i>Tabla Detalle
+                        </h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                            <li class="breadcrumb-item active">Tabla Detalle</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h3 class="card-title">Lista de Detalles</h3>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-0">
+                                    <select id="filtroTabla" class="form-control form-control-sm" onchange="filterByTabla()">
+                                        <option value="">-- Todas las tablas --</option>
+                                        @foreach (var tabla in Model.Tablas)
+                                        {
+                                            <option value="@tabla.Value">@tabla.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-5 text-right">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openTablasModal()">
+                                    <i class="fas fa-table mr-1"></i>Administrar Tablas
+                                </button>
+                                <button type="button" class="btn btn-morado btn-sm" onclick="openCreateModal()">
+                                    <i class="fas fa-plus mr-1"></i>Nuevo Detalle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modalContainer"></div>
+
+<!-- Modal Administrar Tablas -->
+<div class="modal fade" id="tablasModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-table mr-2"></i>Administrar Tablas
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="card mb-0">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h3 class="card-title">Lista de Tablas</h3>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <button type="button" class="btn btn-morado btn-sm" onclick="openCreateTablaModal()">
+                                    <i class="fas fa-plus mr-1"></i>Nueva Tabla
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tablaListContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentTablaFilter = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
+
+        function filterByTabla() {
+            currentTablaFilter = document.getElementById('filtroTabla').value || null;
+            loadList();
+        }
+
+        function loadList() {
+            f_loading();
+            let url = '@Url.Action("GetList")';
+            if (currentTablaFilter) {
+                url += '?idTabla=' + encodeURIComponent(currentTablaFilter);
+            }
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function refreshList() {
+            loadList();
+        }
+
+        function openCreateModal() {
+            f_loading();
+            let url = '@Url.Action("GetCreateModal")';
+            if (currentTablaFilter) {
+                url += '?idTabla=' + encodeURIComponent(currentTablaFilter);
+            }
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#createModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openEditModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetEditModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#editModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openDeleteModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetDeleteModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#deleteModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function submitCreate() {
+            const form = document.getElementById('createForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                IdTabla: parseInt(document.getElementById('create_IdTabla').value),
+                Codigo: document.getElementById('create_Codigo').value,
+                Descripcion: document.getElementById('create_Descripcion').value,
+                Orden: document.getElementById('create_Orden').value ? parseInt(document.getElementById('create_Orden').value) : null
+            };
+
+            const token = document.querySelector('#createForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Create")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#createModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitEdit() {
+            const form = document.getElementById('editForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                GuidRegistro: document.getElementById('edit_GuidRegistro').value,
+                IdTabla: parseInt(document.getElementById('edit_IdTabla').value),
+                Codigo: document.getElementById('edit_Codigo').value,
+                Descripcion: document.getElementById('edit_Descripcion').value,
+                Orden: document.getElementById('edit_Orden').value ? parseInt(document.getElementById('edit_Orden').value) : null,
+                Activo: document.getElementById('edit_Activo').checked ? 1 : 0
+            };
+
+            const token = document.querySelector('#editForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Edit")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#editModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitDelete() {
+            const data = {
+                GuidRegistro: document.getElementById('delete_GuidRegistro').value
+            };
+
+            const token = document.querySelector('#deleteForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Delete")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#deleteModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        // ==================== Funciones para CRUD de Tablas ====================
+
+        function openTablasModal() {
+            $('#tablasModal').modal('show');
+            loadTablaList();
+        }
+
+        function loadTablaList() {
+            fetch('@Url.Action("GetTablaList")')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('tablaListContainer').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('tablaListContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function refreshTablaList() {
+            loadTablaList();
+        }
+
+        function openCreateTablaModal() {
+            fetch('@Url.Action("GetCreateTablaModal")')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#createTablaModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openEditTablaModal(guid) {
+            fetch('@Url.Action("GetEditTablaModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#editTablaModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openDeleteTablaModal(guid) {
+            fetch('@Url.Action("GetDeleteTablaModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#deleteTablaModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function submitCreateTabla() {
+            const form = document.getElementById('createTablaForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                Codigo: document.getElementById('createTabla_Codigo').value,
+                Descripcion: document.getElementById('createTabla_Descripcion').value
+            };
+
+            const token = document.querySelector('#createTablaForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("CreateTabla")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#createTablaModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshTablaList();
+                    // Actualizar el dropdown de filtro
+                    updateFiltroTabla(result.idTabla, data.Codigo, data.Descripcion);
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitEditTabla() {
+            const form = document.getElementById('editTablaForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                GuidRegistro: document.getElementById('editTabla_GuidRegistro').value,
+                Codigo: document.getElementById('editTabla_Codigo').value,
+                Descripcion: document.getElementById('editTabla_Descripcion').value,
+                Activo: document.getElementById('editTabla_Activo').checked ? 1 : 0
+            };
+
+            const token = document.querySelector('#editTablaForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("EditTabla")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#editTablaModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshTablaList();
+                    // Recargar pagina para actualizar dropdown
+                    location.reload();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitDeleteTabla() {
+            const data = {
+                GuidRegistro: document.getElementById('deleteTabla_GuidRegistro').value
+            };
+
+            const token = document.querySelector('#deleteTablaForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("DeleteTabla")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#deleteTablaModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshTablaList();
+                    // Recargar pagina para actualizar dropdown
+                    location.reload();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function updateFiltroTabla(idTabla, codigo, descripcion) {
+            const select = document.getElementById('filtroTabla');
+            const option = document.createElement('option');
+            option.value = idTabla;
+            option.text = codigo + ' - ' + (descripcion || '');
+            select.appendChild(option);
+        }
+    </script>
+}

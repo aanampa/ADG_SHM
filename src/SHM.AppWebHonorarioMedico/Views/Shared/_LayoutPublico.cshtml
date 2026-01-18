@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SGD</title>
+
+    <!-- Google Font: Source Sans Pro -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="~/vendor/plugins/fontawesome-free/css/all.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/vendor/dist/css/adminlte.css">
+
+
+    <link href="~/vendor/plugins/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <link href="~/vendor/plugins/toastr/toastr.min.css" rel="stylesheet" />
+
+    <style type="text/css">
+
+        .app-loading {
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            position: fixed;
+            display: block;
+            opacity: 0.5;
+            background-color: #000;
+            z-index: 99;
+        }
+
+        .app-loading-image {
+            position: absolute;
+            top: 50%;
+            z-index: 100;
+        }
+
+        .titulo-formulario {
+            color: #844484;
+            font-size:25px !important;
+            font-weight: bold;
+        }
+
+        .adg-label {
+            font-size: 0.8rem !important;
+        }
+
+        .btn-morado {
+            color: #fff;
+            background-color: #5d1665;
+            border-color: #5d1665;
+            box-shadow: none;
+            transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+            .btn-morado:hover {
+                color: #fff;
+                background-color: #5a1160;
+                border-color: #5a1160;
+            }
+
+            .btn-morado:active {
+                color: #fff;
+                background-color: #ac84b4;
+                border-color: #5d1665;
+                box-shadow: 0 0 5px rgba(93, 22, 101, 0.5);
+            }
+
+    </style>
+
+    @await RenderSectionAsync("Styles", required: false)
+
+</head>
+<body id="app-body" class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
+
+    @RenderBody()
+
+    <!-- REQUIRED SCRIPTS -->
+    <!-- jQuery -->
+    <script src="~/vendor/plugins/jquery/jquery.min.js"></script>
+    <!-- Bootstrap 4 -->
+    <script src="~/vendor/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="~/vendor/dist/js/adminlte.min.js"></script>
+
+    <!-- toastr and sweetalert2-->
+    <script src="~/vendor/plugins/toastr/toastr.min.js"></script>
+    <script src="~/vendor/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+@model SHM.AppWebHonorarioMedico.Models.BancoEditViewModel
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-edit mr-2"></i>Editar Banco
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_CodigoBanco">Codigo <span class="text-danger">*</span></label>
+                        <input type="text" id="edit_CodigoBanco" class="form-control" maxlength="10" required
+                               value="@Model.CodigoBanco" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_NombreBanco">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" id="edit_NombreBanco" class="form-control" maxlength="100" required
+                               value="@Model.NombreBanco" />
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="edit_Activo"
+                                   @(Model.Activo == 1 ? "checked" : "") />
+                            <label class="custom-control-label" for="edit_Activo">Activo</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="submitEdit()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

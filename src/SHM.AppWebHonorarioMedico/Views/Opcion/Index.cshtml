@@ -1,0 +1,276 @@
+@model SHM.AppWebHonorarioMedico.Models.OpcionIndexViewModel
+
+@{
+    ViewData["Title"] = "Administracion de Opciones de Menu";
+}
+
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">
+                    <i class="fas fa-sitemap mr-2"></i>Administracion de Opciones de Menu
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+                    <li class="breadcrumb-item active">Opciones de Menu</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list mr-2"></i>Estructura del Menu
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-morado btn-sm" onclick="openCreateModal()">
+                        <i class="fas fa-plus mr-1"></i>Nueva Opcion
+                    </button>
+                </div>
+            </div>
+            <div id="listContainer">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Cargando...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-outline card-info">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle mr-2"></i>Informacion
+                </h3>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>Opcion Raiz:</strong> Son las opciones principales del menu (primer nivel).</li>
+                    <li><strong>Sub-opciones:</strong> Son las opciones que dependen de una opcion raiz.</li>
+                    <li><strong>Icono:</strong> Use clases de Font Awesome (ej: <code>fas fa-home</code>, <code>fas fa-users</code>).</li>
+                    <li><strong>URL:</strong> La ruta a la que apunta la opcion (ej: <code>/Usuario/Index</code>). Dejar vacio si es solo un contenedor.</li>
+                    <li><strong>Orden:</strong> Numero para ordenar las opciones. Menor numero = aparece primero.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+    </div>
+</div>    
+
+
+<div id="modalContainer"></div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
+
+        function loadList() {
+            fetch('@Url.Action("GetList", "Opcion")')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center py-5 text-danger">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x"></i>' +
+                        '<p class="mt-2">Error al cargar los datos</p></div>';
+                });
+        }
+
+        function openCreateModal(idPadre) {
+            var url = '@Url.Action("GetCreateModal", "Opcion")';
+            if (idPadre) {
+                url += '?idPadre=' + idPadre;
+            }
+
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#createModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function submitCreate() {
+            var nombre = document.getElementById('create_Nombre').value.trim();
+            var url = document.getElementById('create_Url').value.trim();
+            var icono = document.getElementById('create_Icono').value.trim();
+            var ordenVal = document.getElementById('create_Orden').value.trim();
+            var idOpcionPadreVal = document.getElementById('create_IdOpcionPadre').value;
+
+            if (!nombre) {
+                alert('El nombre es requerido');
+                return;
+            }
+
+            var orden = ordenVal ? parseInt(ordenVal) : null;
+            var idOpcionPadre = idOpcionPadreVal ? parseInt(idOpcionPadreVal) : null;
+
+            var token = document.querySelector('#createForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Create", "Opcion")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    nombre: nombre,
+                    url: url || null,
+                    icono: icono || null,
+                    orden: orden,
+                    idOpcionPadre: idOpcionPadre
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#createModal').modal('hide');
+                        loadList();
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al crear la opcion');
+                });
+        }
+
+        function openEditModal(guid) {
+            fetch('@Url.Action("GetEditModal", "Opcion")?guid=' + guid)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#editModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function submitEdit() {
+            var guidRegistro = document.getElementById('edit_GuidRegistro').value;
+            var nombre = document.getElementById('edit_Nombre').value.trim();
+            var url = document.getElementById('edit_Url').value.trim();
+            var icono = document.getElementById('edit_Icono').value.trim();
+            var ordenVal = document.getElementById('edit_Orden').value.trim();
+            var idOpcionPadreVal = document.getElementById('edit_IdOpcionPadre').value;
+            var activo = document.getElementById('edit_Activo').checked ? 1 : 0;
+
+            if (!nombre) {
+                alert('El nombre es requerido');
+                return;
+            }
+
+            var orden = ordenVal ? parseInt(ordenVal) : null;
+            var idOpcionPadre = idOpcionPadreVal ? parseInt(idOpcionPadreVal) : null;
+
+            var token = document.querySelector('#editForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Edit", "Opcion")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    guidRegistro: guidRegistro,
+                    nombre: nombre,
+                    url: url || null,
+                    icono: icono || null,
+                    orden: orden,
+                    idOpcionPadre: idOpcionPadre,
+                    activo: activo
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#editModal').modal('hide');
+                        loadList();
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al actualizar la opcion');
+                });
+        }
+
+        function openDeleteModal(guid) {
+            fetch('@Url.Action("GetDeleteModal", "Opcion")?guid=' + guid)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#deleteModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function submitDelete() {
+            var guidRegistro = document.getElementById('delete_GuidRegistro').value;
+            var token = document.querySelector('#deleteForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Delete", "Opcion")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    guidRegistro: guidRegistro
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#deleteModal').modal('hide');
+                        loadList();
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar la opcion');
+                });
+        }
+
+        function toggleChildren(idOpcion) {
+            var childrenContainer = document.getElementById('children-' + idOpcion);
+            var toggleIcon = document.getElementById('toggle-' + idOpcion);
+
+            if (childrenContainer) {
+                if (childrenContainer.style.display === 'none') {
+                    childrenContainer.style.display = 'block';
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-chevron-down');
+                } else {
+                    childrenContainer.style.display = 'none';
+                    toggleIcon.classList.remove('fa-chevron-down');
+                    toggleIcon.classList.add('fa-chevron-right');
+                }
+            }
+        }
+    </script>
+}

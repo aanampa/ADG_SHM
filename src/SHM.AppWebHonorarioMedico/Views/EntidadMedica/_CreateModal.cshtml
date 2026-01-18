@@ -1,0 +1,89 @@
+@model SHM.AppWebHonorarioMedico.Models.EntidadMedicaCreateViewModel
+
+<div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title" id="createModalLabel">
+                    <i class="fas fa-plus-circle mr-2"></i>Nueva Entidad Medica
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Codigo de Entidad <span class="text-danger">*</span></label>
+                                <input type="text" id="create_CodigoEntidad" class="form-control form-control-sm"
+                                       maxlength="20" required placeholder="Ingrese codigo">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">RUC <span class="text-danger">*</span></label>
+                                <input type="text" id="create_Ruc" class="form-control form-control-sm only-numbers"
+                                       maxlength="11" required placeholder="11 digitos">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Tipo de Entidad <span class="text-danger">*</span></label>
+                                <select id="create_TipoEntidadMedica" class="form-control form-control-sm" required>
+                                    <option value="">Seleccione...</option>
+                                    @foreach (var tipo in Model.TiposEntidadMedica)
+                                    {
+                                        <option value="@tipo.Value">@tipo.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="adg-label">Razon Social <span class="text-danger">*</span></label>
+                                <input type="text" id="create_RazonSocial" class="form-control form-control-sm"
+                                       maxlength="200" required placeholder="Ingrese razon social">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Telefono</label>
+                                <input type="text" id="create_Telefono" class="form-control form-control-sm only-numbers"
+                                       maxlength="20" placeholder="Solo numeros">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Celular</label>
+                                <input type="text" id="create_Celular" class="form-control form-control-sm only-numbers"
+                                       maxlength="20" placeholder="Solo numeros">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Codigo Acreedor</label>
+                                <input type="text" id="create_CodigoAcreedor" class="form-control form-control-sm"
+                                       maxlength="50" placeholder="Codigo acreedor">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-morado btn-sm" onclick="submitCreate()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

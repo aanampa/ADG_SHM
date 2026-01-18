@@ -1,0 +1,38 @@
+@{
+    Layout = "_LayoutLogin";
+    ViewData["Title"] = "Contraseña Restablecida";
+}
+
+<div class="login-container">
+    <div class="login-wrapper" style="justify-content: center;">
+        <div class="login-right" style="max-width: 600px;">
+            <div style="text-align: center; padding: 3rem;">
+                <div style="margin-bottom: 2rem;">
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.2)); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="bi bi-check-circle-fill" style="font-size: 4rem; color: #22C55E;"></i>
+                    </div>
+                </div>
+
+                <h2 style="font-size: 2rem; font-weight: 700; color: #0F172A; margin-bottom: 1rem;">
+                    Contraseña Restablecida
+                </h2>
+
+                <p style="color: #64748B; font-size: 1.1rem; margin-bottom: 2rem;">
+                    Tu contraseña ha sido actualizada exitosamente.<br>
+                    Ya puedes iniciar sesión con tu nueva contraseña.
+                </p>
+
+                <a asp-controller="Auth" asp-action="Login" class="btn-login" style="max-width: 300px; margin: 0 auto;">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                </a>
+
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #E2E8F0;">
+                    <p style="color: #64748B; font-size: 0.9rem;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Por seguridad, te recomendamos no compartir tu contraseña con nadie.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

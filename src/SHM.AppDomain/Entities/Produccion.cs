@@ -1,0 +1,43 @@
+namespace SHM.AppDomain.Entities;
+
+/// <summary>
+/// Entidad que representa una produccion medica (honorarios).
+/// Mapea a la tabla SHM_PRODUCCION en la base de datos.
+///
+/// <author>ADG Antonio</author>
+/// <created>2026-01-02</created>
+/// </summary>
+public class Produccion
+{
+    public int IdProduccion { get; set; }
+    public int IdSede { get; set; }
+    public int IdEntidadMedica { get; set; }
+    public string? CodigoProduccion { get; set; }
+    public string? TipoProduccion { get; set; }
+    public string? TipoMedico { get; set; }
+    public string? TipoRubro { get; set; }
+    public string? Descripcion { get; set; }
+    public string? Periodo { get; set; }
+    public string? EstadoProduccion { get; set; }
+    public decimal? MtoConsumo { get; set; }
+    public decimal? MtoDescuento { get; set; }
+    public decimal? MtoSubtotal { get; set; }
+    public decimal? MtoRenta { get; set; }
+    public decimal? MtoIgv { get; set; }
+    public decimal? MtoTotal { get; set; }
+    public string? TipoComprobante { get; set; }
+    public string? Serie { get; set; }
+    public string? Numero { get; set; }
+    public DateTime? FechaEmision { get; set; }
+    public string? Glosa { get; set; }
+    public string? EstadoComprobante { get; set; }
+    public string? Concepto { get; set; }
+    public DateTime? FechaLimite { get; set; }
+    public string? Estado { get; set; }
+    public string? GuidRegistro { get; set; }
+    public int Activo { get; set; }
+    public int IdCreador { get; set; }
+    public DateTime FechaCreacion { get; set; }
+    public int? IdModificador { get; set; }
+    public DateTime? FechaModificacion { get; set; }
+}

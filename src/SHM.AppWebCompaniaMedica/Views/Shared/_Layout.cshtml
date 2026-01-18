@@ -1,0 +1,214 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Portal de Honorarios Médicos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <div class="navbar-left">
+            <img src="~/images/logo-navbar.png" alt="Grupo San Pablo" class="navbar-logo">
+            <button class="navbar-toggle" id="mobileToggle">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+        <div class="navbar-right">
+            <div class="navbar-user-info">
+                <div style="text-align: right;">
+                    <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">@ViewData["RazonSocial"]</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                        <i class="bi bi-person-circle" style="margin-right: 0.25rem;"></i>@ViewData["Usuario"]
+                    </div>
+                </div>
+                <div class="user-avatar">
+                    @ViewData["Iniciales"]
+                </div>
+            </div>
+            <button class="navbar-logout-btn" id="navbarLogoutBtn" title="Cerrar Sesión">
+                <i class="bi bi-box-arrow-right"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <p style="font-size: 1rem; color: var(--text-primary); margin: 0; text-align: center; font-weight: 600;">Portal de Honorarios Médicos</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a asp-controller="Home" asp-action="Dashboard" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
+                    <i class="bi bi-grid-fill"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Facturas" asp-action="Pendientes" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Pendientes" ? "active" : "")">
+                    <i class="bi bi-file-earmark-text-fill"></i>
+                    <span>Facturas Pendientes</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Facturas" asp-action="Enviadas" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Enviadas" ? "active" : "")">
+                    <i class="bi bi-send-check-fill"></i>
+                    <span>Facturas Enviadas</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Usuario" asp-action="Perfil" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Perfil" ? "active" : "")">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Mi Perfil</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Usuario" asp-action="Configuracion" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Configuracion" ? "active" : "")">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Configuración</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" id="logoutLink" style="margin-top: 2rem;">
+                    <i class="bi bi-box-arrow-left"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-card); border-radius: 16px; padding: 2rem; max-width: 450px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); animation: modalSlideIn 0.3s ease-out;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, rgba(242, 101, 34, 0.1), rgba(245, 158, 11, 0.1)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                    <i class="bi bi-box-arrow-left" style="font-size: 2rem; color: var(--accent);"></i>
+                </div>
+                <h3 style="color: var(--text-primary); font-weight: 700; font-size: 1.5rem; margin-bottom: 0.5rem;">Cerrar Sesión</h3>
+                <p style="color: var(--text-secondary); font-size: 1rem; margin: 0;">¿Está seguro que desea cerrar sesión?</p>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button id="cancelLogout" style="flex: 1; padding: 0.875rem 1.5rem; border: 2px solid var(--border); background: transparent; color: var(--text-primary); border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 0.95rem;">
+                    Cancelar
+                </button>
+                <button id="confirmLogout" style="flex: 1; padding: 0.875rem 1.5rem; border: none; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(242, 101, 34, 0.3);">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        @RenderBody()
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        // Menu toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const mobileToggle = document.getElementById('mobileToggle');
+
+        // Toggle sidebar and overlay
+        mobileToggle?.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isDesktop = window.innerWidth > 992;
+
+            if (isDesktop) {
+                // Desktop behavior - just toggle hidden class
+                const isHidden = sidebar.classList.toggle('hidden');
+                if (isHidden) {
+                    this.querySelector('i').classList.replace('bi-list', 'bi-x-lg');
+                } else {
+                    this.querySelector('i').classList.replace('bi-x-lg', 'bi-list');
+                }
+            } else {
+                // Mobile behavior - toggle active class and overlay
+                const isActive = sidebar.classList.toggle('active');
+
+                if (isActive) {
+                    sidebarOverlay.style.display = 'block';
+                    setTimeout(() => {
+                        sidebarOverlay.style.opacity = '1';
+                    }, 10);
+                    this.querySelector('i').classList.replace('bi-list', 'bi-x-lg');
+                } else {
+                    sidebarOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        sidebarOverlay.style.display = 'none';
+                    }, 300);
+                    this.querySelector('i').classList.replace('bi-x-lg', 'bi-list');
+                }
+            }
+        });
+
+        // Close sidebar when clicking overlay (mobile only)
+        sidebarOverlay?.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+            this.style.opacity = '0';
+            setTimeout(() => {
+                this.style.display = 'none';
+            }, 300);
+            mobileToggle?.querySelector('i').classList.replace('bi-x-lg', 'bi-list');
+        });
+
+        // Close sidebar when clicking menu item on mobile
+        if (window.innerWidth <= 992) {
+            document.querySelectorAll('.sidebar-menu a').forEach(link => {
+                link.addEventListener('click', function() {
+                    sidebar.classList.remove('active');
+                    sidebarOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        sidebarOverlay.style.display = 'none';
+                    }, 300);
+                    mobileToggle?.querySelector('i').classList.replace('bi-x-lg', 'bi-list');
+                });
+            });
+        }
+
+        // Logout confirmation modal
+        const logoutModal = document.getElementById('logoutModal');
+        const logoutLink = document.getElementById('logoutLink');
+        const navbarLogoutBtn = document.getElementById('navbarLogoutBtn');
+        const cancelLogout = document.getElementById('cancelLogout');
+        const confirmLogout = document.getElementById('confirmLogout');
+
+        logoutLink?.addEventListener('click', function(e) {
+            e.preventDefault();
+            logoutModal.style.display = 'flex';
+        });
+
+        navbarLogoutBtn?.addEventListener('click', function(e) {
+            e.preventDefault();
+            logoutModal.style.display = 'flex';
+        });
+
+        cancelLogout?.addEventListener('click', function() {
+            logoutModal.style.display = 'none';
+        });
+
+        confirmLogout?.addEventListener('click', function() {
+            window.location.href = '@Url.Action("Logout", "Auth")';
+        });
+
+        // Close modal on backdrop click
+        logoutModal?.addEventListener('click', function(e) {
+            if (e.target === logoutModal) {
+                logoutModal.style.display = 'none';
+            }
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

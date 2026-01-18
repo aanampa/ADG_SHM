@@ -1,0 +1,54 @@
+@model SHM.AppWebHonorarioMedico.Models.TablaDetalleDeleteViewModel
+
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-trash mr-2"></i>Eliminar Detalle
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="deleteForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="delete_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                    </div>
+                    <p class="text-center">
+                        Esta seguro que desea eliminar el siguiente detalle?
+                    </p>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Tabla:</dt>
+                                <dd class="col-sm-8">@Model.NombreTabla</dd>
+
+                                <dt class="col-sm-4">Codigo:</dt>
+                                <dd class="col-sm-8">@Model.Codigo</dd>
+
+                                <dt class="col-sm-4">Descripcion:</dt>
+                                <dd class="col-sm-8">@(Model.Descripcion ?? "-")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        El detalle sera desactivado y no estara disponible para uso.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="submitDelete()">
+                        <i class="fas fa-trash mr-1"></i>Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

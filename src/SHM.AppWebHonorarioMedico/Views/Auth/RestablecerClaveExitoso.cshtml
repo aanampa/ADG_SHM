@@ -1,0 +1,242 @@
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@using System.Configuration;
+@{
+    ViewBag.Title = "APP";
+    Layout = null;
+
+    string InstanceName = Configuration.GetSection("AppSettings")["InstanceName"] ?? "";
+    string LoginBackgroundColor = "";
+    string nombreInstancia = "";
+
+    if (InstanceName == "PROD")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColor"] ?? "";
+    }
+    else if (InstanceName.ToUpper() == "TEST")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColorTEST"] ?? "";
+        nombreInstancia = "INSTANCIA DE PRUEBAS";
+    }
+    else if (InstanceName.ToUpper() == "DEV")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColorDEV"] ?? "";
+        nombreInstancia = "INSTANCIA DE DESARROLLO";
+    }
+    else if (InstanceName.ToUpper() == "QA")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColorQA"] ?? "";
+        nombreInstancia = "INSTANCIA QA";
+    }
+
+    string CompanyName = Configuration.GetSection("AppSettings")["CompanyName"] ?? "";
+    string Version = Configuration.GetSection("AppSettings")["Version"] ?? "";
+    string Year = Configuration.GetSection("AppSettings")["Year"] ?? "";
+    string PathUrl = Model.WebRootPath;
+    string AppFullScreenBg = "app-fullscreen-bg";
+    string backgroundImg = Configuration.GetSection("AppSettings")["BackgroundImage"] ?? "";
+    string applogo = "logo_login.jpg";
+
+
+    if (InstanceName != "PROD")
+    {
+        backgroundImg = Configuration.GetSection("AppSettings")["BackgroundImageNoProd"] ?? "";
+    }
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>APP</title>
+    <link rel="shortcut icon" href="~/favicon.ico" />
+
+    <!-- Tell the browser to be responsive to screen width -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="~/vendor/plugins/fontawesome-free/css/all.min.css">
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <!-- icheck bootstrap -->
+    <link rel="stylesheet" href="~/vendor/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/vendor/dist/css/adminlte.css">
+
+
+    <!-- Google Font: Source Sans Pro -->
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+
+
+    <style>
+
+        .app-loading {
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            position: fixed;
+            display: block;
+            opacity: 0.5;
+            background-color: #000;
+            z-index: 99;
+            text-align: center;
+        }
+
+        .app-loading-image {
+            position: absolute;
+            top: 50%;
+            z-index: 100;
+        }
+
+        .app-logo {
+            width: 150px;
+            margin: auto;
+        }
+
+        .app-logo-fillima {
+            width: 200px;
+            margin: auto;
+        }
+
+        /*Portal de Gestion de Anuncios Modificaciones*/
+        #app-fullscreen-bg:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.3);
+        }
+
+        #app-fullscreen-bg {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: url( @PathUrl /images/ @backgroundImg ) no-repeat center center fixed;
+            background-size: cover;
+        }
+
+        .adg-btn-secondary {
+            color: #fff;
+            background-color: #5d1665 !important;
+            border-color: #5d1665 !important;
+            box-shadow: none;
+        }
+    </style>
+</head>
+
+<body class="hold-transition login-page" style="background-color:@LoginBackgroundColor">
+
+    <div id="divLoading" name="divLoading" class="app-loading">
+        <div class="d-flex justify-content-center">
+            <div class="app-loading-image text-white" style="width: 5rem; height: 5rem;" role="status">
+                <div class="overlay"><i class="fas fa-5x fa-sync-alt fa-spin"></i><div class="text-bold pt-2">Loading...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-box mt-2">
+
+        <div class="card">
+
+            <div class="card-body">
+                <div style="border: 0px solid black; justify-content: center;display:flex" class="mb-3">
+                    <img src="~/images/@applogo"
+                         style="margin-top: 0px;
+                        width: 200px;
+                        margin-left: 29px;" />
+                </div>
+
+                <div style="text-align:center;" class="mt-3 mb-3">
+                    <h3 style="color:#5d1665">Contraseña Restablecida</h3>
+                </div>
+
+                <p class="login-box-msg">Se realizó la actualización de su contraseña.A través del siguiente elace podrá ingresar al Sistema.</p>
+
+                <div style="text-align: center; ">
+                    <a class="nav-link" href="@Url.Action("Login", "Auth")">
+                        Ir a Pagina de Acceso
+                    </a>
+                </div>
+                
+
+            </div>
+            <div class="card-footer text-center">
+                <span class="text-xs">Copyright &copy; @Year @CompanyName. All rights reserved.</span>
+                <span class="text-xs"><br />Version @Version</span>
+            </div>
+
+        </div>
+
+        @if (InstanceName != "PROD")
+        {
+            if (InstanceName == "DEV")
+            {
+                <div class="alert alert-primary mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+            else if (InstanceName == "TEST")
+            {
+                <div class="alert alert-info mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+            else if (InstanceName == "QA")
+            {
+                <div class="alert alert-success mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-dark mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+        }
+
+    </div>
+
+    <!-- jQuery -->
+    <script src="~/vendor/plugins/jquery/jquery.min.js"></script>
+    <!-- Bootstrap 4 -->
+    <script src="~/vendor/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="~/vendor/dist/js/adminlte.min.js"></script>
+
+    <script src="~/vendor/plugins/jquery-validation/jquery.validate.min.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('#divLoading').hide();
+
+        });
+
+        $('.btn-loading').on('click', function () {
+            $('#divLoading').show();
+        });
+
+    </script>
+
+</body>
+</html>
+
+
+

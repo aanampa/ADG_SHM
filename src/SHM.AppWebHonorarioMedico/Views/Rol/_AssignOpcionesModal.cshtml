@@ -1,0 +1,135 @@
+@model SHM.AppWebHonorarioMedico.Models.RolOpcionesAssignViewModel
+
+@{
+    void RenderOpcionTree(List<SHM.AppWebHonorarioMedico.Models.OpcionMenuItemViewModel> opciones, int nivel = 0)
+    {
+        foreach (var opcion in opciones)
+        {
+            var paddingLeft = nivel * 25;
+            var hasChildren = opcion.Hijos.Any();
+            var parentClass = opcion.IdOpcionPadre.HasValue && opcion.IdOpcionPadre.Value > 0
+                ? $"opcion-child-{opcion.IdOpcionPadre.Value}"
+                : "";
+
+            <div class="opcion-tree-item" style="padding-left: @(paddingLeft)px;">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox"
+                           class="custom-control-input opcion-item @parentClass"
+                           id="opcion_@opcion.IdOpcion"
+                           data-id="@opcion.IdOpcion"
+                           data-padre="@(opcion.IdOpcionPadre ?? 0)"
+                           @(opcion.Asignado ? "checked" : "")
+                           onchange="@(hasChildren ? $"toggleChildren(this, {opcion.IdOpcion})" : ""); @(opcion.IdOpcionPadre.HasValue && opcion.IdOpcionPadre.Value > 0 ? $"updateParent({opcion.IdOpcionPadre.Value})" : "")" />
+                    <label class="custom-control-label" for="opcion_@opcion.IdOpcion">
+                        @if (!string.IsNullOrEmpty(opcion.Icono))
+                        {
+                            <i class="@opcion.Icono mr-2"></i>
+                        }
+                        else if (hasChildren)
+                        {
+                            <i class="fas fa-folder mr-2"></i>
+                        }
+                        else
+                        {
+                            <i class="fas fa-file mr-2"></i>
+                        }
+                        @opcion.Nombre
+                        @if (hasChildren)
+                        {
+                            <span class="badge badge-secondary ml-2">@opcion.Hijos.Count</span>
+                        }
+                    </label>
+                </div>
+            </div>
+
+            if (hasChildren)
+            {
+                RenderOpcionTree(opcion.Hijos, nivel + 1);
+            }
+        }
+    }
+}
+
+<div class="modal fade" id="assignOpcionesModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-key mr-2"></i>Asignar Opciones de Menu
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="assignOpcionesForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="assign_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="card bg-light mb-3">
+                        <div class="card-body py-2">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-3">Rol:</dt>
+                                <dd class="col-sm-9"><strong>@Model.Codigo</strong> - @Model.Descripcion</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm mr-2" onclick="selectAllOpciones()">
+                            <i class="fas fa-check-double mr-1"></i>Seleccionar Todo
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAllOpciones()">
+                            <i class="fas fa-times mr-1"></i>Deseleccionar Todo
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white py-2">
+                            <i class="fas fa-sitemap mr-2"></i>Opciones del Menu
+                        </div>
+                        <div class="card-body opcion-tree-container" style="max-height: 400px; overflow-y: auto;">
+                            @if (Model.Opciones.Any())
+                            {
+                                RenderOpcionTree(Model.Opciones);
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">No hay opciones de menu disponibles</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="submitAssignOpciones()">
+                        <i class="fas fa-save mr-1"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .opcion-tree-item {
+        padding: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .opcion-tree-item:last-child {
+        border-bottom: none;
+    }
+
+    .opcion-tree-item .custom-control-label {
+        cursor: pointer;
+    }
+
+    .opcion-tree-container {
+        background-color: #fafafa;
+    }
+</style>

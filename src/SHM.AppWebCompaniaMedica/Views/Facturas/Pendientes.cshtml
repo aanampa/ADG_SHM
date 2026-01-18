@@ -1,0 +1,80 @@
+@model SHM.AppWebCompaniaMedica.Models.FacturasPendientesViewModel
+@{
+    ViewData["Title"] = "Facturas Pendientes";
+}
+
+<div class="table-card fade-in">
+    <div class="table-header">
+        <h3>
+            <i class="bi bi-file-earmark-text-fill"></i>
+            Facturas Pendientes de Envio
+            @if (Model.TotalRegistros > 0)
+            {
+                <span class="badge badge-pending ms-2">@Model.TotalRegistros</span>
+            }
+        </h3>
+        <div class="table-actions">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Buscar facturas..." id="searchInput" value="@Model.Busqueda">
+            </div>
+            <button class="filter-btn" onclick="loadList()">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Actualizar
+            </button>
+        </div>
+    </div>
+
+    <div id="listContainer">
+        @await Html.PartialAsync("_ListPendientesPartial", Model)
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let searchTimeout;
+
+        // Search functionality con debounce
+        document.getElementById('searchInput')?.addEventListener('input', function (e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadList();
+            }, 300);
+        });
+
+        // Enter key to search
+        document.getElementById('searchInput')?.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                loadList();
+            }
+        });
+
+        function loadList() {
+            const busqueda = document.getElementById('searchInput')?.value || '';
+            const container = document.getElementById('listContainer');
+
+            // Mostrar loading
+            container.innerHTML = '<div class="text-center p-5"><i class="bi bi-arrow-clockwise spin" style="font-size: 2rem;"></i><p class="mt-2">Cargando...</p></div>';
+
+            fetch(`@Url.Action("GetListPendientes", "Facturas")?busqueda=${encodeURIComponent(busqueda)}`)
+                .then(response => response.text())
+                .then(html => {
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = '<div class="text-center p-5 text-danger"><i class="bi bi-exclamation-circle" style="font-size: 2rem;"></i><p class="mt-2">Error al cargar los datos</p></div>';
+                });
+        }
+    </script>
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+}

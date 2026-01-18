@@ -1,0 +1,204 @@
+@model SHM.AppWebCompaniaMedica.Models.FacturasEnviadasViewModel
+
+<div class="table-responsive">
+    <table class="invoice-table">
+        <thead>
+            <tr>
+                <th>Sede</th>
+                <th>Produccion</th>
+                <th>Concepto</th>
+                <th>Importe</th>
+                <th>Fecha Emision</th>
+                <th>Serie - Numero</th>
+                <th>Estado</th>
+                <th>Accion</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Facturas.Any())
+            {
+                @foreach (var factura in Model.Facturas)
+                {
+                    <tr>
+                        <td><strong>@factura.NombreSede</strong></td>
+                        <td>@factura.CodigoProduccion</td>
+                        <td>@(factura.Concepto ?? "-")</td>
+                        <td><strong>S/ @(factura.MtoTotal?.ToString("N2") ?? "0.00")</strong></td>
+                        <td>@(factura.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(factura.Serie) && !string.IsNullOrEmpty(factura.Numero))
+                            {
+                                <span style="font-family: 'JetBrains Mono', monospace;">@factura.Serie-@factura.Numero</span>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                        <td>
+                            @{
+                                var badgeClass = factura.EstadoComprobante?.ToUpper() switch
+                                {
+                                    "ENVIADO" => "badge-sent",
+                                    "APROBADO" => "badge-sent",
+                                    "PAGADO" => "bg-success",
+                                    "RECHAZADO" => "badge-rejected",
+                                    "EN REVISION" => "badge-pending",
+                                    _ => "badge-sent"
+                                };
+                                var estadoTexto = factura.EstadoComprobante?.ToUpper() switch
+                                {
+                                    "ENVIADO" => "Enviado",
+                                    "APROBADO" => "Aprobado",
+                                    "PAGADO" => "Pagado",
+                                    "RECHAZADO" => "Rechazado",
+                                    "EN REVISION" => "En Revision",
+                                    _ => factura.EstadoComprobante ?? "Enviado"
+                                };
+                            }
+                            <span class="badge @badgeClass">@estadoTexto</span>
+                        </td>
+                        <td>
+                            <a asp-controller="Facturas" asp-action="Detalle" asp-route-guid="@factura.GuidRegistro" class="btn-action" style="border-color: var(--text-secondary); color: var(--text-secondary);">
+                                <i class="bi bi-eye"></i>
+                                Ver
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: var(--text-secondary);"></i>
+                        <p class="mt-3 mb-0" style="color: var(--text-secondary);">
+                            @if (!string.IsNullOrEmpty(Model.Busqueda))
+                            {
+                                <span>No se encontraron facturas que coincidan con "<strong>@Model.Busqueda</strong>"</span>
+                            }
+                            else
+                            {
+                                <span>No hay facturas enviadas</span>
+                            }
+                        </p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Facturas.Any())
+{
+    var startRecord = (Model.PageNumber - 1) * Model.PageSize + 1;
+    var endRecord = Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRegistros);
+
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Mostrando <strong>@startRecord - @endRecord</strong> de <strong>@Model.TotalRegistros</strong> registros
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pagination">
+                @if (Model.PageNumber == 1)
+                {
+                    <button class="pagination-btn" disabled title="Primera pagina">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </button>
+                    <button class="pagination-btn" disabled title="Pagina anterior">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                }
+                else
+                {
+                    <button class="pagination-btn" onclick="goToPage(1)" title="Primera pagina">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </button>
+                    <button class="pagination-btn" onclick="goToPage(@(Model.PageNumber - 1))" title="Pagina anterior">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                }
+
+                <div class="pagination-pages">
+                    @{
+                        var startPage = Math.Max(1, Model.PageNumber - 2);
+                        var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+
+                        if (Model.PageNumber <= 3)
+                        {
+                            endPage = Math.Min(5, Model.TotalPages);
+                        }
+                        if (Model.PageNumber >= Model.TotalPages - 2)
+                        {
+                            startPage = Math.Max(1, Model.TotalPages - 4);
+                        }
+
+                        for (var i = startPage; i <= endPage; i++)
+                        {
+                            var pageNum = i;
+                            var isActive = pageNum == Model.PageNumber;
+                            if (isActive)
+                            {
+                                <button class="pagination-number active">@pageNum</button>
+                            }
+                            else
+                            {
+                                <button class="pagination-number" onclick="goToPage(@pageNum)">@pageNum</button>
+                            }
+                        }
+                    }
+                </div>
+
+                @if (Model.PageNumber == Model.TotalPages)
+                {
+                    <button class="pagination-btn" disabled title="Pagina siguiente">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <button class="pagination-btn" disabled title="Ultima pagina">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </button>
+                }
+                else
+                {
+                    <button class="pagination-btn" onclick="goToPage(@(Model.PageNumber + 1))" title="Pagina siguiente">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <button class="pagination-btn" onclick="goToPage(@Model.TotalPages)" title="Ultima pagina">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </button>
+                }
+            </div>
+        }
+
+        <div class="pagination-size">
+            <select class="page-size-select" onchange="changePageSize(this.value)">
+                @if (Model.PageSize == 10)
+                {
+                    <option value="10" selected>10 por pagina</option>
+                }
+                else
+                {
+                    <option value="10">10 por pagina</option>
+                }
+                @if (Model.PageSize == 20)
+                {
+                    <option value="20" selected>20 por pagina</option>
+                }
+                else
+                {
+                    <option value="20">20 por pagina</option>
+                }
+                @if (Model.PageSize == 50)
+                {
+                    <option value="50" selected>50 por pagina</option>
+                }
+                else
+                {
+                    <option value="50">50 por pagina</option>
+                }
+            </select>
+        </div>
+    </div>
+}

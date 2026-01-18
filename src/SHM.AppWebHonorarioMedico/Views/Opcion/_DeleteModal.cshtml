@@ -1,0 +1,66 @@
+@model SHM.AppWebHonorarioMedico.Models.OpcionDeleteViewModel
+
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-trash mr-2"></i>Eliminar Opcion de Menu
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="deleteForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="delete_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                    </div>
+                    <p class="text-center">
+                        Esta seguro que desea eliminar la siguiente opcion de menu?
+                    </p>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Nombre:</dt>
+                                <dd class="col-sm-8">@Model.Nombre</dd>
+
+                                <dt class="col-sm-4">URL:</dt>
+                                <dd class="col-sm-8">@(Model.Url ?? "-")</dd>
+
+                                <dt class="col-sm-4">Padre:</dt>
+                                <dd class="col-sm-8">@(Model.NombrePadre ?? "Opcion Raiz")</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    @if (Model.CantidadHijos > 0)
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <strong>Advertencia:</strong> Esta opcion tiene <strong>@Model.CantidadHijos sub-opcion(es)</strong> activa(s).
+                            Al eliminar esta opcion, las sub-opciones quedaran huerfanas.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            Esta accion marcara la opcion como inactiva. Los roles que tengan asignada esta opcion perderan acceso.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="submitDelete()">
+                        <i class="fas fa-trash mr-1"></i>Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

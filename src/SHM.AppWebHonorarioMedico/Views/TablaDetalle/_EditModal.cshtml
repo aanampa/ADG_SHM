@@ -1,0 +1,87 @@
+@model SHM.AppWebHonorarioMedico.Models.TablaDetalleEditViewModel
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-edit mr-2"></i>Editar Detalle
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="edit_IdTabla">Tabla <span class="text-danger">*</span></label>
+                                <select id="edit_IdTabla" class="form-control" required>
+                                    <option value="">-- Seleccione --</option>
+                                    @foreach (var tabla in Model.Tablas)
+                                    {
+                                        if (tabla.Selected)
+                                        {
+                                            <option value="@tabla.Value" selected>@tabla.Text</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@tabla.Value">@tabla.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_Codigo">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_Codigo" class="form-control" maxlength="50" required
+                                       value="@Model.Codigo" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_Orden">Orden</label>
+                                <input type="number" id="edit_Orden" class="form-control" min="0"
+                                       value="@Model.Orden" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="edit_Descripcion">Descripcion</label>
+                                <input type="text" id="edit_Descripcion" class="form-control" maxlength="250"
+                                       value="@Model.Descripcion" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="edit_Activo"
+                                           @(Model.Activo == 1 ? "checked" : "") />
+                                    <label class="custom-control-label" for="edit_Activo">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="submitEdit()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

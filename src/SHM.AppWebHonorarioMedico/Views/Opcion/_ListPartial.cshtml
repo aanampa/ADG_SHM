@@ -1,0 +1,154 @@
+@model SHM.AppWebHonorarioMedico.Models.OpcionListViewModel
+
+@{
+    int totalCount = 0;
+
+    void RenderOpcionTree(List<SHM.AppWebHonorarioMedico.Models.OpcionTreeItemViewModel> opciones, int nivel = 0)
+    {
+        foreach (var item in opciones)
+        {
+            totalCount++;
+            var hasChildren = item.Hijos.Any();
+            var paddingLeft = nivel * 30;
+            var rowClass = item.Activo == 1 ? "" : "table-secondary";
+
+            <tr class="@rowClass">
+                <td style="padding-left: @(paddingLeft + 10)px;">
+                    @if (hasChildren)
+                    {
+                        <a href="javascript:void(0)" onclick="toggleChildren(@item.IdOpcion)" class="mr-2 text-secondary">
+                            <i id="toggle-@item.IdOpcion" class="fas fa-chevron-down"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="mr-2" style="width: 16px; display: inline-block;"></span>
+                    }
+                    @if (!string.IsNullOrEmpty(item.Icono))
+                    {
+                        <i class="@item.Icono mr-2 text-primary"></i>
+                    }
+                    else if (hasChildren)
+                    {
+                        <i class="fas fa-folder mr-2 text-warning"></i>
+                    }
+                    else
+                    {
+                        <i class="fas fa-file mr-2 text-info"></i>
+                    }
+                    @item.Nombre
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(item.Url))
+                    {
+                        <code>@item.Url</code>
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td class="text-center">
+                    @if (!string.IsNullOrEmpty(item.Icono))
+                    {
+                        <i class="@item.Icono"></i>
+                        <small class="d-block text-muted">@item.Icono</small>
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td class="text-center">@(item.Orden?.ToString() ?? "-")</td>
+                <td class="text-center">
+                    @if (item.Activo == 1)
+                    {
+                        <span class="badge badge-success">Activo</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-danger">Inactivo</span>
+                    }
+                </td>
+                <td class="text-center">
+                    @if (nivel == 0)
+                    {
+                        <button type="button" class="btn btn-success btn-xs"
+                                onclick="openCreateModal(@item.IdOpcion)" title="Agregar Sub-opcion">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    }
+                    <button type="button" class="btn btn-info btn-xs"
+                            onclick="openEditModal('@item.GuidRegistro')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-xs"
+                            onclick="openDeleteModal('@item.GuidRegistro')" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+
+            if (hasChildren)
+            {
+                <tr id="children-@item.IdOpcion">
+                    <td colspan="6" class="p-0 border-0">
+                        <table class="table table-hover mb-0">
+                            <tbody>
+                                @{ RenderOpcionTree(item.Hijos, nivel + 1); }
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            }
+        }
+    }
+}
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover">
+        <thead class="thead-light">
+            <tr>
+                <th style="min-width: 250px;">Nombre</th>
+                <th style="width: 200px;">URL</th>
+                <th style="width: 150px;" class="text-center">Icono</th>
+                <th style="width: 80px;" class="text-center">Orden</th>
+                <th style="width: 100px;" class="text-center">Estado</th>
+                <th style="width: 150px;" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Any())
+            {
+                RenderOpcionTree(Model.Items);
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <i class="fas fa-sitemap fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay opciones de menu registradas</p>
+                        <button type="button" class="btn btn-morado btn-sm" onclick="openCreateModal()">
+                            <i class="fas fa-plus mr-1"></i>Crear primera opcion
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Items.Any())
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Total: @totalCount opcion(es)
+        </small>
+    </div>
+}
+
+<style>
+    #children-container tr:first-child td {
+        border-top: none;
+    }
+</style>

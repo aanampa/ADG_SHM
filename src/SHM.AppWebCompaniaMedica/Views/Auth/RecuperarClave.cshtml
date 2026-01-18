@@ -1,0 +1,247 @@
+@{
+    Layout = "_LayoutLogin";
+    ViewData["Title"] = "Recuperar Contraseña";
+}
+
+<div class="login-container">
+    <div class="login-wrapper">
+        <!-- Left Column - Image & Information -->
+        <div class="login-left">
+            <div class="login-left-content">
+                <div class="login-brand" style="text-align: center;">
+                    <p style="font-size: 1.2rem; margin: 0;">Portal de Honorarios Médicos</p>
+                    <p style="font-size: 0.95rem; margin-top: 0.5rem;">Sistema de Gestión de Facturación</p>
+                </div>
+
+                <div class="login-illustration" style="margin: 3rem 0; text-align: center;">
+                    <div style="width: 100%; max-width: 500px; height: 350px; margin: 0 auto; background: rgba(255,255,255,0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.2);">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 10rem; color: rgba(255,255,255,0.3);"></i>
+                    </div>
+                </div>
+
+                <div class="login-features" style="margin-top: 2rem;">
+                    <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.5rem; color: white;">
+                        <i class="bi bi-envelope-check" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Recuperación Segura</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Recibirás un enlace de recuperación en tu correo electrónico</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.5rem; color: white;">
+                        <i class="bi bi-clock-history" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Enlace Temporal</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">El enlace de recuperación expira en 24 horas por seguridad</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: start; gap: 1rem; color: white;">
+                        <i class="bi bi-person-check" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Verificación de Identidad</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Verificamos tu identidad antes de permitir el cambio de contraseña</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Recovery Form -->
+        <div class="login-right">
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <div style="margin-bottom: 2.5rem;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(242, 101, 34, 0.1), rgba(245, 158, 11, 0.1)); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem;">
+                        <i class="bi bi-key-fill" style="font-size: 2.5rem; color: var(--accent);"></i>
+                    </div>
+                    <h2 style="font-size: 2.25rem; font-weight: 700; color: #0F172A; margin-bottom: 0.5rem;">Recuperar Contraseña</h2>
+                    <p style="color: #64748B; font-size: 1rem;">Ingresa tu correo electrónico o usuario para recibir instrucciones de recuperación</p>
+                </div>
+
+                @if (ViewBag.Success != null)
+                {
+                    <div class="alert alert-success" style="border-radius: 12px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #0F172A;">
+                        <i class="bi bi-check-circle-fill me-2" style="color: #22C55E;"></i>@ViewBag.Success
+                    </div>
+                }
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger" style="border-radius: 12px;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@ViewBag.Error
+                    </div>
+                }
+
+                <form asp-controller="Auth" asp-action="RecuperarClave" method="post" id="recoveryForm">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Correo Electrónico o Usuario</label>
+                        <input type="text" class="form-control" name="emailOrUsername" placeholder="Ingrese su correo o usuario" required autocomplete="username">
+                        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748B;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Ingresa el correo electrónico o usuario asociado a tu cuenta
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label" style="font-weight: 600;">Verificación de Seguridad</label>
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
+                            <canvas id="captchaCanvas" width="280" height="80" style="border-radius: 12px; border: 2px solid rgba(242, 101, 34, 0.2); cursor: not-allowed; user-select: none;"></canvas>
+                            <button type="button" id="refreshCaptcha" style="padding: 0.875rem; border: 2px solid var(--border); background: white; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; color: var(--accent);">
+                                <i class="bi bi-arrow-clockwise" style="font-size: 1.2rem;"></i>
+                            </button>
+                        </div>
+                        <input type="text" class="form-control" name="captchaAnswer" id="captchaAnswer" placeholder="Ingrese los 6 caracteres" required autocomplete="off" maxlength="6" style="text-transform: uppercase;">
+                        <input type="hidden" name="captchaExpected" id="captchaExpected">
+                    </div>
+
+                    <button type="submit" class="btn-login" id="submitBtn">
+                        <i class="bi bi-envelope me-2"></i>Enviar Instrucciones
+                    </button>
+                </form>
+
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #E2E8F0;">
+                    <div class="text-center">
+                        <p style="color: #64748B; font-size: 0.95rem; margin-bottom: 1rem;">
+                            ¿Recordaste tu contraseña?
+                        </p>
+                        <a asp-controller="Auth" asp-action="Login" style="display: inline-flex; align-items: center; gap: 0.5rem; color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.95rem;">
+                            <i class="bi bi-arrow-left"></i>
+                            Volver al inicio de sesión
+                        </a>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <p style="color: #64748B; font-size: 0.9rem;">
+                        ¿Necesitas ayuda?
+                        <a href="#" style="color: var(--accent); text-decoration: none; font-weight: 600;">Contacta soporte</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // CAPTCHA functionality
+        function generateCaptcha() {
+            const canvas = document.getElementById('captchaCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Generate random 6-character code (alphanumeric, excluding similar characters)
+            const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excluye 0, O, 1, I para evitar confusión
+            let captchaCode = '';
+            for (let i = 0; i < 6; i++) {
+                captchaCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            // Store the code
+            document.getElementById('captchaExpected').value = captchaCode;
+            document.getElementById('captchaAnswer').value = '';
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, 'rgba(242, 101, 34, 0.1)');
+            gradient.addColorStop(0.5, 'rgba(245, 158, 11, 0.1)');
+            gradient.addColorStop(1, 'rgba(242, 101, 34, 0.1)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Add noise lines
+            for (let i = 0; i < 5; i++) {
+                ctx.strokeStyle = `rgba(${Math.random() * 100}, ${Math.random() * 100}, ${Math.random() * 100}, 0.3)`;
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineWidth = 1 + Math.random() * 2;
+                ctx.stroke();
+            }
+
+            // Add noise dots
+            for (let i = 0; i < 50; i++) {
+                ctx.fillStyle = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, ${0.2 + Math.random() * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1 + Math.random() * 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Draw characters
+            const charWidth = canvas.width / 6;
+            for (let i = 0; i < captchaCode.length; i++) {
+                ctx.save();
+
+                // Random position and rotation
+                const x = charWidth * i + charWidth / 2;
+                const y = canvas.height / 2;
+                const angle = (Math.random() - 0.5) * 0.4; // Rotación aleatoria
+
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+
+                // Random font size and style
+                const fontSize = 32 + Math.random() * 8;
+                ctx.font = `bold ${fontSize}px 'JetBrains Mono', monospace`;
+
+                // Random color (shades of orange/purple)
+                const colors = ['#f26522', '#d95519', '#5a1160', '#7a1880', '#F59E0B'];
+                ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+
+                // Draw character with shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(captchaCode[i], 0, 0);
+
+                ctx.restore();
+            }
+
+            // Prevent right-click and text selection
+            canvas.oncontextmenu = function(e) {
+                e.preventDefault();
+                return false;
+            };
+            canvas.onselectstart = function() {
+                return false;
+            };
+            canvas.style.webkitUserSelect = 'none';
+            canvas.style.userSelect = 'none';
+        }
+
+        // Generate initial captcha
+        generateCaptcha();
+
+        // Refresh captcha button
+        document.getElementById('refreshCaptcha').addEventListener('click', function() {
+            this.querySelector('i').style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                this.querySelector('i').style.transform = 'rotate(0deg)';
+            }, 300);
+            generateCaptcha();
+        });
+
+        // Form submission handler with CAPTCHA validation
+        document.getElementById('recoveryForm').addEventListener('submit', function(e) {
+            const userAnswer = document.getElementById('captchaAnswer').value.toUpperCase().trim();
+            const expectedAnswer = document.getElementById('captchaExpected').value;
+
+            if (userAnswer !== expectedAnswer) {
+                e.preventDefault();
+                alert('El código de verificación es incorrecto. Por favor, inténtalo de nuevo.');
+                generateCaptcha();
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+        });
+    </script>
+}

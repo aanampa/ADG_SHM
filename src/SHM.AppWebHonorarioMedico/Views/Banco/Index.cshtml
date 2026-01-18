@@ -1,0 +1,256 @@
+@{
+    ViewData["Title"] = "Bancos";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 titulo-formulario">
+                            <i class="fas fa-university mr-2"></i>Bancos
+                        </h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                            <li class="breadcrumb-item active">Bancos</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h3 class="card-title">Lista de Bancos</h3>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <button type="button" class="btn btn-morado btn-sm" onclick="openCreateModal()">
+                                    <i class="fas fa-plus mr-1"></i>Nuevo Banco
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modalContainer"></div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
+
+        function loadList() {
+            f_loading();
+            fetch('@Url.Action("GetList")')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function refreshList() {
+            loadList();
+        }
+
+        function openCreateModal() {
+            f_loading();
+            fetch('@Url.Action("GetCreateModal")')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#createModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openEditModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetEditModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#editModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openDeleteModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetDeleteModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#deleteModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function submitCreate() {
+            const form = document.getElementById('createForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                CodigoBanco: document.getElementById('create_CodigoBanco').value,
+                NombreBanco: document.getElementById('create_NombreBanco').value
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Create")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#createModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitEdit() {
+            const form = document.getElementById('editForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                GuidRegistro: document.getElementById('edit_GuidRegistro').value,
+                CodigoBanco: document.getElementById('edit_CodigoBanco').value,
+                NombreBanco: document.getElementById('edit_NombreBanco').value,
+                Activo: document.getElementById('edit_Activo').checked ? 1 : 0
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Edit")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#editModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitDelete() {
+            const data = {
+                GuidRegistro: document.getElementById('delete_GuidRegistro').value
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Delete")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#deleteModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+    </script>
+}

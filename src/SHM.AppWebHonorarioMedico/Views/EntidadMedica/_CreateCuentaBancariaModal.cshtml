@@ -1,0 +1,58 @@
+@model SHM.AppWebHonorarioMedico.Models.CuentaBancariaCreateViewModel
+
+<div class="modal fade" id="createCuentaBancariaModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-plus-circle mr-2"></i>Nueva Cuenta Bancaria
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createCuentaBancariaForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="cb_create_EntidadGuid" value="@Model.EntidadGuid" />
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="cb_create_IdBanco">Banco <span class="text-danger">*</span></label>
+                        <select id="cb_create_IdBanco" class="form-control" required>
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var banco in Model.Bancos)
+                            {
+                                <option value="@banco.Value">@banco.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cb_create_CuentaCorriente">Cuenta Corriente <span class="text-danger">*</span></label>
+                        <input type="text" id="cb_create_CuentaCorriente" class="form-control" maxlength="30" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="cb_create_CuentaCci">Cuenta CCI</label>
+                        <input type="text" id="cb_create_CuentaCci" class="form-control" maxlength="30" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cb_create_Moneda">Moneda <span class="text-danger">*</span></label>
+                        <select id="cb_create_Moneda" class="form-control" required>
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var moneda in Model.Monedas)
+                            {
+                                <option value="@moneda.Value">@moneda.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="submitCreateCuentaBancaria()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

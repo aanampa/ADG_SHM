@@ -1,0 +1,103 @@
+@model SHM.AppWebHonorarioMedico.Models.UsuarioInternoCreateViewModel
+
+<div class="modal-header bg-primary">
+    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Nuevo Usuario Interno</h5>
+    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<form id="createForm">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="Login">Login <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="Login" name="Login"
+                           maxlength="50" required placeholder="Usuario de acceso">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="Email">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" id="Email" name="Email"
+                           maxlength="200" required placeholder="correo@ejemplo.com">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="Nombres">Nombres <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="Nombres" name="Nombres"
+                           maxlength="100" required>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="ApellidoPaterno">Apellido Paterno <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="ApellidoPaterno" name="ApellidoPaterno"
+                           maxlength="100" required>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="ApellidoMaterno">Apellido Materno</label>
+                    <input type="text" class="form-control" id="ApellidoMaterno" name="ApellidoMaterno"
+                           maxlength="100">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="NumeroDocumento">N° Documento</label>
+                    <input type="text" class="form-control" id="NumeroDocumento" name="NumeroDocumento"
+                           maxlength="20" placeholder="DNI/CE">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="Celular">Celular</label>
+                    <input type="text" class="form-control" id="Celular" name="Celular"
+                           maxlength="20">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="IdRol">Rol <span class="text-danger">*</span></label>
+                    <select class="form-control" id="IdRol" name="IdRol" required>
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var rol in Model.Roles)
+                        {
+                            <option value="@rol.Value">@rol.Text</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="EnviarCorreo" name="EnviarCorreo" checked>
+                        <label class="custom-control-label" for="EnviarCorreo">
+                            Enviar credenciales por correo electronico
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">
+                        Si no marca esta opcion, la clave generada se mostrara en pantalla.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="submitCreate()">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+    </div>
+</form>

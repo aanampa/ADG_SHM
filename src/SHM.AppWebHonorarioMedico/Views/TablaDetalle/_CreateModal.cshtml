@@ -1,0 +1,75 @@
+@model SHM.AppWebHonorarioMedico.Models.TablaDetalleCreateViewModel
+
+<div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-morado">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-plus-circle mr-2"></i>Nuevo Detalle
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="create_IdTabla">Tabla <span class="text-danger">*</span></label>
+                                <select id="create_IdTabla" class="form-control" required>
+                                    <option value="">-- Seleccione --</option>
+                                    @foreach (var tabla in Model.Tablas)
+                                    {
+                                        if (tabla.Selected)
+                                        {
+                                            <option value="@tabla.Value" selected>@tabla.Text</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@tabla.Value">@tabla.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="create_Codigo">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" id="create_Codigo" class="form-control" maxlength="50" required
+                                       placeholder="Ej: 001" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="create_Orden">Orden</label>
+                                <input type="number" id="create_Orden" class="form-control" min="0"
+                                       placeholder="Ej: 1" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="create_Descripcion">Descripcion</label>
+                                <input type="text" id="create_Descripcion" class="form-control" maxlength="250"
+                                       placeholder="Ej: Descripcion del detalle" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-morado" onclick="submitCreate()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

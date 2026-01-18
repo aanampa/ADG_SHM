@@ -1,0 +1,58 @@
+@model SHM.AppWebHonorarioMedico.Models.CuentaBancariaDeleteViewModel
+
+<div class="modal fade" id="deleteCuentaBancariaModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-trash mr-2"></i>Eliminar Cuenta Bancaria
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="deleteCuentaBancariaForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="cb_delete_GuidRegistro" value="@Model.GuidRegistro" />
+                <input type="hidden" id="cb_delete_EntidadGuid" value="@Model.EntidadGuid" />
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                    </div>
+                    <p class="text-center">
+                        Esta seguro que desea eliminar la siguiente cuenta bancaria?
+                    </p>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Banco:</dt>
+                                <dd class="col-sm-8">@Model.BancoNombre</dd>
+
+                                <dt class="col-sm-4">Cuenta Corriente:</dt>
+                                <dd class="col-sm-8">@Model.CuentaCorriente</dd>
+
+                                <dt class="col-sm-4">Cuenta CCI:</dt>
+                                <dd class="col-sm-8">@(Model.CuentaCci ?? "-")</dd>
+
+                                <dt class="col-sm-4">Moneda:</dt>
+                                <dd class="col-sm-8">@Model.MonedaDescripcion</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        La cuenta sera desactivada y no se mostrara en las listas.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="submitDeleteCuentaBancaria()">
+                        <i class="fas fa-trash mr-1"></i>Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

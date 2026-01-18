@@ -1,0 +1,129 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+@{
+    List<Claim> lista = User.Claims.ToList();
+    string Usuario = "";
+
+    if (lista.Count > 0)
+    {
+        Claim usur = lista[0];
+        Usuario = usur.Value;
+    }
+}
+
+<!-- Sidebar Menu -->
+<nav class="mt-2">
+    <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+        <!-- Add icons to the links using the .nav-icon class
+        with font-awesome or any other icon font library -->
+        @if (Usuario.ToUpper() == "CORPORATIVO" || Usuario.ToUpper() == "ADMIN")
+        {
+            <li class="nav-item menu-open">
+                <a href="#" class="nav-link active bg-secondary">
+                    <p>
+                        <i class="far fa-building nav-icon"></i>
+                        Corporativo
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="@Url.Action("Produccion", "CorporativoLista")" class="nav-link">
+                            <i class="fas fa-file-invoice nav-icon"></i>
+                            <p>Produccion</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="@Url.Action("Liquidacion", "CorporativoLista")" class="nav-link">
+                            <i class="fas fa-file-contract nav-icon"></i>
+                            <p>Liquidacion</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="@Url.Action("OrdenPago", "CorporativoLista")" class="nav-link">
+                            <i class="fas fa-file-contract nav-icon"></i>
+                            <p>Orden de Pago</p>
+                        </a>
+                    </li>
+
+                </ul>
+            </li>
+        }
+
+        @if (Usuario.ToUpper() == "JEFATURA" || Usuario.ToUpper() == "ADMIN"){
+            <li class="nav-item menu-open">
+                <a href="#" class="nav-link active bg-secondary">
+                    <p>
+                        <i class="fas fa-map-marker-alt nav-icon"></i>
+                        JEFATURA
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="@Url.Action("AprobacionOrdenPago", "CorporativoLista")" class="nav-link">
+                            <i class="fas fa-file-invoice nav-icon"></i>
+                            <p>Aprobar Orden de Pago</p>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        }
+
+        @if (Usuario.ToUpper() == "TESORERIA" || Usuario.ToUpper() == "ADMIN"){
+            <li class="nav-item menu-open">
+                <a href="#" class="nav-link active bg-secondary">
+                    <p>
+                        <i class="fas fa-list-alt nav-icon"></i>
+                        Tesoreria
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="@Url.Action("PagarOrdenPago", "CorporativoLista")" class="nav-link">
+                            <i class="fas fa-file-invoice nav-icon"></i>
+                            <p>Liquidacion</p>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        }
+
+
+
+    </ul>
+</nav>
+<!-- /.sidebar-menu -->
+<div class="dropdown-divider"></div>
+
+<ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+
+    <li class="nav-item">
+        <a href="@Url.Action("MisDatos", "Home")" class="nav-link menu-loading">
+            <i class="nav-icon fas fa-user"></i>
+            <p>Mis Datos</p>
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a href="#" class="nav-link menu-loading">
+            <i class="nav-icon fas fa-book"></i>
+            <p>
+                Manuales
+            </p>
+        </a>
+    </li>
+
+    <li class="nav-item" >
+        @* <a href="@Url.Action("Logout", "Login")" class="nav-link"> *@
+        <a class="nav-link" href="#" data-toggle="modal" data-target="#logoutModal" title="Salir">
+            <i class="nav-icon fas fa-sign-out-alt"></i>
+            <p>Salir</p>
+        </a>
+    </li>
+
+</ul>

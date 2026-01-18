@@ -1,0 +1,220 @@
+@{
+    Layout = "_LayoutLogin";
+    ViewData["Title"] = "Restablecer Contraseña";
+}
+
+<div class="login-container">
+    <div class="login-wrapper">
+        <!-- Left Column - Image & Information -->
+        <div class="login-left">
+            <div class="login-left-content">
+                <div class="login-brand" style="text-align: center;">
+                    <p style="font-size: 1.2rem; margin: 0;">Portal de Honorarios Médicos</p>
+                    <p style="font-size: 0.95rem; margin-top: 0.5rem;">Sistema de Gestión de Facturación</p>
+                </div>
+
+                <div class="login-illustration" style="margin: 3rem 0; text-align: center;">
+                    <div style="width: 100%; max-width: 500px; height: 350px; margin: 0 auto; background: rgba(255,255,255,0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.2);">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 10rem; color: rgba(255,255,255,0.3);"></i>
+                    </div>
+                </div>
+
+                <div class="login-features" style="margin-top: 2rem;">
+                    <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.5rem; color: white;">
+                        <i class="bi bi-lock-fill" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Contraseña Segura</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Usa una contraseña única que no utilices en otros sitios</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.5rem; color: white;">
+                        <i class="bi bi-key-fill" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Mínimo 6 Caracteres</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Tu contraseña debe tener al menos 6 caracteres</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: start; gap: 1rem; color: white;">
+                        <i class="bi bi-shield-check" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Protege tu Cuenta</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">No compartas tu contraseña con nadie</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Reset Password Form -->
+        <div class="login-right">
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <div style="margin-bottom: 2.5rem;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(242, 101, 34, 0.1), rgba(245, 158, 11, 0.1)); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem;">
+                        <i class="bi bi-lock-fill" style="font-size: 2.5rem; color: var(--accent);"></i>
+                    </div>
+                    <h2 style="font-size: 2.25rem; font-weight: 700; color: #0F172A; margin-bottom: 0.5rem;">Nueva Contraseña</h2>
+                    <p style="color: #64748B; font-size: 1rem;">Ingresa tu nueva contraseña para restablecer el acceso a tu cuenta</p>
+                </div>
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger" style="border-radius: 12px;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@ViewBag.Error
+                    </div>
+                }
+
+                <form asp-controller="Auth" asp-action="RestablecerClave" method="post" id="resetForm">
+                    <input type="hidden" name="token" value="@ViewBag.Token" />
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Nueva Contraseña</label>
+                        <div style="position: relative;">
+                            <input type="password" class="form-control" name="password" id="password" placeholder="Ingrese su nueva contraseña" required autocomplete="new-password" minlength="6">
+                            <button type="button" class="password-toggle-btn" id="togglePassword" style="position: absolute; right: 0; top: 0; height: 100%; width: 3rem; border: none; background: transparent; color: #64748B; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 0 12px 12px 0;">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div id="passwordStrength" style="margin-top: 0.5rem; height: 4px; border-radius: 2px; background: #E2E8F0; overflow: hidden;">
+                            <div id="strengthBar" style="height: 100%; width: 0%; transition: all 0.3s ease;"></div>
+                        </div>
+                        <div id="strengthText" style="font-size: 0.85rem; margin-top: 0.25rem; color: #64748B;"></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label" style="font-weight: 600;">Confirmar Contraseña</label>
+                        <div style="position: relative;">
+                            <input type="password" class="form-control" name="confirmPassword" id="confirmPassword" placeholder="Confirme su nueva contraseña" required autocomplete="new-password" minlength="6">
+                            <button type="button" class="password-toggle-btn" id="toggleConfirmPassword" style="position: absolute; right: 0; top: 0; height: 100%; width: 3rem; border: none; background: transparent; color: #64748B; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 0 12px 12px 0;">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div id="matchMessage" style="font-size: 0.85rem; margin-top: 0.5rem;"></div>
+                    </div>
+
+                    <button type="submit" class="btn-login" id="submitBtn">
+                        <i class="bi bi-check-circle me-2"></i>Restablecer Contraseña
+                    </button>
+                </form>
+
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #E2E8F0;">
+                    <div class="text-center">
+                        <a asp-controller="Auth" asp-action="Login" style="display: inline-flex; align-items: center; gap: 0.5rem; color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.95rem;">
+                            <i class="bi bi-arrow-left"></i>
+                            Volver al inicio de sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle password visibility
+        function setupPasswordToggle(toggleId, inputId) {
+            document.getElementById(toggleId).addEventListener('click', function () {
+                const input = document.getElementById(inputId);
+                const icon = this.querySelector('i');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
+            });
+        }
+
+        setupPasswordToggle('togglePassword', 'password');
+        setupPasswordToggle('toggleConfirmPassword', 'confirmPassword');
+
+        // Password strength checker
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            const strengthBar = document.getElementById('strengthBar');
+            const strengthText = document.getElementById('strengthText');
+
+            let strength = 0;
+            let text = '';
+            let color = '';
+
+            if (password.length >= 6) strength += 25;
+            if (password.length >= 8) strength += 25;
+            if (/[A-Z]/.test(password)) strength += 15;
+            if (/[a-z]/.test(password)) strength += 15;
+            if (/[0-9]/.test(password)) strength += 10;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 10;
+
+            if (strength < 30) {
+                text = 'Muy débil';
+                color = '#EF4444';
+            } else if (strength < 50) {
+                text = 'Débil';
+                color = '#F59E0B';
+            } else if (strength < 75) {
+                text = 'Media';
+                color = '#3B82F6';
+            } else {
+                text = 'Fuerte';
+                color = '#22C55E';
+            }
+
+            strengthBar.style.width = strength + '%';
+            strengthBar.style.background = color;
+            strengthText.textContent = password.length > 0 ? 'Fortaleza: ' + text : '';
+            strengthText.style.color = color;
+
+            checkPasswordMatch();
+        });
+
+        // Check password match
+        function checkPasswordMatch() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const matchMessage = document.getElementById('matchMessage');
+
+            if (confirmPassword.length === 0) {
+                matchMessage.textContent = '';
+                return;
+            }
+
+            if (password === confirmPassword) {
+                matchMessage.textContent = 'Las contraseñas coinciden';
+                matchMessage.style.color = '#22C55E';
+            } else {
+                matchMessage.textContent = 'Las contraseñas no coinciden';
+                matchMessage.style.color = '#EF4444';
+            }
+        }
+
+        document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
+
+        // Form validation
+        document.getElementById('resetForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+        });
+    </script>
+}

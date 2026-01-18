@@ -1,0 +1,313 @@
+﻿@model SHM.AppWebHonorarioMedico.Models.LoginView
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@using System.Configuration;
+@{
+    ViewBag.Title = "ADG";
+    Layout = null;
+    //string PathUrl = "";
+
+    string InstanceName = Configuration.GetSection("AppSettings")["InstanceName"] ?? "";
+    string LoginBackgroundColor = "";
+    string nombreInstancia = "";
+
+    if (InstanceName == "PROD")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColor"] ?? "";
+    }
+    else if (InstanceName.ToUpper() == "TEST")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColorTEST"] ?? "";
+        nombreInstancia = "INSTANCIA DE PRUEBAS";
+    }
+    else if (InstanceName.ToUpper() == "DEV")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColorDEV"] ?? "";
+        nombreInstancia = "INSTANCIA DE DESARROLLO";
+    }
+    else if (InstanceName.ToUpper() == "QA")
+    {
+        LoginBackgroundColor = Configuration.GetSection("AppSettings")["LoginBackgroundColorQA"] ?? "";
+        nombreInstancia = "INSTANCIA QA";
+    }
+
+    string CompanyName = Configuration.GetSection("AppSettings")["CompanyName"] ?? "";
+    string Version = Configuration.GetSection("AppSettings")["Version"] ?? "";
+    string Year = Configuration.GetSection("AppSettings")["Year"] ?? "";
+    string PathUrl = Model.WebRootPath;
+    string AppFullScreenBg = "app-fullscreen-bg";
+    string backgroundImg = Configuration.GetSection("AppSettings")["BackgroundImage"] ?? "";
+    string applogo = "logo_login.jpg";
+
+
+    if (InstanceName != "PROD")
+    {
+        backgroundImg = Configuration.GetSection("AppSettings")["BackgroundImageNoProd"] ?? "";
+    }
+
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>APP</title>
+
+    <!-- Tell the browser to be responsive to screen width -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="~/vendor/plugins/fontawesome-free/css/all.min.css">
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <!-- icheck bootstrap -->
+    <link rel="stylesheet" href="~/vendor/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/vendor/dist/css/adminlte.css">
+
+
+    <!-- Google Font: Source Sans Pro -->
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+
+    <style>
+
+        .app-loading {
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            position: fixed;
+            display: block;
+            opacity: 0.5;
+            background-color: #000;
+            z-index: 99;
+            text-align: center;
+        }
+
+        .app-loading-image {
+            position: absolute;
+            top: 50%;
+            z-index: 100;
+        }
+
+        .app-logo {
+            width: 150px;
+            margin: auto;
+        }
+
+        .app-logo-fillima {
+            width: 200px;
+            margin: auto;
+        }
+
+        /*Portal de Gestion de Anuncios Modificaciones*/
+        #app-fullscreen-bg:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.3);
+        }
+
+        #app-fullscreen-bg {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: url( @PathUrl /images/ @backgroundImg ) no-repeat center center fixed;
+            background-size: cover;
+        }
+
+        .adg-btn-secondary {
+            color: #fff;
+            background-color: #5d1665 !important;
+            border-color: #5d1665 !important;
+            box-shadow: none;
+        }
+    </style>
+</head>
+
+<body class="hold-transition login-page" style="background-color:@LoginBackgroundColor;">
+
+
+    <div id="divLoading" name="divLoading" class="app-loading">
+        <div class="d-flex justify-content-center">
+            <div class="app-loading-image text-white" style="width: 5rem; height: 5rem;" role="status">
+                <div class="overlay"><i class="fas fa-5x fa-sync-alt fa-spin"></i><div class="text-bold pt-2">Loading...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <p></p>
+
+    <div class="login-box">
+
+        <div class="card">
+
+            @* <div class="card-header">
+                Recuperar Contraseña
+            </div> *@
+
+            <div class="card-body">
+                <div style="border: 0px solid black; justify-content: center;display:flex" class="mb-3">
+                    <img src="~/images/@applogo"
+                         style="margin-top: 0px;
+                        width: 200px;
+                        margin-left: 29px;" />
+                </div>
+
+                <div style="text-align:center;" class="mt-3 mb-3">
+                    <h3 style="color:#5d1665">Recuperar Contraseña</h3>
+                </div>
+
+                <p class="login-box-msg">Por favor introduzca su usuario para recibir un enlace de restablecimiento de contraseña.</p>
+
+                <form asp-controller="Auth" asp-action="RecuperarClave" method="post">
+
+                    <div class="input-group mb-0">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="basic-addon1"><i class="fas fa-user"></i></span>
+                        </div>
+
+                        <input asp-for="Username" class="form-control" placeholder="Usuario" />
+
+                    </div>
+
+                    <div class="input-group  mt-0 mb-3">
+                        <span asp-validation-for="Username" class="text-danger small" id="vmUsername"></span>
+                    </div>
+
+
+
+                    <div class="input-group">
+                        <button type="submit" class="btn adg-btn-secondary btn-block" id="btnIngresar" name="btnIngresar">Restablecer contraseña</button>
+                    </div>
+
+                    <div class="input-group mt-1" style="justify-content: center;">
+                        <a class="nav-link" asp-action="Index" asp-controller="Login">
+                            Ir a Pagina de Acceso
+                        </a>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(ViewBag.LoginMessage))
+                    {
+                        <div class="alert alert-default-danger alert-dismissible fade show mt-3" role="alert">
+                            <div class="text-center">@ViewBag.LoginMessage</div>
+                        </div>
+                    }
+
+                    <div class="text-danger text-center" id="msg-error" name="msg-error"></div>
+
+                    <input asp-for="InstanceName" type="hidden" />
+                    <input asp-for="LoginBackgroundColor" type="hidden" />
+                    <input asp-for="Year" type="hidden" />
+                    <input asp-for="CompanyName" type="hidden" />
+                    <input asp-for="Version" type="hidden" />
+
+                </form>
+
+            </div>
+            <div class="card-footer text-center">
+                <span class="text-xs">Copyright &copy; @Year @CompanyName. All rights reserved.</span>
+                <span class="text-xs"><br />Version @Version</span>
+            </div>
+        </div>
+
+        @if (InstanceName != "PROD")
+        {
+            if (InstanceName == "DEV")
+            {
+                <div class="alert alert-primary mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+            else if (InstanceName == "TEST")
+            {
+                <div class="alert alert-info mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+            else if (InstanceName == "QA")
+            {
+                <div class="alert alert-success mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-dark mt-2 mb-3" role="alert">
+                    <h4 class="text-center">
+                        @nombreInstancia
+                    </h4>
+                </div>
+            }
+        }
+
+    </div>
+
+    <!-- jQuery -->
+    <script src="~/vendor/plugins/jquery/jquery.min.js"></script>
+    <!-- Bootstrap 4 -->
+    <script src="~/vendor/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="~/vendor/dist/js/adminlte.min.js"></script>
+
+    <script src="~/vendor/plugins/jquery-validation/jquery.validate.min.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('#divLoading').hide();
+
+            $('#btnIngresar').click(function () {
+
+                try {
+
+                    var error = false;
+                    var usuario = $("#Username").val();
+
+
+                    if (usuario == null || usuario.length == 0) {
+                        $("#vmUsername").html("Ingrese usuario");
+                        error = true;
+                    }
+
+                    if (error) {
+                        return false;
+                    }
+                    else {
+                        $('#divLoading').show();
+                        return true;
+                    }
+
+                } catch (ex) {
+                    console.log(ex.message);
+                    $("#msg-error").text('Error: ' + ex.message);
+                    return false;
+                }
+
+            });
+
+        });
+
+        $('.btn-loading').on('click', function () {
+            $('#divLoading').show();
+        });
+
+    </script>
+</body>
+</html>
+
+
+

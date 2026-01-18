@@ -1,0 +1,95 @@
+@model SHM.AppWebCompaniaMedica.Models.FacturasEnviadasViewModel
+@{
+    ViewData["Title"] = "Facturas Enviadas";
+}
+
+<div class="table-card fade-in">
+    <div class="table-header">
+        <h3>
+            <i class="bi bi-send-check-fill"></i>
+            Facturas Enviadas
+            @if (Model.TotalRegistros > 0)
+            {
+                <span class="badge bg-success ms-2">@Model.TotalRegistros</span>
+            }
+        </h3>
+        <div class="table-actions">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Buscar facturas..." id="searchInput" value="@Model.Busqueda">
+            </div>
+            <button class="filter-btn" onclick="loadList()">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Actualizar
+            </button>
+        </div>
+    </div>
+
+    <div id="listContainer">
+        @await Html.PartialAsync("_ListEnviadasPartial", Model)
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var searchTimeout;
+        var currentPage = @Model.PageNumber;
+        var pageSize = @Model.PageSize;
+
+        // Search functionality con debounce
+        document.getElementById('searchInput').addEventListener('input', function (e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                currentPage = 1;
+                loadList();
+            }, 300);
+        });
+
+        // Enter key to search
+        document.getElementById('searchInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                currentPage = 1;
+                loadList();
+            }
+        });
+
+        function loadList() {
+            var busqueda = document.getElementById('searchInput').value || '';
+            var container = document.getElementById('listContainer');
+
+            // Mostrar loading
+            container.innerHTML = '<div class="text-center p-5"><i class="bi bi-arrow-clockwise spin" style="font-size: 2rem;"></i><p class="mt-2">Cargando...</p></div>';
+
+            fetch('@Url.Action("GetListEnviadas", "Facturas")?busqueda=' + encodeURIComponent(busqueda) + '&pageNumber=' + currentPage + '&pageSize=' + pageSize)
+                .then(function(response) { return response.text(); })
+                .then(function(html) {
+                    container.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    container.innerHTML = '<div class="text-center p-5 text-danger"><i class="bi bi-exclamation-circle" style="font-size: 2rem;"></i><p class="mt-2">Error al cargar los datos</p></div>';
+                });
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadList();
+        }
+
+        function changePageSize(size) {
+            pageSize = size;
+            currentPage = 1;
+            loadList();
+        }
+    </script>
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+}

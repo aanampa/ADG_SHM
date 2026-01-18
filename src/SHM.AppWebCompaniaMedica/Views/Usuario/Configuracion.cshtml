@@ -1,0 +1,201 @@
+@{
+    ViewData["Title"] = "Configuración";
+}
+
+<!-- Top Bar -->
+<div class="top-bar fade-in">
+    <div>
+        <h1>Mi Perfil</h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Configuración de Cuenta -->
+    <div class="col-md-6 mb-4">
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-person-gear"></i>
+                    Configuración de Cuenta
+                </h3>
+            </div>
+            <div style="padding: 2rem;">
+                <form id="accountForm">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Nombre de Usuario</label>
+                        <input type="text" class="form-control" value="Proveedor Demo" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Correo Electrónico</label>
+                        <input type="email" class="form-control" value="proveedor@empresa.com" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Razón Social</label>
+                        <input type="text" class="form-control" value="Empresa Demo S.A.C." style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">RUC</label>
+                        <input type="text" class="form-control" value="20123456789" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Teléfono</label>
+                        <input type="tel" class="form-control" value="+51 999 999 999" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <button type="submit" class="btn-action" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                        <i class="bi bi-check-circle"></i>
+                        Guardar Cambios
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambiar Contraseña -->
+    <div class="col-md-6 mb-4">
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-shield-lock"></i>
+                    Seguridad
+                </h3>
+            </div>
+            <div style="padding: 2rem;">
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Contraseña Actual</label>
+                        <input type="password" class="form-control" placeholder="Ingresa tu contraseña actual" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Nueva Contraseña</label>
+                        <input type="password" class="form-control" placeholder="Ingresa tu nueva contraseña" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Confirmar Nueva Contraseña</label>
+                        <input type="password" class="form-control" placeholder="Confirma tu nueva contraseña" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 8px;">
+                    </div>
+                    <button type="submit" class="btn-action" style="width: 100%; justify-content: center; margin-top: 1rem; background: linear-gradient(135deg, var(--warning), #e8a317); border-color: var(--warning);">
+                        <i class="bi bi-key"></i>
+                        Cambiar Contraseña
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notificaciones y Preferencias -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-bell"></i>
+                    Notificaciones
+                </h3>
+            </div>
+            <div style="padding: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Notificaciones por Email</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Recibe actualizaciones sobre tus facturas</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailNotifications" checked style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Notificaciones de Aprobación</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Alerta cuando una factura sea aprobada</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="approvalNotifications" checked style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Recordatorios de Vencimiento</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Recordatorios antes de fechas límite</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="reminderNotifications" checked style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                    </div>
+                </div>
+                <button class="btn-action" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                    <i class="bi bi-check-circle"></i>
+                    Guardar Preferencias
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del Sistema -->
+    <div class="col-md-6 mb-4">
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-info-circle"></i>
+                    Información del Sistema
+                </h3>
+            </div>
+            <div style="padding: 2rem;">
+                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                    <span style="color: var(--text-secondary); font-weight: 600;">Versión del Portal</span>
+                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">v1.0.0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                    <span style="color: var(--text-secondary); font-weight: 600;">Último Acceso</span>
+                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">25/12/2024 10:30</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                    <span style="color: var(--text-secondary); font-weight: 600;">Facturas Totales</span>
+                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">32</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
+                    <span style="color: var(--text-secondary); font-weight: 600;">Estado de Cuenta</span>
+                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent);">Activa</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Account form submission
+        document.getElementById('accountForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Simulate API call
+            setTimeout(() => {
+                alert('Configuración de cuenta actualizada exitosamente');
+            }, 500);
+        });
+
+        // Password form submission
+        document.getElementById('passwordForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const newPassword = this.querySelector('input[placeholder="Ingresa tu nueva contraseña"]').value;
+            const confirmPassword = this.querySelector('input[placeholder="Confirma tu nueva contraseña"]').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+
+            // Simulate API call
+            setTimeout(() => {
+                alert('Contraseña actualizada exitosamente');
+                this.reset();
+            }, 500);
+        });
+
+        // Notification toggles
+        document.querySelectorAll('.form-check-input').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                console.log(`${this.id}: ${this.checked}`);
+            });
+        });
+    </script>
+}

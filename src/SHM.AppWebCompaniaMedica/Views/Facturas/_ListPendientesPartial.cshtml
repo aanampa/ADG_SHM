@@ -1,0 +1,82 @@
+@model SHM.AppWebCompaniaMedica.Models.FacturasPendientesViewModel
+
+<div class="table-responsive">
+    <table class="invoice-table">
+        <thead>
+            <tr>
+                <th>Sede</th>
+                <th>Produccion</th>
+                <th>Concepto</th>
+                <th>Importe</th>
+                <th>Fecha Limite</th>
+                <th>Estado</th>
+                <th>Accion</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Facturas.Any())
+            {
+                @foreach (var factura in Model.Facturas)
+                {
+                    <tr>
+                        <td><strong>@factura.NombreSede</strong></td>
+                        <td>@factura.CodigoProduccion</td>
+                        <td>@(factura.Concepto ?? "-")</td>
+                        <td><strong>S/ @(factura.MtoTotal?.ToString("N2") ?? "0.00")</strong></td>
+                        <td>@(factura.FechaLimite?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>
+                            @{
+                                var badgeClass = factura.Estado?.ToUpper() switch
+                                {
+                                    "PENDIENTE" => "badge-pending",
+                                    "VENCIDO" => "badge-rejected",
+                                    _ => "badge-pending"
+                                };
+                                var estadoTexto = factura.Estado?.ToUpper() switch
+                                {
+                                    "PENDIENTE" => "Por Enviar",
+                                    "VENCIDO" => "Vencido",
+                                    _ => "Por Enviar"
+                                };
+                            }
+                            <span class="badge @badgeClass">@estadoTexto</span>
+                        </td>
+                        <td>
+                            <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action">
+                                <i class="bi bi-upload"></i>
+                                Subir
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: var(--text-secondary);"></i>
+                        <p class="mt-3 mb-0" style="color: var(--text-secondary);">
+                            @if (!string.IsNullOrEmpty(Model.Busqueda))
+                            {
+                                <span>No se encontraron facturas que coincidan con "<strong>@Model.Busqueda</strong>"</span>
+                            }
+                            else
+                            {
+                                <span>No hay facturas pendientes de envio</span>
+                            }
+                        </p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Facturas.Any())
+{
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Mostrando <strong>@Model.Facturas.Count</strong> de <strong>@Model.TotalRegistros</strong> registros
+        </div>
+    </div>
+}

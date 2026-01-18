@@ -1,0 +1,467 @@
+@{
+    ViewData["Title"] = "Usuarios Externos";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Usuarios Externos</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                    <li class="breadcrumb-item active">Usuarios Externos</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="txtSearchTerm"
+                                   placeholder="Buscar por nombre, login, email o entidad...">
+                            <div class="input-group-append">
+                                <button class="btn btn-default" type="button" onclick="searchList()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <button class="btn btn-default" type="button" onclick="clearSearch()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <button type="button" class="btn btn-primary" onclick="openCreateModal()">
+                            <i class="fas fa-plus"></i> Nuevo Usuario
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="listContainer">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+    </div>
+</div>
+
+
+
+
+<!-- Modal Container -->
+<div class="modal fade" id="modalContainer" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content" id="modalContent">
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--bootstrap4 .select2-selection--single {
+            height: calc(2.25rem + 2px) !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        let currentPage = 1;
+        const pageSize = 10;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList(1);
+
+            document.getElementById('txtSearchTerm').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchList();
+                }
+            });
+        });
+
+        function loadList(page) {
+            currentPage = page;
+            const searchTerm = document.getElementById('txtSearchTerm').value;
+
+            const params = new URLSearchParams({
+                searchTerm: searchTerm,
+                pageNumber: currentPage,
+                pageSize: pageSize
+            });
+
+            fetch('@Url.Action("GetList")?' + params.toString())
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center py-5 text-danger">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x"></i>' +
+                        '<p class="mt-2">Error al cargar los datos</p></div>';
+                });
+        }
+
+        function searchList() {
+            loadList(1);
+        }
+
+        function clearSearch() {
+            document.getElementById('txtSearchTerm').value = '';
+            loadList(1);
+        }
+
+        function openCreateModal() {
+            fetch('@Url.Action("GetCreateModal")')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                    $('#modalContainer').modal('show');
+                    initSelect2Create();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar el formulario', 'error');
+                });
+        }
+
+        function openEditModal(guid) {
+            fetch('@Url.Action("GetEditModal")?guid=' + encodeURIComponent(guid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                    $('#modalContainer').modal('show');
+                    initSelect2Edit();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar el formulario', 'error');
+                });
+        }
+
+        function openDeleteModal(guid) {
+            fetch('@Url.Action("GetDeleteModal")?guid=' + encodeURIComponent(guid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                    $('#modalContainer').modal('show');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar el formulario', 'error');
+                });
+        }
+
+        function openResetClaveModal(guid) {
+            fetch('@Url.Action("GetResetClaveModal")?guid=' + encodeURIComponent(guid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                    $('#modalContainer').modal('show');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar el formulario', 'error');
+                });
+        }
+
+        function initSelect2Create() {
+            $('#IdEntidadMedica').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Buscar entidad medica...',
+                allowClear: true,
+                minimumInputLength: 2,
+                dropdownParent: $('#modalContainer'),
+                ajax: {
+                    url: '@Url.Action("BuscarEntidadesMedicas")',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return { term: params.term };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.map(function (item) {
+                                return { id: item.id, text: item.text };
+                            })
+                        };
+                    },
+                    cache: true
+                }
+            });
+        }
+
+        function initSelect2Edit() {
+            var $select = $('#IdEntidadMedica');
+            var currentId = $select.data('current-id');
+            var currentText = $select.data('current-text');
+
+            $select.select2({
+                theme: 'bootstrap4',
+                placeholder: 'Buscar entidad medica...',
+                allowClear: true,
+                minimumInputLength: 2,
+                dropdownParent: $('#modalContainer'),
+                ajax: {
+                    url: '@Url.Action("BuscarEntidadesMedicas")',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return { term: params.term };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.map(function (item) {
+                                return { id: item.id, text: item.text };
+                            })
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            // Set initial value if exists
+            if (currentId && currentText) {
+                var option = new Option(currentText, currentId, true, true);
+                $select.append(option).trigger('change');
+            }
+        }
+
+        function submitCreate() {
+            var form = document.getElementById('createForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            var formData = {
+                login: document.getElementById('Login').value,
+                email: document.getElementById('Email').value,
+                nombres: document.getElementById('Nombres').value,
+                apellidoPaterno: document.getElementById('ApellidoPaterno').value,
+                apellidoMaterno: document.getElementById('ApellidoMaterno').value,
+                numeroDocumento: document.getElementById('NumeroDocumento').value,
+                celular: document.getElementById('Celular').value,
+                idEntidadMedica: document.getElementById('IdEntidadMedica').value || null,
+                idRol: document.getElementById('IdRol').value || null,
+                enviarCorreo: document.getElementById('EnviarCorreo').checked
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Create")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    $('#modalContainer').modal('hide');
+                    loadList(currentPage);
+                    showToast(data.message, 'success');
+
+                    // Show password if not sent by email
+                    if (data.generatedPassword) {
+                        showPasswordAlert(data.generatedPassword);
+                    }
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
+        function submitEdit() {
+            var form = document.getElementById('editForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            var formData = {
+                guidRegistro: document.getElementById('GuidRegistro').value,
+                login: document.getElementById('Login').value,
+                email: document.getElementById('Email').value,
+                nombres: document.getElementById('Nombres').value,
+                apellidoPaterno: document.getElementById('ApellidoPaterno').value,
+                apellidoMaterno: document.getElementById('ApellidoMaterno').value,
+                numeroDocumento: document.getElementById('NumeroDocumento').value,
+                celular: document.getElementById('Celular').value,
+                idEntidadMedica: document.getElementById('IdEntidadMedica').value || null,
+                idRol: document.getElementById('IdRol').value || null,
+                activo: parseInt(document.getElementById('Activo').value)
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Edit")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    $('#modalContainer').modal('hide');
+                    loadList(currentPage);
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
+        function submitDelete() {
+            var formData = {
+                guidRegistro: document.getElementById('GuidRegistro').value
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Delete")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    $('#modalContainer').modal('hide');
+                    loadList(currentPage);
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
+        function submitResetClave() {
+            var formData = {
+                guidRegistro: document.getElementById('GuidRegistro').value,
+                enviarCorreo: document.getElementById('EnviarCorreo').checked
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("ResetClave")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    $('#modalContainer').modal('hide');
+                    showToast(data.message, 'success');
+
+                    // Show password if not sent by email
+                    if (data.generatedPassword) {
+                        showPasswordAlert(data.generatedPassword);
+                    }
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
+        function showPasswordAlert(password) {
+            var alertHtml = '<div class="alert alert-info alert-dismissible fade show" role="alert">' +
+                '<strong><i class="fas fa-key"></i> Clave generada:</strong> ' +
+                '<code class="ml-2" style="font-size: 1.1em;">' + password + '</code>' +
+                '<button type="button" class="btn btn-sm btn-outline-info ml-3" onclick="copyToClipboard(\'' + password + '\')">' +
+                '<i class="fas fa-copy"></i> Copiar</button>' +
+                '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                '<span aria-hidden="true">&times;</span></button></div>';
+
+            var container = document.querySelector('.content .container-fluid');
+            container.insertAdjacentHTML('afterbegin', alertHtml);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('Clave copiada al portapapeles', 'success');
+            }).catch(function() {
+                showToast('Error al copiar', 'error');
+            });
+        }
+
+        function showToast(message, type) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var toastHtml = '<div class="toast ' + bgClass + ' text-white" role="alert" aria-live="assertive" aria-atomic="true" data-delay="3000">' +
+                '<div class="toast-body">' + message + '</div></div>';
+
+            var toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+                document.body.appendChild(toastContainer);
+            }
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            var toast = toastContainer.lastElementChild;
+            $(toast).toast('show');
+
+            toast.addEventListener('hidden.bs.toast', function () {
+                toast.remove();
+            });
+
+            // Fallback removal
+            setTimeout(function() {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 3500);
+        }
+    </script>
+}

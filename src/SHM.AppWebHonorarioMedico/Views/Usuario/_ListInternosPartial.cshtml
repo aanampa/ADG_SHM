@@ -1,0 +1,129 @@
+@model SHM.AppWebHonorarioMedico.Models.UsuarioInternoListViewModel
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover table-striped table-sm">
+        <thead>
+            <tr>
+                <th style="width: 120px;">Login</th>
+                <th>Nombre Completo</th>
+                <th style="width: 200px;">Email</th>
+                <th style="width: 100px;">Documento</th>
+                <th style="width: 100px;">Celular</th>
+                <th style="width: 150px;">Rol</th>
+                <th style="width: 80px;" class="text-center">Estado</th>
+                <th style="width: 140px;" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Any())
+            {
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.Login</td>
+                        <td>@item.NombreCompleto</td>
+                        <td>@item.Email</td>
+                        <td>@item.NumeroDocumento</td>
+                        <td>@item.Celular</td>
+                        <td>@item.RolDescripcion</td>
+                        <td class="text-center">
+                            @if (item.Activo == 1)
+                            {
+                                <span class="badge badge-success">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-danger">Inactivo</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-info btn-xs"
+                                    onclick="openEditModal('@item.GuidRegistro')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-warning btn-xs"
+                                    onclick="openResetClaveModal('@item.GuidRegistro')" title="Resetear Clave">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-xs"
+                                    onclick="openDeleteModal('@item.GuidRegistro')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No se encontraron usuarios internos</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <div class="card-footer clearfix">
+        <div class="float-left">
+            <small class="text-muted">
+                Mostrando @((Model.PageNumber - 1) * Model.PageSize + 1) -
+                @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)) de @Model.TotalCount registros
+            </small>
+        </div>
+        <ul class="pagination pagination-sm m-0 float-right">
+            @if (Model.PageNumber > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(1)">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@(Model.PageNumber - 1))">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+            }
+
+            @{
+                var startPage = Math.Max(1, Model.PageNumber - 2);
+                var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+            }
+
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                var pageNum = i;
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@pageNum)">@i</a>
+                </li>
+            }
+
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@(Model.PageNumber + 1))">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@Model.TotalPages)">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+}
+else if (Model.TotalCount > 0)
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Mostrando @Model.TotalCount registro(s)
+        </small>
+    </div>
+}

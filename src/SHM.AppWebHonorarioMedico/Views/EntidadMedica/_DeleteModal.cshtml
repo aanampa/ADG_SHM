@@ -1,0 +1,55 @@
+@model SHM.AppWebHonorarioMedico.Models.EntidadMedicaDeleteViewModel
+
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white" id="deleteModalLabel">
+                    <i class="fas fa-trash-alt mr-2"></i>Eliminar Entidad Medica
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="delete_GuidRegistro" value="@Model.GuidRegistro" />
+
+                <div class="text-center mb-3">
+                    <i class="fas fa-exclamation-triangle text-warning fa-3x"></i>
+                </div>
+
+                <p class="text-center">
+                    Esta a punto de eliminar la siguiente entidad medica:
+                </p>
+
+                <table class="table table-sm table-bordered">
+                    <tr>
+                        <td class="text-muted" style="width: 40%;">Codigo:</td>
+                        <td><strong>@Model.CodigoEntidad</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Razon Social:</td>
+                        <td><strong>@Model.RazonSocial</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">RUC:</td>
+                        <td><strong>@Model.Ruc</strong></td>
+                    </tr>
+                </table>
+
+                <div class="alert alert-warning small mb-0">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Esta accion desactivara la entidad medica. El registro no sera eliminado permanentemente.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="submitDelete()">
+                    <i class="fas fa-trash mr-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

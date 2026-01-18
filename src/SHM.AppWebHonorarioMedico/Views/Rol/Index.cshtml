@@ -1,0 +1,325 @@
+@model SHM.AppWebHonorarioMedico.Models.RolIndexViewModel
+
+@{
+    ViewData["Title"] = "Administracion de Roles";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">
+                    <i class="fas fa-user-shield mr-2"></i>Administracion de Roles
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+                    <li class="breadcrumb-item active">Roles</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list mr-2"></i>Lista de Roles
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-morado btn-sm" onclick="openCreateModal()">
+                        <i class="fas fa-plus mr-1"></i>Nuevo Rol
+                    </button>
+                </div>
+            </div>
+            <div id="listContainer">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+    </div>
+</div>    
+
+
+<div id="modalContainer"></div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
+
+        function loadList() {
+            fetch('@Url.Action("GetList", "Rol")')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center py-5 text-danger">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x"></i>' +
+                        '<p class="mt-2">Error al cargar los datos</p></div>';
+                });
+        }
+
+        function openCreateModal() {
+            fetch('@Url.Action("GetCreateModal", "Rol")')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#createModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function submitCreate() {
+            var codigo = document.getElementById('create_Codigo').value.trim();
+            var descripcion = document.getElementById('create_Descripcion').value.trim();
+
+            if (!codigo) {
+                alert('El codigo es requerido');
+                return;
+            }
+
+            if (!descripcion) {
+                alert('La descripcion es requerida');
+                return;
+            }
+
+            var token = document.querySelector('#createForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Create", "Rol")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    codigo: codigo,
+                    descripcion: descripcion
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#createModal').modal('hide');
+                        loadList();
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al crear el rol');
+                });
+        }
+
+        function openEditModal(guid) {
+            fetch('@Url.Action("GetEditModal", "Rol")?guid=' + guid)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#editModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function submitEdit() {
+            var guidRegistro = document.getElementById('edit_GuidRegistro').value;
+            var codigo = document.getElementById('edit_Codigo').value.trim();
+            var descripcion = document.getElementById('edit_Descripcion').value.trim();
+            var activo = document.getElementById('edit_Activo').checked ? 1 : 0;
+
+            if (!codigo) {
+                alert('El codigo es requerido');
+                return;
+            }
+
+            if (!descripcion) {
+                alert('La descripcion es requerida');
+                return;
+            }
+
+            var token = document.querySelector('#editForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Edit", "Rol")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    guidRegistro: guidRegistro,
+                    codigo: codigo,
+                    descripcion: descripcion,
+                    activo: activo
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#editModal').modal('hide');
+                        loadList();
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al actualizar el rol');
+                });
+        }
+
+        function openDeleteModal(guid) {
+            fetch('@Url.Action("GetDeleteModal", "Rol")?guid=' + guid)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#deleteModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function submitDelete() {
+            var guidRegistro = document.getElementById('delete_GuidRegistro').value;
+            var token = document.querySelector('#deleteForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("Delete", "Rol")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    guidRegistro: guidRegistro
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#deleteModal').modal('hide');
+                        loadList();
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar el rol');
+                });
+        }
+
+        function openAssignOpcionesModal(guid) {
+            fetch('@Url.Action("GetAssignOpcionesModal", "Rol")?guid=' + guid)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#assignOpcionesModal').modal('show');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function toggleChildren(checkbox, idOpcion) {
+            var children = document.querySelectorAll('.opcion-child-' + idOpcion);
+            children.forEach(function (child) {
+                child.checked = checkbox.checked;
+                // Recursivamente actualizar los hijos de este hijo
+                var childId = child.getAttribute('data-id');
+                if (childId) {
+                    toggleChildren(child, childId);
+                }
+            });
+        }
+
+        function updateParent(idOpcionPadre) {
+            if (!idOpcionPadre) return;
+
+            var parentCheckbox = document.querySelector('.opcion-item[data-id="' + idOpcionPadre + '"]');
+            if (!parentCheckbox) return;
+
+            var children = document.querySelectorAll('.opcion-child-' + idOpcionPadre);
+            var allChecked = true;
+            var anyChecked = false;
+
+            children.forEach(function (child) {
+                if (child.checked) {
+                    anyChecked = true;
+                } else {
+                    allChecked = false;
+                }
+            });
+
+            parentCheckbox.checked = anyChecked;
+            parentCheckbox.indeterminate = anyChecked && !allChecked;
+        }
+
+        function submitAssignOpciones() {
+            var guidRegistro = document.getElementById('assign_GuidRegistro').value;
+            var checkboxes = document.querySelectorAll('.opcion-item:checked');
+            var opcionesSeleccionadas = [];
+
+            checkboxes.forEach(function (cb) {
+                opcionesSeleccionadas.push(parseInt(cb.getAttribute('data-id')));
+            });
+
+            var token = document.querySelector('#assignOpcionesForm input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("SaveOpciones", "Rol")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    guidRegistro: guidRegistro,
+                    opcionesSeleccionadas: opcionesSeleccionadas
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#assignOpcionesModal').modal('hide');
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al guardar las opciones');
+                });
+        }
+
+        function selectAllOpciones() {
+            var checkboxes = document.querySelectorAll('.opcion-item');
+            checkboxes.forEach(function (cb) {
+                cb.checked = true;
+                cb.indeterminate = false;
+            });
+        }
+
+        function deselectAllOpciones() {
+            var checkboxes = document.querySelectorAll('.opcion-item');
+            checkboxes.forEach(function (cb) {
+                cb.checked = false;
+                cb.indeterminate = false;
+            });
+        }
+    </script>
+}

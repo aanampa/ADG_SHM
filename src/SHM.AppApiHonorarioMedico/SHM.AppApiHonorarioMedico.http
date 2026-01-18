@@ -1,0 +1,6 @@
+@SHM.AppApiHonorarioMedico_HostAddress = http://localhost:5271
+
+GET {{SHM.AppApiHonorarioMedico_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

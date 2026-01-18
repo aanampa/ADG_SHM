@@ -1,0 +1,219 @@
+@model SHM.AppWebCompaniaMedica.Models.DetalleFacturaViewModel
+@{
+    ViewData["Title"] = "Detalle de Factura";
+}
+
+<div class="table-card fade-in">
+    <div class="table-header">
+        <h3>
+            <i class="bi bi-file-earmark-text"></i>
+            Detalle de Factura
+            @if (!string.IsNullOrEmpty(Model.Serie) && !string.IsNullOrEmpty(Model.Numero))
+            {
+                <span style="font-family: 'JetBrains Mono', monospace; font-weight: 400; font-size: 1rem; margin-left: 0.5rem;">@Model.Serie-@Model.Numero</span>
+            }
+        </h3>
+        <div class="table-actions">
+            @{
+                var badgeClass = Model.EstadoComprobante?.ToUpper() switch
+                {
+                    "ENVIADO" => "badge-sent",
+                    "APROBADO" => "badge-sent",
+                    "PAGADO" => "bg-success",
+                    "RECHAZADO" => "badge-rejected",
+                    "EN REVISION" => "badge-pending",
+                    _ => "badge-sent"
+                };
+                var estadoTexto = Model.EstadoComprobante?.ToUpper() switch
+                {
+                    "ENVIADO" => "Enviado",
+                    "APROBADO" => "Aprobado",
+                    "PAGADO" => "Pagado",
+                    "RECHAZADO" => "Rechazado",
+                    "EN REVISION" => "En Revision",
+                    _ => Model.EstadoComprobante ?? "Enviado"
+                };
+            }
+            <span class="badge @badgeClass" style="font-size: 0.9rem; padding: 0.5rem 1rem;">@estadoTexto</span>
+        </div>
+    </div>
+
+    <div style="padding: 2rem;">
+        <!-- Seccion de Informacion de Produccion -->
+        <div class="mb-4">
+            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                <i class="bi bi-info-circle me-2"></i>Informacion de la Produccion
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Sede</span>
+                        <span style="font-weight: 600;">@Model.NombreSede</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Codigo Produccion</span>
+                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.CodigoProduccion</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Periodo</span>
+                        <span style="font-weight: 600;">@(Model.Periodo ?? "-")</span>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Concepto</span>
+                        <span style="font-weight: 600;">@(Model.Concepto ?? Model.Descripcion ?? "-")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr style="margin: 2rem 0; border-color: var(--border);">
+
+        <!-- Seccion de Datos del Comprobante -->
+        <div class="mb-4">
+            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                <i class="bi bi-receipt me-2"></i>Datos del Comprobante
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Tipo Comprobante</span>
+                        @{
+                            var tipoComprobanteTexto = Model.TipoComprobante switch
+                            {
+                                "01" => "Factura",
+                                "03" => "Boleta",
+                                _ => Model.TipoComprobante ?? "-"
+                            };
+                        }
+                        <span style="font-weight: 600;">@tipoComprobanteTexto</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Serie - Numero</span>
+                        @if (!string.IsNullOrEmpty(Model.Serie) && !string.IsNullOrEmpty(Model.Numero))
+                        {
+                            <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.Serie-@Model.Numero</span>
+                        }
+                        else
+                        {
+                            <span style="font-weight: 600;">-</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Fecha de Emision</span>
+                        <span style="font-weight: 600;">@(Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Fecha Limite</span>
+                        <span style="font-weight: 600;">@(Model.FechaLimite?.ToString("dd/MM/yyyy") ?? "-")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr style="margin: 2rem 0; border-color: var(--border);">
+
+        <!-- Seccion de Importes -->
+        <div class="mb-4">
+            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                <i class="bi bi-currency-dollar me-2"></i>Detalle de Importes
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div style="padding: 1.5rem; background: var(--bg-main); border-radius: 12px;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span style="color: var(--text-secondary);">Consumo:</span>
+                            <span style="font-weight: 600;">S/ @(Model.MtoConsumo?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span style="color: var(--text-secondary);">Descuento:</span>
+                            <span style="font-weight: 600; color: var(--danger);">- S/ @(Model.MtoDescuento?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                        <hr style="margin: 0.75rem 0; border-color: var(--border);">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span style="color: var(--text-secondary);">Subtotal:</span>
+                            <span style="font-weight: 600;">S/ @(Model.MtoSubtotal?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span style="color: var(--text-secondary);">IGV (18%):</span>
+                            <span style="font-weight: 600;">S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                        <hr style="margin: 0.75rem 0; border-color: var(--border);">
+                        <div class="d-flex justify-content-between">
+                            <span style="font-weight: 700; font-size: 1.1rem;">Total:</span>
+                            <span style="font-weight: 700; font-size: 1.25rem; color: var(--accent);">S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Archivos.Any())
+        {
+            <hr style="margin: 2rem 0; border-color: var(--border);">
+
+            <!-- Seccion de Documentos Adjuntos -->
+            <div class="mb-4">
+                <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                    <i class="bi bi-paperclip me-2"></i>Documentos Adjuntos
+                </h6>
+                <div class="row g-3">
+                    @foreach (var archivo in Model.Archivos)
+                    {
+                        var iconClass = archivo.TipoArchivo?.ToUpper() switch
+                        {
+                            "PDF" => "bi-file-earmark-pdf",
+                            "XML" => "bi-file-earmark-code",
+                            "CDR" => "bi-file-earmark-zip",
+                            _ => "bi-file-earmark"
+                        };
+                        var iconColor = archivo.TipoArchivo?.ToUpper() switch
+                        {
+                            "PDF" => "var(--danger)",
+                            "XML" => "var(--warning)",
+                            "CDR" => "var(--primary)",
+                            _ => "var(--text-secondary)"
+                        };
+                        var btnColor = archivo.TipoArchivo?.ToUpper() switch
+                        {
+                            "PDF" => "var(--danger)",
+                            "XML" => "var(--warning)",
+                            "CDR" => "var(--primary)",
+                            _ => "var(--text-secondary)"
+                        };
+                        var tamanoKb = archivo.Tamano.HasValue ? (archivo.Tamano.Value / 1024.0).ToString("N1") + " KB" : "-";
+
+                        <div class="col-md-4">
+                            <div style="padding: 1.5rem; background: var(--bg-main); border-radius: 12px; text-align: center; border: 2px solid var(--border); transition: all 0.3s ease;">
+                                <i class="bi @iconClass" style="font-size: 3rem; color: @iconColor; margin-bottom: 1rem; display: block;"></i>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">@archivo.TipoArchivo</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">@tamanoKb</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; word-break: break-all;">@archivo.NombreArchivo</div>
+                                <a href="@Url.Action("DescargarArchivo", "Facturas", new { guid = archivo.GuidRegistro })" class="btn btn-sm" style="background: @btnColor; color: white; border-radius: 8px; padding: 0.5rem 1rem; text-decoration: none;">
+                                    <i class="bi bi-download me-1"></i>Descargar
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="d-flex gap-2 mt-4">
+            <a asp-controller="Facturas" asp-action="Enviadas" class="btn btn-secondary" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                <i class="bi bi-arrow-left me-2"></i>Volver a Facturas Enviadas
+            </a>
+        </div>
+    </div>
+</div>

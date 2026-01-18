@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Contraseña</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 30px 40px; background: linear-gradient(135deg, #5a1160 0%, #7a1880 50%, #f26522 100%); border-radius: 8px 8px 0 0;">
+                            <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td align="center">
+                                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
+                                            Portal de Honorarios Médicos
+                                        </h1>
+                                        <p style="margin: 10px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">
+                                            Sistema de Gestión de Facturación
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                <!-- Icon -->
+                                <tr>
+                                    <td align="center" style="padding-bottom: 30px;">
+                                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(242, 101, 34, 0.1), rgba(90, 17, 96, 0.1)); border-radius: 50%; display: inline-block; line-height: 80px;">
+                                            <span style="font-size: 40px;">🔐</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Title -->
+                                <tr>
+                                    <td align="center" style="padding-bottom: 20px;">
+                                        <h2 style="margin: 0; color: #1a1a2e; font-size: 24px; font-weight: 600;">
+                                            Recuperación de Contraseña
+                                        </h2>
+                                    </td>
+                                </tr>
+
+                                <!-- Greeting -->
+                                <tr>
+                                    <td style="padding-bottom: 20px;">
+                                        <p style="margin: 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                                            Hola <strong>{{NOMBRE_USUARIO}}</strong>,
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Message -->
+                                <tr>
+                                    <td style="padding-bottom: 20px;">
+                                        <p style="margin: 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                                            Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en el
+                                            <strong>Portal de Honorarios Médicos</strong>.
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="padding-bottom: 30px;">
+                                        <p style="margin: 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                                            Haz clic en el siguiente botón para crear una nueva contraseña:
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Button -->
+                                <tr>
+                                    <td align="center" style="padding-bottom: 30px;">
+                                        <a href="{{URL_RECUPERACION}}"
+                                           style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #5a1160 0%, #f26522 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 15px rgba(242, 101, 34, 0.3);">
+                                            Restablecer Contraseña
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <!-- Warning Box -->
+                                <tr>
+                                    <td style="padding-bottom: 20px;">
+                                        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fff8f0; border-left: 4px solid #f26522; border-radius: 4px;">
+                                            <tr>
+                                                <td style="padding: 15px 20px;">
+                                                    <p style="margin: 0; color: #7a4510; font-size: 14px; line-height: 1.5;">
+                                                        <strong>⏰ Importante:</strong> Este enlace expirará en <strong>1 hora</strong> por motivos de seguridad.
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!-- Security Note -->
+                                <tr>
+                                    <td style="padding-bottom: 20px;">
+                                        <p style="margin: 0; color: #777777; font-size: 14px; line-height: 1.6;">
+                                            Si no solicitaste restablecer tu contraseña, puedes ignorar este correo.
+                                            Tu cuenta permanecerá segura.
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Divider -->
+                                <tr>
+                                    <td style="padding: 20px 0;">
+                                        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 0;">
+                                    </td>
+                                </tr>
+
+                                <!-- Alternative Link -->
+                                <tr>
+                                    <td>
+                                        <p style="margin: 0; color: #888888; font-size: 13px; line-height: 1.6;">
+                                            Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:
+                                        </p>
+                                        <p style="margin: 10px 0 0 0; word-break: break-all;">
+                                            <a href="{{URL_RECUPERACION}}" style="color: #5a1160; font-size: 13px;">
+                                                {{URL_RECUPERACION}}
+                                            </a>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
+                            <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td align="center">
+                                        <p style="margin: 0 0 10px 0; color: #888888; font-size: 13px;">
+                                            Este es un correo automático, por favor no respondas a este mensaje.
+                                        </p>
+                                        <p style="margin: 0; color: #aaaaaa; font-size: 12px;">
+                                            © {{ANIO}} Portal de Honorarios Médicos - Grupo San Pablo
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

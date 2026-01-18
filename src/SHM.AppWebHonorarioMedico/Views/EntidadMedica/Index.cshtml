@@ -1,0 +1,507 @@
+@{
+    ViewData["Title"] = "Entidades Medicas";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+        
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 titulo-formulario">
+                            <i class="fas fa-hospital mr-2"></i>Entidades Medicas
+                        </h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                            <li class="breadcrumb-item active">Entidades Medicas</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="txtSearchTerm" class="form-control"
+                                           placeholder="Buscar por razon social, RUC o codigo..."
+                                           style="width: 300px;">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-default" onclick="searchList()">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-default" onclick="clearSearch()" title="Limpiar busqueda">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <button type="button" class="btn btn-morado btn-sm" onclick="openCreateModal()">
+                                    <i class="fas fa-plus mr-1"></i>Nueva Entidad
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modalContainer"></div>
+
+@section Scripts {
+    <script>
+        let currentPage = 1;
+        const pageSize = 10;
+        let searchTerm = '';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Cargar lista inicial
+            loadList(1);
+
+            // Buscar al presionar Enter
+            document.getElementById('txtSearchTerm').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    searchList();
+                }
+            });
+
+            // Validar solo numeros en campos con clase only-numbers
+            document.addEventListener('input', function (e) {
+                if (e.target.classList.contains('only-numbers')) {
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                }
+            });
+        });
+
+        function loadList(page) {
+            currentPage = page || 1;
+            searchTerm = document.getElementById('txtSearchTerm').value || '';
+
+            const params = new URLSearchParams({
+                searchTerm: searchTerm,
+                pageNumber: currentPage,
+                pageSize: pageSize
+            });
+
+            f_loading();
+            fetch('@Url.Action("GetList")?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function searchList() {
+            loadList(1);
+        }
+
+        function clearSearch() {
+            document.getElementById('txtSearchTerm').value = '';
+            loadList(1);
+        }
+
+        function refreshList() {
+            loadList(currentPage);
+        }
+
+        function openCreateModal() {
+            f_loading();
+            fetch('@Url.Action("GetCreateModal")')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#createModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openEditModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetEditModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#editModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openDeleteModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetDeleteModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#deleteModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function submitCreate() {
+            const form = document.getElementById('createForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                CodigoEntidad: document.getElementById('create_CodigoEntidad').value,
+                RazonSocial: document.getElementById('create_RazonSocial').value,
+                Ruc: document.getElementById('create_Ruc').value,
+                TipoEntidadMedica: document.getElementById('create_TipoEntidadMedica').value,
+                Telefono: document.getElementById('create_Telefono').value,
+                Celular: document.getElementById('create_Celular').value,
+                CodigoAcreedor: document.getElementById('create_CodigoAcreedor').value
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Create")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#createModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitEdit() {
+            const form = document.getElementById('editForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                GuidRegistro: document.getElementById('edit_GuidRegistro').value,
+                CodigoEntidad: document.getElementById('edit_CodigoEntidad').value,
+                RazonSocial: document.getElementById('edit_RazonSocial').value,
+                Ruc: document.getElementById('edit_Ruc').value,
+                TipoEntidadMedica: document.getElementById('edit_TipoEntidadMedica').value,
+                Telefono: document.getElementById('edit_Telefono').value,
+                Celular: document.getElementById('edit_Celular').value,
+                CodigoAcreedor: document.getElementById('edit_CodigoAcreedor').value,
+                Activo: document.getElementById('edit_Activo').checked ? 1 : 0
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Edit")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#editModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitDelete() {
+            const data = {
+                GuidRegistro: document.getElementById('delete_GuidRegistro').value
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Delete")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#deleteModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        // Funciones para Cuentas Bancarias
+        let currentEntidadGuid = '';
+
+        function openCuentasBancariasModal(guid) {
+            currentEntidadGuid = guid;
+            f_loading();
+            fetch('@Url.Action("GetCuentasBancariasModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#cuentasBancariasModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar las cuentas bancarias');
+                });
+        }
+
+        function loadCuentasBancarias() {
+            fetch('@Url.Action("GetListCuentasBancarias")?entidadGuid=' + encodeURIComponent(currentEntidadGuid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('cuentasBancariasListContainer').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('cuentasBancariasListContainer').innerHTML =
+                        '<div class="text-center text-danger py-3">Error al cargar las cuentas</div>';
+                });
+        }
+
+        function openCreateCuentaBancariaModal() {
+            fetch('@Url.Action("GetCreateCuentaBancariaModal")?entidadGuid=' + encodeURIComponent(currentEntidadGuid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('cuentaBancariaFormContainer').innerHTML = html;
+                    $('#createCuentaBancariaModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openEditCuentaBancariaModal(guid) {
+            fetch('@Url.Action("GetEditCuentaBancariaModal")?guid=' + encodeURIComponent(guid) + '&entidadGuid=' + encodeURIComponent(currentEntidadGuid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('cuentaBancariaFormContainer').innerHTML = html;
+                    $('#editCuentaBancariaModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openDeleteCuentaBancariaModal(guid) {
+            fetch('@Url.Action("GetDeleteCuentaBancariaModal")?guid=' + encodeURIComponent(guid) + '&entidadGuid=' + encodeURIComponent(currentEntidadGuid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('cuentaBancariaFormContainer').innerHTML = html;
+                    $('#deleteCuentaBancariaModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function submitCreateCuentaBancaria() {
+            const form = document.getElementById('createCuentaBancariaForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                EntidadGuid: document.getElementById('cb_create_EntidadGuid').value,
+                IdBanco: document.getElementById('cb_create_IdBanco').value || null,
+                CuentaCorriente: document.getElementById('cb_create_CuentaCorriente').value,
+                CuentaCci: document.getElementById('cb_create_CuentaCci').value,
+                Moneda: document.getElementById('cb_create_Moneda').value
+            };
+
+            const token = document.querySelector('#createCuentaBancariaForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("CreateCuentaBancaria")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#createCuentaBancariaModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    loadCuentasBancarias();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitEditCuentaBancaria() {
+            const form = document.getElementById('editCuentaBancariaForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                GuidRegistro: document.getElementById('cb_edit_GuidRegistro').value,
+                EntidadGuid: document.getElementById('cb_edit_EntidadGuid').value,
+                IdBanco: document.getElementById('cb_edit_IdBanco').value || null,
+                CuentaCorriente: document.getElementById('cb_edit_CuentaCorriente').value,
+                CuentaCci: document.getElementById('cb_edit_CuentaCci').value,
+                Moneda: document.getElementById('cb_edit_Moneda').value,
+                Activo: parseInt(document.getElementById('cb_edit_Activo').value)
+            };
+
+            const token = document.querySelector('#editCuentaBancariaForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("EditCuentaBancaria")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#editCuentaBancariaModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    loadCuentasBancarias();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitDeleteCuentaBancaria() {
+            const data = {
+                GuidRegistro: document.getElementById('cb_delete_GuidRegistro').value,
+                EntidadGuid: document.getElementById('cb_delete_EntidadGuid').value
+            };
+
+            const token = document.querySelector('#deleteCuentaBancariaForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("DeleteCuentaBancaria")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#deleteCuentaBancariaModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    loadCuentasBancarias();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+    </script>
+}

@@ -1,0 +1,115 @@
+@model SHM.AppWebHonorarioMedico.Models.EntidadMedicaEditViewModel
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title" id="editModalLabel">
+                    <i class="fas fa-edit mr-2"></i>Editar Entidad Medica
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Codigo de Entidad <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_CodigoEntidad" class="form-control form-control-sm"
+                                       maxlength="20" required placeholder="Ingrese codigo" value="@Model.CodigoEntidad">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">RUC <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_Ruc" class="form-control form-control-sm only-numbers"
+                                       maxlength="11" required placeholder="11 digitos" value="@Model.Ruc">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Tipo de Entidad <span class="text-danger">*</span></label>
+                                <select id="edit_TipoEntidadMedica" class="form-control form-control-sm" required>
+                                    <option value="">Seleccione...</option>
+                                    @foreach (var tipo in Model.TiposEntidadMedica)
+                                    {
+                                        var isSelected = tipo.Value == Model.TipoEntidadMedica;
+                                        if (isSelected)
+                                        {
+                                            <option value="@tipo.Value" selected>@tipo.Text</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@tipo.Value">@tipo.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="adg-label">Razon Social <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_RazonSocial" class="form-control form-control-sm"
+                                       maxlength="200" required placeholder="Ingrese razon social" value="@Model.RazonSocial">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Telefono</label>
+                                <input type="text" id="edit_Telefono" class="form-control form-control-sm only-numbers"
+                                       maxlength="20" placeholder="Solo numeros" value="@Model.Telefono">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Celular</label>
+                                <input type="text" id="edit_Celular" class="form-control form-control-sm only-numbers"
+                                       maxlength="20" placeholder="Solo numeros" value="@Model.Celular">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="adg-label">Codigo Acreedor</label>
+                                <input type="text" id="edit_CodigoAcreedor" class="form-control form-control-sm"
+                                       maxlength="50" placeholder="Codigo acreedor" value="@Model.CodigoAcreedor">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    @if (Model.Activo == 1)
+                                    {
+                                        <input type="checkbox" class="custom-control-input" id="edit_Activo" checked>
+                                    }
+                                    else
+                                    {
+                                        <input type="checkbox" class="custom-control-input" id="edit_Activo">
+                                    }
+                                    <label class="custom-control-label" for="edit_Activo">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-info btn-sm" onclick="submitEdit()">
+                        <i class="fas fa-save mr-1"></i>Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

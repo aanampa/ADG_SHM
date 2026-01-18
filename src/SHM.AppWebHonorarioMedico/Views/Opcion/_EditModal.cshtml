@@ -1,0 +1,110 @@
+@model SHM.AppWebHonorarioMedico.Models.OpcionEditViewModel
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-edit mr-2"></i>Editar Opcion de Menu
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_Nombre">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_Nombre" class="form-control" maxlength="100" required
+                                       value="@Model.Nombre" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_IdOpcionPadre">Opcion Padre</label>
+                                <select id="edit_IdOpcionPadre" class="form-control">
+                                    @foreach (var item in Model.OpcionesPadre)
+                                    {
+                                        if (item.Selected)
+                                        {
+                                            <option value="@item.Value" selected>@item.Text</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@item.Value">@item.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="edit_Url">URL</label>
+                                <input type="text" id="edit_Url" class="form-control" maxlength="255"
+                                       value="@Model.Url" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edit_Orden">Orden</label>
+                                <input type="number" id="edit_Orden" class="form-control" min="0"
+                                       value="@Model.Orden" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_Icono">Icono (Font Awesome)</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text" id="editIconPreview">
+                                    @if (!string.IsNullOrEmpty(Model.Icono))
+                                    {
+                                        <i class="@Model.Icono"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-icons"></i>
+                                    }
+                                </span>
+                            </div>
+                            <input type="text" id="edit_Icono" class="form-control" maxlength="255"
+                                   value="@Model.Icono" oninput="updateEditIconPreview(this.value)" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="edit_Activo"
+                                   @(Model.Activo == 1 ? "checked" : "") />
+                            <label class="custom-control-label" for="edit_Activo">Activo</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="submitEdit()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateEditIconPreview(iconClass) {
+        var preview = document.getElementById('editIconPreview');
+        if (iconClass && iconClass.trim()) {
+            preview.innerHTML = '<i class="' + iconClass + '"></i>';
+        } else {
+            preview.innerHTML = '<i class="fas fa-icons"></i>';
+        }
+    }
+</script>

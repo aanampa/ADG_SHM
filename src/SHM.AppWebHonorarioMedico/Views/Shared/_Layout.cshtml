@@ -1,0 +1,377 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=ice-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SHM</title>
+
+    <!-- Google Font: Source Sans Pro -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="~/vendor/plugins/fontawesome-free/css/all.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/vendor/dist/css/adminlte.css">
+
+
+    <link href="~/vendor/plugins/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <link href="~/vendor/plugins/toastr/toastr.min.css" rel="stylesheet" />
+
+    <style type="text/css">
+
+        .app-loading {
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            position: fixed;
+            display: block;
+            opacity: 0.5;
+            background-color: #000;
+            z-index: 99;
+        }
+
+        .app-loading-image {
+            position: absolute;
+            top: 50%;
+            z-index: 100;
+        }
+
+        .titulo-formulario {
+            color: #844484;
+            font-size:25px !important;
+            font-weight: bold;
+        }
+
+        .adg-label {
+            font-size: 0.8rem !important;
+        }
+
+        .btn-morado {
+            color: #fff;
+            background-color: #5d1665;
+            border-color: #5d1665;
+            box-shadow: none;
+            transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+            .btn-morado:hover {
+                color: #fff;
+                background-color: #5a1160;
+                border-color: #5a1160;
+            }
+
+            .btn-morado:active {
+                color: #fff;
+                background-color: #ac84b4;
+                border-color: #5d1665;
+                box-shadow: 0 0 5px rgba(93, 22, 101, 0.5);
+            }
+
+    </style>
+
+    @await RenderSectionAsync("Styles", required: false)
+
+</head>
+<body id="app-body" class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
+
+    <input type="hidden" name="hdnUrlMenu" id="hdnUrlMenu" value="@Url.Action("GetMenu","Menu")" />
+
+    <partial name="_NavBar" />
+
+    <partial name="_SideBar" />
+
+    @RenderBody()
+
+    <partial name="_Footer" />
+
+    <!-- REQUIRED SCRIPTS -->
+    <!-- jQuery -->
+    <script src="~/vendor/plugins/jquery/jquery.min.js"></script>
+    <!-- Bootstrap 4 -->
+    <script src="~/vendor/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="~/vendor/dist/js/adminlte.min.js"></script>
+
+    <!-- toastr and sweetalert2-->
+    <script src="~/vendor/plugins/toastr/toastr.min.js"></script>
+    <script src="~/vendor/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            f_cargar_menu();
+            f_remove_loading();
+            //$('#app-divloading').hide();
+
+            //Para los tooltip
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+
+        $('.btn-loading').on('click', function () {
+            f_loading();
+            //$('#app-body').addClass("app-loading")
+            //$('#app-divloading').show();
+        });
+
+        function f_loading() {
+            //$('#app-body').addClass("app-loading")
+            //$('#app-divloading').show();
+            document.getElementById('app-body').classList.add('app-loading');
+            document.getElementById('app-divloading').style.display = 'block';
+        }
+
+        function f_remove_loading() {
+            //$('#app-body').removeClass("app-loading")
+            //$('#app-divloading').hide();
+            document.getElementById('app-body').classList.remove('app-loading');
+            document.getElementById('app-divloading').style.display = 'none';
+        }
+
+        function f_cargar_menu() {
+            fetch('@Url.Action("GetMenu","Menu")')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('app-menu-usuario').innerHTML = data;
+                    // Resaltar la opcion de menu activa
+                    f_resaltar_menu_activo();
+                })
+                .catch(error => console.error('Error al cargar la vista parcial:', error));
+        }
+
+        function f_resaltar_menu_activo() {
+            var currentPath = window.location.pathname.toLowerCase();
+            var currentParts = currentPath.split('/').filter(function(p) { return p !== ''; });
+            var currentController = currentParts[0] || '';
+            var currentAction = currentParts[1] || 'index';
+
+            var menuLinks = document.querySelectorAll('.nav-sidebar .nav-link');
+
+            menuLinks.forEach(function(link) {
+                var href = link.getAttribute('href');
+                if (href && href !== '#') {
+                    var linkPath = href.toLowerCase();
+                    var linkParts = linkPath.split('/').filter(function(p) { return p !== ''; });
+                    var linkController = linkParts[0] || '';
+                    var linkAction = linkParts[1] || 'index';
+
+                    // Resaltar si controlador y accion coinciden
+                    if (currentController && linkController &&
+                        currentController === linkController &&
+                        currentAction === linkAction) {
+                        link.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        function f_alert(tipo, titulo, mensaje) {
+
+            if (tipo == "") {
+                return;
+            }
+
+            tipo = tipo.toLowerCase();
+            tipo = tipo[0];
+
+            switch (tipo) {
+                case "w":
+                    tipo = "warning";
+                    break;
+                case "e":
+                    tipo = "error";
+                    break;
+                case "s":
+                    tipo = "success";
+                    break;
+                case "i":
+                    titulo = "info";
+                    break;
+                case "q":
+                    titulo = "question";
+                    break;
+            }
+
+            if (titulo == "") {
+                switch (tipo) {
+                    case "w":
+                        titulo = "Advertencia";
+                        break;
+                    case "e":
+                        titulo = "Error";
+                        break;
+                    case "s":
+                        titulo = "Success";
+                        break;
+                    case "i":
+                        titulo = "Informacion";
+                        break;
+                    case "q":
+                        titulo = "Pregunta";
+                        break;
+                    default:
+                        titulo = "";
+                        break;
+                }
+            }
+
+            Swal.fire({
+                title: '<div style="font-size:1rem">' + titulo + '</div>',
+                html: '<div style="text-align:center">' + mensaje + '</div>',
+                icon: tipo,
+                confirmButtonColor: '#007bff',
+                confirmButtonText: 'Ok',
+                showCloseButton: true,
+                buttonsStyling: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+        }
+
+        function f_alert_callback(tipo, titulo, mensaje, callback) {
+
+            if (tipo == "") {
+                return;
+            }
+
+            tipo = tipo.toLowerCase();
+            tipo = tipo[0];
+
+            switch (tipo) {
+                case "w":
+                    tipo = "warning";
+                    break;
+                case "e":
+                    tipo = "error";
+                    break;
+                case "s":
+                    tipo = "success";
+                    break;
+                case "i":
+                    titulo = "info";
+                    break;
+                case "q":
+                    titulo = "question";
+                    break;
+            }
+
+            if (titulo == "") {
+                switch (tipo) {
+                    case "warning":
+                        titulo = "Advertencia";
+                        break;
+                    case "error":
+                        titulo = "Error";
+                        break;
+                    case "success":
+                        titulo = "Success";
+                        break;
+                    case "info":
+                        titulo = "Informacion";
+                        break;
+                    case "question":
+                        titulo = "Pregunta";
+                        break;
+                    default:
+                        titulo = "";
+                        break;
+                }
+            }
+
+            Swal.fire({
+                title: '<div style="font-size:1rem">' + titulo + '</div>',
+                html: '<div style="text-align:center; font-size:0.9rem">' + mensaje + '</div>',
+                icon: tipo,
+                confirmButtonColor: '#007bff',
+                confirmButtonText: 'Ok',
+                showCloseButton: true,
+                buttonsStyling: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(callback);;
+        }
+
+        function f_alert_question(tipo, titulo, mensaje) {
+
+            if (tipo == "") {
+                return;
+            }
+
+            tipo = tipo.toLowerCase();
+            tipo = tipo[0];
+
+            switch (tipo) {
+                case "w":
+                    tipo = "warning";
+                    break;
+                case "e":
+                    tipo = "error";
+                    break;
+                case "s":
+                    tipo = "success";
+                    break;
+                case "i":
+                    tipo = "info";
+                    break;
+                case "q":
+                    tipo = "question";
+                    break;
+            }
+
+            if (titulo == "") {
+                switch (tipo) {
+                    case "w":
+                        titulo = "Advertencia";
+                        break;
+                    case "e":
+                        titulo = "Error";
+                        break;
+                    case "s":
+                        titulo = "Success";
+                        break;
+                    case "i":
+                        titulo = "Informacion";
+                        break;
+                    case "q":
+                        titulo = "Pregunta";
+                        break;
+                    default:
+                        titulo = "";
+                        break;
+                }
+            }
+
+            return Swal.fire({
+                title: '<div style="font-size:1rem">' + titulo + '</div>',
+                html: '<div style="text-align:center; font-size:0.9rem">' + mensaje + '</div>',
+                icon: tipo,
+                showCancelButton: true,
+                confirmButtonColor: "#ec6c04",
+                cancelButtonColor: "#6c757d",
+                confirmButtonText: "Si",
+                cancelButtonText: "Cancelar",
+                customClass: {
+                    popup: "swal-popup-custom",
+                    confirmButton: "swal-confirm-button",
+                    cancelButton: "swal-cancel-button"
+                },
+                showClass: {
+                    popup: "animate__animated animate__fadeInDown"
+                },
+                hideClass: {
+                    popup: "animate__animated animate__fadeOutUp"
+                }
+            }).then((result) => {
+                return result.isConfirmed;
+            });
+        }
+
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

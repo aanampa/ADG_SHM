@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Contraseña</title>
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
+
+    <!-- Contenedor Principal -->
+    <div style="background-color: #ffffff; margin: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #5d1665 0%, #8b2472 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">
+                Sistema de Honorarios Médicos
+            </h1>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">
+                Corporativo San Pablo
+            </p>
+        </div>
+
+        <!-- Contenido -->
+        <div style="padding: 40px 30px;">
+
+            <!-- Icono -->
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; width: 70px; height: 70px; background-color: #f8f4f9; border-radius: 50%; line-height: 70px;">
+                    <span style="font-size: 32px;">🔐</span>
+                </div>
+            </div>
+
+            <!-- Título -->
+            <h2 style="color: #5d1665; margin: 0 0 20px 0; text-align: center; font-size: 22px; font-weight: 600;">
+                Recuperación de Contraseña
+            </h2>
+
+            <!-- Saludo -->
+            <p style="margin: 0 0 20px 0; font-size: 16px;">
+                Estimado/a <strong style="color: #5d1665;">{{NOMBRE_USUARIO}}</strong>,
+            </p>
+
+            <!-- Mensaje -->
+            <p style="margin: 0 0 15px 0; color: #555555; font-size: 15px;">
+                Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en el Sistema de Honorarios Médicos.
+            </p>
+
+            <p style="margin: 0 0 25px 0; color: #555555; font-size: 15px;">
+                Para crear una nueva contraseña, haz clic en el siguiente botón:
+            </p>
+
+            <!-- Botón -->
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="{{URL_RECUPERACION}}"
+                   style="display: inline-block;
+                          background: linear-gradient(135deg, #5d1665 0%, #8b2472 100%);
+                          color: #ffffff;
+                          padding: 16px 40px;
+                          text-decoration: none;
+                          border-radius: 8px;
+                          font-weight: 600;
+                          font-size: 16px;
+                          box-shadow: 0 4px 15px rgba(93, 22, 101, 0.3);
+                          transition: all 0.3s ease;">
+                    Restablecer Contraseña
+                </a>
+            </div>
+
+            <!-- Alerta de tiempo -->
+            <div style="background-color: #fff8e6; border-left: 4px solid #f0ad4e; padding: 15px; margin: 25px 0; border-radius: 0 5px 5px 0;">
+                <p style="margin: 0; color: #856404; font-size: 14px;">
+                    <strong>⏰ Importante:</strong> Este enlace expirará en <strong>1 hora</strong> por motivos de seguridad.
+                </p>
+            </div>
+
+            <!-- Mensaje de seguridad -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; color: #666666; font-size: 13px;">
+                    🔒 Si no solicitaste restablecer tu contraseña, puedes ignorar este correo. Tu cuenta permanecerá segura y no se realizarán cambios.
+                </p>
+            </div>
+
+            <!-- Enlace alternativo -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
+                <p style="color: #888888; font-size: 12px; text-align: center; margin: 0 0 10px 0;">
+                    Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:
+                </p>
+                <p style="text-align: center; margin: 0; word-break: break-all;">
+                    <a href="{{URL_RECUPERACION}}" style="color: #5d1665; font-size: 12px; text-decoration: underline;">
+                        {{URL_RECUPERACION}}
+                    </a>
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f8f8; padding: 25px 30px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0 0 10px 0; color: #888888; font-size: 12px;">
+                Este es un correo automático, por favor no respondas a este mensaje.
+            </p>
+            <p style="margin: 0; color: #aaaaaa; font-size: 11px;">
+                © {{ANIO}} Corporativo San Pablo. Todos los derechos reservados.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Pie de página externo -->
+    <div style="text-align: center; padding: 20px;">
+        <p style="margin: 0; color: #999999; font-size: 11px;">
+            Sistema de Honorarios Médicos - Portal Web
+        </p>
+    </div>
+
+</body>
+</html>

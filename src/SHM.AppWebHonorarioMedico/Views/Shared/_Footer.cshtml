@@ -1,0 +1,31 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+@{
+    string companyName = Configuration.GetSection("AppSettings")["CompanyName"] ?? "";
+    string year = Configuration.GetSection("AppSettings")["Year"] ?? "";
+    string version = Configuration.GetSection("AppSettings")["Version"] ?? "";
+
+    string nombreUsuario = "";
+
+    if (User?.Identity?.IsAuthenticated == true)
+    {
+        nombreUsuario = User?.FindFirst("NombreUsuario")?.Value ?? string.Empty;
+    }
+    else
+    {
+        nombreUsuario = "";
+    }
+
+}
+<!-- Main Footer -->
+<footer class="main-footer">
+    <!-- To the right -->
+    <div class="float-right d-none d-sm-inline">
+       Usuario: @nombreUsuario
+    </div>
+    <!-- Default to the left -->
+    <span class="text-xs">Copyright &copy; @year @companyName. All rights reserved. Versión: @version</span>
+</footer>

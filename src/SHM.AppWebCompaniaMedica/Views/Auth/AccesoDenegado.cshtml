@@ -1,0 +1,34 @@
+@{
+    Layout = "_LayoutLogin";
+    ViewData["Title"] = "Acceso Denegado";
+}
+
+<div class="login-container">
+    <div class="login-wrapper" style="justify-content: center;">
+        <div class="login-right" style="max-width: 600px;">
+            <div style="text-align: center; padding: 3rem;">
+                <div style="margin-bottom: 2rem;">
+                    <i class="bi bi-shield-exclamation" style="font-size: 6rem; color: #EF4444;"></i>
+                </div>
+
+                <h2 style="font-size: 2rem; font-weight: 700; color: #0F172A; margin-bottom: 1rem;">
+                    Acceso Denegado
+                </h2>
+
+                <p style="color: #64748B; font-size: 1.1rem; margin-bottom: 2rem;">
+                    No tienes permisos para acceder a esta sección.<br>
+                    Si crees que esto es un error, contacta al administrador del sistema.
+                </p>
+
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a asp-controller="Home" asp-action="Dashboard" class="btn-login" style="max-width: 200px;">
+                        <i class="bi bi-house-door me-2"></i>Ir al Inicio
+                    </a>
+                    <a asp-controller="Auth" asp-action="Logout" class="btn-login" style="max-width: 200px; background: #64748B;">
+                        <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

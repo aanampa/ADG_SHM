@@ -1,0 +1,68 @@
+@model SHM.AppWebHonorarioMedico.Models.SedeListViewModel
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th style="width: 80px;">Codigo</th>
+                <th>Nombre</th>
+                <th style="width: 120px;">RUC</th>
+                <th>Direccion</th>
+                <th style="width: 100px;" class="text-center">Estado</th>
+                <th style="width: 120px;" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Any())
+            {
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.Codigo</td>
+                        <td>@item.Nombre</td>
+                        <td>@item.Ruc</td>
+                        <td>@item.Direccion</td>
+                        <td class="text-center">
+                            @if (item.Activo == 1)
+                            {
+                                <span class="badge badge-success">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-danger">Inactivo</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-info btn-xs"
+                                    onclick="openEditModal('@item.GuidRegistro')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-xs"
+                                    onclick="openDeleteModal('@item.GuidRegistro')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay sedes registradas</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Items.Any())
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Total: @Model.Items.Count registro(s)
+        </small>
+    </div>
+}

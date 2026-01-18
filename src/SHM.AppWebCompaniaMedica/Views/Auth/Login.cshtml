@@ -1,0 +1,245 @@
+@{
+    Layout = "_LayoutLogin";
+    ViewData["Title"] = "Iniciar Sesión";
+}
+
+<div class="login-container">
+    <div class="login-wrapper">
+        <!-- Left Column - Image & Information -->
+        <div class="login-left">
+            <div class="login-left-content">
+                <div class="login-brand" style="text-align: center;">
+                    <p style="font-size: 1.2rem; margin: 0;">Portal de Honorarios Médicos</p>
+                    <p style="font-size: 0.95rem; margin-top: 0.5rem;">Sistema de Gestión de Facturación</p>
+                </div>
+
+                <div class="login-illustration" style="margin: 3rem 0; text-align: center;">
+                    <div style="width: 100%; max-width: 500px; height: 350px; margin: 0 auto; background: rgba(255,255,255,0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.2);">
+                        <i class="bi bi-file-earmark-text-fill" style="font-size: 10rem; color: rgba(255,255,255,0.3);"></i>
+                    </div>
+                </div>
+
+                <div class="login-features" style="margin-top: 2rem;">
+                    <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.5rem; color: white;">
+                        <i class="bi bi-shield-check" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Seguro y Confiable</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Tus datos están protegidos con los más altos estándares de seguridad</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1.5rem; color: white;">
+                        <i class="bi bi-lightning-charge" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Rápido y Eficiente</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Envía tus facturas en segundos con nuestro sistema optimizado</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: start; gap: 1rem; color: white;">
+                        <i class="bi bi-graph-up-arrow" style="font-size: 1.5rem; color: var(--accent); margin-top: 0.25rem; flex-shrink: 0;"></i>
+                        <div>
+                            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">Seguimiento en Tiempo Real</h4>
+                            <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); margin: 0;">Monitorea el estado de tus facturas desde cualquier dispositivo</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Login Form -->
+        <div class="login-right">
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <div style="margin-bottom: 2.5rem;">
+                    <img src="~/images/logo-login.png" alt="Logo" style="max-width: 200px; height: auto; margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 2.25rem; font-weight: 700; color: #0F172A; margin-bottom: 0.5rem;">Bienvenido de nuevo</h2>
+                    <p style="color: #64748B; font-size: 1rem;">Ingresa tus credenciales para acceder al portal</p>
+                </div>
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger" style="border-radius: 12px;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@ViewBag.Error
+                    </div>
+                }
+
+                <form asp-controller="Auth" asp-action="Login" method="post">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Usuario</label>
+                        <input type="text" class="form-control" name="username" placeholder="Ingrese su usuario" required autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Contraseña</label>
+                        <div style="position: relative;">
+                            <input type="password" class="form-control" name="password" id="password" placeholder="Ingrese su contraseña" required autocomplete="current-password">
+                            <button type="button" class="password-toggle-btn" id="togglePassword" style="position: absolute; right: 0; top: 0; height: 100%; width: 3rem; border: none; background: transparent; color: #64748B; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 0 12px 12px 0;">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="text-end mt-2">
+                            <a asp-controller="Auth" asp-action="RecuperarClave" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 500;">
+                                ¿Olvidaste tu contraseña?
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" style="font-weight: 600;">Verificación de Seguridad</label>
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
+                            <canvas id="captchaCanvas" width="280" height="80" style="border-radius: 12px; border: 2px solid rgba(242, 101, 34, 0.2); cursor: not-allowed; user-select: none;"></canvas>
+                            <button type="button" id="refreshCaptcha" style="padding: 0.875rem; border: 2px solid var(--border); background: white; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; color: var(--accent);">
+                                <i class="bi bi-arrow-clockwise" style="font-size: 1.2rem;"></i>
+                            </button>
+                        </div>
+                        <input type="text" class="form-control" name="captchaAnswer" id="captchaAnswer" placeholder="Ingrese los 6 caracteres" required autocomplete="off" maxlength="6" style="text-transform: uppercase;">
+                        <input type="hidden" name="captchaExpected" id="captchaExpected">
+                    </div>
+                    <button type="submit" class="btn-login">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <p style="color: #64748B; font-size: 0.9rem;">
+                        ¿Problemas para acceder?
+                        <a href="#" style="color: var(--accent); text-decoration: none; font-weight: 600;">Contacta soporte</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+
+        // CAPTCHA functionality
+        function generateCaptcha() {
+            const canvas = document.getElementById('captchaCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Generate random 6-character code (alphanumeric, excluding similar characters)
+            const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excluye 0, O, 1, I para evitar confusión
+            let captchaCode = '';
+            for (let i = 0; i < 6; i++) {
+                captchaCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            // Store the code
+            document.getElementById('captchaExpected').value = captchaCode;
+            document.getElementById('captchaAnswer').value = '';
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, 'rgba(242, 101, 34, 0.1)');
+            gradient.addColorStop(0.5, 'rgba(245, 158, 11, 0.1)');
+            gradient.addColorStop(1, 'rgba(242, 101, 34, 0.1)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Add noise lines
+            for (let i = 0; i < 5; i++) {
+                ctx.strokeStyle = `rgba(${Math.random() * 100}, ${Math.random() * 100}, ${Math.random() * 100}, 0.3)`;
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineWidth = 1 + Math.random() * 2;
+                ctx.stroke();
+            }
+
+            // Add noise dots
+            for (let i = 0; i < 50; i++) {
+                ctx.fillStyle = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, ${0.2 + Math.random() * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1 + Math.random() * 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Draw characters
+            const charWidth = canvas.width / 6;
+            for (let i = 0; i < captchaCode.length; i++) {
+                ctx.save();
+
+                // Random position and rotation
+                const x = charWidth * i + charWidth / 2;
+                const y = canvas.height / 2;
+                const angle = (Math.random() - 0.5) * 0.4; // Rotación aleatoria
+
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+
+                // Random font size and style
+                const fontSize = 32 + Math.random() * 8;
+                ctx.font = `bold ${fontSize}px 'JetBrains Mono', monospace`;
+
+                // Random color (shades of orange/purple)
+                const colors = ['#f26522', '#d95519', '#5a1160', '#7a1880', '#F59E0B'];
+                ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+
+                // Draw character with shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(captchaCode[i], 0, 0);
+
+                ctx.restore();
+            }
+
+            // Prevent right-click and text selection
+            canvas.oncontextmenu = function(e) {
+                e.preventDefault();
+                return false;
+            };
+            canvas.onselectstart = function() {
+                return false;
+            };
+            canvas.style.webkitUserSelect = 'none';
+            canvas.style.userSelect = 'none';
+        }
+
+        // Generate initial captcha
+        generateCaptcha();
+
+        // Refresh captcha button
+        document.getElementById('refreshCaptcha').addEventListener('click', function() {
+            this.querySelector('i').style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                this.querySelector('i').style.transform = 'rotate(0deg)';
+            }, 300);
+            generateCaptcha();
+        });
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const userAnswer = document.getElementById('captchaAnswer').value.toUpperCase().trim();
+            const expectedAnswer = document.getElementById('captchaExpected').value;
+
+            if (userAnswer !== expectedAnswer) {
+                e.preventDefault();
+                alert('El código de verificación es incorrecto. Por favor, inténtalo de nuevo.');
+                generateCaptcha();
+            }
+        });
+    </script>
+}

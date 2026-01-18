@@ -1,0 +1,107 @@
+@model SHM.AppWebHonorarioMedico.Models.MenuViewModel
+
+@{
+    // Obtener opciones padre (nivel 1)
+    var modulos = Model.ListaOpciones?.Where(x => x.IdOpcionPadre == 0).OrderBy(x => x.Orden).ToList()
+        ?? new List<SHM.AppDomain.DTOs.Opcion.OpcionMenuDTO>();
+}
+
+<!-- Sidebar Menu -->
+<nav class="mt-2">
+
+    @foreach (var modulo in modulos)
+    {
+        // Obtener opciones hijo (nivel 2)
+        var opciones = Model.ListaOpciones?.Where(x => x.IdOpcionPadre == modulo.IdOpcion).OrderBy(x => x.Orden).ToList()
+            ?? new List<SHM.AppDomain.DTOs.Opcion.OpcionMenuDTO>();
+
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="true">
+
+            <li class="nav-item menu-open">
+
+                <a href="#" class="nav-link">
+                    <i class="nav-icon @(string.IsNullOrEmpty(modulo.Icono) ? "far fa-plus-square" : modulo.Icono)"></i>
+                    <p class="text-xs">
+                        @modulo.Nombre
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+
+                <ul class="nav nav-treeview">
+
+                    @foreach (var opcion in opciones)
+                    {
+                        string controlador = "";
+                        string accion = "Index";
+
+                        if (!string.IsNullOrEmpty(opcion.Url))
+                        {
+                            // Remover slash inicial si existe
+                            var url = opcion.Url.TrimStart('/');
+                            string[] parametros = url.Split("/");
+
+                            if (parametros.Length == 1)
+                            {
+                                controlador = parametros[0];
+                                accion = "Index";
+                            }
+                            else if (parametros.Length >= 2)
+                            {
+                                controlador = parametros[0];
+                                accion = parametros[1];
+                            }
+                        }
+
+                        <li class="nav-item" style="font-size:0.8rem">
+                            <a href="@Url.Action(accion, controlador)" class="nav-link" onclick="f_loading();">
+                                <i class="@(string.IsNullOrEmpty(opcion.Icono) ? "far fa-circle" : opcion.Icono) nav-icon"></i>
+                                <p>
+                                    @opcion.Nombre
+                                </p>
+                            </a>
+                        </li>
+                    }
+
+                </ul>
+
+            </li>
+
+        </ul>
+    }
+
+</nav>
+
+<!-- /.sidebar-menu -->
+
+<div class="dropdown-divider"></div>
+
+<ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+
+    <li class="nav-item" style="font-size:0.8rem">
+        <a href="@Url.Action("MisDatos", "Home")" class="nav-link menu-loading">
+            <i class="nav-icon fas fa-user"></i>
+            <p>
+                Mis Datos
+            </p>
+        </a>
+    </li>
+
+    <li class="nav-item" style="font-size:0.8rem">
+        <a href="@Url.Action("Manuales", "Home")" class="nav-link menu-loading">
+            <i class="nav-icon fas fa-book"></i>
+            <p>
+                Manuales y Videos
+            </p>
+        </a>
+    </li>
+
+    <li class="nav-item" style="font-size:0.8rem">
+        <a href="@Url.Action("Logout", "Auth")" class="nav-link">
+            <i class="nav-icon fas fa-sign-out-alt"></i>
+            <p>
+                Salir
+            </p>
+        </a>
+    </li>
+
+</ul>

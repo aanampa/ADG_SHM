@@ -1,0 +1,73 @@
+@model SHM.AppWebHonorarioMedico.Models.SedeEditViewModel
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-edit mr-2"></i>Editar Sede
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit_GuidRegistro" value="@Model.GuidRegistro" />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edit_Codigo">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_Codigo" class="form-control" maxlength="5" required
+                                       value="@Model.Codigo" />
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="edit_Nombre">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" id="edit_Nombre" class="form-control" maxlength="100" required
+                                       value="@Model.Nombre" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edit_Ruc">RUC</label>
+                                <input type="text" id="edit_Ruc" class="form-control only-numbers" maxlength="20"
+                                       value="@Model.Ruc" />
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="edit_Direccion">Direccion</label>
+                                <input type="text" id="edit_Direccion" class="form-control" maxlength="300"
+                                       value="@Model.Direccion" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="edit_Activo"
+                                           @(Model.Activo == 1 ? "checked" : "") />
+                                    <label class="custom-control-label" for="edit_Activo">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="submitEdit()">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

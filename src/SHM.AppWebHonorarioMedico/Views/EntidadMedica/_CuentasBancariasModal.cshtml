@@ -1,0 +1,38 @@
+@model SHM.AppWebHonorarioMedico.Models.CuentaBancariaListViewModel
+
+<!-- Modal Cuentas Bancarias -->
+<div class="modal fade" id="cuentasBancariasModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-university mr-2"></i>Cuentas Bancarias
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Entidad:</strong> @Model.EntidadRazonSocial
+                </div>
+                <div class="mb-3 text-right">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openCreateCuentaBancariaModal()">
+                        <i class="fas fa-plus mr-1"></i>Nueva Cuenta
+                    </button>
+                </div>
+                <div id="cuentasBancariasListContainer">
+                    @await Html.PartialAsync("_CuentasBancariasListPartial", Model)
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenedor para modales de formularios -->
+<div id="cuentaBancariaFormContainer"></div>

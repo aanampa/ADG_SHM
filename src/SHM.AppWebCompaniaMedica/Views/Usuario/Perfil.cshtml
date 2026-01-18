@@ -1,0 +1,588 @@
+@model SHM.AppWebCompaniaMedica.Models.PerfilViewModel
+@{
+    ViewData["Title"] = "Mi Perfil";
+}
+
+<style>
+    .form-control[readonly] {
+        background-color: var(--bg-main) !important;
+        cursor: not-allowed;
+    }
+</style>
+
+<div class="row">
+    <!-- Perfil Principal -->
+    <div class="col-lg-4 mb-4">
+        <div class="table-card fade-in">
+            <div style="padding: 2rem; text-align: center;">
+                <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 3rem; margin: 0 auto 1.5rem;">
+                    @Model.Iniciales
+                </div>
+                <h3 style="font-weight: 700; margin-bottom: 0.5rem;">@Model.NombreCompleto</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">@Model.Email</p>
+                <span class="badge badge-sent" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                    <i class="bi bi-check-circle-fill me-1"></i>
+                    Cuenta Verificada
+                </span>
+            </div>
+
+            <div style="padding: 0 2rem 2rem;">
+                <hr style="border-color: var(--border); margin: 1.5rem 0;">
+
+                @if (!string.IsNullOrEmpty(Model.RazonSocial))
+                {
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 10px; background: var(--bg-main);">
+                            <i class="bi bi-building" style="font-size: 1.25rem; color: var(--accent);"></i>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Entidad Medica</div>
+                                <div style="font-weight: 600;">@Model.RazonSocial</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Ruc))
+                {
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 10px; background: var(--bg-main);">
+                            <i class="bi bi-fingerprint" style="font-size: 1.25rem; color: var(--accent);"></i>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">RUC</div>
+                                <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.Ruc</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 10px; background: var(--bg-main);">
+                        <i class="bi bi-calendar-check" style="font-size: 1.25rem; color: var(--accent);"></i>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Miembro desde</div>
+                            <div style="font-weight: 600;">@Model.FechaCreacion.ToString("MMMM yyyy", new System.Globalization.CultureInfo("es-PE"))</div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.NumeroDocumento))
+                {
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 10px; background: var(--bg-main);">
+                            <i class="bi bi-person-badge" style="font-size: 1.25rem; color: var(--accent);"></i>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Documento</div>
+                                <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.NumeroDocumento</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Informacion de Contacto de la Entidad -->
+        @if (!string.IsNullOrEmpty(Model.RazonSocial))
+        {
+            <div class="table-card fade-in mt-4">
+                <div class="table-header">
+                    <h3>
+                        <i class="bi bi-building"></i>
+                        Entidad Medica
+                    </h3>
+                </div>
+                <div style="padding: 1.5rem;">
+                    @if (!string.IsNullOrEmpty(Model.DireccionEntidad))
+                    {
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">Direccion</div>
+                                <div style="font-size: 1rem; font-weight: 600;">@Model.DireccionEntidad</div>
+                            </div>
+                            <i class="bi bi-geo-alt" style="font-size: 1.5rem; color: var(--accent); opacity: 0.5;"></i>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.TelefonoEntidad))
+                    {
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">Telefono</div>
+                                <div style="font-size: 1rem; font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.TelefonoEntidad</div>
+                            </div>
+                            <i class="bi bi-telephone" style="font-size: 1.5rem; color: var(--accent); opacity: 0.5;"></i>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.CelularEntidad))
+                    {
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">Celular</div>
+                                <div style="font-size: 1rem; font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.CelularEntidad</div>
+                            </div>
+                            <i class="bi bi-phone" style="font-size: 1.5rem; color: var(--accent); opacity: 0.5;"></i>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Informacion Detallada -->
+    <div class="col-lg-8">
+        <!-- Informacion Personal -->
+        <div class="table-card fade-in mb-4">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-person-fill"></i>
+                    Informacion Personal
+                </h3>
+                <button class="btn-action" id="editPersonalBtn">
+                    <i class="bi bi-pencil"></i>
+                    Editar
+                </button>
+            </div>
+            <div style="padding: 2rem;">
+                <form id="personalForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Nombres <span style="color: #dc3545;">*</span></label>
+                            <input type="text" class="form-control" id="nombres" name="Nombres" value="@Model.Nombres" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Apellido Paterno <span style="color: #dc3545;">*</span></label>
+                            <input type="text" class="form-control" id="apellidoPaterno" name="ApellidoPaterno" value="@Model.ApellidoPaterno" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Apellido Materno <span style="color: #dc3545;">*</span></label>
+                            <input type="text" class="form-control" id="apellidoMaterno" name="ApellidoMaterno" value="@Model.ApellidoMaterno" readonly>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Correo Electronico <span style="color: #dc3545;">*</span></label>
+                            <input type="email" class="form-control" id="email" name="Email" value="@Model.Email" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Numero de Documento</label>
+                            <input type="text" class="form-control" id="numeroDocumento" name="NumeroDocumento" value="@Model.NumeroDocumento" readonly>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Telefono</label>
+                            <input type="tel" class="form-control" id="telefono" name="Telefono" value="@Model.Telefono" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Celular <span style="color: #dc3545;">*</span></label>
+                            <input type="tel" class="form-control" id="celular" name="Celular" value="@Model.Celular" readonly>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Cargo / Puesto</label>
+                            <input type="text" class="form-control" id="cargo" name="Cargo" value="@Model.Cargo" readonly>
+                        </div>
+                    </div>
+
+                    <div class="d-none" id="personalFormButtons">
+                        <hr style="border-color: var(--border); margin: 1.5rem 0;">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-secondary" id="cancelPersonalBtn" style="border-radius: 10px; padding: 0.625rem 1.5rem;">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn-action" style="background: var(--accent); color: white; border: none;">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Informacion Bancaria (Solo Lectura) -->
+        <div class="table-card fade-in mb-4">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-bank"></i>
+                    Informacion Bancaria
+                </h3>
+            </div>
+            <div style="padding: 2rem;">
+                @if (Model.CuentasBancarias.Any())
+                {
+                    @foreach (var cuenta in Model.CuentasBancarias)
+                    {
+                        <div style="background: var(--bg-main); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Banco</label>
+                                    <div style="font-weight: 600; font-size: 1rem;">@(cuenta.NombreBanco ?? "-")</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Moneda</label>
+                                    <div style="font-weight: 600; font-size: 1rem;">
+                                        @if (cuenta.Moneda == "PEN")
+                                        {
+                                            <span>Soles (PEN)</span>
+                                        }
+                                        else if (cuenta.Moneda == "USD")
+                                        {
+                                            <span>Dolares (USD)</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@(cuenta.Moneda ?? "-")</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Cuenta Corriente</label>
+                                    <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 1rem;">@(cuenta.CuentaCorriente ?? "-")</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Cuenta CCI</label>
+                                    <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 1rem;">@(cuenta.CuentaCci ?? "-")</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    <div class="alert" style="background: rgba(37, 150, 190, 0.1); border: 2px solid rgba(37, 150, 190, 0.3); border-radius: 12px; padding: 1rem; margin-bottom: 0;">
+                        <i class="bi bi-info-circle-fill me-2" style="color: var(--accent);"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                            Para modificar la informacion bancaria, contacte al administrador del sistema.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <div style="background: var(--bg-main); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Banco</label>
+                                <div style="font-weight: 600; font-size: 1rem; color: var(--text-secondary);">-</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Moneda</label>
+                                <div style="font-weight: 600; font-size: 1rem; color: var(--text-secondary);">-</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Cuenta Corriente</label>
+                                <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--text-secondary);">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="color: var(--text-secondary); font-size: 0.85rem;">Cuenta CCI</label>
+                                <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--text-secondary);">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert" style="background: rgba(255, 193, 7, 0.1); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; padding: 1rem; margin-bottom: 0;">
+                        <i class="bi bi-exclamation-triangle-fill me-2" style="color: #ffc107;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                            No tiene cuentas bancarias registradas. Contacte al administrador del sistema para agregar su informacion bancaria.
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Cambiar Contrasena -->
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-key-fill"></i>
+                    Seguridad
+                </h3>
+            </div>
+            <div style="padding: 2rem;">
+                <form id="passwordForm">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Contrasena Actual <span style="color: #dc3545;">*</span></label>
+                            <input type="password" class="form-control" id="currentPassword" placeholder="Ingrese su contrasena actual">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nueva Contrasena <span style="color: #dc3545;">*</span></label>
+                            <input type="password" class="form-control" id="newPassword" placeholder="Ingrese nueva contrasena">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirmar Nueva Contrasena <span style="color: #dc3545;">*</span></label>
+                            <input type="password" class="form-control" id="confirmPassword" placeholder="Confirme nueva contrasena">
+                        </div>
+                    </div>
+
+                    <div class="alert" style="background: rgba(37, 150, 190, 0.1); border: 2px solid rgba(37, 150, 190, 0.3); border-radius: 12px; padding: 1rem;">
+                        <i class="bi bi-info-circle-fill me-2" style="color: var(--accent);"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                            La contrasena debe tener al menos 8 caracteres, incluir mayusculas, minusculas y numeros.
+                        </span>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="submit" class="btn-action" style="background: var(--accent); color: white; border: none;">
+                            <i class="bi bi-shield-lock me-1"></i>
+                            Cambiar Contrasena
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Variables para guardar valores originales
+        let originalPersonalValues = {};
+
+        // Guardar valores originales al cargar
+        function saveOriginalPersonalValues() {
+            originalPersonalValues = {
+                nombres: document.getElementById('nombres').value,
+                apellidoPaterno: document.getElementById('apellidoPaterno').value,
+                apellidoMaterno: document.getElementById('apellidoMaterno').value,
+                email: document.getElementById('email').value,
+                numeroDocumento: document.getElementById('numeroDocumento').value,
+                telefono: document.getElementById('telefono').value,
+                celular: document.getElementById('celular').value,
+                cargo: document.getElementById('cargo').value
+            };
+        }
+
+        // Restaurar valores originales
+        function restoreOriginalPersonalValues() {
+            document.getElementById('nombres').value = originalPersonalValues.nombres;
+            document.getElementById('apellidoPaterno').value = originalPersonalValues.apellidoPaterno;
+            document.getElementById('apellidoMaterno').value = originalPersonalValues.apellidoMaterno;
+            document.getElementById('email').value = originalPersonalValues.email;
+            document.getElementById('numeroDocumento').value = originalPersonalValues.numeroDocumento;
+            document.getElementById('telefono').value = originalPersonalValues.telefono;
+            document.getElementById('celular').value = originalPersonalValues.celular;
+            document.getElementById('cargo').value = originalPersonalValues.cargo;
+        }
+
+        // Inicializar valores originales
+        saveOriginalPersonalValues();
+
+        // Editar Informacion Personal
+        document.getElementById('editPersonalBtn').addEventListener('click', function () {
+            saveOriginalPersonalValues();
+            const inputs = document.querySelectorAll('#personalForm input');
+            inputs.forEach(input => input.removeAttribute('readonly'));
+            document.getElementById('personalFormButtons').classList.remove('d-none');
+            this.style.display = 'none';
+        });
+
+        document.getElementById('cancelPersonalBtn').addEventListener('click', function () {
+            restoreOriginalPersonalValues();
+            const inputs = document.querySelectorAll('#personalForm input');
+            inputs.forEach(input => input.setAttribute('readonly', true));
+            document.getElementById('personalFormButtons').classList.add('d-none');
+            document.getElementById('editPersonalBtn').style.display = 'inline-flex';
+        });
+
+        document.getElementById('personalForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const nombres = document.getElementById('nombres').value.trim();
+            const apellidoPaterno = document.getElementById('apellidoPaterno').value.trim();
+            const apellidoMaterno = document.getElementById('apellidoMaterno').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const celular = document.getElementById('celular').value.trim();
+
+            // Validar campos requeridos
+            const errores = [];
+
+            if (!nombres) {
+                errores.push('Nombres es requerido');
+            }
+            if (!apellidoPaterno) {
+                errores.push('Apellido Paterno es requerido');
+            }
+            if (!apellidoMaterno) {
+                errores.push('Apellido Materno es requerido');
+            }
+            if (!email) {
+                errores.push('Correo Electronico es requerido');
+            }
+            if (!celular) {
+                errores.push('Celular es requerido');
+            }
+
+            if (errores.length > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos Requeridos',
+                    html: '<ul style="text-align: left; margin: 0; padding-left: 1.5rem;">' +
+                          errores.map(function(err) { return '<li>' + err + '</li>'; }).join('') +
+                          '</ul>',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#f26522'
+                });
+                return;
+            }
+
+            const data = {
+                nombres: nombres,
+                apellidoPaterno: apellidoPaterno,
+                apellidoMaterno: apellidoMaterno,
+                email: email,
+                numeroDocumento: document.getElementById('numeroDocumento').value.trim(),
+                celular: celular
+            };
+
+            try {
+                const response = await fetch('@Url.Action("ActualizarPerfil", "Usuario")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Exito',
+                        text: result.message,
+                        confirmButtonColor: '#2596be'
+                    });
+
+                    saveOriginalPersonalValues();
+                    const inputs = document.querySelectorAll('#personalForm input');
+                    inputs.forEach(input => input.setAttribute('readonly', true));
+                    document.getElementById('personalFormButtons').classList.add('d-none');
+                    document.getElementById('editPersonalBtn').style.display = 'inline-flex';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message,
+                        confirmButtonColor: '#2596be'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al actualizar los datos',
+                    confirmButtonColor: '#2596be'
+                });
+            }
+        });
+
+        // Cambiar Contrasena
+        document.getElementById('passwordForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validar campos requeridos
+            const errores = [];
+
+            if (!currentPassword) {
+                errores.push('Contrasena Actual es requerida');
+            }
+            if (!newPassword) {
+                errores.push('Nueva Contrasena es requerida');
+            }
+            if (!confirmPassword) {
+                errores.push('Confirmar Nueva Contrasena es requerida');
+            }
+
+            if (errores.length > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos Requeridos',
+                    html: '<ul style="text-align: left; margin: 0; padding-left: 1.5rem;">' +
+                          errores.map(function(err) { return '<li>' + err + '</li>'; }).join('') +
+                          '</ul>',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#f26522'
+                });
+                return;
+            }
+
+            // Validar que las contrasenas coincidan
+            if (newPassword !== confirmPassword) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Validacion',
+                    text: 'Las contrasenas no coinciden',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+
+            // Validar longitud minima
+            if (newPassword.length < 8) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Validacion',
+                    text: 'La contrasena debe tener al menos 8 caracteres',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+
+            const data = {
+                passwordActual: currentPassword,
+                passwordNueva: newPassword,
+                confirmarPassword: confirmPassword
+            };
+
+            try {
+                const response = await fetch('@Url.Action("CambiarPassword", "Usuario")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Exito',
+                        text: result.message,
+                        confirmButtonColor: '#2596be'
+                    });
+                    this.reset();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message,
+                        confirmButtonColor: '#2596be'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al cambiar la contrasena',
+                    confirmButtonColor: '#2596be'
+                });
+            }
+        });
+    </script>
+}
