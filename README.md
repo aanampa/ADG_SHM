@@ -109,8 +109,12 @@ Portal web para entidades medicas externas.
 ### 1. Clonar el repositorio
 
 ```bash
-git clone <url-del-repositorio>
-cd SHM-HonorarioMedico
+git clone -b <rama>  https://github.com/aanampa/ADG_SHM.git
+
+Ejemplo:
+git clone -b antonio_v1 https://github.com/aanampa/ADG_SHM.git
+
+cd ADG_SHM
 ```
 
 ### 2. Restaurar dependencias
@@ -132,6 +136,29 @@ dotnet build SHM.HonorarioMedico.sln
 
 ```bash
 # Desde la raiz del proyecto
+docker-compose up -d
+```
+
+Esperar ~2 minutos la primera vez. Verificar con:
+
+```bash
+docker-compose logs -f
+```
+
+Cuando aparezca `DATABASE IS READY TO USE!` está lista.
+
+## Detener
+
+```bash
+docker-compose down
+```
+
+Los datos se mantienen.
+
+## Reiniciar con datos limpios
+
+```bash
+docker-compose down -v
 docker-compose up -d
 ```
 
