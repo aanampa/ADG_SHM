@@ -64,4 +64,12 @@ public interface IProduccionRepository
     /// Verifica si existe una produccion con el identificador especificado.
     /// </summary>
     Task<bool> ExistsAsync(int id);
+
+    /// <summary>
+    /// Verifica si existe una produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-19</created>
+    /// </summary>
+    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using SHM.AppDomain.DTOs.Archivo;
@@ -7,6 +8,7 @@ using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebCompaniaMedica.Models;
+using SHM.AppWebCompaniaMedica.Services;
 
 namespace SHM.AppWebCompaniaMedica.Controllers;
 
@@ -19,6 +21,7 @@ public class FacturasController : BaseController
     private readonly IBitacoraService _bitacoraService;
     private readonly ILogger<FacturasController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly FacturaXmlParserService _facturaXmlParserService;
 
     public FacturasController(
         IProduccionService produccionService,
@@ -27,7 +30,8 @@ public class FacturasController : BaseController
         IArchivoComprobanteService archivoComprobanteService,
         IBitacoraService bitacoraService,
         ILogger<FacturasController> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        FacturaXmlParserService facturaXmlParserService)
     {
         _produccionService = produccionService;
         _sedeService = sedeService;
@@ -36,6 +40,7 @@ public class FacturasController : BaseController
         _bitacoraService = bitacoraService;
         _logger = logger;
         _configuration = configuration;
+        _facturaXmlParserService = facturaXmlParserService;
     }
 
     // GET: Facturas/Pendientes
@@ -45,8 +50,20 @@ public class FacturasController : BaseController
 
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                userId = 0;
+            }
+
+            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
+            if (!int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica))
+            {
+                idEntidadMedica = 0;
+            }
+
             // Obtener todas las producciones (en produccion filtrar por IdEntidadMedica del usuario)
-            var producciones = await _produccionService.GetAllProduccionesAsync();
+            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
 
             // Filtrar solo las pendientes (Estado = "PENDIENTE" o sin comprobante)
             var pendientes = producciones
@@ -493,6 +510,27 @@ public class FacturasController : BaseController
                 await archivoCdr.CopyToAsync(stream);
             }
             archivosGuardados.Add(cdrPath);
+
+            // Parsear XML y guardar datos en archivo JSON
+            var jsonFileName = $"{serie}-{numero}.json";
+            var jsonPath = Path.Combine(uploadPath, jsonFileName);
+            try
+            {
+                var facturaData = _facturaXmlParserService.ParseFacturaXml(xmlPath);
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+                var jsonContent = JsonSerializer.Serialize(facturaData, jsonOptions);
+                await System.IO.File.WriteAllTextAsync(jsonPath, jsonContent);
+                archivosGuardados.Add(jsonPath);
+                _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
+            }
+            catch (Exception xmlEx)
+            {
+                _logger.LogWarning(xmlEx, "No se pudo parsear el XML de factura para extraer datos. Continuando sin JSON.");
+            }
 
             // Iniciar transacción para operaciones de base de datos
             using var transactionScope = new TransactionScope(

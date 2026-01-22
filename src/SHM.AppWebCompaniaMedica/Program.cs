@@ -7,6 +7,7 @@ using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
 using SHM.AppInfrastructure.Repositories;
+using SHM.AppWebCompaniaMedica.Services;
 
 // Configurar NLog
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
@@ -73,6 +74,9 @@ try
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
     builder.Services.AddScoped<IEmailService, EmailService>();
+
+    // Registrar servicios de la aplicacion web
+    builder.Services.AddScoped<FacturaXmlParserService>();
 
     var app = builder.Build();
 
