@@ -7,6 +7,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo GetActivosByCodigoTablaAsync</modified>
 /// </summary>
 public interface ITablaDetalleRepository
 {
@@ -59,4 +60,11 @@ public interface ITablaDetalleRepository
     /// Verifica si existe un detalle de tabla con el identificador especificado.
     /// </summary>
     Task<bool> ExistsAsync(int id);
+
+    /// <summary>
+    /// Obtiene los detalles activos de una tabla por su codigo de tabla.
+    /// </summary>
+    /// <param name="codigoTabla">Codigo de la tabla maestra</param>
+    /// <returns>Lista de detalles activos</returns>
+    Task<IEnumerable<TablaDetalle>> GetActivosByCodigoTablaAsync(string codigoTabla);
 }

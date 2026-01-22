@@ -12,6 +12,7 @@ namespace SHM.AppInfrastructure.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo GetActivosByCodigoTablaAsync</modified>
 /// </summary>
 public class TablaDetalleRepository : ITablaDetalleRepository
 {
@@ -290,5 +291,33 @@ public class TablaDetalleRepository : ITablaDetalleRepository
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Id = id });
 
         return count > 0;
+    }
+
+    /// <summary>
+    /// Obtiene los detalles activos de una tabla por su codigo de tabla.
+    /// </summary>
+    public async Task<IEnumerable<TablaDetalle>> GetActivosByCodigoTablaAsync(string codigoTabla)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                td.ID_TABLA_DETALLE as IdTablaDetalle,
+                td.ID_TABLA as IdTabla,
+                td.CODIGO as Codigo,
+                td.DESCRIPCION as Descripcion,
+                td.ORDEN as Orden,
+                td.ACTIVO as Activo,
+                td.GUID_REGISTRO as GuidRegistro,
+                td.ID_CREADOR as IdCreador,
+                td.FECHA_CREACION as FechaCreacion,
+                td.ID_MODIFICADOR as IdModificador,
+                td.FECHA_MODIFICACION as FechaModificacion
+            FROM SHM_TABLA_DETALLE td
+            INNER JOIN SHM_TABLA t ON t.ID_TABLA = td.ID_TABLA
+            WHERE t.CODIGO = :CodigoTabla AND td.ACTIVO = 1 AND t.ACTIVO = 1
+            ORDER BY td.ORDEN, td.ID_TABLA_DETALLE";
+
+        return await connection.QueryAsync<TablaDetalle>(sql, new { CodigoTabla = codigoTabla });
     }
 }

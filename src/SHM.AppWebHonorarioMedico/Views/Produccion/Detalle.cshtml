@@ -1,0 +1,637 @@
+@model SHM.AppDomain.DTOs.Produccion.ProduccionListaResponseDto
+@{
+    ViewData["Title"] = "Detalle de Produccion";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 titulo-formulario">
+                            <i class="fas fa-file-medical mr-2"></i>Detalle de Produccion
+                        </h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <!-- Breadcrumb y Volver -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <ol class="breadcrumb m-0 bg-transparent p-0">
+                        <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                        <li class="breadcrumb-item"><a href="@Url.Action("Index", "Produccion")">Produccion</a></li>
+                        <li class="breadcrumb-item active">Detalle</li>
+                    </ol>
+                    <a href="@Url.Action("Index", "Produccion")" class="text-secondary text-decoration-none d-inline-flex align-items-center" title="Volver a la lista">
+                        <i class="fas fa-arrow-circle-left" style="font-size: 1.3rem;"></i>
+                        <span class="ml-2">Volver</span>
+                    </a>
+                </div>
+
+                <!-- Datos de Produccion -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-info-circle mr-2"></i>Datos de Produccion
+                        </h3>
+                        <div class="card-tools">
+                            @{
+                                var badgeClass = Model.Estado switch
+                                {
+                                    "PENDIENTE" => "badge-warning",
+                                    "ENVIADA" => "badge-info",
+                                    "ACEPTADA" => "badge-primary",
+                                    "LIQUIDACION" => "badge-secondary",
+                                    "PAGADO" => "badge-success",
+                                    "RECHAZADA" => "badge-danger",
+                                    _ => "badge-secondary"
+                                };
+                            }
+                            <span class="badge @badgeClass" style="font-size: 0.9rem;">@(Model.DesEstado ?? Model.Estado ?? "-")</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Produccion</label>
+                                    <input type="text" class="form-control" value="@(Model.CodigoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tipo de Produccion</label>
+                                    <input type="text" class="form-control" value="@(Model.DesTipoProduccion ?? Model.TipoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Periodo</label>
+                                    <input type="text" class="form-control" value="@FormatPeriodo(Model.Periodo)" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Descripcion</label>
+                                    <input type="text" class="form-control" value="@(Model.Descripcion ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Rubro</label>
+                                    <input type="text" class="form-control" value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tipo Medico</label>
+                                    <input type="text" class="form-control" value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Sede</label>
+                                    <input type="text" class="form-control" value="@(Model.NombreSede ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Fecha Creacion</label>
+                                    <input type="text" class="form-control" value="@(Model.FechaCreacion?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entidad Medica -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-building mr-2"></i>Entidad Medica
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>RUC</label>
+                                    <input type="text" class="form-control" value="@(Model.Ruc ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Razon Social</label>
+                                    <input type="text" class="form-control" value="@(Model.RazonSocial ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tipo Entidad</label>
+                                    <input type="text" class="form-control" value="@(Model.DesTipoEntidadMedica ?? Model.TipoEntidadMedica ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Montos -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-calculator mr-2"></i>Montos
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Consumo</label>
+                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoConsumo?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Descuento</label>
+                                    <input type="text" class="form-control text-right text-danger" value="S/ @(Model.MtoDescuento?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Sub Total</label>
+                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoSubtotal?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>IGV</label>
+                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Imp. Renta</label>
+                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoRenta?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Total</label>
+                                    <input type="text" class="form-control text-right font-weight-bold text-primary" value="S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comprobante -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-file-invoice mr-2"></i>Comprobante
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tipo Comprobante</label>
+                                    <input type="text" class="form-control" value="@(Model.TipoComprobante ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Serie - Numero</label>
+                                    <input type="text" class="form-control" value="@(Model.ComprobanteFactura ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Fecha Emision</label>
+                                    <input type="text" class="form-control" value="@(Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Fecha Limite</label>
+                                    <input type="text" class="form-control" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Concepto</label>
+                                    <input type="text" class="form-control" value="@(Model.Concepto ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Glosa</label>
+                                    <input type="text" class="form-control" value="@(Model.Glosa ?? "-")" readonly style="background-color: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="button" class="btn btn-success" onclick="solicitarFactura()">
+                                    <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal Solicitar Factura -->
+<div class="modal fade" id="modalSolicitarFactura" tabindex="-1" role="dialog" aria-labelledby="modalSolicitarFacturaLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalSolicitarFacturaLabel">
+                    <i class="fas fa-file-invoice-dollar mr-2"></i>Solicitar Factura
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formSolicitarFactura">
+                    <input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
+
+                    <!-- Opciones rapidas -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="mb-2">Seleccione un plazo sugerido:</label>
+                            <div class="btn-group d-flex" role="group" id="btnGroupPlazo">
+                                <button type="button" class="btn btn-outline-primary btn-plazo" data-dias="1">
+                                    <i class="fas fa-clock mr-1"></i>1 Dia
+                                    <small class="d-block" id="lblFecha1Dia"></small>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-plazo" data-dias="2">
+                                    <i class="fas fa-clock mr-1"></i>2 Dias
+                                    <small class="d-block" id="lblFecha2Dias"></small>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-plazo" data-dias="3">
+                                    <i class="fas fa-clock mr-1"></i>3 Dias
+                                    <small class="d-block" id="lblFecha3Dias"></small>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-plazo" data-dias="0">
+                                    <i class="fas fa-edit mr-1"></i>Manual
+                                    <small class="d-block">Personalizado</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos de fecha y hora (inicialmente readonly) -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Fecha Limite <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="txtFechaLimite" required readonly style="background-color: #e9ecef;" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Hora Limite <span class="text-danger">*</span></label>
+                                <input type="time" class="form-control" id="txtHoraLimite" required readonly style="background-color: #e9ecef;" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <span id="msgInfoPlazo">Seleccione una opcion de plazo para establecer la fecha y hora limite.</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="enviarSolicitudFactura()">
+                    <i class="fas fa-paper-plane mr-1"></i>Enviar Solicitud
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Calcular fecha agregando dias laborables (Lunes a Viernes)
+        function agregarDiasLaborables(fecha, dias) {
+            var resultado = new Date(fecha);
+            var diasAgregados = 0;
+
+            while (diasAgregados < dias) {
+                resultado.setDate(resultado.getDate() + 1);
+                var diaSemana = resultado.getDay();
+                // 0 = Domingo, 6 = Sabado
+                if (diaSemana !== 0 && diaSemana !== 6) {
+                    diasAgregados++;
+                }
+            }
+
+            return resultado;
+        }
+
+        // Formatear fecha para mostrar (dd/MM/yyyy)
+        function formatearFechaMostrar(fecha) {
+            var dia = String(fecha.getDate()).padStart(2, '0');
+            var mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            var anio = fecha.getFullYear();
+            return dia + '/' + mes + '/' + anio;
+        }
+
+        // Formatear fecha para input date (yyyy-MM-dd)
+        function formatearFechaInput(fecha) {
+            var dia = String(fecha.getDate()).padStart(2, '0');
+            var mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            var anio = fecha.getFullYear();
+            return anio + '-' + mes + '-' + dia;
+        }
+
+        // Obtener nombre del dia
+        function obtenerNombreDia(fecha) {
+            var dias = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+            return dias[fecha.getDay()];
+        }
+
+        // Calcular y mostrar las fechas sugeridas
+        function calcularFechasSugeridas() {
+            var hoy = new Date();
+
+            for (var i = 1; i <= 3; i++) {
+                var fechaSugerida = agregarDiasLaborables(hoy, i);
+                var nombreDia = obtenerNombreDia(fechaSugerida);
+                var fechaFormateada = formatearFechaMostrar(fechaSugerida);
+                var labelId = i === 1 ? 'lblFecha1Dia' : 'lblFecha' + i + 'Dias';
+                document.getElementById(labelId).textContent = nombreDia + ' ' + fechaFormateada + ' 18:00';
+            }
+        }
+
+        // Actualizar mensaje en modo manual
+        function actualizarMensajeManual() {
+            var txtFecha = document.getElementById('txtFechaLimite');
+            var txtHora = document.getElementById('txtHoraLimite');
+            var msgInfo = document.getElementById('msgInfoPlazo');
+
+            var fecha = txtFecha.value;
+            var hora = txtHora.value;
+
+            if (fecha && hora) {
+                var fechaObj = new Date(fecha + 'T' + hora);
+                var nombreDia = obtenerNombreDia(fechaObj);
+                var fechaFormateada = formatearFechaMostrar(fechaObj);
+                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las ' + hora + ' horas.';
+            } else if (fecha) {
+                var fechaObj = new Date(fecha + 'T00:00:00');
+                var nombreDia = obtenerNombreDia(fechaObj);
+                var fechaFormateada = formatearFechaMostrar(fechaObj);
+                msgInfo.textContent = 'Fecha seleccionada: ' + nombreDia + ' ' + fechaFormateada + '. Ingrese la hora limite.';
+            } else if (hora) {
+                msgInfo.textContent = 'Hora seleccionada: ' + hora + '. Ingrese la fecha limite.';
+            } else {
+                msgInfo.textContent = 'Ingrese manualmente la fecha y hora limite para la entrega de la factura.';
+            }
+        }
+
+        // Seleccionar plazo
+        function seleccionarPlazo(dias) {
+            var botones = document.querySelectorAll('.btn-plazo');
+            botones.forEach(function(btn) {
+                btn.classList.remove('active', 'btn-primary');
+                btn.classList.add('btn-outline-primary');
+                if (btn.dataset.dias === '0') {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-outline-secondary');
+                }
+            });
+
+            var botonSeleccionado = document.querySelector('.btn-plazo[data-dias="' + dias + '"]');
+            if (botonSeleccionado) {
+                botonSeleccionado.classList.remove('btn-outline-primary', 'btn-outline-secondary');
+                botonSeleccionado.classList.add('active', 'btn-primary');
+            }
+
+            var txtFecha = document.getElementById('txtFechaLimite');
+            var txtHora = document.getElementById('txtHoraLimite');
+            var msgInfo = document.getElementById('msgInfoPlazo');
+
+            if (dias === 0) {
+                // Modo manual
+                txtFecha.readOnly = false;
+                txtHora.readOnly = false;
+                txtFecha.style.backgroundColor = '';
+                txtHora.style.backgroundColor = '';
+                txtFecha.value = '';
+                txtHora.value = '';
+                actualizarMensajeManual();
+            } else {
+                // Modo automatico
+                var hoy = new Date();
+                var fechaSugerida = agregarDiasLaborables(hoy, dias);
+
+                txtFecha.value = formatearFechaInput(fechaSugerida);
+                txtHora.value = '18:00';
+                txtFecha.readOnly = true;
+                txtHora.readOnly = true;
+                txtFecha.style.backgroundColor = '#e9ecef';
+                txtHora.style.backgroundColor = '#e9ecef';
+
+                var nombreDia = obtenerNombreDia(fechaSugerida);
+                var fechaFormateada = formatearFechaMostrar(fechaSugerida);
+                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las 18:00 horas (' + dias + ' dia' + (dias > 1 ? 's' : '') + ' laborable' + (dias > 1 ? 's' : '') + ').';
+            }
+        }
+
+        function solicitarFactura() {
+            // Limpiar campos del modal
+            document.getElementById('txtFechaLimite').value = '';
+            document.getElementById('txtHoraLimite').value = '';
+
+            // Resetear botones
+            var botones = document.querySelectorAll('.btn-plazo');
+            botones.forEach(function(btn) {
+                btn.classList.remove('active', 'btn-primary');
+                if (btn.dataset.dias === '0') {
+                    btn.classList.add('btn-outline-secondary');
+                } else {
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
+
+            // Resetear campos a readonly
+            var txtFecha = document.getElementById('txtFechaLimite');
+            var txtHora = document.getElementById('txtHoraLimite');
+            txtFecha.readOnly = true;
+            txtHora.readOnly = true;
+            txtFecha.style.backgroundColor = '#e9ecef';
+            txtHora.style.backgroundColor = '#e9ecef';
+
+            // Resetear mensaje
+            document.getElementById('msgInfoPlazo').textContent = 'Seleccione una opcion de plazo para establecer la fecha y hora limite.';
+
+            // Calcular fechas sugeridas
+            calcularFechasSugeridas();
+
+            // Abrir modal
+            $('#modalSolicitarFactura').modal('show');
+        }
+
+        // Evento click para botones de plazo y eventos de cambio en inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.btn-plazo').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var dias = parseInt(this.dataset.dias);
+                    seleccionarPlazo(dias);
+                });
+            });
+
+            // Eventos para actualizar mensaje en modo manual
+            document.getElementById('txtFechaLimite').addEventListener('change', function() {
+                var botonManual = document.querySelector('.btn-plazo[data-dias="0"].active');
+                if (botonManual) {
+                    actualizarMensajeManual();
+                }
+            });
+
+            document.getElementById('txtHoraLimite').addEventListener('change', function() {
+                var botonManual = document.querySelector('.btn-plazo[data-dias="0"].active');
+                if (botonManual) {
+                    actualizarMensajeManual();
+                }
+            });
+        });
+
+        function enviarSolicitudFactura() {
+            var fecha = document.getElementById('txtFechaLimite').value;
+            var hora = document.getElementById('txtHoraLimite').value;
+            var guid = document.getElementById('hdnGuidProduccion').value;
+
+            // Verificar si se selecciono alguna opcion
+            var botonActivo = document.querySelector('.btn-plazo.active');
+
+            // Validar campos requeridos
+            var errores = [];
+            if (!botonActivo) {
+                errores.push('Debe seleccionar una opcion de plazo');
+            }
+            if (!fecha) errores.push('La fecha limite es requerida');
+            if (!hora) errores.push('La hora limite es requerida');
+
+            // Validar que la fecha y hora limite no sea menor a la actual
+            if (fecha && hora) {
+                var fechaHoraLimite = new Date(fecha + 'T' + hora);
+                var ahora = new Date();
+
+                if (fechaHoraLimite <= ahora) {
+                    errores.push('La fecha y hora limite debe ser mayor a la fecha y hora actual');
+                }
+            }
+
+            if (errores.length > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos requeridos',
+                    html: '<ul style="text-align:left;">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+                    confirmButtonColor: '#f26522'
+                });
+                return;
+            }
+
+            // Confirmar antes de enviar
+            Swal.fire({
+                icon: 'question',
+                title: 'Confirmar Solicitud',
+                html: '¿Desea enviar la solicitud de factura con fecha limite <strong>' +
+                      formatearFecha(fecha) + '</strong> a las <strong>' + hora + '</strong>?',
+                showCancelButton: true,
+                confirmButtonColor: '#007bff',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Si, Enviar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Llamar al endpoint del API
+                    fetch('@Url.Action("SolicitarFactura", "Produccion")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            guidRegistro: guid,
+                            fecha: fecha,
+                            hora: hora
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            $('#modalSolicitarFactura').modal('hide');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Exito',
+                                text: data.message,
+                                confirmButtonColor: '#28a745'
+                            }).then(() => {
+                                // Recargar la pagina para reflejar el nuevo estado
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message,
+                                confirmButtonColor: '#dc3545'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error al procesar la solicitud',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    });
+                }
+            });
+        }
+
+        function formatearFecha(fecha) {
+            if (!fecha) return '';
+            var partes = fecha.split('-');
+            return partes[2] + '/' + partes[1] + '/' + partes[0];
+        }
+    </script>
+}
+
+@functions {
+    string FormatPeriodo(string? periodo)
+    {
+        if (string.IsNullOrEmpty(periodo)) return "-";
+        if (DateTime.TryParse(periodo, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out DateTime fecha))
+        {
+            return fecha.ToString("dd/MM/yyyy");
+        }
+        return periodo;
+    }
+}

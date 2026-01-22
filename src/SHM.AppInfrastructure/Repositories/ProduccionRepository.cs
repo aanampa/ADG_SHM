@@ -1,5 +1,6 @@
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppInfrastructure.Configurations;
@@ -12,6 +13,7 @@ namespace SHM.AppInfrastructure.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// </summary>
 public class ProduccionRepository : IProduccionRepository
 {
@@ -42,7 +44,7 @@ public class ProduccionRepository : IProduccionRepository
         MTO_CONSUMO as MtoConsumo,
         MTO_DESCUENTO as MtoDescuento,
         MTO_SUBTOTAL as MtoSubtotal,
-        MTP_RENTA as MtoRenta,
+        MTO_RENTA as MtoRenta,
         MTO_IGV as MtoIgv,
         MTO_TOTAL as MtoTotal,
         TIPO_COMPROBANTE as TipoComprobante,
@@ -353,5 +355,192 @@ public class ProduccionRepository : IProduccionRepository
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Id = id });
 
         return count > 0;
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-20</created>
+    /// </summary>
+    public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        string? estado, int pageNumber, int pageSize)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var whereClause = "WHERE p.ACTIVO = 1";
+        if (!string.IsNullOrEmpty(estado))
+        {
+            whereClause += " AND p.ESTADO = :Estado";
+        }
+
+        // Query para obtener el total de registros
+        var countSql = $@"
+            SELECT COUNT(1)
+            FROM SHM_PRODUCCION p
+            {whereClause}";
+
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Estado = estado });
+
+        // Query principal con paginacion
+        var offset = (pageNumber - 1) * pageSize;
+        var sql = $@"
+            SELECT
+                p.ID_PRODUCCION AS IdProduccion,
+                p.GUID_REGISTRO AS GuidRegistro,
+                p.ID_SEDE AS IdSede,
+                p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION AS CodigoProduccion,
+                p.TIPO_PRODUCCION AS TipoProduccion,
+                tp.DESCRIPCION AS DesTipoProduccion,
+                p.TIPO_MEDICO AS TipoMedico,
+                tm.DESCRIPCION AS DesTipoMedico,
+                p.TIPO_RUBRO AS TipoRubro,
+                tr.DESCRIPCION AS DesTipoRubro,
+                p.ESTADO AS Estado,
+                ep.DESCRIPCION AS DesEstado,
+                p.DESCRIPCION AS Descripcion,
+                p.PERIODO AS Periodo,
+                p.ESTADO_PRODUCCION AS EstadoProduccion,
+                p.MTO_CONSUMO AS MtoConsumo,
+                p.MTO_DESCUENTO AS MtoDescuento,
+                p.MTO_SUBTOTAL AS MtoSubtotal,
+                p.MTO_RENTA AS MtoRenta,
+                p.MTO_IGV AS MtoIgv,
+                p.MTO_TOTAL AS MtoTotal,
+                p.TIPO_COMPROBANTE AS TipoComprobante,
+                p.CONCEPTO AS Concepto,
+                p.FECHA_LIMITE AS FechaLimite,
+                p.SERIE AS Serie,
+                p.NUMERO AS Numero,
+                p.FECHA_EMISION AS FechaEmision,
+                p.GLOSA AS Glosa,
+                p.ESTADO_COMPROBANTE AS EstadoComprobante,
+                p.ACTIVO AS Activo,
+                p.ID_CREADOR AS IdCreador,
+                p.FECHA_CREACION AS FechaCreacion,
+                p.ID_MODIFICADOR AS IdModificador,
+                p.FECHA_MODIFICACION AS FechaModificacion,
+                s.CODIGO AS CodigoSede,
+                s.NOMBRE AS NombreSede,
+                em.RUC AS Ruc,
+                em.RAZON_SOCIAL AS RazonSocial,
+                em.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
+                tem.DESCRIPCION AS DesTipoEntidadMedica
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
+            LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
+            LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
+            {whereClause}
+            ORDER BY p.CODIGO_PRODUCCION DESC
+            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+
+        var items = await connection.QueryAsync<ProduccionListaResponseDto>(sql, new
+        {
+            Estado = estado,
+            Offset = offset,
+            PageSize = pageSize
+        });
+
+        return (items, totalCount);
+    }
+
+    /// <summary>
+    /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-21</created>
+    /// </summary>
+    public async Task<ProduccionListaResponseDto?> GetByGuidWithDetailsAsync(string guidRegistro)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                p.ID_PRODUCCION AS IdProduccion,
+                p.GUID_REGISTRO AS GuidRegistro,
+                p.ID_SEDE AS IdSede,
+                p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION AS CodigoProduccion,
+                p.TIPO_PRODUCCION AS TipoProduccion,
+                tp.DESCRIPCION AS DesTipoProduccion,
+                p.TIPO_MEDICO AS TipoMedico,
+                tm.DESCRIPCION AS DesTipoMedico,
+                p.TIPO_RUBRO AS TipoRubro,
+                tr.DESCRIPCION AS DesTipoRubro,
+                p.ESTADO AS Estado,
+                ep.DESCRIPCION AS DesEstado,
+                p.DESCRIPCION AS Descripcion,
+                p.PERIODO AS Periodo,
+                p.ESTADO_PRODUCCION AS EstadoProduccion,
+                p.MTO_CONSUMO AS MtoConsumo,
+                p.MTO_DESCUENTO AS MtoDescuento,
+                p.MTO_SUBTOTAL AS MtoSubtotal,
+                p.MTO_RENTA AS MtoRenta,
+                p.MTO_IGV AS MtoIgv,
+                p.MTO_TOTAL AS MtoTotal,
+                p.TIPO_COMPROBANTE AS TipoComprobante,
+                p.CONCEPTO AS Concepto,
+                p.FECHA_LIMITE AS FechaLimite,
+                p.SERIE AS Serie,
+                p.NUMERO AS Numero,
+                p.FECHA_EMISION AS FechaEmision,
+                p.GLOSA AS Glosa,
+                p.ESTADO_COMPROBANTE AS EstadoComprobante,
+                p.ACTIVO AS Activo,
+                p.ID_CREADOR AS IdCreador,
+                p.FECHA_CREACION AS FechaCreacion,
+                p.ID_MODIFICADOR AS IdModificador,
+                p.FECHA_MODIFICACION AS FechaModificacion,
+                s.CODIGO AS CodigoSede,
+                s.NOMBRE AS NombreSede,
+                em.RUC AS Ruc,
+                em.RAZON_SOCIAL AS RazonSocial,
+                em.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
+                tem.DESCRIPCION AS DesTipoEntidadMedica
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
+            LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
+            LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
+            WHERE p.GUID_REGISTRO = :GuidRegistro";
+
+        return await connection.QueryFirstOrDefaultAsync<ProduccionListaResponseDto>(sql, new { GuidRegistro = guidRegistro });
+    }
+
+    /// <summary>
+    /// Actualiza la fecha limite y estado de una produccion para solicitud de factura.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-21</created>
+    /// </summary>
+    public async Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET FECHA_LIMITE = :FechaLimite,
+                ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
+            FechaLimite = fechaLimite,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
     }
 }
