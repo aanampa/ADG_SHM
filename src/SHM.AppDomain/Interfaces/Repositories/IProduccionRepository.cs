@@ -68,6 +68,14 @@ public interface IProduccionRepository
     Task<bool> ExistsAsync(int id);
 
     /// <summary>
+    /// Verifica si existe una produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-19</created>
+    /// </summary>
+    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
+
+    /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
     /// </summary>
     /// <param name="estado">Filtro por estado del proceso (opcional)</param>
@@ -93,4 +101,5 @@ public interface IProduccionRepository
     /// <param name="idModificador">ID del usuario que realiza la modificacion</param>
     /// <returns>True si se actualizo correctamente</returns>
     Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador);
+
 }
