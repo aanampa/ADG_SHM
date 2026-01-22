@@ -81,6 +81,8 @@ public class AuthController : Controller
 
             if (usuario.IdEntidadMedica.HasValue)
                 claims.Add(new Claim("IdEntidadMedica", usuario.IdEntidadMedica.Value.ToString()));
+            else
+                claims.Add(new Claim("IdEntidadMedica", "0"));
 
             if (usuario.IdRol.HasValue)
                 claims.Add(new Claim(ClaimTypes.Role, usuario.IdRol.Value.ToString()));

@@ -1,0 +1,77 @@
+{
+  "datosGenerales": {
+    "numeroFactura": "F005-192214",
+    "fechaEmision": "2025-12-22",
+    "horaEmision": "11:33:03",
+    "tipoDocumento": "Factura",
+    "codigoTipoDocumento": "01",
+    "moneda": "PEN",
+    "totalEnLetras": "Son  OCHOCIENTOS CINCUENTA Y SIETE CON_91/100 SOLES"
+  },
+  "emisor": {
+    "ruc": "20100072751",
+    "razonSocial": "Empresa Peruana de Servicios Editoriales S.A. - EDITORA PERU",
+    "direccion": "",
+    "ubicacion": "",
+    "departamento": "",
+    "provincia": "",
+    "distrito": "",
+    "ubigeo": ""
+  },
+  "cliente": {
+    "tipoDocumento": "6",
+    "numeroDocumento": "20217267618",
+    "razonSocial": "TRIBUNAL CONSTITUCIONAL",
+    "direccion": ""
+  },
+  "detallesPago": {
+    "formaPago": "Credito",
+    "montoTotal": 754.91,
+    "moneda": "PEN",
+    "cuotas": [
+      {
+        "numeroCuota": "Cuota001",
+        "monto": 754.91,
+        "fechaVencimiento": "2026-01-21"
+      }
+    ]
+  },
+  "impuestos": {
+    "igv": 130.87,
+    "porcentajeIgv": 0,
+    "baseImponible": 727.04,
+    "totalGravado": 727.04,
+    "totalExonerado": 0,
+    "totalInafecto": 0,
+    "totalGratuito": 0
+  },
+  "desgloseTotales": {
+    "valorVenta": 727.04,
+    "igv": 130.87,
+    "importeTotal": 857.91,
+    "descuentos": 0,
+    "otrosCargos": 0
+  },
+  "detalleItems": [
+    {
+      "numeroItem": 1,
+      "descripcion": "DECLARACIONES JURADAS EN SEPARATA ESPECIAL",
+      "cantidad": 64.000,
+      "unidadMedida": "CMT",
+      "codigoUnidadMedida": "CMT",
+      "precioUnitario": 11.360000,
+      "valorVenta": 727.04,
+      "igv": 130.87,
+      "precioVentaPublico": 13.404800,
+      "codigoProducto": "7041220101",
+      "tipoAfectacionIgv": "10"
+    }
+  ],
+  "firmaElectronica": {
+    "certificadoEmisor": "",
+    "validoHasta": "",
+    "firmaValida": true,
+    "digestValue": "klUxrxI/CFx55HXBesNxPc5R\u002B9Y=",
+    "signatureValue": "ka68S\u002Bmgmwo156AklmIaDFZaBcKvUEWqqwl3/Pzx3znvjMCZIaWdEHIR1GQoYuRgJOPGcIvCJ2ZlnxBPdtDghUvp7ZaCSgatmm4MyGbSjz9c0gUkmPhYEnPPx9r8SWYZaT3tK6kLtdg1g7ubEq893jxn26YByky5FcRnTdOxFlr4OAI1GnT/8rVUmMfV1NyLiHO4kyRKb9pMuaxCPpKZkaTMd2Cb1xZqHEEvqBvtnWd799KqAXNSm4WlJ9zyOYFnQ8TET70tmp\u002BqW5q/GQsbTKs6Gs6iLPma3xNdZSwiveEk6\u002BdPJagmsUefzv5UIhiivQq3OdYP8kdiIH3IFv3Q8g=="
+  }
+}
