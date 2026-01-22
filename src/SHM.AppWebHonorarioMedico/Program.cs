@@ -22,7 +22,13 @@ try
     builder.Host.UseNLog();
 
     // Add services to the container.
-    builder.Services.AddControllersWithViews();
+    var mvcBuilder = builder.Services.AddControllersWithViews();
+
+    // Habilitar Runtime Compilation en Development para refrescar vistas sin recompilar
+    if (builder.Environment.IsDevelopment())
+    {
+        mvcBuilder.AddRazorRuntimeCompilation();
+    }
 
     // Configurar Session
     builder.Services.AddDistributedMemoryCache();
@@ -64,6 +70,7 @@ try
     builder.Services.AddScoped<IBancoRepository, BancoRepository>();
     builder.Services.AddScoped<ISedeRepository, SedeRepository>();
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
+    builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -77,6 +84,7 @@ try
     builder.Services.AddScoped<IBancoService, BancoService>();
     builder.Services.AddScoped<ISedeService, SedeService>();
     builder.Services.AddScoped<IParametroService, ParametroService>();
+    builder.Services.AddScoped<IProduccionService, ProduccionService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));

@@ -7,6 +7,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo ListarPorCodigoTablaAsync</modified>
 /// </summary>
 public interface ITablaDetalleService
 {
@@ -59,4 +60,11 @@ public interface ITablaDetalleService
     /// Elimina un detalle de tabla por su identificador.
     /// </summary>
     Task<bool> DeleteTablaDetalleAsync(int id);
+
+    /// <summary>
+    /// Obtiene los detalles activos de una tabla por su codigo.
+    /// </summary>
+    /// <param name="codigoTabla">Codigo de la tabla maestra</param>
+    /// <returns>Lista de detalles de la tabla</returns>
+    Task<IEnumerable<TablaDetalleResponseDto>> ListarPorCodigoTablaAsync(string codigoTabla);
 }

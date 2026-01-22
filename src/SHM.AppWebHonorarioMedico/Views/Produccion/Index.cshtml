@@ -1,0 +1,169 @@
+@{
+    ViewData["Title"] = "Produccion";
+    var estados = ViewBag.Estados as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new
+    List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 titulo-formulario">
+                            <i class="fas fa-file-medical mr-2"></i>Produccion
+                        </h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                            <li class="breadcrumb-item">Honorarios</li>
+                            <li class="breadcrumb-item active">Produccion</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <div class="form-group mb-0">
+                                    <label class="mb-1 small">Estado del Proceso</label>
+                                    <select id="cboEstado" class="form-control form-control-sm">
+                                        <option value="">- Todos los Estados -</option>
+                                        @foreach (var estado in estados)
+                                        {
+                                            <option value="@estado.Value">@estado.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="mb-1 small">&nbsp;</label>
+                                <div>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="searchList()">
+                                        <i class="fas fa-search mr-1"></i>Buscar
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearFilters()">
+                                        <i class="fas fa-eraser mr-1"></i>Limpiar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <label class="mb-1 small">&nbsp;</label>
+                                <div>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
+                                        <i class="fas fa-file-excel mr-1"></i>Exportar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modalContainer"></div>
+
+@section Scripts {
+    <script>
+        let currentPage = 1;
+        const pageSize = 10;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Cargar lista inicial
+            loadList(1);
+
+            // Buscar al cambiar el filtro de estado
+            document.getElementById('cboEstado').addEventListener('change', function () {
+                searchList();
+            });
+        });
+
+        function loadList(page) {
+            currentPage = page || 1;
+            const estado = document.getElementById('cboEstado').value;
+
+            const params = new URLSearchParams({
+                estado: estado,
+                pageNumber: currentPage,
+                pageSize: pageSize
+            });
+
+            f_loading();
+            fetch('@Url.Action("GetList")?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function searchList() {
+            loadList(1);
+        }
+
+        function clearFilters() {
+            document.getElementById('cboEstado').value = '';
+            loadList(1);
+        }
+
+        function refreshList() {
+            loadList(currentPage);
+        }
+
+        function verDetalle(guid) {
+            window.location.href = '@Url.Action("Detalle")/' + guid;
+        }
+
+        function exportToExcel() {
+            // TODO: Implementar exportacion a Excel
+            toastr.info('Funcionalidad en desarrollo', 'Exportar');
+        }
+
+        // Funcion para obtener el color del badge segun el estado
+        function getEstadoBadgeClass(estado) {
+            switch (estado) {
+                case 'PENDIENTE':
+                    return 'badge-warning';
+                case 'ENVIADA':
+                    return 'badge-info';
+                case 'ACEPTADA':
+                    return 'badge-primary';
+                case 'LIQUIDACION':
+                    return 'badge-secondary';
+                case 'PAGADO':
+                    return 'badge-success';
+                case 'RECHAZADA':
+                    return 'badge-danger';
+                default:
+                    return 'badge-secondary';
+            }
+        }
+    </script>
+}

@@ -1,3 +1,4 @@
+using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 
 namespace SHM.AppDomain.Interfaces.Repositories;
@@ -7,6 +8,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// </summary>
 public interface IProduccionRepository
 {
@@ -66,10 +68,29 @@ public interface IProduccionRepository
     Task<bool> ExistsAsync(int id);
 
     /// <summary>
-    /// Verifica si existe una produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
-    ///
-    /// <author>ADG Antonio</author>
-    /// <created>2026-01-19</created>
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
     /// </summary>
-    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
+    /// <param name="estado">Filtro por estado del proceso (opcional)</param>
+    /// <param name="pageNumber">Numero de pagina</param>
+    /// <param name="pageSize">Tamaño de pagina</param>
+    /// <returns>Tupla con lista de producciones y total de registros</returns>
+    Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        string? estado, int pageNumber, int pageSize);
+
+    /// <summary>
+    /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <returns>Produccion con datos relacionados o null si no existe</returns>
+    Task<ProduccionListaResponseDto?> GetByGuidWithDetailsAsync(string guidRegistro);
+
+    /// <summary>
+    /// Actualiza la fecha limite y estado de una produccion para solicitud de factura.
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <param name="fechaLimite">Fecha y hora limite para entrega de factura</param>
+    /// <param name="estado">Nuevo estado de la produccion</param>
+    /// <param name="idModificador">ID del usuario que realiza la modificacion</param>
+    /// <returns>True si se actualizo correctamente</returns>
+    Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador);
 }

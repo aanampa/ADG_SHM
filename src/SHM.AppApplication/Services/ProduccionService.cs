@@ -10,6 +10,7 @@ namespace SHM.AppApplication.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// </summary>
 public class ProduccionService : IProduccionService
 {
@@ -48,12 +49,13 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
-    /// Obtiene una produccion por su GUID de registro
+    /// Obtiene una produccion por su GUID de registro con datos relacionados
+    ///
+    /// <modified>ADG Vladimir D - 2025-01-21 - Cambiado para devolver ProduccionListaResponseDto con JOINs</modified>
     /// </summary>
-    public async Task<ProduccionResponseDto?> GetProduccionByGuidAsync(string guidRegistro)
+    public async Task<ProduccionListaResponseDto?> GetProduccionByGuidAsync(string guidRegistro)
     {
-        var produccion = await _produccionRepository.GetByGuidAsync(guidRegistro);
-        return produccion != null ? MapToResponseDto(produccion) : null;
+        return await _produccionRepository.GetByGuidWithDetailsAsync(guidRegistro);
     }
 
     /// <summary>
@@ -223,6 +225,41 @@ public class ProduccionService : IProduccionService
             return false;
 
         return await _produccionRepository.DeleteAsync(id, idModificador);
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-20</created>
+    /// </summary>
+    public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        string? estado, int pageNumber, int pageSize)
+    {
+        return await _produccionRepository.GetPaginatedListAsync(estado, pageNumber, pageSize);
+    }
+
+    /// <summary>
+    /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_ENVIADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-21</created>
+    /// </summary>
+    public async Task<bool> SolicitarFacturaAsync(SolicitarFacturaDto solicitudDto, int idModificador)
+    {
+        // Combinar fecha y hora en un DateTime
+        if (!DateTime.TryParse($"{solicitudDto.Fecha} {solicitudDto.Hora}", out DateTime fechaLimite))
+        {
+            return false;
+        }
+
+        const string nuevoEstado = "FACTURA_ENVIADA";
+
+        return await _produccionRepository.UpdateFechaLimiteEstadoAsync(
+            solicitudDto.GuidRegistro,
+            fechaLimite,
+            nuevoEstado,
+            idModificador);
     }
 
     private static ProduccionResponseDto MapToResponseDto(Produccion produccion)

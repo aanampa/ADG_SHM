@@ -10,6 +10,7 @@ namespace SHM.AppApplication.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo ListarPorCodigoTablaAsync</modified>
 /// </summary>
 public class TablaDetalleService : ITablaDetalleService
 {
@@ -144,6 +145,15 @@ public class TablaDetalleService : ITablaDetalleService
             return false;
 
         return await _tablaDetalleRepository.DeleteAsync(id);
+    }
+
+    /// <summary>
+    /// Obtiene los detalles activos de una tabla por su codigo.
+    /// </summary>
+    public async Task<IEnumerable<TablaDetalleResponseDto>> ListarPorCodigoTablaAsync(string codigoTabla)
+    {
+        var tablaDetalles = await _tablaDetalleRepository.GetActivosByCodigoTablaAsync(codigoTabla);
+        return tablaDetalles.Select(MapToResponseDto);
     }
 
     private static TablaDetalleResponseDto MapToResponseDto(TablaDetalle tablaDetalle)
