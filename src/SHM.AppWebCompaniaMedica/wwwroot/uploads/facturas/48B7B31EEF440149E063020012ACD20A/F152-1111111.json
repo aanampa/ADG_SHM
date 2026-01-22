@@ -1,0 +1,77 @@
+{
+  "datosGenerales": {
+    "numeroFactura": "E001-17",
+    "fechaEmision": "2026-01-03",
+    "horaEmision": "10:51:06.0Z",
+    "tipoDocumento": "Factura",
+    "codigoTipoDocumento": "01",
+    "moneda": "PEN",
+    "totalEnLetras": "SON:  DIECISEIS MIL QUINIENTOS VEINTE Y 00/100  SOLES"
+  },
+  "emisor": {
+    "ruc": "20610857524",
+    "razonSocial": "ADG SYSTEMS S.A.C.",
+    "direccion": "AV. MARIANO CORNEJO 1432 CND. LIMA DPTO. 1605",
+    "ubicacion": "LIMA - LIMA - LIMA",
+    "departamento": "LIMA",
+    "provincia": "LIMA",
+    "distrito": "LIMA",
+    "ubigeo": ""
+  },
+  "cliente": {
+    "tipoDocumento": "6",
+    "numeroDocumento": "20517738701",
+    "razonSocial": "CLINICA JESUS DEL NORTE SOCIEDAD ANONIMA CERRADA",
+    "direccion": ""
+  },
+  "detallesPago": {
+    "formaPago": "Credito",
+    "montoTotal": 16520.00,
+    "moneda": "PEN",
+    "cuotas": [
+      {
+        "numeroCuota": "Cuota001",
+        "monto": 16520.00,
+        "fechaVencimiento": "2026-01-16"
+      }
+    ]
+  },
+  "impuestos": {
+    "igv": 2520.00,
+    "porcentajeIgv": 0,
+    "baseImponible": 14000.00,
+    "totalGravado": 14000.00,
+    "totalExonerado": 0,
+    "totalInafecto": 0,
+    "totalGratuito": 0
+  },
+  "desgloseTotales": {
+    "valorVenta": 14000.00,
+    "igv": 2520.00,
+    "importeTotal": 16520.00,
+    "descuentos": 0.00,
+    "otrosCargos": 0.00
+  },
+  "detalleItems": [
+    {
+      "numeroItem": 1,
+      "descripcion": "DESARROLLO E IMPLEMENTACION DEL SISTEMA WORKFLOW DE HONORARIOS MEDICOS (CONFORMIDAD DEL 40%)",
+      "cantidad": 1.00,
+      "unidadMedida": "Unidad",
+      "codigoUnidadMedida": "NIU",
+      "precioUnitario": 14000.00,
+      "valorVenta": 14000.00,
+      "igv": 2520.00,
+      "precioVentaPublico": 16520.00,
+      "codigoProducto": "",
+      "tipoAfectacionIgv": "10"
+    }
+  ],
+  "firmaElectronica": {
+    "certificadoEmisor": "",
+    "validoHasta": "",
+    "firmaValida": true,
+    "digestValue": "Ck1ld64qy8WWcEc0i4MPGS12Tbg=",
+    "signatureValue": "WGoOE5pAE3oyQhvT4LMl3uHwRO4XaOmA9Ep3X0IbsC8CZUd3d7tL3EAyB8Qnwd86q\u002BgDjmM7nIFb\r\nIbXInQBK61V03C0kOGKWQldzGmvGLNPX2G4fBf3y0dS/bvEYSQX4MQCtd9x8TZplAFvAFkFtXfRv\r\nOz9bdKDZGSgwFc\u002B8\u002BsZIKuSUnqD6kF7uJyfygco0cRD1AhbNxn3Ht5jZ79BVDj8U7WjxDXLV\u002Bea\u002B\r\nIAF8B8URWOC9JdrEQc84SborwmiZR09ZTxejX9S7qLw1sG6H7adN15H8sllLJL\u002B1ndymzpKsqECa\r\ncPEvZPE1\u002BiwiWqW84d6vTxS00Qjk3Bc0BQAGNw=="
+  }
+}
