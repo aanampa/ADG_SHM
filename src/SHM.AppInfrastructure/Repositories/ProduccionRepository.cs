@@ -357,6 +357,31 @@ public class ProduccionRepository : IProduccionRepository
         return count > 0;
     }
 
+/// <summary>
+    /// Verifica si existe un registro de produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-19</created>
+    /// </summary>
+    public async Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"SELECT COUNT(1) FROM SHM_PRODUCCION
+                    WHERE ID_SEDE = :IdSede
+                    AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+                    AND CODIGO_PRODUCCION = :CodigoProduccion";
+
+        var count = await connection.ExecuteScalarAsync<int>(sql, new
+        {
+            IdSede = idSede,
+            IdEntidadMedica = idEntidadMedica,
+            CodigoProduccion = codigoProduccion
+        });
+
+        return count > 0;
+    }
+    
     /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
     ///
