@@ -159,6 +159,49 @@
             </div>
         </div>
 
+        @{
+            var archivoPdf = Model.Archivos.FirstOrDefault(a => a.TipoArchivo?.ToUpper() == "PDF");
+        }
+
+        @if (archivoPdf != null)
+        {
+            <hr style="margin: 2rem 0; border-color: var(--border);">
+
+            <!-- Seccion de Visor de PDF -->
+            <div class="mb-4">
+                <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Vista Previa del Comprobante
+                </h6>
+                <div style="background: var(--bg-main); border-radius: 12px; padding: 1rem; border: 2px solid var(--border);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            <i class="bi bi-file-pdf me-1"></i>@archivoPdf.NombreArchivo
+                        </span>
+                        <div class="d-flex gap-2">
+                            <a href="@Url.Action("DescargarArchivo", "Facturas", new { guid = archivoPdf.GuidRegistro })"
+                               target="_blank"
+                               class="btn btn-sm btn-outline-secondary"
+                               style="border-radius: 8px;">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en nueva pestana
+                            </a>
+                            <a href="@Url.Action("DescargarArchivo", "Facturas", new { guid = archivoPdf.GuidRegistro })"
+                               class="btn btn-sm"
+                               style="background: var(--danger); color: white; border-radius: 8px;">
+                                <i class="bi bi-download me-1"></i>Descargar PDF
+                            </a>
+                        </div>
+                    </div>
+                    <div style="border-radius: 8px; overflow: hidden; background: #525659;">
+                        <iframe id="pdfViewer"
+                                src="@Url.Action("DescargarArchivo", "Facturas", new { guid = archivoPdf.GuidRegistro })"
+                                style="width: 100%; height: 600px; border: none;"
+                                title="Vista previa del PDF">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        }
+
         @if (Model.Archivos.Any())
         {
             <hr style="margin: 2rem 0; border-color: var(--border);">
