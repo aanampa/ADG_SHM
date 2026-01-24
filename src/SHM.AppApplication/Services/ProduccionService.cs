@@ -240,7 +240,7 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
-    /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_ENVIADA.
+    /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-21</created>
@@ -253,13 +253,37 @@ public class ProduccionService : IProduccionService
             return false;
         }
 
-        const string nuevoEstado = "FACTURA_ENVIADA";
+        const string nuevoEstado = "FACTURA_SOLICITADA";
 
         return await _produccionRepository.UpdateFechaLimiteEstadoAsync(
             solicitudDto.GuidRegistro,
             fechaLimite,
             nuevoEstado,
             idModificador);
+    }
+
+    /// <summary>
+    /// Devuelve una factura cambiando el estado a FACTURA_DEVUELTA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    public async Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador)
+    {
+        const string nuevoEstado = "FACTURA_DEVUELTA";
+        return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
+    }
+
+    /// <summary>
+    /// Acepta una factura cambiando el estado a FACTURA_ACEPTADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    public async Task<bool> AceptarFacturaAsync(string guidRegistro, int idModificador)
+    {
+        const string nuevoEstado = "FACTURA_ACEPTADA";
+        return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
     }
 
     private static ProduccionResponseDto MapToResponseDto(Produccion produccion)

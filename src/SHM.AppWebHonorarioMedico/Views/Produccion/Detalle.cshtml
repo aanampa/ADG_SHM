@@ -1,6 +1,8 @@
 @model SHM.AppDomain.DTOs.Produccion.ProduccionListaResponseDto
 @{
     ViewData["Title"] = "Detalle de Produccion";
+    var archivos = ViewBag.Archivos as List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>
+        ?? new List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>();
 }
 
 <div class="wrapper">
@@ -27,7 +29,9 @@
                         <li class="breadcrumb-item"><a href="@Url.Action("Index", "Produccion")">Produccion</a></li>
                         <li class="breadcrumb-item active">Detalle</li>
                     </ol>
-                    <a href="@Url.Action("Index", "Produccion")" class="text-secondary text-decoration-none d-inline-flex align-items-center" title="Volver a la lista">
+                    <a href="@Url.Action("Index", "Produccion")"
+                        class="text-secondary text-decoration-none d-inline-flex align-items-center"
+                        title="Volver a la lista">
                         <i class="fas fa-arrow-circle-left" style="font-size: 1.3rem;"></i>
                         <span class="ml-2">Volver</span>
                     </a>
@@ -43,16 +47,18 @@
                             @{
                                 var badgeClass = Model.Estado switch
                                 {
-                                    "PENDIENTE" => "badge-warning",
-                                    "ENVIADA" => "badge-info",
-                                    "ACEPTADA" => "badge-primary",
-                                    "LIQUIDACION" => "badge-secondary",
-                                    "PAGADO" => "badge-success",
-                                    "RECHAZADA" => "badge-danger",
+                                    "FACTURA_PENDIENTE" => "badge-warning",
+                                    "FACTURA_SOLICITADA" => "badge-info",
+                                    "FACTURA_ENVIADA" => "badge-primary",
+                                    "FACTURA_ACEPTADA" => "badge-primary",
+                                    "FACTURA_LIQUIDADA" => "badge-secondary",
+                                    "FACTURA_PAGADA" => "badge-success",
+                                    "FACTURA_DEVUELTA" => "badge-danger",
                                     _ => "badge-secondary"
                                 };
                             }
-                            <span class="badge @badgeClass" style="font-size: 0.9rem;">@(Model.DesEstado ?? Model.Estado ?? "-")</span>
+                            <span class="badge @badgeClass" style="font-size: 0.9rem;">@(Model.DesEstado ?? Model.Estado
+                                                                ?? "-")</span>
                         </div>
                     </div>
                     <div class="card-body">
@@ -60,25 +66,30 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Produccion</label>
-                                    <input type="text" class="form-control" value="@(Model.CodigoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.CodigoProduccion ?? "-")"
+                                        readonly style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Tipo de Produccion</label>
-                                    <input type="text" class="form-control" value="@(Model.DesTipoProduccion ?? Model.TipoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.DesTipoProduccion ?? Model.TipoProduccion ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Periodo</label>
-                                    <input type="text" class="form-control" value="@FormatPeriodo(Model.Periodo)" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@FormatPeriodo(Model.Periodo)"
+                                        readonly style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Descripcion</label>
-                                    <input type="text" class="form-control" value="@(Model.Descripcion ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.Descripcion ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                         </div>
@@ -86,25 +97,32 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Rubro</label>
-                                    <input type="text" class="form-control" value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Tipo Medico</label>
-                                    <input type="text" class="form-control" value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Sede</label>
-                                    <input type="text" class="form-control" value="@(Model.NombreSede ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.NombreSede ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Fecha Creacion</label>
-                                    <input type="text" class="form-control" value="@(Model.FechaCreacion?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.FechaCreacion?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                         </div>
@@ -123,19 +141,23 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>RUC</label>
-                                    <input type="text" class="form-control" value="@(Model.Ruc ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.Ruc ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Razon Social</label>
-                                    <input type="text" class="form-control" value="@(Model.RazonSocial ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.RazonSocial ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Tipo Entidad</label>
-                                    <input type="text" class="form-control" value="@(Model.DesTipoEntidadMedica ?? Model.TipoEntidadMedica ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.DesTipoEntidadMedica ?? Model.TipoEntidadMedica ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                         </div>
@@ -154,37 +176,49 @@
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Consumo</label>
-                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoConsumo?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control text-right"
+                                        value="S/ @(Model.MtoConsumo?.ToString("N2") ?? "0.00")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Descuento</label>
-                                    <input type="text" class="form-control text-right text-danger" value="S/ @(Model.MtoDescuento?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control text-right text-danger"
+                                        value="S/ @(Model.MtoDescuento?.ToString("N2") ?? "0.00")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Sub Total</label>
-                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoSubtotal?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control text-right"
+                                        value="S/ @(Model.MtoSubtotal?.ToString("N2") ?? "0.00")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>IGV</label>
-                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control text-right"
+                                        value="S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Imp. Renta</label>
-                                    <input type="text" class="form-control text-right" value="S/ @(Model.MtoRenta?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control text-right"
+                                        value="S/ @(Model.MtoRenta?.ToString("N2") ?? "0.00")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Total</label>
-                                    <input type="text" class="form-control text-right font-weight-bold text-primary" value="S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control text-right font-weight-bold text-primary"
+                                        value="S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                         </div>
@@ -199,29 +233,43 @@
                         </h3>
                     </div>
                     <div class="card-body">
+                        @{
+                            var tipoComprobanteTexto = Model.TipoComprobante switch
+                            {
+                                "01" => "Factura",
+                                "03" => "Boleta",
+                                _ => Model.TipoComprobante ?? "-"
+                            };
+                        }
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Tipo Comprobante</label>
-                                    <input type="text" class="form-control" value="@(Model.TipoComprobante ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@tipoComprobanteTexto"
+                                        readonly style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Serie - Numero</label>
-                                    <input type="text" class="form-control" value="@(Model.ComprobanteFactura ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.ComprobanteFactura ?? "-")"
+                                        readonly style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Fecha Emision</label>
-                                    <input type="text" class="form-control" value="@(Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Fecha Limite</label>
-                                    <input type="text" class="form-control" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control"
+                                        value="@(Model.FechaLimite?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                         </div>
@@ -229,23 +277,89 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Concepto</label>
-                                    <input type="text" class="form-control" value="@(Model.Concepto ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.Concepto ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Glosa</label>
-                                    <input type="text" class="form-control" value="@(Model.Glosa ?? "-")" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="@(Model.Glosa ?? "-")" readonly
+                                        style="background-color: #e9ecef;">
                                 </div>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <button type="button" class="btn btn-success" onclick="solicitarFactura()">
-                                    <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
-                                </button>
+                        @if (Model.Estado == "FACTURA_PENDIENTE")
+                        {
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-success" onclick="solicitarFactura()">
+                                        <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        }
+                        @if (Model.Estado == "FACTURA_ENVIADA")
+                        {
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-danger mr-2" onclick="devolverFactura()">
+                                        <i class="fas fa-undo mr-1"></i>Devolver Factura
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="aceptarFactura()">
+                                        <i class="fas fa-check mr-1"></i>Aceptar Factura
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        @* Documentos Adjuntos - Solo para estados diferentes a FACTURA_PENDIENTE y FACTURA_SOLICITADA *@
+                        @if (Model.Estado != "FACTURA_PENDIENTE" && Model.Estado != "FACTURA_SOLICITADA" && archivos.Any())
+                        {
+                            <hr class="mt-4 mb-3" />
+                            <div class="mb-3" style="font-weight: 600; color: #6c757d; font-size: 0.95rem;">
+                                <i class="fas fa-paperclip mr-2"></i>Documentos Adjuntos
+                            </div>
+                            <div class="row">
+                                @foreach (var archivo in archivos)
+                                {
+                                    var iconClass = archivo.TipoArchivo?.ToUpper() switch
+                                    {
+                                        "PDF" => "far fa-file-pdf",
+                                        "XML" => "far fa-file-code",
+                                        "CDR" => "far fa-file-archive",
+                                        _ => "far fa-file"
+                                    };
+                                    var iconColor = archivo.TipoArchivo?.ToUpper() switch
+                                    {
+                                        "PDF" => "#dc3545",
+                                        "XML" => "#f39c12",
+                                        "CDR" => "#6f42c1",
+                                        _ => "#6c757d"
+                                    };
+                                    var btnColor = archivo.TipoArchivo?.ToUpper() switch
+                                    {
+                                        "PDF" => "#dc3545",
+                                        "XML" => "#f39c12",
+                                        "CDR" => "#6f42c1",
+                                        _ => "#6c757d"
+                                    };
+                                    var tamanoKb = archivo.Tamano.HasValue ? (archivo.Tamano.Value / 1024.0).ToString("N1") + " KB" : "-";
+
+                                    <div class="col-md-4 mb-3">
+                                        <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 12px; text-align: center; border: 2px solid #e9ecef; height: 100%;">
+                                            <i class="@iconClass" style="font-size: 3.5rem; color: @iconColor; margin-bottom: 1rem; display: block;"></i>
+                                            <div style="font-weight: 600; margin-bottom: 0.25rem;">@archivo.TipoArchivo</div>
+                                            <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.5rem;">@tamanoKb</div>
+                                            <div style="font-size: 0.8rem; color: #6c757d; margin-bottom: 1rem; word-break: break-all;">@archivo.NombreArchivo</div>
+                                            <a href="@Url.Action("DescargarArchivo", "Produccion", new { guid = archivo.GuidRegistro })"
+                                               class="btn btn-sm" style="background: @btnColor; color: white; border-radius: 8px; padding: 0.5rem 1.25rem;">
+                                                <i class="fas fa-download mr-1"></i>Descargar
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -255,7 +369,8 @@
 </div>
 
 <!-- Modal Solicitar Factura -->
-<div class="modal fade" id="modalSolicitarFactura" tabindex="-1" role="dialog" aria-labelledby="modalSolicitarFacturaLabel" aria-hidden="true">
+<div class="modal fade" id="modalSolicitarFactura" tabindex="-1" role="dialog"
+    aria-labelledby="modalSolicitarFacturaLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -300,13 +415,15 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Fecha Limite <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="txtFechaLimite" required readonly style="background-color: #e9ecef;" />
+                                <input type="date" class="form-control" id="txtFechaLimite" required readonly
+                                    style="background-color: #e9ecef;" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Hora Limite <span class="text-danger">*</span></label>
-                                <input type="time" class="form-control" id="txtHoraLimite" required readonly style="background-color: #e9ecef;" />
+                                <input type="time" class="form-control" id="txtHoraLimite" required readonly
+                                    style="background-color: #e9ecef;" />
                             </div>
                         </div>
                     </div>
@@ -314,7 +431,8 @@
                         <div class="col-12">
                             <div class="alert alert-info" role="alert">
                                 <i class="fas fa-info-circle mr-2"></i>
-                                <span id="msgInfoPlazo">Seleccione una opcion de plazo para establecer la fecha y hora limite.</span>
+                                <span id="msgInfoPlazo">Seleccione una opcion de plazo para establecer la fecha y hora
+                                    limite.</span>
                             </div>
                         </div>
                     </div>
@@ -415,7 +533,7 @@
         // Seleccionar plazo
         function seleccionarPlazo(dias) {
             var botones = document.querySelectorAll('.btn-plazo');
-            botones.forEach(function(btn) {
+            botones.forEach(function (btn) {
                 btn.classList.remove('active', 'btn-primary');
                 btn.classList.add('btn-outline-primary');
                 if (btn.dataset.dias === '0') {
@@ -468,7 +586,7 @@
 
             // Resetear botones
             var botones = document.querySelectorAll('.btn-plazo');
-            botones.forEach(function(btn) {
+            botones.forEach(function (btn) {
                 btn.classList.remove('active', 'btn-primary');
                 if (btn.dataset.dias === '0') {
                     btn.classList.add('btn-outline-secondary');
@@ -496,23 +614,23 @@
         }
 
         // Evento click para botones de plazo y eventos de cambio en inputs
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.btn-plazo').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.btn-plazo').forEach(function (btn) {
+                btn.addEventListener('click', function () {
                     var dias = parseInt(this.dataset.dias);
                     seleccionarPlazo(dias);
                 });
             });
 
             // Eventos para actualizar mensaje en modo manual
-            document.getElementById('txtFechaLimite').addEventListener('change', function() {
+            document.getElementById('txtFechaLimite').addEventListener('change', function () {
                 var botonManual = document.querySelector('.btn-plazo[data-dias="0"].active');
                 if (botonManual) {
                     actualizarMensajeManual();
                 }
             });
 
-            document.getElementById('txtHoraLimite').addEventListener('change', function() {
+            document.getElementById('txtHoraLimite').addEventListener('change', function () {
                 var botonManual = document.querySelector('.btn-plazo[data-dias="0"].active');
                 if (botonManual) {
                     actualizarMensajeManual();
@@ -561,7 +679,7 @@
                 icon: 'question',
                 title: 'Confirmar Solicitud',
                 html: '¿Desea enviar la solicitud de factura con fecha limite <strong>' +
-                      formatearFecha(fecha) + '</strong> a las <strong>' + hora + '</strong>?',
+                    formatearFecha(fecha) + '</strong> a las <strong>' + hora + '</strong>?',
                 showCancelButton: true,
                 confirmButtonColor: '#007bff',
                 cancelButtonColor: '#6c757d',
@@ -581,37 +699,37 @@
                             hora: hora
                         })
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            $('#modalSolicitarFactura').modal('hide');
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Exito',
-                                text: data.message,
-                                confirmButtonColor: '#28a745'
-                            }).then(() => {
-                                // Recargar la pagina para reflejar el nuevo estado
-                                location.reload();
-                            });
-                        } else {
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                $('#modalSolicitarFactura').modal('hide');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Exito',
+                                    text: data.message,
+                                    confirmButtonColor: '#28a745'
+                                }).then(() => {
+                                    // Recargar la pagina para reflejar el nuevo estado
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message,
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
-                                text: data.message,
+                                text: 'Error al procesar la solicitud',
                                 confirmButtonColor: '#dc3545'
                             });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Error al procesar la solicitud',
-                            confirmButtonColor: '#dc3545'
                         });
-                    });
                 }
             });
         }
@@ -620,6 +738,118 @@
             if (!fecha) return '';
             var partes = fecha.split('-');
             return partes[2] + '/' + partes[1] + '/' + partes[0];
+        }
+
+        function devolverFactura() {
+            var guid = document.getElementById('hdnGuidProduccion').value;
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Devolver Factura',
+                text: '¿Esta seguro que desea devolver esta factura?',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Si, Devolver',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('@Url.Action("DevolverFactura", "Produccion")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            guidRegistro: guid
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Exito',
+                                    text: data.message,
+                                    confirmButtonColor: '#28a745'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message,
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Error al procesar la solicitud',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        });
+                }
+            });
+        }
+
+        function aceptarFactura() {
+            var guid = document.getElementById('hdnGuidProduccion').value;
+
+            Swal.fire({
+                icon: 'question',
+                title: 'Aceptar Factura',
+                text: '¿Esta seguro que desea aceptar esta factura?',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Si, Aceptar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('@Url.Action("AceptarFactura", "Produccion")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            guidRegistro: guid
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Exito',
+                                    text: data.message,
+                                    confirmButtonColor: '#28a745'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message,
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Error al procesar la solicitud',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        });
+                }
+            });
         }
     </script>
 }

@@ -72,10 +72,26 @@ public interface IProduccionService
         string? estado, int pageNumber, int pageSize);
 
     /// <summary>
-    /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_ENVIADA.
+    /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
     /// </summary>
     /// <param name="solicitudDto">Datos de la solicitud (GUID, fecha y hora)</param>
     /// <param name="idModificador">ID del usuario que realiza la solicitud</param>
     /// <returns>True si se proceso correctamente</returns>
     Task<bool> SolicitarFacturaAsync(SolicitarFacturaDto solicitudDto, int idModificador);
+
+    /// <summary>
+    /// Devuelve una factura cambiando el estado a FACTURA_DEVUELTA.
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <param name="idModificador">ID del usuario que realiza la devolucion</param>
+    /// <returns>True si se proceso correctamente</returns>
+    Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador);
+
+    /// <summary>
+    /// Acepta una factura cambiando el estado a FACTURA_ACEPTADA.
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <param name="idModificador">ID del usuario que acepta la factura</param>
+    /// <returns>True si se proceso correctamente</returns>
+    Task<bool> AceptarFacturaAsync(string guidRegistro, int idModificador);
 }

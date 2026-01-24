@@ -568,4 +568,31 @@ public class ProduccionRepository : IProduccionRepository
 
         return rowsAffected > 0;
     }
+
+    /// <summary>
+    /// Actualiza solo el estado de una produccion.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoAsync(string guidRegistro, string estado, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
 }
