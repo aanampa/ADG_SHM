@@ -603,6 +603,32 @@ public class ProduccionRepository : IProduccionRepository
     }
 
     /// <summary>
+    /// Actualiza solo el estado de una produccion.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoAsync(string guidRegistro, string estado, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+    
     /// Obtiene estadisticas del dashboard para una entidad medica.
     ///
     /// <author>ADG Antonio</author>
@@ -613,6 +639,20 @@ public class ProduccionRepository : IProduccionRepository
         using var connection = new OracleConnection(_connectionString);
 
         var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
             SELECT
                 NVL(SUM(CASE WHEN ESTADO = 'FACTURA_SOLICITADA' THEN MTO_TOTAL ELSE 0 END), 0) AS TotalPorFacturar,
                 COUNT(CASE WHEN ESTADO = 'FACTURA_SOLICITADA' THEN 1 END) AS Pendientes,

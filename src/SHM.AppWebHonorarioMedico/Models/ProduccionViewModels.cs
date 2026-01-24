@@ -48,5 +48,23 @@ public class ProduccionItemViewModel
         ? $"{Serie}-{Numero}"
         : null;
     public DateTime? FechaEmision { get; set; }
+    public DateTime? FechaLimite { get; set; }
     public int Activo { get; set; }
+}
+
+/// <summary>
+/// ViewModel para archivos adjuntos de produccion.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2025-01-22</created>
+/// </summary>
+public class ArchivoAdjuntoViewModel
+{
+    public string? GuidRegistro { get; set; }
+    public string? TipoArchivo { get; set; }
+    public string? NombreArchivo { get; set; }
+    public string? NombreOriginal { get; set; }
+    public string? Extension { get; set; }
+    public int? Tamano { get; set; }
+    public DateTime FechaCreacion { get; set; }
 }

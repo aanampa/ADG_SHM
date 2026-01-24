@@ -20,15 +20,24 @@ public class ProduccionController : Controller
     private readonly ILogger<ProduccionController> _logger;
     private readonly IProduccionService _produccionService;
     private readonly ITablaDetalleService _tablaDetalleService;
+    private readonly IArchivoService _archivoService;
+    private readonly IArchivoComprobanteService _archivoComprobanteService;
+    private readonly IConfiguration _configuration;
 
     public ProduccionController(
         ILogger<ProduccionController> logger,
         IProduccionService produccionService,
-        ITablaDetalleService tablaDetalleService)
+        ITablaDetalleService tablaDetalleService,
+        IArchivoService archivoService,
+        IArchivoComprobanteService archivoComprobanteService,
+        IConfiguration configuration)
     {
         _logger = logger;
         _produccionService = produccionService;
         _tablaDetalleService = tablaDetalleService;
+        _archivoService = archivoService;
+        _archivoComprobanteService = archivoComprobanteService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -88,6 +97,7 @@ public class ProduccionController : Controller
                     Serie = p.Serie,
                     Numero = p.Numero,
                     FechaEmision = p.FechaEmision,
+                    FechaLimite = p.FechaLimite,
                     Activo = p.Activo
                 }).ToList(),
                 TotalCount = totalCount,
@@ -113,6 +123,7 @@ public class ProduccionController : Controller
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-20</created>
+    /// <modified>ADG Vladimir D - 2025-01-22 - Agregado carga de archivos adjuntos</modified>
     /// </summary>
     [HttpGet]
     [Route("Produccion/Detalle/{guid}")]
@@ -126,6 +137,34 @@ public class ProduccionController : Controller
                 return NotFound();
             }
 
+            // Cargar archivos adjuntos para estados diferentes a FACTURA_PENDIENTE y FACTURA_SOLICITADA
+            var archivos = new List<ArchivoAdjuntoViewModel>();
+            if (produccion.Estado != "FACTURA_PENDIENTE" && produccion.Estado != "FACTURA_SOLICITADA")
+            {
+                var archivosComprobante = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
+                foreach (var ac in archivosComprobante.Where(a => a.Activo == 1))
+                {
+                    if (ac.IdArchivo.HasValue)
+                    {
+                        var archivo = await _archivoService.GetArchivoByIdAsync(ac.IdArchivo.Value);
+                        if (archivo != null && archivo.Activo == 1)
+                        {
+                            archivos.Add(new ArchivoAdjuntoViewModel
+                            {
+                                GuidRegistro = archivo.GuidRegistro,
+                                TipoArchivo = ac.TipoArchivo ?? archivo.TipoArchivo,
+                                NombreArchivo = archivo.NombreArchivo,
+                                NombreOriginal = archivo.NombreOriginal,
+                                Extension = archivo.Extension,
+                                Tamano = archivo.Tamano,
+                                FechaCreacion = archivo.FechaCreacion
+                            });
+                        }
+                    }
+                }
+            }
+
+            ViewBag.Archivos = archivos;
             return View(produccion);
         }
         catch (Exception ex)
@@ -174,6 +213,131 @@ public class ProduccionController : Controller
         {
             _logger.LogError(ex, "Error al solicitar factura: {Guid}", solicitud?.GuidRegistro);
             return Json(new { success = false, message = "Error al procesar la solicitud" });
+        }
+    }
+
+    /// <summary>
+    /// Devuelve una factura cambiando el estado a FACTURA_DEVUELTA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> DevolverFactura([FromBody] CambioEstadoFacturaDto request)
+    {
+        try
+        {
+            if (request == null || string.IsNullOrEmpty(request.GuidRegistro))
+            {
+                return Json(new { success = false, message = "Datos de solicitud invalidos" });
+            }
+
+            var idUsuario = GetCurrentUserId();
+            var resultado = await _produccionService.DevolverFacturaAsync(request.GuidRegistro, idUsuario);
+
+            if (resultado)
+            {
+                _logger.LogInformation("Factura devuelta. GUID: {Guid}, Usuario: {Usuario}",
+                    request.GuidRegistro, idUsuario);
+                return Json(new { success = true, message = "Factura devuelta correctamente" });
+            }
+            else
+            {
+                return Json(new { success = false, message = "No se pudo devolver la factura" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al devolver factura: {Guid}", request?.GuidRegistro);
+            return Json(new { success = false, message = "Error al procesar la solicitud" });
+        }
+    }
+
+    /// <summary>
+    /// Acepta una factura cambiando el estado a FACTURA_ACEPTADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> AceptarFactura([FromBody] CambioEstadoFacturaDto request)
+    {
+        try
+        {
+            if (request == null || string.IsNullOrEmpty(request.GuidRegistro))
+            {
+                return Json(new { success = false, message = "Datos de solicitud invalidos" });
+            }
+
+            var idUsuario = GetCurrentUserId();
+            var resultado = await _produccionService.AceptarFacturaAsync(request.GuidRegistro, idUsuario);
+
+            if (resultado)
+            {
+                _logger.LogInformation("Factura aceptada. GUID: {Guid}, Usuario: {Usuario}",
+                    request.GuidRegistro, idUsuario);
+                return Json(new { success = true, message = "Factura aceptada correctamente" });
+            }
+            else
+            {
+                return Json(new { success = false, message = "No se pudo aceptar la factura" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al aceptar factura: {Guid}", request?.GuidRegistro);
+            return Json(new { success = false, message = "Error al procesar la solicitud" });
+        }
+    }
+
+    /// <summary>
+    /// Descarga un archivo adjunto de comprobante.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-22</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> DescargarArchivo(string guid)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                return NotFound("Archivo no encontrado");
+            }
+
+            var archivo = await _archivoService.GetArchivoByGuidAsync(guid);
+            if (archivo == null || archivo.Activo != 1)
+            {
+                return NotFound("Archivo no encontrado");
+            }
+
+            // Obtener ruta base de archivos desde configuracion
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var filePath = Path.Combine(uploadBasePath, archivo.Ruta ?? "");
+
+            if (!System.IO.File.Exists(filePath))
+            {
+                _logger.LogWarning("Archivo fisico no encontrado: {FilePath}", filePath);
+                return NotFound("Archivo fisico no encontrado");
+            }
+
+            // Determinar content type
+            var contentType = archivo.Extension?.ToLower() switch
+            {
+                ".pdf" => "application/pdf",
+                ".xml" => "application/xml",
+                ".zip" => "application/zip",
+                _ => "application/octet-stream"
+            };
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            return File(fileBytes, contentType, archivo.NombreArchivo ?? $"archivo{archivo.Extension}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al descargar archivo con GUID: {Guid}", guid);
+            return StatusCode(500, "Error al descargar el archivo");
         }
     }
 
