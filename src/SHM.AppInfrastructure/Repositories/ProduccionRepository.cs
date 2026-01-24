@@ -14,6 +14,7 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
+/// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
 /// </summary>
 public class ProduccionRepository : IProduccionRepository
 {
@@ -56,6 +57,10 @@ public class ProduccionRepository : IProduccionRepository
         CONCEPTO as Concepto,
         FECHA_LIMITE as FechaLimite,
         ESTADO as Estado,
+        FACTURA_FECHA_SOLICITUD as FacturaFechaSolicitud,
+        FACTURA_FECHA_ENVIO as FacturaFechaEnvio,
+        FACTURA_FECHA_ACEPTACION as FacturaFechaAceptacion,
+        FACTURA_FECHA_PAGO as FacturaFechaPago,
         GUID_REGISTRO as GuidRegistro,
         ACTIVO as Activo,
         ID_CREADOR as IdCreador,
@@ -181,6 +186,10 @@ public class ProduccionRepository : IProduccionRepository
                 CONCEPTO,
                 FECHA_LIMITE,
                 ESTADO,
+                FACTURA_FECHA_SOLICITUD,
+                FACTURA_FECHA_ENVIO,
+                FACTURA_FECHA_ACEPTACION,
+                FACTURA_FECHA_PAGO,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -211,6 +220,10 @@ public class ProduccionRepository : IProduccionRepository
                 :Concepto,
                 :FechaLimite,
                 :Estado,
+                :FacturaFechaSolicitud,
+                :FacturaFechaEnvio,
+                :FacturaFechaAceptacion,
+                :FacturaFechaPago,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -243,6 +256,10 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("Concepto", produccion.Concepto);
         parameters.Add("FechaLimite", produccion.FechaLimite);
         parameters.Add("Estado", produccion.Estado);
+        parameters.Add("FacturaFechaSolicitud", produccion.FacturaFechaSolicitud);
+        parameters.Add("FacturaFechaEnvio", produccion.FacturaFechaEnvio);
+        parameters.Add("FacturaFechaAceptacion", produccion.FacturaFechaAceptacion);
+        parameters.Add("FacturaFechaPago", produccion.FacturaFechaPago);
         parameters.Add("IdCreador", produccion.IdCreador);
         parameters.Add("IdProduccion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -285,6 +302,10 @@ public class ProduccionRepository : IProduccionRepository
                 CONCEPTO = :Concepto,
                 FECHA_LIMITE = :FechaLimite,
                 ESTADO = :Estado,
+                FACTURA_FECHA_SOLICITUD = :FacturaFechaSolicitud,
+                FACTURA_FECHA_ENVIO = :FacturaFechaEnvio,
+                FACTURA_FECHA_ACEPTACION = :FacturaFechaAceptacion,
+                FACTURA_FECHA_PAGO = :FacturaFechaPago,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -317,6 +338,10 @@ public class ProduccionRepository : IProduccionRepository
             produccion.Concepto,
             produccion.FechaLimite,
             produccion.Estado,
+            produccion.FacturaFechaSolicitud,
+            produccion.FacturaFechaEnvio,
+            produccion.FacturaFechaAceptacion,
+            produccion.FacturaFechaPago,
             produccion.Activo,
             produccion.IdModificador
         });
@@ -441,6 +466,10 @@ public class ProduccionRepository : IProduccionRepository
                 p.FECHA_EMISION AS FechaEmision,
                 p.GLOSA AS Glosa,
                 p.ESTADO_COMPROBANTE AS EstadoComprobante,
+                p.FACTURA_FECHA_SOLICITUD AS FacturaFechaSolicitud,
+                p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
+                p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
+                p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
                 p.ACTIVO AS Activo,
                 p.ID_CREADOR AS IdCreador,
                 p.FECHA_CREACION AS FechaCreacion,
@@ -516,6 +545,10 @@ public class ProduccionRepository : IProduccionRepository
                 p.FECHA_EMISION AS FechaEmision,
                 p.GLOSA AS Glosa,
                 p.ESTADO_COMPROBANTE AS EstadoComprobante,
+                p.FACTURA_FECHA_SOLICITUD AS FacturaFechaSolicitud,
+                p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
+                p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
+                p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
                 p.ACTIVO AS Activo,
                 p.ID_CREADOR AS IdCreador,
                 p.FECHA_CREACION AS FechaCreacion,
@@ -594,5 +627,109 @@ public class ProduccionRepository : IProduccionRepository
         });
 
         return rowsAffected > 0;
+    }
+    
+    /// Obtiene estadisticas del dashboard para una entidad medica.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-24</created>
+    /// </summary>
+    public async Task<(decimal TotalPorFacturar, int Pendientes, int Enviadas, int EnviadasHHMM, int Pagadas)> GetDashboardStatsAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+            SELECT
+                NVL(SUM(CASE WHEN ESTADO = 'FACTURA_SOLICITADA' THEN MTO_TOTAL ELSE 0 END), 0) AS TotalPorFacturar,
+                COUNT(CASE WHEN ESTADO = 'FACTURA_SOLICITADA' THEN 1 END) AS Pendientes,
+                COUNT(CASE WHEN ESTADO = 'FACTURA_ENVIADA' THEN 1 END) AS Enviadas,
+                COUNT(CASE WHEN ESTADO = 'FACTURA_ENVIADA_HHMM' THEN 1 END) AS EnviadasHHMM,
+                COUNT(CASE WHEN ESTADO = 'FACTURA_PAGADA' THEN 1 END) AS Pagadas
+            FROM SHM_PRODUCCION
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND ACTIVO = 1";
+
+        var result = await connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { IdEntidadMedica = idEntidadMedica });
+
+        return (
+            result?.TOTALPORFACTURAR ?? 0m,
+            (int)(result?.PENDIENTES ?? 0),
+            (int)(result?.ENVIADAS ?? 0),
+            (int)(result?.ENVIADASHHMM ?? 0),
+            (int)(result?.PAGADAS ?? 0)
+        );
+    }
+
+    /// <summary>
+    /// Obtiene el conteo de facturas enviadas en el mes actual para una entidad medica.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-24</created>
+    /// </summary>
+    public async Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT COUNT(1)
+            FROM SHM_PRODUCCION
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND ACTIVO = 1
+            AND ESTADO IN ('FACTURA_ENVIADA', 'FACTURA_ENVIADA_HHMM', 'FACTURA_PAGADA')
+            AND TRUNC(FECHA_EMISION, 'MM') = TRUNC(SYSDATE, 'MM')";
+
+        return await connection.ExecuteScalarAsync<int>(sql, new { IdEntidadMedica = idEntidadMedica });
+    }
+
+    /// <summary>
+    /// Obtiene datos de facturas por mes para los ultimos 6 meses.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-24</created>
+    /// </summary>
+    public async Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            WITH MESES AS (
+                SELECT ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -LEVEL + 1) AS MES_INICIO
+                FROM DUAL
+                CONNECT BY LEVEL <= 6
+            )
+            SELECT
+                EXTRACT(YEAR FROM m.MES_INICIO) AS Anio,
+                EXTRACT(MONTH FROM m.MES_INICIO) AS Mes,
+                COUNT(CASE WHEN p.ESTADO IN ('FACTURA_ENVIADA', 'FACTURA_ENVIADA_HHMM', 'FACTURA_PAGADA') THEN 1 END) AS Enviadas,
+                COUNT(CASE WHEN p.ESTADO = 'FACTURA_SOLICITADA' THEN 1 END) AS Pendientes
+            FROM MESES m
+            LEFT JOIN SHM_PRODUCCION p ON TRUNC(p.FECHA_CREACION, 'MM') = m.MES_INICIO
+                AND p.ID_ENTIDAD_MEDICA = :IdEntidadMedica
+                AND p.ACTIVO = 1
+            GROUP BY m.MES_INICIO
+            ORDER BY m.MES_INICIO ASC";
+
+        var results = await connection.QueryAsync<dynamic>(sql, new { IdEntidadMedica = idEntidadMedica });
+
+        return results.Select(r => (
+            Anio: (int)r.ANIO,
+            Mes: (int)r.MES,
+            Enviadas: (int)r.ENVIADAS,
+            Pendientes: (int)r.PENDIENTES
+        ));
     }
 }

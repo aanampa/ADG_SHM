@@ -1,3 +1,4 @@
+@model SHM.AppWebCompaniaMedica.Models.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
 }
@@ -14,7 +15,7 @@
     <div class="stat-card fade-in stagger-1">
         <div class="stat-header">
             <div>
-                <div class="stat-value">S/ 124,850.00</div>
+                <div class="stat-value">S/ @Model.TotalPorFacturar.ToString("N2")</div>
                 <div class="stat-label">Total por Facturar</div>
             </div>
             <div class="stat-icon warning">
@@ -26,7 +27,7 @@
     <div class="stat-card fade-in stagger-2">
         <div class="stat-header">
             <div>
-                <div class="stat-value">8</div>
+                <div class="stat-value">@Model.FacturasPendientes</div>
                 <div class="stat-label">Facturas Pendientes</div>
             </div>
             <div class="stat-icon primary">
@@ -38,7 +39,7 @@
     <div class="stat-card fade-in stagger-3">
         <div class="stat-header">
             <div>
-                <div class="stat-value">15</div>
+                <div class="stat-value">@Model.FacturasEnviadasMes</div>
                 <div class="stat-label">Facturas Enviadas (Mes)</div>
             </div>
             <div class="stat-icon info">
@@ -81,7 +82,7 @@
 
 <!-- Quick Stats Row -->
 <div class="row">
-    <div class="col-md-6 mb-4">
+    <div class="col-md-12 mb-4">
         <div class="table-card fade-in">
             <div class="table-header">
                 <h3>
@@ -90,45 +91,24 @@
                 </h3>
             </div>
             <div style="padding: 2rem;">
-                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
-                    <span style="color: var(--text-secondary); font-weight: 600;">Total Facturado</span>
-                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent);">S/ 245,680.00</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
-                    <span style="color: var(--text-secondary); font-weight: 600;">Facturas Procesadas</span>
-                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">32</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
-                    <span style="color: var(--text-secondary); font-weight: 600;">Tiempo Promedio</span>
-                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">2.5 días</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 mb-4">
-        <div class="table-card fade-in">
-            <div class="table-header">
-                <h3>
-                    <i class="bi bi-bell"></i>
-                    Notificaciones Recientes
-                </h3>
-            </div>
-            <div style="padding: 1.5rem;">
-                <div style="display: flex; gap: 1rem; padding: 1rem; border-left: 3px solid var(--accent); background: rgba(37, 150, 190, 0.05); border-radius: 8px; margin-bottom: 1rem;">
-                    <i class="bi bi-check-circle-fill" style="color: var(--accent); font-size: 1.25rem;"></i>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">Factura Aprobada</div>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Tu factura #ORD-2024-005 ha sido aprobada</div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Hace 2 horas</div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
+                            <span style="color: var(--text-secondary); font-weight: 600;">Total Facturado</span>
+                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent);">S/ 245,680.00</span>
+                        </div>
                     </div>
-                </div>
-                <div style="display: flex; gap: 1rem; padding: 1rem; border-left: 3px solid var(--warning); background: rgba(245, 158, 11, 0.05); border-radius: 8px; margin-bottom: 1rem;">
-                    <i class="bi bi-exclamation-triangle-fill" style="color: var(--warning); font-size: 1.25rem;"></i>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">Factura Pendiente</div>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Tienes 8 facturas pendientes de enviar</div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Hace 1 día</div>
+                    <div class="col-md-4">
+                        <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
+                            <span style="color: var(--text-secondary); font-weight: 600;">Facturas Procesadas</span>
+                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">32</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
+                            <span style="color: var(--text-secondary); font-weight: 600;">Tiempo Promedio</span>
+                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">2.5 dias</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -139,22 +119,35 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        // Gráfico de Facturas por Mes (Barras)
+        // Datos del modelo para graficos
+        const meses = [@Html.Raw(string.Join(",", Model.FacturasPorMes.Select(f => $"'{f.Mes}'")))];
+        const facturasEnviadasData = [@string.Join(",", Model.FacturasPorMes.Select(f => f.FacturasEnviadas))];
+        const facturasPendientesData = [@string.Join(",", Model.FacturasPorMes.Select(f => f.FacturasPendientes))];
+
+        // Datos para grafico de estados
+        const estadosData = {
+            pendientes: @Model.CantidadPendienteFactura,
+            enviadas: @Model.CantidadFacturaEnviada,
+            enviadasHHMM: @Model.CantidadFacturaEnviadaHHMM,
+            pagadas: @Model.CantidadFacturaPagada
+        };
+
+        // Grafico de Facturas por Mes (Barras)
         const ctxFacturas = document.getElementById('facturasChart').getContext('2d');
         const facturasChart = new Chart(ctxFacturas, {
             type: 'bar',
             data: {
-                labels: ['Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+                labels: meses,
                 datasets: [{
                     label: 'Facturas Enviadas',
-                    data: [12, 19, 15, 25, 22, 15],
+                    data: facturasEnviadasData,
                     backgroundColor: 'rgba(242, 101, 34, 0.8)',
                     borderColor: 'rgba(242, 101, 34, 1)',
                     borderWidth: 2,
                     borderRadius: 8
                 }, {
                     label: 'Facturas Pendientes',
-                    data: [5, 8, 6, 10, 7, 8],
+                    data: facturasPendientesData,
                     backgroundColor: 'rgba(245, 158, 11, 0.8)',
                     borderColor: 'rgba(245, 158, 11, 1)',
                     borderWidth: 2,
@@ -203,24 +196,24 @@
             }
         });
 
-        // Gráfico de Estados (Dona)
+        // Grafico de Estados (Dona)
         const ctxEstados = document.getElementById('estadosChart').getContext('2d');
         const estadosChart = new Chart(ctxEstados, {
             type: 'doughnut',
             data: {
-                labels: ['Aprobadas', 'En Revisión', 'Pendientes', 'Pagadas'],
+                labels: ['Pendiente Factura', 'Factura Enviada', 'Enviada a HHMM', 'Pagadas'],
                 datasets: [{
-                    data: [15, 3, 8, 6],
+                    data: [estadosData.pendientes, estadosData.enviadas, estadosData.enviadasHHMM, estadosData.pagadas],
                     backgroundColor: [
-                        'rgba(34, 197, 94, 0.8)',
-                        'rgba(59, 130, 246, 0.8)',
                         'rgba(245, 158, 11, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
                         'rgba(242, 101, 34, 0.8)'
                     ],
                     borderColor: [
-                        'rgba(34, 197, 94, 1)',
-                        'rgba(59, 130, 246, 1)',
                         'rgba(245, 158, 11, 1)',
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(34, 197, 94, 1)',
                         'rgba(242, 101, 34, 1)'
                     ],
                     borderWidth: 2
@@ -263,7 +256,7 @@
                                 const label = context.label || '';
                                 const value = context.parsed || 0;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                 return `${label}: ${value} (${percentage}%)`;
                             }
                         }
@@ -273,4 +266,3 @@
         });
     </script>
 }
-

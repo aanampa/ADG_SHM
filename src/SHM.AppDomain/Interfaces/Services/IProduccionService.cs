@@ -94,4 +94,23 @@ public interface IProduccionService
     /// <param name="idModificador">ID del usuario que acepta la factura</param>
     /// <returns>True si se proceso correctamente</returns>
     Task<bool> AceptarFacturaAsync(string guidRegistro, int idModificador);
+    /// Obtiene estadisticas del dashboard para una entidad medica.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Tupla con estadisticas: TotalPorFacturar, conteo por estados</returns>
+    Task<(decimal TotalPorFacturar, int Pendientes, int Enviadas, int EnviadasHHMM, int Pagadas)> GetDashboardStatsAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Obtiene el conteo de facturas enviadas en el mes actual para una entidad medica.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Cantidad de facturas enviadas en el mes</returns>
+    Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Obtiene datos de facturas por mes para los ultimos 6 meses.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Lista de datos por mes</returns>
+    Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica);
 }

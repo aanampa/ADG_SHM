@@ -74,6 +74,7 @@ public class UsuarioController : BaseController
                 var entidad = await _entidadMedicaService.GetEntidadMedicaByIdAsync(usuario.IdEntidadMedica.Value);
                 if (entidad != null)
                 {
+                    model.CodigoEntidad = entidad.CodigoEntidad;
                     model.RazonSocial = entidad.RazonSocial;
                     model.Ruc = entidad.Ruc;
                     model.DireccionEntidad = entidad.Direccion;

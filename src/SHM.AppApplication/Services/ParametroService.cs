@@ -57,6 +57,19 @@ public class ParametroService : IParametroService
     }
 
     /// <summary>
+    /// Obtiene el valor de un parametro por su codigo
+    /// </summary>
+    /// <param name="codigo">Codigo del parametro</param>
+    /// <returns>Valor del parametro o null si no existe</returns>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-23</created>
+    public async Task<string?> GetValorByCodigoAsync(string codigo)
+    {
+        var parametro = await _parametroRepository.GetByCodigoAsync(codigo);
+        return parametro?.Valor;
+    }
+
+    /// <summary>
     /// Crea un nuevo parametro de configuracion en el sistema
     /// </summary>
     public async Task<ParametroResponseDto> CreateParametroAsync(CreateParametroDto createDto, int idCreador)
