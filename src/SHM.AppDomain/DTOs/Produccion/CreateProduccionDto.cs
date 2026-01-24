@@ -7,6 +7,7 @@ namespace SHM.AppDomain.DTOs.Produccion;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
 /// </summary>
 public class CreateProduccionDto
 {
@@ -68,4 +69,9 @@ public class CreateProduccionDto
 
     [MaxLength(20)]
     public string? Estado { get; set; }
+
+    public DateTime? FacturaFechaSolicitud { get; set; }
+    public DateTime? FacturaFechaEnvio { get; set; }
+    public DateTime? FacturaFechaAceptacion { get; set; }
+    public DateTime? FacturaFechaPago { get; set; }
 }

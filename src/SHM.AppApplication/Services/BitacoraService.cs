@@ -10,6 +10,7 @@ namespace SHM.AppApplication.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-24 - Agregados campos IdEntidad y FechaAccion</modified>
 /// </summary>
 public class BitacoraService : IBitacoraService
 {
@@ -54,9 +55,11 @@ public class BitacoraService : IBitacoraService
     {
         var bitacora = new Bitacora
         {
+            IdEntidad = createDto.IdEntidad,
             Entidad = createDto.Entidad,
             Accion = createDto.Accion,
             Descripcion = createDto.Descripcion,
+            FechaAccion = createDto.FechaAccion,
             IdCreador = idCreador,
             Activo = 1
         };
@@ -76,6 +79,9 @@ public class BitacoraService : IBitacoraService
         if (bitacoraExistente == null)
             return false;
 
+        if (updateDto.IdEntidad.HasValue)
+            bitacoraExistente.IdEntidad = updateDto.IdEntidad;
+
         if (!string.IsNullOrEmpty(updateDto.Entidad))
             bitacoraExistente.Entidad = updateDto.Entidad;
 
@@ -84,6 +90,9 @@ public class BitacoraService : IBitacoraService
 
         if (updateDto.Descripcion != null)
             bitacoraExistente.Descripcion = updateDto.Descripcion;
+
+        if (updateDto.FechaAccion.HasValue)
+            bitacoraExistente.FechaAccion = updateDto.FechaAccion;
 
         if (updateDto.Activo.HasValue)
             bitacoraExistente.Activo = updateDto.Activo.Value;
@@ -110,9 +119,11 @@ public class BitacoraService : IBitacoraService
         return new BitacoraResponseDto
         {
             IdBitacora = bitacora.IdBitacora,
+            IdEntidad = bitacora.IdEntidad,
             Entidad = bitacora.Entidad,
             Accion = bitacora.Accion,
             Descripcion = bitacora.Descripcion,
+            FechaAccion = bitacora.FechaAccion,
             Activo = bitacora.Activo,
             GuidRegistro = bitacora.GuidRegistro,
             FechaCreacion = bitacora.FechaCreacion,

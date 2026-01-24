@@ -16,6 +16,7 @@ public class PerfilViewModel
     public DateTime FechaCreacion { get; set; }
 
     // Informacion de la Entidad Medica
+    public string? CodigoEntidad { get; set; }
     public string? RazonSocial { get; set; }
     public string? Ruc { get; set; }
     public string? DireccionEntidad { get; set; }

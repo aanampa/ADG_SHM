@@ -19,6 +19,9 @@ public class FacturasController : BaseController
     private readonly IArchivoService _archivoService;
     private readonly IArchivoComprobanteService _archivoComprobanteService;
     private readonly IBitacoraService _bitacoraService;
+    private readonly IEntidadCuentaBancariaService _entidadCuentaBancariaService;
+    private readonly IBancoService _bancoService;
+    private readonly IParametroService _parametroService;
     private readonly ILogger<FacturasController> _logger;
     private readonly IConfiguration _configuration;
     private readonly FacturaXmlParserService _facturaXmlParserService;
@@ -29,6 +32,9 @@ public class FacturasController : BaseController
         IArchivoService archivoService,
         IArchivoComprobanteService archivoComprobanteService,
         IBitacoraService bitacoraService,
+        IEntidadCuentaBancariaService entidadCuentaBancariaService,
+        IBancoService bancoService,
+        IParametroService parametroService,
         ILogger<FacturasController> logger,
         IConfiguration configuration,
         FacturaXmlParserService facturaXmlParserService)
@@ -38,6 +44,9 @@ public class FacturasController : BaseController
         _archivoService = archivoService;
         _archivoComprobanteService = archivoComprobanteService;
         _bitacoraService = bitacoraService;
+        _entidadCuentaBancariaService = entidadCuentaBancariaService;
+        _bancoService = bancoService;
+        _parametroService = parametroService;
         _logger = logger;
         _configuration = configuration;
         _facturaXmlParserService = facturaXmlParserService;
@@ -315,6 +324,8 @@ public class FacturasController : BaseController
     }
 
     // GET: Facturas/Subir
+    /// <author>ADG Antonio</author>
+    /// <modified>ADG Antonio - 2026-01-23 - Agregado datos de cuenta bancaria y validacion por parametro</modified>
     public async Task<IActionResult> Subir(string guid)
     {
         ViewData["Title"] = "Subir Factura";
@@ -335,6 +346,35 @@ public class FacturasController : BaseController
             var sedes = await _sedeService.GetAllSedesAsync();
             var sede = sedes.FirstOrDefault(s => s.IdSede == produccion.IdSede);
 
+            // Obtener parametro de validacion de cuenta bancaria
+            var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+            var requiereValidacionCuenta = validaCuentaBancaria?.ToUpper() == "S";
+
+            // Obtener cuenta bancaria de la entidad medica
+            string? nombreBanco = null;
+            string? cuentaCorriente = null;
+            string? cuentaCci = null;
+            string? moneda = null;
+
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (cuentaBancaria != null)
+                {
+                    cuentaCorriente = cuentaBancaria.CuentaCorriente;
+                    cuentaCci = cuentaBancaria.CuentaCci;
+                    moneda = cuentaBancaria.Moneda;
+
+                    if (cuentaBancaria.IdBanco.HasValue)
+                    {
+                        var banco = await _bancoService.GetBancoByIdAsync(cuentaBancaria.IdBanco.Value);
+                        nombreBanco = banco?.NombreBanco;
+                    }
+                }
+            }
+
             var model = new SubirFacturaViewModel
             {
                 GuidRegistro = produccion.GuidRegistro,
@@ -342,7 +382,12 @@ public class FacturasController : BaseController
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
                 Concepto = produccion.Concepto ?? produccion.Descripcion,
                 MtoTotal = produccion.MtoTotal,
-                FechaLimite = produccion.FechaLimite
+                FechaLimite = produccion.FechaLimite,
+                NombreBanco = nombreBanco,
+                CuentaCorriente = cuentaCorriente,
+                CuentaCci = cuentaCci,
+                Moneda = moneda,
+                RequiereValidacionCuenta = requiereValidacionCuenta
             };
 
             return View(model);
@@ -355,6 +400,8 @@ public class FacturasController : BaseController
     }
 
     // GET: Facturas/Detalle
+    /// <author>ADG Antonio</author>
+    /// <modified>ADG Antonio - 2026-01-23 - Agregado datos de cuenta bancaria</modified>
     public async Task<IActionResult> Detalle(string guid)
     {
         ViewData["Title"] = "Detalle de Factura";
@@ -400,6 +447,31 @@ public class FacturasController : BaseController
                 }
             }
 
+            // Obtener cuenta bancaria de la entidad medica
+            string? nombreBanco = null;
+            string? cuentaCorriente = null;
+            string? cuentaCci = null;
+            string? moneda = null;
+
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (cuentaBancaria != null)
+                {
+                    cuentaCorriente = cuentaBancaria.CuentaCorriente;
+                    cuentaCci = cuentaBancaria.CuentaCci;
+                    moneda = cuentaBancaria.Moneda;
+
+                    if (cuentaBancaria.IdBanco.HasValue)
+                    {
+                        var banco = await _bancoService.GetBancoByIdAsync(cuentaBancaria.IdBanco.Value);
+                        nombreBanco = banco?.NombreBanco;
+                    }
+                }
+            }
+
             var model = new DetalleFacturaViewModel
             {
                 IdProduccion = produccion.IdProduccion,
@@ -421,7 +493,11 @@ public class FacturasController : BaseController
                 FechaLimite = produccion.FechaLimite,
                 Estado = produccion.Estado,
                 EstadoComprobante = produccion.EstadoComprobante,
-                Archivos = archivos
+                Archivos = archivos,
+                NombreBanco = nombreBanco,
+                CuentaCorriente = cuentaCorriente,
+                CuentaCci = cuentaCci,
+                Moneda = moneda
             };
 
             return View(model);
@@ -469,6 +545,26 @@ public class FacturasController : BaseController
             if (produccion == null)
             {
                 return Json(new { success = false, message = "Producción no encontrada" });
+            }
+
+            // Validar cuenta bancaria si el parametro lo requiere
+            var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+            if (validaCuentaBancaria?.ToUpper() == "S")
+            {
+                if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+                {
+                    var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                    var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                    if (cuentaBancaria == null || (string.IsNullOrEmpty(cuentaBancaria.CuentaCorriente) && string.IsNullOrEmpty(cuentaBancaria.CuentaCci)))
+                    {
+                        return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada. Por favor contacte al administrador." });
+                    }
+                }
+                else
+                {
+                    return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada. Por favor contacte al administrador." });
+                }
             }
 
             // Validar archivos requeridos
