@@ -10,6 +10,8 @@ namespace SHM.AppApplication.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
+/// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
 /// </summary>
 public class ProduccionService : IProduccionService
 {
@@ -48,12 +50,13 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
-    /// Obtiene una produccion por su GUID de registro
+    /// Obtiene una produccion por su GUID de registro con datos relacionados
+    ///
+    /// <modified>ADG Vladimir D - 2025-01-21 - Cambiado para devolver ProduccionListaResponseDto con JOINs</modified>
     /// </summary>
-    public async Task<ProduccionResponseDto?> GetProduccionByGuidAsync(string guidRegistro)
+    public async Task<ProduccionListaResponseDto?> GetProduccionByGuidAsync(string guidRegistro)
     {
-        var produccion = await _produccionRepository.GetByGuidAsync(guidRegistro);
-        return produccion != null ? MapToResponseDto(produccion) : null;
+        return await _produccionRepository.GetByGuidWithDetailsAsync(guidRegistro);
     }
 
     /// <summary>
@@ -114,6 +117,10 @@ public class ProduccionService : IProduccionService
             Concepto = createDto.Concepto,
             FechaLimite = createDto.FechaLimite,
             Estado = createDto.Estado,
+            FacturaFechaSolicitud = createDto.FacturaFechaSolicitud,
+            FacturaFechaEnvio = createDto.FacturaFechaEnvio,
+            FacturaFechaAceptacion = createDto.FacturaFechaAceptacion,
+            FacturaFechaPago = createDto.FacturaFechaPago,
             IdCreador = idCreador,
             Activo = 1
         };
@@ -205,6 +212,18 @@ public class ProduccionService : IProduccionService
         if (updateDto.Estado != null)
             produccionExistente.Estado = updateDto.Estado;
 
+        if (updateDto.FacturaFechaSolicitud.HasValue)
+            produccionExistente.FacturaFechaSolicitud = updateDto.FacturaFechaSolicitud;
+
+        if (updateDto.FacturaFechaEnvio.HasValue)
+            produccionExistente.FacturaFechaEnvio = updateDto.FacturaFechaEnvio;
+
+        if (updateDto.FacturaFechaAceptacion.HasValue)
+            produccionExistente.FacturaFechaAceptacion = updateDto.FacturaFechaAceptacion;
+
+        if (updateDto.FacturaFechaPago.HasValue)
+            produccionExistente.FacturaFechaPago = updateDto.FacturaFechaPago;
+
         if (updateDto.Activo.HasValue)
             produccionExistente.Activo = updateDto.Activo.Value;
 
@@ -223,6 +242,74 @@ public class ProduccionService : IProduccionService
             return false;
 
         return await _produccionRepository.DeleteAsync(id, idModificador);
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-20</created>
+    /// </summary>
+    public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        string? estado, int pageNumber, int pageSize)
+    {
+        return await _produccionRepository.GetPaginatedListAsync(estado, pageNumber, pageSize);
+    }
+
+    /// <summary>
+    /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_ENVIADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2025-01-21</created>
+    /// </summary>
+    public async Task<bool> SolicitarFacturaAsync(SolicitarFacturaDto solicitudDto, int idModificador)
+    {
+        // Combinar fecha y hora en un DateTime
+        if (!DateTime.TryParse($"{solicitudDto.Fecha} {solicitudDto.Hora}", out DateTime fechaLimite))
+        {
+            return false;
+        }
+
+        const string nuevoEstado = "FACTURA_ENVIADA";
+
+        return await _produccionRepository.UpdateFechaLimiteEstadoAsync(
+            solicitudDto.GuidRegistro,
+            fechaLimite,
+            nuevoEstado,
+            idModificador);
+    }
+
+    /// <summary>
+    /// Obtiene estadisticas del dashboard para una entidad medica.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-24</created>
+    /// </summary>
+    public async Task<(decimal TotalPorFacturar, int Pendientes, int Enviadas, int EnviadasHHMM, int Pagadas)> GetDashboardStatsAsync(int idEntidadMedica)
+    {
+        return await _produccionRepository.GetDashboardStatsAsync(idEntidadMedica);
+    }
+
+    /// <summary>
+    /// Obtiene el conteo de facturas enviadas en el mes actual para una entidad medica.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-24</created>
+    /// </summary>
+    public async Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica)
+    {
+        return await _produccionRepository.GetFacturasEnviadasMesActualAsync(idEntidadMedica);
+    }
+
+    /// <summary>
+    /// Obtiene datos de facturas por mes para los ultimos 6 meses.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-24</created>
+    /// </summary>
+    public async Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica)
+    {
+        return await _produccionRepository.GetFacturasPorMesAsync(idEntidadMedica);
     }
 
     private static ProduccionResponseDto MapToResponseDto(Produccion produccion)
@@ -254,6 +341,10 @@ public class ProduccionService : IProduccionService
             Concepto = produccion.Concepto,
             FechaLimite = produccion.FechaLimite,
             Estado = produccion.Estado,
+            FacturaFechaSolicitud = produccion.FacturaFechaSolicitud,
+            FacturaFechaEnvio = produccion.FacturaFechaEnvio,
+            FacturaFechaAceptacion = produccion.FacturaFechaAceptacion,
+            FacturaFechaPago = produccion.FacturaFechaPago,
             Activo = produccion.Activo,
             GuidRegistro = produccion.GuidRegistro,
             FechaCreacion = produccion.FechaCreacion,

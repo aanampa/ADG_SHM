@@ -1,3 +1,4 @@
+using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 
 namespace SHM.AppDomain.Interfaces.Repositories;
@@ -7,6 +8,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// </summary>
 public interface IProduccionRepository
 {
@@ -72,4 +74,53 @@ public interface IProduccionRepository
     /// <created>2026-01-19</created>
     /// </summary>
     Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
+
+    /// <summary>
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    /// </summary>
+    /// <param name="estado">Filtro por estado del proceso (opcional)</param>
+    /// <param name="pageNumber">Numero de pagina</param>
+    /// <param name="pageSize">Tamaño de pagina</param>
+    /// <returns>Tupla con lista de producciones y total de registros</returns>
+    Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        string? estado, int pageNumber, int pageSize);
+
+    /// <summary>
+    /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <returns>Produccion con datos relacionados o null si no existe</returns>
+    Task<ProduccionListaResponseDto?> GetByGuidWithDetailsAsync(string guidRegistro);
+
+    /// <summary>
+    /// Actualiza la fecha limite y estado de una produccion para solicitud de factura.
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <param name="fechaLimite">Fecha y hora limite para entrega de factura</param>
+    /// <param name="estado">Nuevo estado de la produccion</param>
+    /// <param name="idModificador">ID del usuario que realiza la modificacion</param>
+    /// <returns>True si se actualizo correctamente</returns>
+    Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador);
+
+    /// <summary>
+    /// Obtiene estadisticas del dashboard para una entidad medica.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Tupla con estadisticas: TotalPorFacturar, conteo por estados</returns>
+    Task<(decimal TotalPorFacturar, int Pendientes, int Enviadas, int EnviadasHHMM, int Pagadas)> GetDashboardStatsAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Obtiene el conteo de facturas enviadas en el mes actual para una entidad medica.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Cantidad de facturas enviadas en el mes</returns>
+    Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Obtiene datos de facturas por mes para los ultimos 6 meses.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Lista de datos por mes</returns>
+    Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica);
+
 }

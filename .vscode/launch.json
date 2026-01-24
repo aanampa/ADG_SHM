@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Web Honorario Medico (5201)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-web-honorario",
+            "program": "${workspaceFolder}/src/SHM.AppWebHonorarioMedico/bin/Debug/net8.0/SHM.AppWebHonorarioMedico.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/SHM.AppWebHonorarioMedico",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5201"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/src/SHM.AppWebHonorarioMedico/Views"
+            }
+        },
+        {
+            "name": "Web Compania Medica (5202)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-web-compania",
+            "program": "${workspaceFolder}/src/SHM.AppWebCompaniaMedica/bin/Debug/net8.0/SHM.AppWebCompaniaMedica.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/SHM.AppWebCompaniaMedica",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5202"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/src/SHM.AppWebCompaniaMedica/Views"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Ambos Portales (5201 + 5202)",
+            "configurations": ["Web Honorario Medico (5201)", "Web Compania Medica (5202)"]
+        }
+    ]
+}

@@ -12,6 +12,7 @@ namespace SHM.AppInfrastructure.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-24 - Agregados campos IdEntidad y FechaAccion</modified>
 /// </summary>
 public class BitacoraRepository : IBitacoraRepository
 {
@@ -35,9 +36,11 @@ public class BitacoraRepository : IBitacoraRepository
         var sql = @"
             SELECT
                 ID_BITACORA as IdBitacora,
+                ID_ENTIDAD as IdEntidad,
                 ENTIDAD as Entidad,
                 ACCION as Accion,
                 DESCRIPCION as Descripcion,
+                FECHA_ACCION as FechaAccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -60,9 +63,11 @@ public class BitacoraRepository : IBitacoraRepository
         var sql = @"
             SELECT
                 ID_BITACORA as IdBitacora,
+                ID_ENTIDAD as IdEntidad,
                 ENTIDAD as Entidad,
                 ACCION as Accion,
                 DESCRIPCION as Descripcion,
+                FECHA_ACCION as FechaAccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -85,9 +90,11 @@ public class BitacoraRepository : IBitacoraRepository
         var sql = @"
             SELECT
                 ID_BITACORA as IdBitacora,
+                ID_ENTIDAD as IdEntidad,
                 ENTIDAD as Entidad,
                 ACCION as Accion,
                 DESCRIPCION as Descripcion,
+                FECHA_ACCION as FechaAccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -111,18 +118,22 @@ public class BitacoraRepository : IBitacoraRepository
         var sql = @"
             INSERT INTO SHM_BITACORA (
                 ID_BITACORA,
+                ID_ENTIDAD,
                 ENTIDAD,
                 ACCION,
                 DESCRIPCION,
+                FECHA_ACCION,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
                 SHM_BITACORA_SEQ.NEXTVAL,
+                :IdEntidad,
                 :Entidad,
                 :Accion,
                 :Descripcion,
+                :FechaAccion,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -131,9 +142,11 @@ public class BitacoraRepository : IBitacoraRepository
             RETURNING ID_BITACORA INTO :IdBitacora";
 
         var parameters = new DynamicParameters();
+        parameters.Add("IdEntidad", bitacora.IdEntidad);
         parameters.Add("Entidad", bitacora.Entidad);
         parameters.Add("Accion", bitacora.Accion);
         parameters.Add("Descripcion", bitacora.Descripcion);
+        parameters.Add("FechaAccion", bitacora.FechaAccion);
         parameters.Add("IdCreador", bitacora.IdCreador);
         parameters.Add("IdBitacora", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -152,9 +165,11 @@ public class BitacoraRepository : IBitacoraRepository
         var sql = @"
             UPDATE SHM_BITACORA
             SET
+                ID_ENTIDAD = :IdEntidad,
                 ENTIDAD = :Entidad,
                 ACCION = :Accion,
                 DESCRIPCION = :Descripcion,
+                FECHA_ACCION = :FechaAccion,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -163,9 +178,11 @@ public class BitacoraRepository : IBitacoraRepository
         var rowsAffected = await connection.ExecuteAsync(sql, new
         {
             IdBitacora = id,
+            bitacora.IdEntidad,
             bitacora.Entidad,
             bitacora.Accion,
             bitacora.Descripcion,
+            bitacora.FechaAccion,
             bitacora.Activo,
             bitacora.IdModificador
         });

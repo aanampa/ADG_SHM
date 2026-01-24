@@ -51,6 +51,17 @@ public class SubirFacturaViewModel
     public string? Concepto { get; set; }
     public decimal? MtoTotal { get; set; }
     public DateTime? FechaLimite { get; set; }
+
+    // Datos de cuenta bancaria
+    public string? NombreBanco { get; set; }
+    public string? CuentaCorriente { get; set; }
+    public string? CuentaCci { get; set; }
+    public string? Moneda { get; set; }
+
+    // Validacion de cuenta bancaria
+    public bool RequiereValidacionCuenta { get; set; }
+    public bool TieneCuentaBancaria => !string.IsNullOrEmpty(CuentaCorriente) || !string.IsNullOrEmpty(CuentaCci);
+    public bool PuedeSubirFactura => !RequiereValidacionCuenta || TieneCuentaBancaria;
 }
 
 public class DetalleFacturaViewModel
@@ -75,6 +86,12 @@ public class DetalleFacturaViewModel
     public string? Estado { get; set; }
     public string? EstadoComprobante { get; set; }
     public List<ArchivoAdjuntoViewModel> Archivos { get; set; } = new();
+
+    // Datos de cuenta bancaria
+    public string? NombreBanco { get; set; }
+    public string? CuentaCorriente { get; set; }
+    public string? CuentaCci { get; set; }
+    public string? Moneda { get; set; }
 }
 
 public class ArchivoAdjuntoViewModel

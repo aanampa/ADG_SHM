@@ -105,6 +105,65 @@ public class AuthController : Controller
                 return RedirectToAction("Index", "Home");
             }
 
+            // Modo DEV - login sin validación de contraseña pero con datos reales
+            if (instancia == "DEV")
+            {
+                // Obtener usuario solo por login (sin validar password)
+                var usuarioDev = await _usuarioService.GetUsuarioByLoginAsync(model.Username);
+
+                if (usuarioDev == null)
+                {
+                    _logger.LogWarning("Usuario no encontrado en modo DEV: {Username}", model.Username);
+                    SetModelView(model);
+                    ViewBag.LoginMessage = "Usuario no encontrado";
+                    return View(model);
+                }
+
+                if (usuarioDev.Activo != 1)
+                {
+                    SetModelView(model);
+                    ViewBag.LoginMessage = "Usuario inactivo";
+                    return View(model);
+                }
+
+                // Crear Claims con datos reales del usuario
+                var devClaims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuarioDev.IdUsuario.ToString()),
+                    new Claim(ClaimTypes.Name, usuarioDev.Login),
+                    new Claim("Usuario", usuarioDev.Login.ToUpper()),
+                    new Claim("NombreUsuario", $"{usuarioDev.Nombres} {usuarioDev.ApellidoPaterno}".Trim()),
+                    new Claim("IdUsuario", usuarioDev.IdUsuario.ToString()),
+                    new Claim("Email", usuarioDev.Email ?? ""),
+                    new Claim("IdSede", "0"),
+                    new Claim("NombreSede", ""),
+                    new Claim("IdArea", "0"),
+                    new Claim("NombreArea", "")
+                };
+
+                if (usuarioDev.IdRol.HasValue)
+                    devClaims.Add(new Claim(ClaimTypes.Role, usuarioDev.IdRol.Value.ToString()));
+
+                if (usuarioDev.IdEntidadMedica.HasValue)
+                    devClaims.Add(new Claim("IdEntidadMedica", usuarioDev.IdEntidadMedica.Value.ToString()));
+
+                var devIdentity = new ClaimsIdentity(devClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(devIdentity),
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = model.RememberMe,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    }
+                );
+
+                _logger.LogInformation("Login DEV exitoso para usuario: {Username} (ID: {UserId})",
+                    model.Username, usuarioDev.IdUsuario);
+                return RedirectToAction("Index", "Home");
+            }
+
             // Validar credenciales contra la base de datos
             var usuario = await _usuarioService.ValidarCredencialesAsync(model.Username, model.Password);
 

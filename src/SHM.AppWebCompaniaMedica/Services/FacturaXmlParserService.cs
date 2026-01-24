@@ -6,10 +6,24 @@ using SHM.AppWebCompaniaMedica.Models;
 namespace SHM.AppWebCompaniaMedica.Services;
 
 /// <summary>
-/// Servicio para parsear archivos XML de facturas electronicas UBL 2.1 (SUNAT Peru).
+/// Resultado de la validacion del XML de factura.
+///
+/// <author>ADG Antonio</author>
+/// <created>2026-01-22</created>
+/// </summary>
+public class FacturaXmlValidationResult
+{
+    public bool IsValid { get; set; }
+    public List<string> Errors { get; set; } = new();
+    public string ErrorMessage => string.Join("; ", Errors);
+}
+
+/// <summary>
+/// Servicio para parsear y validar archivos XML de facturas electronicas UBL 2.1 (SUNAT Peru).
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-21</created>
+/// <modified>ADG Antonio - 2026-01-22 - Agregado metodo de validacion de XML</modified>
 /// </summary>
 public class FacturaXmlParserService
 {
@@ -17,6 +31,155 @@ public class FacturaXmlParserService
     private static readonly XNamespace cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
     private static readonly XNamespace ds = "http://www.w3.org/2000/09/xmldsig#";
     private static readonly XNamespace ext = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
+
+    /// <summary>
+    /// Valida que el XML sea una factura electronica UBL 2.1 valida.
+    /// </summary>
+    public FacturaXmlValidationResult ValidateFacturaXml(Stream xmlStream)
+    {
+        var result = new FacturaXmlValidationResult { IsValid = true };
+
+        try
+        {
+            // Resetear posicion del stream
+            if (xmlStream.CanSeek)
+                xmlStream.Position = 0;
+
+            var doc = XDocument.Load(xmlStream);
+            var root = doc.Root;
+
+            if (root == null)
+            {
+                result.IsValid = false;
+                result.Errors.Add("El archivo no contiene un documento XML valido");
+                return result;
+            }
+
+            // Validar que sea un documento Invoice o CreditNote o DebitNote
+            var rootName = root.Name.LocalName;
+            if (rootName != "Invoice" && rootName != "CreditNote" && rootName != "DebitNote")
+            {
+                result.IsValid = false;
+                result.Errors.Add($"El documento XML no es una factura electronica valida. Tipo encontrado: {rootName}");
+                return result;
+            }
+
+            // Validar numero de documento (ID)
+            var id = root.Element(cbc + "ID")?.Value;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene el numero de documento (ID)");
+            }
+            else if (!id.Contains('-'))
+            {
+                result.IsValid = false;
+                result.Errors.Add($"El numero de documento '{id}' no tiene el formato valido (SERIE-NUMERO)");
+            }
+
+            // Validar fecha de emision
+            var issueDate = root.Element(cbc + "IssueDate")?.Value;
+            if (string.IsNullOrWhiteSpace(issueDate))
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene la fecha de emision (IssueDate)");
+            }
+
+            // Validar tipo de documento
+            var invoiceTypeCode = root.Element(cbc + "InvoiceTypeCode")?.Value;
+            if (rootName == "Invoice" && string.IsNullOrWhiteSpace(invoiceTypeCode))
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene el tipo de documento (InvoiceTypeCode)");
+            }
+
+            // Validar emisor (AccountingSupplierParty)
+            var supplierParty = root.Element(cac + "AccountingSupplierParty");
+            if (supplierParty == null)
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene informacion del emisor (AccountingSupplierParty)");
+            }
+            else
+            {
+                var supplierRuc = supplierParty
+                    .Element(cac + "Party")?
+                    .Element(cac + "PartyIdentification")?
+                    .Element(cbc + "ID")?.Value;
+
+                if (string.IsNullOrWhiteSpace(supplierRuc))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add("El XML no contiene el RUC del emisor");
+                }
+            }
+
+            // Validar cliente (AccountingCustomerParty)
+            var customerParty = root.Element(cac + "AccountingCustomerParty");
+            if (customerParty == null)
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene informacion del cliente (AccountingCustomerParty)");
+            }
+            else
+            {
+                var customerDoc = customerParty
+                    .Element(cac + "Party")?
+                    .Element(cac + "PartyIdentification")?
+                    .Element(cbc + "ID")?.Value;
+
+                if (string.IsNullOrWhiteSpace(customerDoc))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add("El XML no contiene el documento del cliente");
+                }
+            }
+
+            // Validar que tenga al menos un item
+            var invoiceLines = root.Elements(cac + "InvoiceLine").ToList();
+            var creditNoteLines = root.Elements(cac + "CreditNoteLine").ToList();
+            var debitNoteLines = root.Elements(cac + "DebitNoteLine").ToList();
+
+            if (invoiceLines.Count == 0 && creditNoteLines.Count == 0 && debitNoteLines.Count == 0)
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene items de detalle");
+            }
+
+            // Validar montos totales
+            var legalMonetaryTotal = root.Element(cac + "LegalMonetaryTotal");
+            if (legalMonetaryTotal == null)
+            {
+                result.IsValid = false;
+                result.Errors.Add("El XML no contiene los totales del documento (LegalMonetaryTotal)");
+            }
+            else
+            {
+                var payableAmount = legalMonetaryTotal.Element(cbc + "PayableAmount")?.Value;
+                if (string.IsNullOrWhiteSpace(payableAmount))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add("El XML no contiene el importe total a pagar (PayableAmount)");
+                }
+            }
+
+            // Resetear posicion del stream para uso posterior
+            if (xmlStream.CanSeek)
+                xmlStream.Position = 0;
+        }
+        catch (XmlException ex)
+        {
+            result.IsValid = false;
+            result.Errors.Add($"El archivo no es un XML valido: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            result.IsValid = false;
+            result.Errors.Add($"Error al validar el XML: {ex.Message}");
+        }
+
+        return result;
+    }
 
     /// <summary>
     /// Parsea un archivo XML de factura electronica y extrae sus datos.

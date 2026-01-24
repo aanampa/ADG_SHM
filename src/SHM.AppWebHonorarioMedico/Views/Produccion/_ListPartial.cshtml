@@ -1,0 +1,164 @@
+@model SHM.AppWebHonorarioMedico.Models.ProduccionListViewModel
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
+        <thead>
+            <tr>
+                <th class="text-center" style="width: 40px;">
+                    <input type="checkbox" id="chkSelectAll" onclick="toggleSelectAll(this)">
+                </th>
+                <th style="width: 90px;">Produccion</th>
+                <th style="width: 130px;">Tipo Produccion</th>
+                <th>Descripcion</th>
+                <th style="width: 100px;">Periodo</th>
+                <th style="width: 140px;">Estado del Proceso</th>
+                <th>Razon Social</th>
+                <th style="width: 100px;" class="text-right">Sub Total S/.</th>
+                <th style="width: 80px;" class="text-right">IGV S/.</th>
+                <th style="width: 80px;" class="text-right">Imp. Renta S/.</th>
+                <th style="width: 90px;" class="text-right">Total S/.</th>
+                <th style="width: 120px;">Comprobante</th>
+                <th style="width: 80px;" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Any())
+            {
+                @foreach (var item in Model.Items)
+                {
+                    var badgeClass = GetBadgeClass(item.Estado);
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="chk-item" data-guid="@item.GuidRegistro">
+                        </td>
+                        <td>@item.CodigoProduccion</td>
+                        <td>@item.DesTipoProduccion</td>
+                        <td>@item.Descripcion</td>
+                        <td>@(item.Periodo != null ? FormatPeriodo(item.Periodo) : "-")</td>
+                        <td>
+                            <span class="badge @badgeClass">@item.DesEstado</span>
+                        </td>
+                        <td>@item.RazonSocial</td>
+                        <td class="text-right">@(item.MtoSubtotal?.ToString("N2") ?? "-")</td>
+                        <td class="text-right">@(item.MtoIgv?.ToString("N2") ?? "-")</td>
+                        <td class="text-right">@(item.MtoRenta?.ToString("N2") ?? "-")</td>
+                        <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                        <td>@(item.ComprobanteFactura ?? "-")</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-info btn-xs" onclick="verDetalle('@item.GuidRegistro')"
+                                title="Ver Detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="13" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No se encontraron producciones</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <div class="card-footer clearfix">
+        <div class="float-left">
+            <small class="text-muted">
+                Mostrando @((Model.PageNumber - 1) * Model.PageSize + 1) -
+                @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)) de @Model.TotalCount registros
+            </small>
+        </div>
+        <ul class="pagination pagination-sm m-0 float-right">
+            @if (Model.PageNumber > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(1)">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@(Model.PageNumber - 1))">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+            }
+
+            @{
+                var startPage = Math.Max(1, Model.PageNumber - 2);
+                var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+            }
+
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                var pageNum = i;
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@pageNum)">@i</a>
+                </li>
+            }
+
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@(Model.PageNumber + 1))">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@Model.TotalPages)">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+}
+else if (Model.TotalCount > 0)
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Mostrando @Model.TotalCount registro(s)
+        </small>
+    </div>
+}
+
+@functions {
+    string GetBadgeClass(string? estado)
+    {
+        return estado switch
+        {
+            "PENDIENTE" => "badge-warning",
+            "ENVIADA" => "badge-info",
+            "ACEPTADA" => "badge-primary",
+            "LIQUIDACION" => "badge-secondary",
+            "PAGADO" => "badge-success",
+            "RECHAZADA" => "badge-danger",
+            _ => "badge-secondary"
+        };
+    }
+
+    string FormatPeriodo(string periodo)
+    {
+        // Parsear formato Oracle (DD-MON-YY) y convertir a dd/MM/yyyy
+        if (DateTime.TryParse(periodo, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out DateTime fecha))
+        {
+            return fecha.ToString("dd/MM/yyyy");
+        }
+        return periodo;
+    }
+}
+
+<script>
+    function toggleSelectAll(source) {
+        const checkboxes = document.querySelectorAll('.chk-item');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = source.checked;
+        });
+    }
+</script>

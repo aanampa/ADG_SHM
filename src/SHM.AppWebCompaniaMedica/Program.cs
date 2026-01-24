@@ -59,6 +59,7 @@ try
     builder.Services.AddScoped<IEntidadMedicaRepository, EntidadMedicaRepository>();
     builder.Services.AddScoped<IEntidadCuentaBancariaRepository, EntidadCuentaBancariaRepository>();
     builder.Services.AddScoped<IBancoRepository, BancoRepository>();
+    builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -70,6 +71,7 @@ try
     builder.Services.AddScoped<IEntidadMedicaService, EntidadMedicaService>();
     builder.Services.AddScoped<IEntidadCuentaBancariaService, EntidadCuentaBancariaService>();
     builder.Services.AddScoped<IBancoService, BancoService>();
+    builder.Services.AddScoped<IParametroService, ParametroService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));

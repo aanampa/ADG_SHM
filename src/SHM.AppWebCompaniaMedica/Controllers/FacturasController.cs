@@ -19,6 +19,9 @@ public class FacturasController : BaseController
     private readonly IArchivoService _archivoService;
     private readonly IArchivoComprobanteService _archivoComprobanteService;
     private readonly IBitacoraService _bitacoraService;
+    private readonly IEntidadCuentaBancariaService _entidadCuentaBancariaService;
+    private readonly IBancoService _bancoService;
+    private readonly IParametroService _parametroService;
     private readonly ILogger<FacturasController> _logger;
     private readonly IConfiguration _configuration;
     private readonly FacturaXmlParserService _facturaXmlParserService;
@@ -29,6 +32,9 @@ public class FacturasController : BaseController
         IArchivoService archivoService,
         IArchivoComprobanteService archivoComprobanteService,
         IBitacoraService bitacoraService,
+        IEntidadCuentaBancariaService entidadCuentaBancariaService,
+        IBancoService bancoService,
+        IParametroService parametroService,
         ILogger<FacturasController> logger,
         IConfiguration configuration,
         FacturaXmlParserService facturaXmlParserService)
@@ -38,6 +44,9 @@ public class FacturasController : BaseController
         _archivoService = archivoService;
         _archivoComprobanteService = archivoComprobanteService;
         _bitacoraService = bitacoraService;
+        _entidadCuentaBancariaService = entidadCuentaBancariaService;
+        _bancoService = bancoService;
+        _parametroService = parametroService;
         _logger = logger;
         _configuration = configuration;
         _facturaXmlParserService = facturaXmlParserService;
@@ -68,7 +77,7 @@ public class FacturasController : BaseController
             // Filtrar solo las pendientes (Estado = "PENDIENTE" o sin comprobante)
             var pendientes = producciones
                 .Where(p => p.Activo == 1 &&
-                            p.Estado == "PENDIENTE" 
+                            p.Estado == "FACTURA_SOLICITADA" 
                             )
                 .ToList();
 
@@ -85,7 +94,7 @@ public class FacturasController : BaseController
                 Concepto = p.Concepto ?? p.Descripcion,
                 MtoTotal = p.MtoTotal,
                 FechaLimite = p.FechaLimite,
-                Estado = p.Estado ?? "PENDIENTE",
+                Estado = p.Estado ?? "FACTURA_SOLICITADA",
                 GuidRegistro = p.GuidRegistro
             }).ToList();
 
@@ -185,7 +194,9 @@ public class FacturasController : BaseController
             var enviadas = producciones
                 .Where(p => p.Activo == 1 &&
                            !string.IsNullOrEmpty(p.EstadoComprobante) &&
-                           p.EstadoComprobante != "PENDIENTE")
+                           p.EstadoComprobante != "FACTURA_SOLICITADA" &&
+                           p.EstadoComprobante != "PENDIENTE"
+                           )
                 .ToList();
 
             var sedes = await _sedeService.GetAllSedesAsync();
@@ -253,7 +264,10 @@ public class FacturasController : BaseController
             var enviadas = producciones
                 .Where(p => p.Activo == 1 &&
                            !string.IsNullOrEmpty(p.EstadoComprobante) &&
-                           p.EstadoComprobante != "PENDIENTE")
+                           p.EstadoComprobante != "PENDIENTE" &
+                           p.EstadoComprobante != "FACTURA_PENDIENTE" &&
+                           p.EstadoComprobante != "FACTURA_SOLICITADA"
+                           )
                 .ToList();
 
             var sedes = await _sedeService.GetAllSedesAsync();
@@ -310,6 +324,8 @@ public class FacturasController : BaseController
     }
 
     // GET: Facturas/Subir
+    /// <author>ADG Antonio</author>
+    /// <modified>ADG Antonio - 2026-01-23 - Agregado datos de cuenta bancaria y validacion por parametro</modified>
     public async Task<IActionResult> Subir(string guid)
     {
         ViewData["Title"] = "Subir Factura";
@@ -330,6 +346,35 @@ public class FacturasController : BaseController
             var sedes = await _sedeService.GetAllSedesAsync();
             var sede = sedes.FirstOrDefault(s => s.IdSede == produccion.IdSede);
 
+            // Obtener parametro de validacion de cuenta bancaria
+            var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+            var requiereValidacionCuenta = validaCuentaBancaria?.ToUpper() == "S";
+
+            // Obtener cuenta bancaria de la entidad medica
+            string? nombreBanco = null;
+            string? cuentaCorriente = null;
+            string? cuentaCci = null;
+            string? moneda = null;
+
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (cuentaBancaria != null)
+                {
+                    cuentaCorriente = cuentaBancaria.CuentaCorriente;
+                    cuentaCci = cuentaBancaria.CuentaCci;
+                    moneda = cuentaBancaria.Moneda;
+
+                    if (cuentaBancaria.IdBanco.HasValue)
+                    {
+                        var banco = await _bancoService.GetBancoByIdAsync(cuentaBancaria.IdBanco.Value);
+                        nombreBanco = banco?.NombreBanco;
+                    }
+                }
+            }
+
             var model = new SubirFacturaViewModel
             {
                 GuidRegistro = produccion.GuidRegistro,
@@ -337,7 +382,12 @@ public class FacturasController : BaseController
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
                 Concepto = produccion.Concepto ?? produccion.Descripcion,
                 MtoTotal = produccion.MtoTotal,
-                FechaLimite = produccion.FechaLimite
+                FechaLimite = produccion.FechaLimite,
+                NombreBanco = nombreBanco,
+                CuentaCorriente = cuentaCorriente,
+                CuentaCci = cuentaCci,
+                Moneda = moneda,
+                RequiereValidacionCuenta = requiereValidacionCuenta
             };
 
             return View(model);
@@ -350,6 +400,8 @@ public class FacturasController : BaseController
     }
 
     // GET: Facturas/Detalle
+    /// <author>ADG Antonio</author>
+    /// <modified>ADG Antonio - 2026-01-23 - Agregado datos de cuenta bancaria</modified>
     public async Task<IActionResult> Detalle(string guid)
     {
         ViewData["Title"] = "Detalle de Factura";
@@ -395,6 +447,31 @@ public class FacturasController : BaseController
                 }
             }
 
+            // Obtener cuenta bancaria de la entidad medica
+            string? nombreBanco = null;
+            string? cuentaCorriente = null;
+            string? cuentaCci = null;
+            string? moneda = null;
+
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (cuentaBancaria != null)
+                {
+                    cuentaCorriente = cuentaBancaria.CuentaCorriente;
+                    cuentaCci = cuentaBancaria.CuentaCci;
+                    moneda = cuentaBancaria.Moneda;
+
+                    if (cuentaBancaria.IdBanco.HasValue)
+                    {
+                        var banco = await _bancoService.GetBancoByIdAsync(cuentaBancaria.IdBanco.Value);
+                        nombreBanco = banco?.NombreBanco;
+                    }
+                }
+            }
+
             var model = new DetalleFacturaViewModel
             {
                 IdProduccion = produccion.IdProduccion,
@@ -416,7 +493,11 @@ public class FacturasController : BaseController
                 FechaLimite = produccion.FechaLimite,
                 Estado = produccion.Estado,
                 EstadoComprobante = produccion.EstadoComprobante,
-                Archivos = archivos
+                Archivos = archivos,
+                NombreBanco = nombreBanco,
+                CuentaCorriente = cuentaCorriente,
+                CuentaCci = cuentaCci,
+                Moneda = moneda
             };
 
             return View(model);
@@ -466,10 +547,152 @@ public class FacturasController : BaseController
                 return Json(new { success = false, message = "Producción no encontrada" });
             }
 
+            // Validar cuenta bancaria si el parametro lo requiere
+            var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+            if (validaCuentaBancaria?.ToUpper() == "S")
+            {
+                if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+                {
+                    var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                    var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                    if (cuentaBancaria == null || (string.IsNullOrEmpty(cuentaBancaria.CuentaCorriente) && string.IsNullOrEmpty(cuentaBancaria.CuentaCci)))
+                    {
+                        return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada. Por favor contacte al administrador." });
+                    }
+                }
+                else
+                {
+                    return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada. Por favor contacte al administrador." });
+                }
+            }
+
             // Validar archivos requeridos
             if (archivoPdf == null || archivoXml == null || archivoCdr == null)
             {
                 return Json(new { success = false, message = "Todos los archivos son requeridos (PDF, XML, CDR)" });
+            }
+
+            // Validar que el XML sea una factura electronica valida
+            FacturaXmlValidationResult validationResult;
+            using (var xmlStreamValidation = archivoXml.OpenReadStream())
+            {
+                validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
+            }
+
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("XML de factura invalido: {Errors}", validationResult.ErrorMessage);
+                return Json(new { success = false, message = $"El XML de factura no es valido: {validationResult.ErrorMessage}" });
+            }
+
+            // Parsear XML para obtener serie y numero de factura
+            FacturaXmlData facturaData;
+            try
+            {
+                using var xmlStream = archivoXml.OpenReadStream();
+                facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+            }
+            catch (Exception xmlEx)
+            {
+                _logger.LogError(xmlEx, "Error al parsear el XML de factura");
+                return Json(new { success = false, message = "Error al leer el archivo XML de factura" });
+            }
+
+            // Extraer serie y numero del XML (formato: "E001-17" -> serie="E001", numero="17")
+            var numeroFactura = facturaData.DatosGenerales.NumeroFactura;
+            if (string.IsNullOrEmpty(numeroFactura) || !numeroFactura.Contains('-'))
+            {
+                return Json(new { success = false, message = "El XML no contiene un numero de factura valido" });
+            }
+
+            var partes = numeroFactura.Split('-');
+            var serieXml = partes[0];
+            var numeroXml = partes[1];
+
+            // Formatear numero a 8 digitos con ceros a la izquierda
+            var numeroXmlOriginal = numeroXml;
+            if (int.TryParse(numeroXml, out var numeroInt))
+            {
+                numeroXml = numeroInt.ToString("D8");
+            }
+
+            // Validar que los datos del formulario coincidan con los del XML
+            var erroresCoincidencia = new List<string>();
+
+            // Validar tipo de comprobante
+            var tipoComprobanteXml = facturaData.DatosGenerales.CodigoTipoDocumento;
+            if (!string.IsNullOrEmpty(tipoComprobante) && !string.IsNullOrEmpty(tipoComprobanteXml))
+            {
+                if (tipoComprobante != tipoComprobanteXml)
+                {
+                    erroresCoincidencia.Add($"Tipo de comprobante: formulario='{tipoComprobante}', XML='{tipoComprobanteXml}'");
+                }
+            }
+
+            // Validar fecha de emision
+            var fechaEmisionXmlStr = facturaData.DatosGenerales.FechaEmision;
+            if (DateTime.TryParse(fechaEmisionXmlStr, out var fechaEmisionXml))
+            {
+                if (fechaEmision.Date != fechaEmisionXml.Date)
+                {
+                    erroresCoincidencia.Add($"Fecha de emision: formulario='{fechaEmision:yyyy-MM-dd}', XML='{fechaEmisionXml:yyyy-MM-dd}'");
+                }
+            }
+
+            // Validar serie
+            if (!string.Equals(serie?.Trim(), serieXml?.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                erroresCoincidencia.Add($"Serie: formulario='{serie}', XML='{serieXml}'");
+            }
+
+            // Validar numero (comparar valores numericos para evitar problemas con ceros)
+            if (int.TryParse(numero, out var numeroFormulario) && int.TryParse(numeroXmlOriginal, out var numeroXmlInt))
+            {
+                if (numeroFormulario != numeroXmlInt)
+                {
+                    erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
+                }
+            }
+            else if (numero?.Trim() != numeroXmlOriginal?.Trim())
+            {
+                erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
+            }
+
+            // Validar importe total
+            var importeTotalXml = facturaData.DesgloseTotales.ImporteTotal;
+            if (produccion.MtoTotal.HasValue && importeTotalXml > 0)
+            {
+                // Comparar con tolerancia de 0.01 para evitar problemas de redondeo
+                if (Math.Abs(produccion.MtoTotal.Value - importeTotalXml) > 0.01m)
+                {
+                    erroresCoincidencia.Add($"Importe total: produccion='S/ {produccion.MtoTotal:N2}', XML='S/ {importeTotalXml:N2}'");
+                }
+            }
+
+            // Validar concepto contra descripcion del primer item del XML
+            if (facturaData.DetalleItems.Count > 0)
+            {
+                var descripcionPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
+                var conceptoProduccion = produccion.Concepto?.Trim();
+
+                if (!string.IsNullOrEmpty(conceptoProduccion) && !string.IsNullOrEmpty(descripcionPrimerItem))
+                {
+                    if (!string.Equals(conceptoProduccion, descripcionPrimerItem, StringComparison.OrdinalIgnoreCase))
+                    {
+                        erroresCoincidencia.Add($"Concepto: produccion='{conceptoProduccion}', XML (primer item)='{descripcionPrimerItem}'");
+                    }
+                }
+            }
+
+            if (erroresCoincidencia.Count > 0)
+            {
+                _logger.LogWarning("Los datos del formulario no coinciden con el XML: {Errores}", string.Join("; ", erroresCoincidencia));
+                return Json(new
+                {
+                    success = false,
+                    message = "Los datos ingresados no coinciden con el XML de la factura: " + string.Join("; ", erroresCoincidencia)
+                });
             }
 
             // Obtener ruta de archivos desde configuración
@@ -482,11 +705,11 @@ public class FacturasController : BaseController
                 Directory.CreateDirectory(uploadPath);
             }
 
-            // Preparar nombres de archivos
-            var pdfFileName = $"{serie}-{numero}.pdf";
-            var xmlFileName = $"{serie}-{numero}.xml";
+            // Preparar nombres de archivos usando serie y numero del XML
+            var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
+            var xmlFileName = $"{serieXml}-{numeroXml}.xml";
             var cdrExtension = Path.GetExtension(archivoCdr.FileName);
-            var cdrFileName = $"{serie}-{numero}-cdr{cdrExtension}";
+            var cdrFileName = $"{serieXml}-{numeroXml}-cdr{cdrExtension}";
 
             var pdfPath = Path.Combine(uploadPath, pdfFileName);
             var xmlPath = Path.Combine(uploadPath, xmlFileName);
@@ -511,26 +734,18 @@ public class FacturasController : BaseController
             }
             archivosGuardados.Add(cdrPath);
 
-            // Parsear XML y guardar datos en archivo JSON
-            var jsonFileName = $"{serie}-{numero}.json";
+            // Guardar datos del XML parseado en archivo JSON
+            var jsonFileName = $"{serieXml}-{numeroXml}.json";
             var jsonPath = Path.Combine(uploadPath, jsonFileName);
-            try
+            var jsonOptions = new JsonSerializerOptions
             {
-                var facturaData = _facturaXmlParserService.ParseFacturaXml(xmlPath);
-                var jsonOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-                var jsonContent = JsonSerializer.Serialize(facturaData, jsonOptions);
-                await System.IO.File.WriteAllTextAsync(jsonPath, jsonContent);
-                archivosGuardados.Add(jsonPath);
-                _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
-            }
-            catch (Exception xmlEx)
-            {
-                _logger.LogWarning(xmlEx, "No se pudo parsear el XML de factura para extraer datos. Continuando sin JSON.");
-            }
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var jsonContent = JsonSerializer.Serialize(facturaData, jsonOptions);
+            await System.IO.File.WriteAllTextAsync(jsonPath, jsonContent);
+            archivosGuardados.Add(jsonPath);
+            _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
 
             // Iniciar transacción para operaciones de base de datos
             using var transactionScope = new TransactionScope(
@@ -599,15 +814,21 @@ public class FacturasController : BaseController
                 Descripcion = "Constancia CDR"
             }, userId);
 
-            // Actualizar producción
+            // Actualizar producción con datos del XML
+            DateTime? fechaEmisionParaActualizar = null;
+            if (DateTime.TryParse(facturaData.DatosGenerales.FechaEmision, out var fechaParsedUpdate))
+            {
+                fechaEmisionParaActualizar = fechaParsedUpdate;
+            }
+
             var updateDto = new UpdateProduccionDto
             {
-                TipoComprobante = tipoComprobante,
-                Serie = serie,
-                Numero = numero,
-                FechaEmision = fechaEmision,
+                TipoComprobante = facturaData.DatosGenerales.CodigoTipoDocumento,
+                Serie = serieXml,
+                Numero = numeroXml,
+                FechaEmision = fechaEmisionParaActualizar ?? fechaEmision,
                 EstadoComprobante = "ENVIADO",
-                Estado = "ENVIADO"
+                Estado = "FACTURA_ENVIADA"
             };
 
             var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
@@ -708,6 +929,15 @@ public class FacturasController : BaseController
             };
 
             var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+
+            // Para PDFs, mostrar inline en el navegador (visor embebido)
+            // Para otros archivos, forzar descarga
+            if (archivo.Extension?.ToLower() == ".pdf")
+            {
+                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivo.NombreArchivo}\"");
+                return File(fileBytes, contentType);
+            }
+
             return File(fileBytes, contentType, archivo.NombreArchivo ?? $"archivo{archivo.Extension}");
         }
         catch (Exception ex)

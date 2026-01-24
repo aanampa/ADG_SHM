@@ -31,6 +31,15 @@ public interface IParametroService
     Task<ParametroResponseDto?> GetParametroByCodigoAsync(string codigo);
 
     /// <summary>
+    /// Obtiene el valor de un parametro por su codigo.
+    /// </summary>
+    /// <param name="codigo">Codigo del parametro</param>
+    /// <returns>Valor del parametro o null si no existe</returns>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-23</created>
+    Task<string?> GetValorByCodigoAsync(string codigo);
+
+    /// <summary>
     /// Crea un nuevo parametro en el sistema.
     /// </summary>
     Task<ParametroResponseDto> CreateParametroAsync(CreateParametroDto createDto, int idCreador);

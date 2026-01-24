@@ -67,6 +67,16 @@
                 box-shadow: 0 0 5px rgba(93, 22, 101, 0.5);
             }
 
+        /* Reducir espacio superior del content-wrapper cuando navbar es fijo */
+        .layout-navbar-fixed .content-wrapper {
+            margin-top: 0 !important;
+            padding-top: 20px !important;
+        }
+
+        .content-header {
+            padding: 0 0.5rem !important;
+        }
+
     </style>
 
     @await RenderSectionAsync("Styles", required: false)
