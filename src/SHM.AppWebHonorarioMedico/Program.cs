@@ -73,6 +73,7 @@ try
     builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
     builder.Services.AddScoped<IArchivoRepository, ArchivoRepository>();
     builder.Services.AddScoped<IArchivoComprobanteRepository, ArchivoComprobanteRepository>();
+    builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
