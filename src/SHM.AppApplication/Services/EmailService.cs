@@ -3,25 +3,34 @@ using System.Net.Mail;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SHM.AppDomain.Configurations;
+using SHM.AppDomain.Entities;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 
 namespace SHM.AppApplication.Services;
 
 /// <summary>
-/// Servicio para el envio de correos electronicos del sistema, incluyendo emails de recuperacion de clave con plantillas HTML
+/// Servicio para el envio de correos electronicos del sistema, incluyendo emails de recuperacion de clave con plantillas HTML.
+/// Registra cada envio en la tabla SHM_EMAIL_LOG.
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Antonio - 2026-01-25 - Agregado logging de emails en base de datos</modified>
 /// </summary>
 public class EmailService : IEmailService
 {
     private readonly SmtpSettings _smtpSettings;
     private readonly ILogger<EmailService> _logger;
+    private readonly IEmailLogRepository _emailLogRepository;
 
-    public EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailService> logger)
+    public EmailService(
+        IOptions<SmtpSettings> smtpSettings,
+        ILogger<EmailService> logger,
+        IEmailLogRepository emailLogRepository)
     {
         _smtpSettings = smtpSettings.Value;
         _logger = logger;
+        _emailLogRepository = emailLogRepository;
     }
 
     /// <summary>
@@ -29,19 +38,18 @@ public class EmailService : IEmailService
     /// </summary>
     public async Task<bool> EnviarEmailRecuperacionAsync(string email, string nombreUsuario, string token, string baseUrl)
     {
+        var resetUrl = $"{baseUrl}/Auth/RestablecerClave?token={token}";
+        var subject = "Recuperación de Contraseña - Portal de Honorarios";
+        string body;
+
         try
         {
-            var resetUrl = $"{baseUrl}/Auth/RestablecerClave?token={token}";
-
-            var subject = "Recuperación de Contraseña - Portal de Honorarios";
-
             // Intentar cargar plantilla desde archivo
             var templatePath = Path.Combine(baseUrl.Contains("localhost")
                 ? Directory.GetCurrentDirectory()
                 : System.AppDomain.CurrentDomain.BaseDirectory,
                 "wwwroot", "archivos", "plantillas_html", "RecuperarClave.html");
 
-            string body;
             if (File.Exists(templatePath))
             {
                 body = await File.ReadAllTextAsync(templatePath);
@@ -55,7 +63,17 @@ public class EmailService : IEmailService
                 body = GenerarPlantillaRecuperacion(nombreUsuario, resetUrl);
             }
 
-            await EnviarEmailAsync(email, subject, body, isHtml: true);
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreUsuario,
+                subject: subject,
+                body: body,
+                tipoEmail: "RECUPERACION_CLAVE",
+                isHtml: true,
+                idUsuario: null,
+                idEntidadMedica: null,
+                entidadReferencia: null,
+                idReferencia: null);
 
             _logger.LogInformation("Email de recuperación enviado a: {Email}", email);
             return true;
@@ -67,25 +85,91 @@ public class EmailService : IEmailService
         }
     }
 
-    private async Task EnviarEmailAsync(string toEmail, string subject, string body, bool isHtml = false)
+    /// <summary>
+    /// Envia un email y guarda el log en la base de datos.
+    /// </summary>
+    private async Task EnviarEmailConLogAsync(
+        string toEmail,
+        string? nombreDestino,
+        string subject,
+        string body,
+        string tipoEmail,
+        bool isHtml = false,
+        int? idUsuario = null,
+        int? idEntidadMedica = null,
+        string? entidadReferencia = null,
+        int? idReferencia = null)
     {
-        using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port)
+        var emailLog = new EmailLog
         {
-            EnableSsl = _smtpSettings.EnableSsl,
-            Credentials = new NetworkCredential(_smtpSettings.UserName, _smtpSettings.Password)
+            GuidRegistro = Guid.NewGuid().ToString(),
+            EmailDestino = toEmail,
+            NombreDestino = nombreDestino,
+            Asunto = subject,
+            TipoEmail = tipoEmail,
+            Contenido = body,
+            EsHtml = isHtml ? 1 : 0,
+            IdUsuario = idUsuario,
+            IdEntidadMedica = idEntidadMedica,
+            EntidadReferencia = entidadReferencia,
+            IdReferencia = idReferencia,
+            ServidorSmtp = $"{_smtpSettings.Host}:{_smtpSettings.Port}",
+            Activo = 1
         };
 
-        var mailMessage = new MailMessage
+        try
         {
-            From = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = isHtml
-        };
+            using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port)
+            {
+                EnableSsl = _smtpSettings.EnableSsl,
+                Credentials = new NetworkCredential(_smtpSettings.UserName, _smtpSettings.Password)
+            };
 
-        mailMessage.To.Add(toEmail);
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = isHtml
+            };
 
-        await client.SendMailAsync(mailMessage);
+            mailMessage.To.Add(toEmail);
+
+            await client.SendMailAsync(mailMessage);
+
+            // Email enviado exitosamente
+            emailLog.Estado = "ENVIADO";
+        }
+        catch (Exception ex)
+        {
+            // Error al enviar email
+            emailLog.Estado = "ERROR";
+            emailLog.MensajeError = ex.Message.Length > 4000
+                ? ex.Message.Substring(0, 4000)
+                : ex.Message;
+
+            // Re-lanzar la excepcion despues de guardar el log
+            try
+            {
+                await _emailLogRepository.CreateAsync(emailLog);
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogError(logEx, "Error al guardar log de email fallido");
+            }
+
+            throw;
+        }
+
+        // Guardar log de email exitoso
+        try
+        {
+            await _emailLogRepository.CreateAsync(emailLog);
+        }
+        catch (Exception logEx)
+        {
+            _logger.LogError(logEx, "Error al guardar log de email enviado");
+        }
     }
 
     private static string GenerarPlantillaRecuperacion(string nombreUsuario, string resetUrl)

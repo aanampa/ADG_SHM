@@ -149,17 +149,19 @@
         // Funcion para obtener el color del badge segun el estado
         function getEstadoBadgeClass(estado) {
             switch (estado) {
-                case 'PENDIENTE':
+                case 'FACTURA_PENDIENTE':
                     return 'badge-warning';
-                case 'ENVIADA':
+                case 'FACTURA_SOLICITADA':
                     return 'badge-info';
-                case 'ACEPTADA':
+                case 'FACTURA_ENVIADA':
                     return 'badge-primary';
-                case 'LIQUIDACION':
+                case 'FACTURA_ACEPTADA':
+                    return 'badge-primary';
+                case 'FACTURA_LIQUIDADA':
                     return 'badge-secondary';
-                case 'PAGADO':
+                case 'FACTURA_PAGADA':
                     return 'badge-success';
-                case 'RECHAZADA':
+                case 'FACTURA_DEVUELTA':
                     return 'badge-danger';
                 default:
                     return 'badge-secondary';

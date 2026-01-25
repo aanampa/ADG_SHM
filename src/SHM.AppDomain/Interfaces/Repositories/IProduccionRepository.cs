@@ -103,6 +103,13 @@ public interface IProduccionRepository
     Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador);
 
     /// <summary>
+    /// Actualiza solo el estado de una produccion.
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <param name="estado">Nuevo estado de la produccion</param>
+    /// <param name="idModificador">ID del usuario que realiza la modificacion</param>
+    /// <returns>True si se actualizo correctamente</returns>
+    Task<bool> UpdateEstadoAsync(string guidRegistro, string estado, int idModificador);
     /// Obtiene estadisticas del dashboard para una entidad medica.
     /// </summary>
     /// <param name="idEntidadMedica">ID de la entidad medica</param>

@@ -60,6 +60,7 @@ try
     builder.Services.AddScoped<IEntidadCuentaBancariaRepository, EntidadCuentaBancariaRepository>();
     builder.Services.AddScoped<IBancoRepository, BancoRepository>();
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
+    builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
