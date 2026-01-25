@@ -408,20 +408,30 @@ public class ProduccionRepository : IProduccionRepository
     }
     
     /// <summary>
-    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-20</created>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
     /// </summary>
     public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? estado, int pageNumber, int pageSize)
+        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var whereClause = "WHERE p.ACTIVO = 1";
+        if (!string.IsNullOrEmpty(produccion))
+        {
+            whereClause += " AND UPPER(p.CODIGO_PRODUCCION) LIKE '%' || UPPER(:Produccion) || '%'";
+        }
         if (!string.IsNullOrEmpty(estado))
         {
             whereClause += " AND p.ESTADO = :Estado";
+        }
+        if (idEntidadMedica.HasValue)
+        {
+            whereClause += " AND p.ID_ENTIDAD_MEDICA = :IdEntidadMedica";
         }
 
         // Query para obtener el total de registros
@@ -430,7 +440,7 @@ public class ProduccionRepository : IProduccionRepository
             FROM SHM_PRODUCCION p
             {whereClause}";
 
-        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Estado = estado });
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Produccion = produccion, Estado = estado, IdEntidadMedica = idEntidadMedica });
 
         // Query principal con paginacion
         var offset = (pageNumber - 1) * pageSize;
@@ -495,7 +505,9 @@ public class ProduccionRepository : IProduccionRepository
 
         var items = await connection.QueryAsync<ProduccionListaResponseDto>(sql, new
         {
+            Produccion = produccion,
             Estado = estado,
+            IdEntidadMedica = idEntidadMedica,
             Offset = offset,
             PageSize = pageSize
         });

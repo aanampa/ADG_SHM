@@ -22,6 +22,7 @@ public class ProduccionController : Controller
     private readonly ITablaDetalleService _tablaDetalleService;
     private readonly IArchivoService _archivoService;
     private readonly IArchivoComprobanteService _archivoComprobanteService;
+    private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IConfiguration _configuration;
 
     public ProduccionController(
@@ -30,6 +31,7 @@ public class ProduccionController : Controller
         ITablaDetalleService tablaDetalleService,
         IArchivoService archivoService,
         IArchivoComprobanteService archivoComprobanteService,
+        IEntidadMedicaService entidadMedicaService,
         IConfiguration configuration)
     {
         _logger = logger;
@@ -37,6 +39,7 @@ public class ProduccionController : Controller
         _tablaDetalleService = tablaDetalleService;
         _archivoService = archivoService;
         _archivoComprobanteService = archivoComprobanteService;
+        _entidadMedicaService = entidadMedicaService;
         _configuration = configuration;
     }
 
@@ -45,6 +48,7 @@ public class ProduccionController : Controller
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-20</created>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado carga de Cias Medicas para filtro</modified>
     /// </summary>
     [HttpGet]
     [Route("Produccion")]
@@ -59,6 +63,14 @@ public class ProduccionController : Controller
             Text = e.Descripcion
         }).ToList();
 
+        // Cargar Cias Medicas para el filtro Select2
+        var ciasMedicas = await _entidadMedicaService.GetAllEntidadesMedicasAsync();
+        ViewBag.CiasMedicas = ciasMedicas
+            .Where(c => c.Activo == 1)
+            .OrderBy(c => c.RazonSocial)
+            .Select(c => new { id = c.IdEntidadMedica, text = c.RazonSocial })
+            .ToList();
+
         return View();
     }
 
@@ -67,13 +79,15 @@ public class ProduccionController : Controller
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-20</created>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetList(string? estado, int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetList(string? produccion, string? estado, int? idEntidadMedica, int pageNumber = 1, int pageSize = 10)
     {
         try
         {
-            var (items, totalCount) = await _produccionService.GetPaginatedListAsync(estado, pageNumber, pageSize);
+            var (items, totalCount) = await _produccionService.GetPaginatedListAsync(produccion, estado, idEntidadMedica, pageNumber, pageSize);
 
             var model = new ProduccionListViewModel
             {
@@ -106,8 +120,8 @@ public class ProduccionController : Controller
                 Estado = estado
             };
 
-            _logger.LogInformation("Listando producciones. Total: {Total}, Pagina: {Page}, Estado: {Estado}",
-                totalCount, pageNumber, estado ?? "Todos");
+            _logger.LogInformation("Listando producciones. Total: {Total}, Pagina: {Page}, Produccion: {Produccion}, Estado: {Estado}, CiaMedica: {CiaMedica}",
+                totalCount, pageNumber, produccion ?? "Todos", estado ?? "Todos", idEntidadMedica?.ToString() ?? "Todas");
 
             return PartialView("_ListPartial", model);
         }
@@ -332,6 +346,15 @@ public class ProduccionController : Controller
             };
 
             var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+
+            // Para PDFs, mostrar inline en el navegador (visor embebido)
+            // Para otros archivos, forzar descarga
+            if (archivo.Extension?.ToLower() == ".pdf")
+            {
+                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivo.NombreArchivo}\"");
+                return File(fileBytes, contentType);
+            }
+
             return File(fileBytes, contentType, archivo.NombreArchivo ?? $"archivo{archivo.Extension}");
         }
         catch (Exception ex)

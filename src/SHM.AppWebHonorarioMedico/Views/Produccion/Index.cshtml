@@ -1,28 +1,24 @@
+@using System.Text.Json
 @{
     ViewData["Title"] = "Produccion";
     var estados = ViewBag.Estados as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new
     List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var ciasMedicas = ViewBag.CiasMedicas ?? new List<object>();
 }
 
 <div class="wrapper">
     <div class="content-wrapper">
 
-        <div class="content-header">
+        <div class="content-header py-2">
             <div class="container-fluid">
-                <div class="row mb-2">
-                    <div class="col-sm-6">
-                        <h1 class="m-0 titulo-formulario">
-                            <i class="fas fa-file-medical mr-2"></i>Produccion
-                        </h1>
-                    </div>
-                    <div class="col-sm-6">
-                        <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
-                            <li class="breadcrumb-item">Honorarios</li>
-                            <li class="breadcrumb-item active">Produccion</li>
-                        </ol>
-                    </div>
-                </div>
+                <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
+                    <i class="fas fa-file-medical mr-2"></i>Produccion
+                </h1>
+                <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                    <li class="breadcrumb-item">Honorarios</li>
+                    <li class="breadcrumb-item active">Produccion</li>
+                </ol>
             </div>
         </div>
 
@@ -31,11 +27,18 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="row align-items-center">
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="form-group mb-0">
-                                    <label class="mb-1 small">Estado del Proceso</label>
+                                    <label class="mb-1 small">Produccion</label>
+                                    <input type="text" id="txtProduccion" class="form-control form-control-sm"
+                                           placeholder="Codigo" maxlength="20">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group mb-0">
+                                    <label class="mb-1 small">Estado Factura</label>
                                     <select id="cboEstado" class="form-control form-control-sm">
-                                        <option value="">- Todos los Estados -</option>
+                                        <option value="">- Todos -</option>
                                         @foreach (var estado in estados)
                                         {
                                             <option value="@estado.Value">@estado.Text</option>
@@ -44,6 +47,14 @@
                                 </div>
                             </div>
                             <div class="col-md-4">
+                                <div class="form-group mb-0">
+                                    <label class="mb-1 small">Cía Médica</label>
+                                    <select id="cboCiaMedica" class="form-control form-control-sm">
+                                        <option value="">- Todas -</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
                                 <label class="mb-1 small">&nbsp;</label>
                                 <div>
                                     <button type="button" class="btn btn-primary btn-sm" onclick="searchList()">
@@ -54,7 +65,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-4 text-right">
+                            <div class="col-md-2 text-right">
                                 <label class="mb-1 small">&nbsp;</label>
                                 <div>
                                     <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
@@ -62,6 +73,17 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                        <!-- Leyenda de Estados (oculta por ahora) -->
+                        <div class="mt-2 pt-2 border-top" style="display: none;">
+                            <small class="text-muted mr-2">Estados:</small>
+                            <span class="badge badge-estado-pendiente mr-1">Pendiente</span>
+                            <span class="badge badge-estado-solicitada mr-1">Solicitada</span>
+                            <span class="badge badge-estado-enviada mr-1">Enviada</span>
+                            <span class="badge badge-estado-devuelta mr-1">Devuelta</span>
+                            <span class="badge badge-estado-aceptada mr-1">Aceptada</span>
+                            <span class="badge badge-estado-liquidada mr-1">Liquidada</span>
+                            <span class="badge badge-estado-pagada">Pagada</span>
                         </div>
                     </div>
                     <!-- Contenedor para la lista cargada via AJAX -->
@@ -81,26 +103,148 @@
 <div id="modalContainer"></div>
 
 @section Scripts {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
+    <style>
+        .select2-container--bootstrap-5 .select2-selection--single {
+            height: 31px !important;
+            min-height: 31px !important;
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.875rem !important;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            line-height: 1.4 !important;
+            padding-left: 0 !important;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+            height: 29px !important;
+        }
+        /* Tamaño de fuente del dropdown y opciones */
+        .select2-container--bootstrap-5 .select2-dropdown {
+            font-size: 0.875rem !important;
+        }
+        .select2-container--bootstrap-5 .select2-results__option {
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.875rem !important;
+        }
+        .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+            font-size: 0.875rem !important;
+            padding: 0.25rem 0.5rem !important;
+        }
+    </style>
     <script>
         let currentPage = 1;
         const pageSize = 10;
 
+        // Datos de Cias Medicas cargados en memoria
+        var ciasMedicasData = @Html.Raw(JsonSerializer.Serialize(ciasMedicas));
+
+        // Funcion para restaurar filtros desde query string
+        function restoreFiltersFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+
+            // Restaurar filtro de produccion
+            if (params.get('produccion')) {
+                document.getElementById('txtProduccion').value = params.get('produccion');
+            }
+
+            // Restaurar filtro de estado
+            if (params.get('estado')) {
+                document.getElementById('cboEstado').value = params.get('estado');
+            }
+
+            // Restaurar filtro de Cia Medica (Select2)
+            if (params.get('ciaMedica')) {
+                $('#cboCiaMedica').val(params.get('ciaMedica')).trigger('change.select2');
+            }
+
+            // Restaurar pagina actual
+            if (params.get('page')) {
+                currentPage = parseInt(params.get('page')) || 1;
+            }
+        }
+
+        // Funcion para obtener query string con filtros actuales
+        function getFilterQueryString() {
+            const params = new URLSearchParams();
+
+            const produccion = document.getElementById('txtProduccion').value.trim();
+            const estado = document.getElementById('cboEstado').value;
+            const ciaMedica = $('#cboCiaMedica').val() || '';
+
+            if (produccion) params.set('produccion', produccion);
+            if (estado) params.set('estado', estado);
+            if (ciaMedica) params.set('ciaMedica', ciaMedica);
+            if (currentPage > 1) params.set('page', currentPage);
+
+            return params.toString();
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
-            // Cargar lista inicial
-            loadList(1);
+            // Inicializar Select2 para Cia Medica con busqueda en memoria
+            $('#cboCiaMedica').select2({
+                theme: 'bootstrap-5',
+                data: ciasMedicasData,
+                placeholder: '- Buscar Cía Médica -',
+                allowClear: true,
+                language: 'es',
+                width: '100%',
+                matcher: function(params, data) {
+                    // Si no hay termino de busqueda, mostrar todo
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+                    // Busqueda en cualquier parte del texto (case-insensitive)
+                    if (data.text && data.text.toUpperCase().indexOf(params.term.toUpperCase()) > -1) {
+                        return data;
+                    }
+                    return null;
+                }
+            });
+
+            // Foco automatico en el campo de busqueda al abrir el dropdown
+            $('#cboCiaMedica').on('select2:open', function() {
+                setTimeout(function() {
+                    document.querySelector('.select2-container--open .select2-search__field').focus();
+                }, 0);
+            });
+
+            // Restaurar filtros desde URL antes de cargar la lista
+            restoreFiltersFromUrl();
+
+            // Cargar lista con la pagina restaurada
+            loadList(currentPage);
 
             // Buscar al cambiar el filtro de estado
             document.getElementById('cboEstado').addEventListener('change', function () {
                 searchList();
             });
+
+            // Buscar al cambiar Cia Medica
+            $('#cboCiaMedica').on('change', function () {
+                searchList();
+            });
+
+            // Buscar al presionar Enter en el campo de produccion
+            document.getElementById('txtProduccion').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    searchList();
+                }
+            });
         });
 
         function loadList(page) {
             currentPage = page || 1;
+            const produccion = document.getElementById('txtProduccion').value.trim();
             const estado = document.getElementById('cboEstado').value;
+            const idEntidadMedica = $('#cboCiaMedica').val() || '';
 
             const params = new URLSearchParams({
+                produccion: produccion,
                 estado: estado,
+                idEntidadMedica: idEntidadMedica,
                 pageNumber: currentPage,
                 pageSize: pageSize
             });
@@ -129,7 +273,9 @@
         }
 
         function clearFilters() {
+            document.getElementById('txtProduccion').value = '';
             document.getElementById('cboEstado').value = '';
+            $('#cboCiaMedica').val(null).trigger('change');
             loadList(1);
         }
 
@@ -138,7 +284,9 @@
         }
 
         function verDetalle(guid) {
-            window.location.href = '@Url.Action("Detalle")/' + guid;
+            const filterParams = getFilterQueryString();
+            const url = '@Url.Action("Detalle")/' + guid + (filterParams ? '?' + filterParams : '');
+            window.location.href = url;
         }
 
         function exportToExcel() {
@@ -150,19 +298,19 @@
         function getEstadoBadgeClass(estado) {
             switch (estado) {
                 case 'FACTURA_PENDIENTE':
-                    return 'badge-warning';
+                    return 'badge-estado-pendiente';
                 case 'FACTURA_SOLICITADA':
-                    return 'badge-info';
+                    return 'badge-estado-solicitada';
                 case 'FACTURA_ENVIADA':
-                    return 'badge-primary';
+                    return 'badge-estado-enviada';
                 case 'FACTURA_ACEPTADA':
-                    return 'badge-primary';
+                    return 'badge-estado-aceptada';
                 case 'FACTURA_LIQUIDADA':
-                    return 'badge-secondary';
+                    return 'badge-estado-liquidada';
                 case 'FACTURA_PAGADA':
-                    return 'badge-success';
+                    return 'badge-estado-pagada';
                 case 'FACTURA_DEVUELTA':
-                    return 'badge-danger';
+                    return 'badge-estado-devuelta';
                 default:
                     return 'badge-secondary';
             }

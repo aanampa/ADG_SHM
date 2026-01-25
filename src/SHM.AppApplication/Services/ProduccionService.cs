@@ -245,15 +245,17 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
-    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-20</created>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
+    /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
     /// </summary>
     public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? estado, int pageNumber, int pageSize)
+        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize)
     {
-        return await _produccionRepository.GetPaginatedListAsync(estado, pageNumber, pageSize);
+        return await _produccionRepository.GetPaginatedListAsync(produccion, estado, idEntidadMedica, pageNumber, pageSize);
     }
 
     /// <summary>
