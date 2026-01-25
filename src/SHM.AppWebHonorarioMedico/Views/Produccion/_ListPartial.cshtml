@@ -11,8 +11,8 @@
                 <th style="width: 130px;">Tipo Produccion</th>
                 <th>Descripcion</th>
                 <th style="width: 100px;">Periodo</th>
-                <th style="width: 140px;">Estado del Proceso</th>
-                <th>Razon Social</th>
+                <th style="width: 120px;">Estado Factura</th>
+                <th>Cía Médica</th>
                 <th style="width: 100px;" class="text-right">Total S/.</th>
                 <th style="width: 130px;">Fecha Limite</th>
                 <th style="width: 120px;">Comprobante</th>
@@ -108,13 +108,13 @@ else if (Model.TotalCount > 0)
     {
         return estado switch
         {
-            "FACTURA_PENDIENTE" => "badge-warning",
-            "FACTURA_SOLICITADA" => "badge-info",
-            "FACTURA_ENVIADA" => "badge-primary",
-            "FACTURA_ACEPTADA" => "badge-primary",
-            "FACTURA_LIQUIDADA" => "badge-secondary",
-            "FACTURA_PAGADA" => "badge-success",
-            "FACTURA_DEVUELTA" => "badge-danger",
+            "FACTURA_PENDIENTE" => "badge-estado-pendiente",
+            "FACTURA_SOLICITADA" => "badge-estado-solicitada",
+            "FACTURA_ENVIADA" => "badge-estado-enviada",
+            "FACTURA_ACEPTADA" => "badge-estado-aceptada",
+            "FACTURA_LIQUIDADA" => "badge-estado-liquidada",
+            "FACTURA_PAGADA" => "badge-estado-pagada",
+            "FACTURA_DEVUELTA" => "badge-estado-devuelta",
             _ => "badge-secondary"
         };
     }

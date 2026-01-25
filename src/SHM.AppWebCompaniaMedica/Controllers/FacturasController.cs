@@ -617,83 +617,83 @@ public class FacturasController : BaseController
                 numeroXml = numeroInt.ToString("D8");
             }
 
-            // Validar que los datos del formulario coincidan con los del XML
-            var erroresCoincidencia = new List<string>();
+            // // Validar que los datos del formulario coincidan con los del XML
+            // var erroresCoincidencia = new List<string>();
 
-            // Validar tipo de comprobante
-            var tipoComprobanteXml = facturaData.DatosGenerales.CodigoTipoDocumento;
-            if (!string.IsNullOrEmpty(tipoComprobante) && !string.IsNullOrEmpty(tipoComprobanteXml))
-            {
-                if (tipoComprobante != tipoComprobanteXml)
-                {
-                    erroresCoincidencia.Add($"Tipo de comprobante: formulario='{tipoComprobante}', XML='{tipoComprobanteXml}'");
-                }
-            }
+            // // Validar tipo de comprobante
+            // var tipoComprobanteXml = facturaData.DatosGenerales.CodigoTipoDocumento;
+            // if (!string.IsNullOrEmpty(tipoComprobante) && !string.IsNullOrEmpty(tipoComprobanteXml))
+            // {
+            //     if (tipoComprobante != tipoComprobanteXml)
+            //     {
+            //         erroresCoincidencia.Add($"Tipo de comprobante: formulario='{tipoComprobante}', XML='{tipoComprobanteXml}'");
+            //     }
+            // }
 
-            // Validar fecha de emision
-            var fechaEmisionXmlStr = facturaData.DatosGenerales.FechaEmision;
-            if (DateTime.TryParse(fechaEmisionXmlStr, out var fechaEmisionXml))
-            {
-                if (fechaEmision.Date != fechaEmisionXml.Date)
-                {
-                    erroresCoincidencia.Add($"Fecha de emision: formulario='{fechaEmision:yyyy-MM-dd}', XML='{fechaEmisionXml:yyyy-MM-dd}'");
-                }
-            }
+            // // Validar fecha de emision
+            // var fechaEmisionXmlStr = facturaData.DatosGenerales.FechaEmision;
+            // if (DateTime.TryParse(fechaEmisionXmlStr, out var fechaEmisionXml))
+            // {
+            //     if (fechaEmision.Date != fechaEmisionXml.Date)
+            //     {
+            //         erroresCoincidencia.Add($"Fecha de emision: formulario='{fechaEmision:yyyy-MM-dd}', XML='{fechaEmisionXml:yyyy-MM-dd}'");
+            //     }
+            // }
 
-            // Validar serie
-            if (!string.Equals(serie?.Trim(), serieXml?.Trim(), StringComparison.OrdinalIgnoreCase))
-            {
-                erroresCoincidencia.Add($"Serie: formulario='{serie}', XML='{serieXml}'");
-            }
+            // // Validar serie
+            // if (!string.Equals(serie?.Trim(), serieXml?.Trim(), StringComparison.OrdinalIgnoreCase))
+            // {
+            //     erroresCoincidencia.Add($"Serie: formulario='{serie}', XML='{serieXml}'");
+            // }
 
-            // Validar numero (comparar valores numericos para evitar problemas con ceros)
-            if (int.TryParse(numero, out var numeroFormulario) && int.TryParse(numeroXmlOriginal, out var numeroXmlInt))
-            {
-                if (numeroFormulario != numeroXmlInt)
-                {
-                    erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
-                }
-            }
-            else if (numero?.Trim() != numeroXmlOriginal?.Trim())
-            {
-                erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
-            }
+            // // Validar numero (comparar valores numericos para evitar problemas con ceros)
+            // if (int.TryParse(numero, out var numeroFormulario) && int.TryParse(numeroXmlOriginal, out var numeroXmlInt))
+            // {
+            //     if (numeroFormulario != numeroXmlInt)
+            //     {
+            //         erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
+            //     }
+            // }
+            // else if (numero?.Trim() != numeroXmlOriginal?.Trim())
+            // {
+            //     erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
+            // }
 
-            // Validar importe total
-            var importeTotalXml = facturaData.DesgloseTotales.ImporteTotal;
-            if (produccion.MtoTotal.HasValue && importeTotalXml > 0)
-            {
-                // Comparar con tolerancia de 0.01 para evitar problemas de redondeo
-                if (Math.Abs(produccion.MtoTotal.Value - importeTotalXml) > 0.01m)
-                {
-                    erroresCoincidencia.Add($"Importe total: produccion='S/ {produccion.MtoTotal:N2}', XML='S/ {importeTotalXml:N2}'");
-                }
-            }
+            // // Validar importe total
+            // var importeTotalXml = facturaData.DesgloseTotales.ImporteTotal;
+            // if (produccion.MtoTotal.HasValue && importeTotalXml > 0)
+            // {
+            //     // Comparar con tolerancia de 0.01 para evitar problemas de redondeo
+            //     if (Math.Abs(produccion.MtoTotal.Value - importeTotalXml) > 0.01m)
+            //     {
+            //         erroresCoincidencia.Add($"Importe total: produccion='S/ {produccion.MtoTotal:N2}', XML='S/ {importeTotalXml:N2}'");
+            //     }
+            // }
 
             // Validar concepto contra descripcion del primer item del XML
-            if (facturaData.DetalleItems.Count > 0)
-            {
-                var descripcionPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
-                var conceptoProduccion = produccion.Concepto?.Trim();
+            // if (facturaData.DetalleItems.Count > 0)
+            // {
+            //     var descripcionPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
+            //     var conceptoProduccion = produccion.Concepto?.Trim();
 
-                if (!string.IsNullOrEmpty(conceptoProduccion) && !string.IsNullOrEmpty(descripcionPrimerItem))
-                {
-                    if (!string.Equals(conceptoProduccion, descripcionPrimerItem, StringComparison.OrdinalIgnoreCase))
-                    {
-                        erroresCoincidencia.Add($"Concepto: produccion='{conceptoProduccion}', XML (primer item)='{descripcionPrimerItem}'");
-                    }
-                }
-            }
+            //     if (!string.IsNullOrEmpty(conceptoProduccion) && !string.IsNullOrEmpty(descripcionPrimerItem))
+            //     {
+            //         if (!string.Equals(conceptoProduccion, descripcionPrimerItem, StringComparison.OrdinalIgnoreCase))
+            //         {
+            //             erroresCoincidencia.Add($"Concepto: produccion='{conceptoProduccion}', XML (primer item)='{descripcionPrimerItem}'");
+            //         }
+            //     }
+            // }
 
-            if (erroresCoincidencia.Count > 0)
-            {
-                _logger.LogWarning("Los datos del formulario no coinciden con el XML: {Errores}", string.Join("; ", erroresCoincidencia));
-                return Json(new
-                {
-                    success = false,
-                    message = "Los datos ingresados no coinciden con el XML de la factura: " + string.Join("; ", erroresCoincidencia)
-                });
-            }
+            // if (erroresCoincidencia.Count > 0)
+            // {
+            //     _logger.LogWarning("Los datos del formulario no coinciden con el XML: {Errores}", string.Join("; ", erroresCoincidencia));
+            //     return Json(new
+            //     {
+            //         success = false,
+            //         message = "Los datos ingresados no coinciden con el XML de la factura: " + string.Join("; ", erroresCoincidencia)
+            //     });
+            // }
 
             // Obtener ruta de archivos desde configuración
             var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");

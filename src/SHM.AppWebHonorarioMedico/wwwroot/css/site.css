@@ -20,3 +20,63 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* ============================================
+   Estados de Factura - Badges
+   ============================================ */
+
+/* FACTURA_PENDIENTE - Amarillo (Requiere acción) */
+.badge-estado-pendiente {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+/* FACTURA_SOLICITADA - Celeste (En espera de respuesta) */
+.badge-estado-solicitada {
+  background-color: #17a2b8 !important;
+  color: #fff !important;
+}
+
+/* FACTURA_ENVIADA - Azul (Documentos recibidos, pendiente revisión) */
+.badge-estado-enviada {
+  background-color: #007bff !important;
+  color: #fff !important;
+}
+
+/* FACTURA_ACEPTADA - Verde Azulado/Teal (Aprobada, avanzando) */
+.badge-estado-aceptada {
+  background-color: #20c997 !important;
+  color: #fff !important;
+}
+
+/* FACTURA_DEVUELTA - Rojo (Rechazada, requiere corrección) */
+.badge-estado-devuelta {
+  background-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+/* FACTURA_LIQUIDADA - Morado (Proceso contable activo) */
+.badge-estado-liquidada {
+  background-color: #6f42c1 !important;
+  color: #fff !important;
+}
+
+/* FACTURA_PAGADA - Verde (Estado final exitoso) */
+.badge-estado-pagada {
+  background-color: #28a745 !important;
+  color: #fff !important;
+}
+
+/* Estilos comunes para badges de estado */
+.badge-estado-pendiente,
+.badge-estado-solicitada,
+.badge-estado-enviada,
+.badge-estado-aceptada,
+.badge-estado-devuelta,
+.badge-estado-liquidada,
+.badge-estado-pagada {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.4rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+}

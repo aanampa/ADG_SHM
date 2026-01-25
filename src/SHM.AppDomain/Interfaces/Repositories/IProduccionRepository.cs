@@ -76,14 +76,16 @@ public interface IProduccionRepository
     Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
 
     /// <summary>
-    /// Obtiene el listado paginado de producciones con datos relacionados y filtro por estado.
+    /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     /// </summary>
+    /// <param name="produccion">Filtro por codigo de produccion (opcional)</param>
     /// <param name="estado">Filtro por estado del proceso (opcional)</param>
+    /// <param name="idEntidadMedica">Filtro por ID de Cia Medica (opcional)</param>
     /// <param name="pageNumber">Numero de pagina</param>
     /// <param name="pageSize">Tamaño de pagina</param>
     /// <returns>Tupla con lista de producciones y total de registros</returns>
     Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? estado, int pageNumber, int pageSize);
+        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize);
 
     /// <summary>
     /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
