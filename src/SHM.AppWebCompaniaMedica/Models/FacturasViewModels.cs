@@ -104,3 +104,42 @@ public class ArchivoAdjuntoViewModel
     public int? Tamano { get; set; }
     public DateTime FechaCreacion { get; set; }
 }
+
+/// <summary>
+/// ViewModel para la pagina de Vista Previa de Factura.
+/// </summary>
+/// <author>ADG Antonio</author>
+/// <created>2026-01-25</created>
+public class VistaPreviaFacturaViewModel
+{
+    // Identificador unico de la sesion de vista previa
+    public string? SessionId { get; set; }
+
+    // Datos de la produccion
+    public string? GuidRegistro { get; set; }
+    public string? CodigoProduccion { get; set; }
+    public string? NombreSede { get; set; }
+    public string? Concepto { get; set; }
+    public decimal? MtoTotal { get; set; }
+    public DateTime? FechaLimite { get; set; }
+
+    // Datos del formulario ingresados
+    public string? TipoComprobante { get; set; }
+    public string? Serie { get; set; }
+    public string? Numero { get; set; }
+    public DateTime? FechaEmision { get; set; }
+
+    // Datos bancarios
+    public string? NombreBanco { get; set; }
+    public string? CuentaCorriente { get; set; }
+    public string? CuentaCci { get; set; }
+    public string? Moneda { get; set; }
+
+    // Rutas temporales de archivos
+    public string? PdfTempPath { get; set; }
+    public string? XmlTempPath { get; set; }
+    public string? CdrTempPath { get; set; }
+
+    // Datos parseados del XML
+    public FacturaXmlData? DatosXml { get; set; }
+}

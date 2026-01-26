@@ -516,6 +516,92 @@ public class FacturasController : BaseController
         return View();
     }
 
+    /// <summary>
+    /// Parsea un archivo XML de factura y devuelve los datos para vista previa.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-25</created>
+    /// </summary>
+    [HttpPost]
+    public IActionResult ParsearXmlVistaPrevia([FromForm] IFormFile? archivoXml)
+    {
+        try
+        {
+            if (archivoXml == null)
+            {
+                return Json(new { success = false, message = "No se recibio el archivo XML" });
+            }
+
+            // Validar que el XML sea una factura electronica valida
+            FacturaXmlValidationResult validationResult;
+            using (var xmlStreamValidation = archivoXml.OpenReadStream())
+            {
+                validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
+            }
+
+            if (!validationResult.IsValid)
+            {
+                return Json(new { success = false, message = $"El XML no es valido: {validationResult.ErrorMessage}" });
+            }
+
+            // Parsear XML para obtener datos
+            FacturaXmlData facturaData;
+            using (var xmlStream = archivoXml.OpenReadStream())
+            {
+                facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+            }
+
+            return Json(new
+            {
+                success = true,
+                data = new
+                {
+                    numeroFactura = facturaData.DatosGenerales.NumeroFactura,
+                    fechaEmision = facturaData.DatosGenerales.FechaEmision,
+                    horaEmision = facturaData.DatosGenerales.HoraEmision,
+                    tipoDocumento = facturaData.DatosGenerales.TipoDocumento,
+                    moneda = facturaData.DatosGenerales.Moneda,
+                    totalEnLetras = facturaData.DatosGenerales.TotalEnLetras,
+                    emisor = new
+                    {
+                        ruc = facturaData.Emisor.Ruc,
+                        razonSocial = facturaData.Emisor.RazonSocial,
+                        direccion = facturaData.Emisor.Direccion,
+                        ubicacion = facturaData.Emisor.Ubicacion
+                    },
+                    cliente = new
+                    {
+                        tipoDocumento = facturaData.Cliente.TipoDocumento,
+                        numeroDocumento = facturaData.Cliente.NumeroDocumento,
+                        razonSocial = facturaData.Cliente.RazonSocial,
+                        direccion = facturaData.Cliente.Direccion
+                    },
+                    totales = new
+                    {
+                        valorVenta = facturaData.DesgloseTotales.ValorVenta,
+                        igv = facturaData.DesgloseTotales.Igv,
+                        importeTotal = facturaData.DesgloseTotales.ImporteTotal,
+                        descuentos = facturaData.DesgloseTotales.Descuentos
+                    },
+                    items = facturaData.DetalleItems.Select(i => new
+                    {
+                        numeroItem = i.NumeroItem,
+                        descripcion = i.Descripcion,
+                        cantidad = i.Cantidad,
+                        unidadMedida = i.UnidadMedida,
+                        precioUnitario = i.PrecioUnitario,
+                        valorVenta = i.ValorVenta
+                    }).ToList()
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al parsear XML para vista previa");
+            return Json(new { success = false, message = "Error al procesar el archivo XML" });
+        }
+    }
+
     // POST: Facturas/SubirFactura
     [HttpPost]
     public async Task<IActionResult> SubirFactura(
@@ -891,6 +977,579 @@ public class FacturasController : BaseController
 
             return Json(new { success = false, message = $"Error: {ex.Message}" });
         }
+    }
+
+    /// <summary>
+    /// Prepara la vista previa de la factura guardando los archivos temporalmente.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-25</created>
+    [HttpPost]
+    public async Task<IActionResult> PrepararVistaPrevia(
+        [FromForm] string guidRegistro,
+        [FromForm] string tipoComprobante,
+        [FromForm] string serie,
+        [FromForm] string numero,
+        [FromForm] DateTime fechaEmision,
+        [FromForm] IFormFile? archivoPdf,
+        [FromForm] IFormFile? archivoXml,
+        [FromForm] IFormFile? archivoCdr)
+    {
+        try
+        {
+            // Validar produccion
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
+            if (produccion == null)
+            {
+                TempData["Error"] = "Producción no encontrada";
+                return RedirectToAction(nameof(Pendientes));
+            }
+
+            // Validar archivos requeridos
+            if (archivoPdf == null || archivoXml == null || archivoCdr == null)
+            {
+                TempData["Error"] = "Todos los archivos son requeridos (PDF, XML, CDR)";
+                return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
+            }
+
+            // Validar XML
+            FacturaXmlValidationResult validationResult;
+            using (var xmlStreamValidation = archivoXml.OpenReadStream())
+            {
+                validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
+            }
+
+            if (!validationResult.IsValid)
+            {
+                TempData["Error"] = $"El XML no es válido: {validationResult.ErrorMessage}";
+                return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
+            }
+
+            // Parsear XML
+            FacturaXmlData facturaData;
+            using (var xmlStream = archivoXml.OpenReadStream())
+            {
+                facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+            }
+
+            // Crear session ID unico
+            var sessionId = Guid.NewGuid().ToString("N");
+
+            // Obtener ruta temporal
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var tempPath = Path.Combine(uploadBasePath, "temp", sessionId);
+            Directory.CreateDirectory(tempPath);
+
+            // Guardar archivos temporales
+            var pdfPath = Path.Combine(tempPath, $"factura.pdf");
+            var xmlPath = Path.Combine(tempPath, $"factura.xml");
+            var cdrPath = Path.Combine(tempPath, $"cdr{Path.GetExtension(archivoCdr.FileName)}");
+
+            using (var stream = new FileStream(pdfPath, FileMode.Create))
+            {
+                await archivoPdf.CopyToAsync(stream);
+            }
+            using (var stream = new FileStream(xmlPath, FileMode.Create))
+            {
+                await archivoXml.CopyToAsync(stream);
+            }
+            using (var stream = new FileStream(cdrPath, FileMode.Create))
+            {
+                await archivoCdr.CopyToAsync(stream);
+            }
+
+            // Guardar datos del XML en archivo JSON
+            var jsonPath = Path.Combine(tempPath, "datos.json");
+            var jsonContent = JsonSerializer.Serialize(facturaData, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            await System.IO.File.WriteAllTextAsync(jsonPath, jsonContent);
+
+            // Guardar metadatos de la sesion
+            var metadataPath = Path.Combine(tempPath, "metadata.json");
+            var metadata = new
+            {
+                GuidRegistro = guidRegistro,
+                TipoComprobante = tipoComprobante,
+                Serie = serie,
+                Numero = numero,
+                FechaEmision = fechaEmision,
+                CdrExtension = Path.GetExtension(archivoCdr.FileName),
+                CreatedAt = DateTime.Now
+            };
+            var metadataJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
+            await System.IO.File.WriteAllTextAsync(metadataPath, metadataJson);
+
+            _logger.LogInformation("Vista previa preparada. SessionId: {SessionId}, GuidRegistro: {GuidRegistro}", sessionId, guidRegistro);
+
+            return RedirectToAction(nameof(VistaPrevia), new { sessionId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al preparar vista previa");
+            TempData["Error"] = "Error al procesar los archivos. Intente nuevamente.";
+            return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
+        }
+    }
+
+    /// <summary>
+    /// Muestra la pagina de vista previa de la factura.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-25</created>
+    public async Task<IActionResult> VistaPrevia(string sessionId)
+    {
+        ViewData["Title"] = "Vista Previa de Factura";
+
+        try
+        {
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return RedirectToAction(nameof(Pendientes));
+            }
+
+            // Obtener ruta de archivos temporales
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var tempPath = Path.Combine(uploadBasePath, "temp", sessionId);
+
+            if (!Directory.Exists(tempPath))
+            {
+                TempData["Error"] = "Sesión de vista previa no encontrada o expirada";
+                return RedirectToAction(nameof(Pendientes));
+            }
+
+            // Leer metadatos
+            var metadataPath = Path.Combine(tempPath, "metadata.json");
+            if (!System.IO.File.Exists(metadataPath))
+            {
+                TempData["Error"] = "Datos de sesión no encontrados";
+                return RedirectToAction(nameof(Pendientes));
+            }
+
+            var metadataJson = await System.IO.File.ReadAllTextAsync(metadataPath);
+            using var metadataDoc = JsonDocument.Parse(metadataJson);
+            var metadata = metadataDoc.RootElement;
+
+            var guidRegistro = metadata.GetProperty("GuidRegistro").GetString();
+
+            // Obtener produccion
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro ?? "");
+            if (produccion == null)
+            {
+                TempData["Error"] = "Producción no encontrada";
+                return RedirectToAction(nameof(Pendientes));
+            }
+
+            // Obtener sede
+            var sedes = await _sedeService.GetAllSedesAsync();
+            var sede = sedes.FirstOrDefault(s => s.IdSede == produccion.IdSede);
+
+            // Leer datos del XML
+            var jsonPath = Path.Combine(tempPath, "datos.json");
+            var datosJson = await System.IO.File.ReadAllTextAsync(jsonPath);
+            var datosXml = JsonSerializer.Deserialize<FacturaXmlData>(datosJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            // Obtener cuenta bancaria
+            string? nombreBanco = null;
+            string? cuentaCorriente = null;
+            string? cuentaCci = null;
+            string? moneda = null;
+
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (cuentaBancaria != null)
+                {
+                    cuentaCorriente = cuentaBancaria.CuentaCorriente;
+                    cuentaCci = cuentaBancaria.CuentaCci;
+                    moneda = cuentaBancaria.Moneda;
+
+                    if (cuentaBancaria.IdBanco.HasValue)
+                    {
+                        var banco = await _bancoService.GetBancoByIdAsync(cuentaBancaria.IdBanco.Value);
+                        nombreBanco = banco?.NombreBanco;
+                    }
+                }
+            }
+
+            DateTime? fechaEmision = null;
+            if (metadata.TryGetProperty("FechaEmision", out var fechaEmisionElement))
+            {
+                fechaEmision = fechaEmisionElement.GetDateTime();
+            }
+
+            var model = new VistaPreviaFacturaViewModel
+            {
+                SessionId = sessionId,
+                GuidRegistro = guidRegistro,
+                CodigoProduccion = produccion.CodigoProduccion,
+                NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
+                Concepto = produccion.Concepto ?? produccion.Descripcion,
+                MtoTotal = produccion.MtoTotal,
+                FechaLimite = produccion.FechaLimite,
+                TipoComprobante = metadata.GetProperty("TipoComprobante").GetString(),
+                Serie = metadata.GetProperty("Serie").GetString(),
+                Numero = metadata.GetProperty("Numero").GetString(),
+                FechaEmision = fechaEmision,
+                NombreBanco = nombreBanco,
+                CuentaCorriente = cuentaCorriente,
+                CuentaCci = cuentaCci,
+                Moneda = moneda,
+                PdfTempPath = $"/Facturas/ObtenerPdfTemporal?sessionId={sessionId}",
+                DatosXml = datosXml
+            };
+
+            return View(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar vista previa");
+            TempData["Error"] = "Error al cargar la vista previa";
+            return RedirectToAction(nameof(Pendientes));
+        }
+    }
+
+    /// <summary>
+    /// Sirve el archivo PDF temporal para la vista previa.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-25</created>
+    [HttpGet]
+    public IActionResult ObtenerPdfTemporal(string sessionId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return NotFound();
+            }
+
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var pdfPath = Path.Combine(uploadBasePath, "temp", sessionId, "factura.pdf");
+
+            if (!System.IO.File.Exists(pdfPath))
+            {
+                return NotFound();
+            }
+
+            var fileBytes = System.IO.File.ReadAllBytes(pdfPath);
+            Response.Headers.Append("Content-Disposition", "inline; filename=\"factura.pdf\"");
+            return File(fileBytes, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener PDF temporal");
+            return NotFound();
+        }
+    }
+
+    /// <summary>
+    /// Confirma el envio de la factura desde la vista previa.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-25</created>
+    [HttpPost]
+    public async Task<IActionResult> ConfirmarEnvio([FromForm] string sessionId)
+    {
+        var archivosGuardados = new List<string>();
+        string? uploadPath = null;
+        string? tempPath = null;
+
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                return Json(new { success = false, message = "Usuario no identificado" });
+            }
+
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return Json(new { success = false, message = "Sesión no válida" });
+            }
+
+            // Obtener ruta de archivos temporales
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            tempPath = Path.Combine(uploadBasePath, "temp", sessionId);
+
+            if (!Directory.Exists(tempPath))
+            {
+                return Json(new { success = false, message = "Sesión expirada. Por favor, vuelva a subir los archivos." });
+            }
+
+            // Leer metadatos
+            var metadataPath = Path.Combine(tempPath, "metadata.json");
+            var metadataJson = await System.IO.File.ReadAllTextAsync(metadataPath);
+            using var metadataDoc = JsonDocument.Parse(metadataJson);
+            var metadata = metadataDoc.RootElement;
+
+            var guidRegistro = metadata.GetProperty("GuidRegistro").GetString() ?? "";
+            var cdrExtension = metadata.GetProperty("CdrExtension").GetString() ?? ".zip";
+
+            // Obtener produccion
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
+            if (produccion == null)
+            {
+                return Json(new { success = false, message = "Producción no encontrada" });
+            }
+
+            // Validar cuenta bancaria si es requerido
+            var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+            if (validaCuentaBancaria?.ToUpper() == "S")
+            {
+                if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+                {
+                    var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                    var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                    if (cuentaBancaria == null || (string.IsNullOrEmpty(cuentaBancaria.CuentaCorriente) && string.IsNullOrEmpty(cuentaBancaria.CuentaCci)))
+                    {
+                        return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada." });
+                    }
+                }
+            }
+
+            // Leer datos del XML
+            var jsonPath = Path.Combine(tempPath, "datos.json");
+            var datosJson = await System.IO.File.ReadAllTextAsync(jsonPath);
+            var facturaData = JsonSerializer.Deserialize<FacturaXmlData>(datosJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (facturaData == null)
+            {
+                return Json(new { success = false, message = "Error al leer los datos del XML" });
+            }
+
+            // Extraer serie y numero del XML
+            var numeroFactura = facturaData.DatosGenerales.NumeroFactura;
+            if (string.IsNullOrEmpty(numeroFactura) || !numeroFactura.Contains('-'))
+            {
+                return Json(new { success = false, message = "El XML no contiene un número de factura válido" });
+            }
+
+            var partes = numeroFactura.Split('-');
+            var serieXml = partes[0];
+            var numeroXml = partes[1];
+
+            // Formatear numero a 8 digitos
+            if (int.TryParse(numeroXml, out var numeroInt))
+            {
+                numeroXml = numeroInt.ToString("D8");
+            }
+
+            // Preparar rutas de archivos definitivos
+            uploadPath = Path.Combine(uploadBasePath, "facturas", guidRegistro);
+            Directory.CreateDirectory(uploadPath);
+
+            var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
+            var xmlFileName = $"{serieXml}-{numeroXml}.xml";
+            var cdrFileName = $"{serieXml}-{numeroXml}-cdr{cdrExtension}";
+
+            var pdfPath = Path.Combine(uploadPath, pdfFileName);
+            var xmlPath = Path.Combine(uploadPath, xmlFileName);
+            var cdrPath = Path.Combine(uploadPath, cdrFileName);
+
+            // Copiar archivos de temporal a definitivo
+            System.IO.File.Copy(Path.Combine(tempPath, "factura.pdf"), pdfPath, true);
+            archivosGuardados.Add(pdfPath);
+
+            System.IO.File.Copy(Path.Combine(tempPath, "factura.xml"), xmlPath, true);
+            archivosGuardados.Add(xmlPath);
+
+            var cdrTempPath = Directory.GetFiles(tempPath, "cdr*").FirstOrDefault();
+            if (cdrTempPath != null)
+            {
+                System.IO.File.Copy(cdrTempPath, cdrPath, true);
+                archivosGuardados.Add(cdrPath);
+            }
+
+            // Guardar JSON con datos del XML
+            var jsonFinalPath = Path.Combine(uploadPath, $"{serieXml}-{numeroXml}.json");
+            System.IO.File.Copy(jsonPath, jsonFinalPath, true);
+            archivosGuardados.Add(jsonFinalPath);
+
+            // Obtener tamaños de archivos
+            var pdfSize = (int)new FileInfo(pdfPath).Length;
+            var xmlSize = (int)new FileInfo(xmlPath).Length;
+            var cdrSize = cdrTempPath != null ? (int)new FileInfo(cdrPath).Length : 0;
+
+            // Iniciar transaccion
+            using var transactionScope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
+
+            // Registrar archivos en BD
+            var archivoPdfDto = new CreateArchivoDto
+            {
+                TipoArchivo = "PDF",
+                NombreOriginal = "factura.pdf",
+                NombreArchivo = pdfFileName,
+                Extension = ".pdf",
+                Tamano = pdfSize,
+                Ruta = Path.Combine("facturas", guidRegistro, pdfFileName)
+            };
+            var archivoPdfCreado = await _archivoService.CreateArchivoAsync(archivoPdfDto, userId);
+
+            var archivoXmlDto = new CreateArchivoDto
+            {
+                TipoArchivo = "XML",
+                NombreOriginal = "factura.xml",
+                NombreArchivo = xmlFileName,
+                Extension = ".xml",
+                Tamano = xmlSize,
+                Ruta = Path.Combine("facturas", guidRegistro, xmlFileName)
+            };
+            var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
+
+            var archivoCdrDto = new CreateArchivoDto
+            {
+                TipoArchivo = "CDR",
+                NombreOriginal = $"cdr{cdrExtension}",
+                NombreArchivo = cdrFileName,
+                Extension = cdrExtension,
+                Tamano = cdrSize,
+                Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
+            };
+            var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
+
+            // Crear registros en ArchivoComprobante
+            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+            {
+                IdProduccion = produccion.IdProduccion,
+                IdArchivo = archivoPdfCreado.IdArchivo,
+                TipoArchivo = "PDF",
+                Descripcion = "Factura PDF"
+            }, userId);
+
+            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+            {
+                IdProduccion = produccion.IdProduccion,
+                IdArchivo = archivoXmlCreado.IdArchivo,
+                TipoArchivo = "XML",
+                Descripcion = "Factura XML"
+            }, userId);
+
+            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+            {
+                IdProduccion = produccion.IdProduccion,
+                IdArchivo = archivoCdrCreado.IdArchivo,
+                TipoArchivo = "CDR",
+                Descripcion = "Constancia CDR"
+            }, userId);
+
+            // Actualizar produccion
+            DateTime? fechaEmisionParaActualizar = null;
+            if (DateTime.TryParse(facturaData.DatosGenerales.FechaEmision, out var fechaParsed))
+            {
+                fechaEmisionParaActualizar = fechaParsed;
+            }
+
+            var updateDto = new UpdateProduccionDto
+            {
+                TipoComprobante = facturaData.DatosGenerales.CodigoTipoDocumento,
+                Serie = serieXml,
+                Numero = numeroXml,
+                FechaEmision = fechaEmisionParaActualizar,
+                EstadoComprobante = "ENVIADO",
+                Estado = "FACTURA_ENVIADA"
+            };
+
+            var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
+
+            if (!result)
+            {
+                throw new InvalidOperationException("Error al actualizar la producción");
+            }
+
+            // Registrar en bitacora
+            await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+            {
+                Entidad = "SHM_ARCHIVO_COMPROBANTE",
+                Accion = "Informar Factura",
+                Descripcion = "Factura enviada desde vista previa"
+            }, userId);
+
+            transactionScope.Complete();
+
+            // Limpiar archivos temporales
+            try
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+            catch (Exception cleanEx)
+            {
+                _logger.LogWarning(cleanEx, "No se pudo eliminar directorio temporal: {Path}", tempPath);
+            }
+
+            _logger.LogInformation("Factura enviada exitosamente desde vista previa. SessionId: {SessionId}", sessionId);
+
+            return Json(new { success = true, message = "Factura enviada exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al confirmar envío de factura");
+
+            // Rollback de archivos guardados
+            foreach (var archivo in archivosGuardados)
+            {
+                try
+                {
+                    if (System.IO.File.Exists(archivo))
+                    {
+                        System.IO.File.Delete(archivo);
+                    }
+                }
+                catch (Exception deleteEx)
+                {
+                    _logger.LogWarning(deleteEx, "No se pudo eliminar archivo durante rollback: {Archivo}", archivo);
+                }
+            }
+
+            return Json(new { success = false, message = $"Error: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Cancela la vista previa y elimina los archivos temporales.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-25</created>
+    [HttpPost]
+    public IActionResult CancelarVistaPrevia([FromForm] string sessionId, [FromForm] string guidRegistro)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                var tempPath = Path.Combine(uploadBasePath, "temp", sessionId);
+
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                    _logger.LogInformation("Archivos temporales eliminados. SessionId: {SessionId}", sessionId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error al eliminar archivos temporales");
+        }
+
+        return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
     }
 
     // GET: Facturas/DescargarArchivo

@@ -1,0 +1,691 @@
+@model SHM.AppWebCompaniaMedica.Models.VistaPreviaFacturaViewModel
+@{
+    ViewData["Title"] = "Vista Previa de Factura";
+
+    // Extraer serie y numero del XML (formato "E001-17")
+    var numeroFacturaXml = Model.DatosXml?.DatosGenerales.NumeroFactura ?? "";
+    var partesXml = numeroFacturaXml.Split('-');
+    var serieXml = partesXml.Length > 0 ? partesXml[0] : "";
+    var numeroXml = partesXml.Length > 1 ? partesXml[1] : "";
+
+    // Normalizar numero (quitar ceros a la izquierda para comparacion)
+    int.TryParse(numeroXml, out var numeroXmlInt);
+    int.TryParse(Model.Numero, out var numeroFormInt);
+
+    // Validaciones
+    var serieCoincide = string.Equals(Model.Serie?.Trim(), serieXml?.Trim(), StringComparison.OrdinalIgnoreCase);
+    var numeroCoincide = numeroXmlInt == numeroFormInt;
+    var importeXml = Model.DatosXml?.DesgloseTotales.ImporteTotal ?? 0;
+    var importeProduccion = Model.MtoTotal ?? 0;
+    var importeCoincide = Math.Abs(importeProduccion - importeXml) <= 0.01m;
+
+    // Validacion de concepto (primer item del XML vs concepto de produccion)
+    var conceptoXml = Model.DatosXml?.DetalleItems?.FirstOrDefault()?.Descripcion ?? "";
+    var conceptoProduccion = Model.Concepto ?? "";
+    var conceptoCoincide = string.Equals(conceptoProduccion.Trim(), conceptoXml.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    // Determinar si puede enviar (incluye validacion de concepto)
+    var puedeEnviar = serieCoincide && numeroCoincide && importeCoincide && conceptoCoincide;
+    var totalErrores = (serieCoincide ? 0 : 1) + (numeroCoincide ? 0 : 1) + (importeCoincide ? 0 : 1) + (conceptoCoincide ? 0 : 1);
+}
+
+<style>
+    .preview-container {
+        display: flex;
+        gap: 1.5rem;
+        height: calc(100vh - 200px);
+        min-height: 600px;
+    }
+    .pdf-column {
+        flex: 0 0 55%;
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .xml-column {
+        flex: 1;
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+    }
+    .column-header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #5a1160 0%, #f26522 100%);
+        color: white;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .pdf-viewer {
+        height: calc(100% - 56px);
+        background: #525659;
+    }
+    .pdf-viewer iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    .xml-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.25rem;
+    }
+    .xml-section {
+        margin-bottom: 1.25rem;
+    }
+    .xml-section-title {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .xml-data-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    .xml-field {
+        background: var(--bg-main);
+        padding: 0.75rem;
+        border-radius: 8px;
+    }
+    .xml-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    .xml-value {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+    .xml-value.mono {
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .total-highlight {
+        background: rgba(242, 101, 34, 0.1);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 0.75rem;
+    }
+    .total-amount {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent);
+    }
+    .item-row {
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+    }
+    .item-row:nth-child(odd) {
+        background: var(--bg-main);
+    }
+    .item-row:nth-child(even) {
+        background: white;
+        border: 1px solid var(--border);
+    }
+    .action-bar {
+        padding: 1.25rem 1.5rem;
+        background: white;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+    }
+    .btn-cancel {
+        background: transparent;
+        border: 2px solid var(--border);
+        color: var(--text-primary);
+        padding: 0.875rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-cancel:hover {
+        background: var(--bg-main);
+        border-color: var(--text-secondary);
+    }
+    .btn-confirm {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark, #d4541c));
+        border: none;
+        color: white;
+        padding: 0.875rem 2.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 15px rgba(242, 101, 34, 0.3);
+    }
+    .btn-confirm:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(242, 101, 34, 0.4);
+    }
+    .btn-confirm:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        background: #6c757d;
+        box-shadow: none;
+    }
+    .info-banner {
+        background: linear-gradient(135deg, rgba(90, 17, 96, 0.1) 0%, rgba(242, 101, 34, 0.1) 100%);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .info-banner-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #5a1160 0%, #f26522 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+    .info-banner-text h4 {
+        margin: 0 0 0.25rem 0;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .info-banner-text p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    /* Estilos de validacion */
+    .validation-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border: 2px solid var(--border);
+    }
+    .validation-section.has-errors {
+        border-color: #dc3545;
+        background: rgba(220, 53, 69, 0.03);
+    }
+    .validation-section.all-valid {
+        border-color: #28a745;
+        background: rgba(40, 167, 69, 0.03);
+    }
+    .validation-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .validation-title.error {
+        color: #dc3545;
+    }
+    .validation-title.success {
+        color: #28a745;
+    }
+    .validation-row {
+        display: flex;
+        align-items: stretch;
+        margin-bottom: 0.75rem;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+    }
+    .validation-label {
+        flex: 0 0 100px;
+        background: var(--bg-main);
+        padding: 0.75rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        border-right: 1px solid var(--border);
+    }
+    .validation-values {
+        flex: 1;
+        display: flex;
+    }
+    .validation-col {
+        flex: 1;
+        padding: 0.75rem;
+        text-align: center;
+    }
+    .validation-col-header {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    .validation-col-value {
+        font-weight: 600;
+        font-size: 0.85rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .validation-col:first-child {
+        border-right: 1px solid var(--border);
+    }
+    .validation-status {
+        flex: 0 0 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    .validation-status.valid {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+    .validation-status.invalid {
+        background: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+    .error-alert {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .error-alert i {
+        color: #dc3545;
+        font-size: 1.25rem;
+        margin-top: 0.1rem;
+    }
+    .error-alert-text {
+        flex: 1;
+    }
+    .error-alert-text strong {
+        color: #dc3545;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    .error-alert-text p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    @@media (max-width: 992px) {
+        .preview-container {
+            flex-direction: column;
+            height: auto;
+        }
+        .pdf-column {
+            flex: none;
+            height: 400px;
+        }
+        .xml-column {
+            flex: none;
+            height: auto;
+        }
+        .xml-content {
+            max-height: 600px;
+        }
+    }
+</style>
+
+<div class="fade-in">
+    <!-- Banner informativo -->
+    <div class="info-banner">
+        <div class="info-banner-icon">
+            <i class="bi bi-eye-fill"></i>
+        </div>
+        <div class="info-banner-text">
+            <h4>Vista Previa - @Model.CodigoProduccion</h4>
+            <p>Verifique que los datos del formulario coincidan con el XML antes de confirmar el envio.</p>
+        </div>
+    </div>
+
+    <!-- Contenedor principal -->
+    <div class="preview-container">
+        <!-- Columna PDF -->
+        <div class="pdf-column">
+            <div class="column-header">
+                <i class="bi bi-file-earmark-pdf"></i>
+                Documento PDF
+            </div>
+            <div class="pdf-viewer">
+                <iframe src="@Model.PdfTempPath" title="Vista previa del PDF"></iframe>
+            </div>
+        </div>
+
+        <!-- Columna Datos XML y Validaciones -->
+        <div class="xml-column">
+            <div class="column-header">
+                <i class="bi bi-file-earmark-code"></i>
+                Validacion de Datos
+            </div>
+            <div class="xml-content">
+                <!-- Seccion de Validaciones -->
+                <div class="validation-section @(puedeEnviar ? "all-valid" : "has-errors")">
+                    <div class="validation-title @(puedeEnviar ? "success" : "error")">
+                        @if (puedeEnviar)
+                        {
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Validaciones Correctas</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>Se encontraron @totalErrores error(es)</span>
+                        }
+                    </div>
+
+                    <!-- Serie -->
+                    <div class="validation-row">
+                        <div class="validation-label">Serie</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Formulario</div>
+                                <div class="validation-col-value">@(Model.Serie ?? "-")</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value">@(serieXml)</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(serieCoincide ? "valid" : "invalid")">
+                            <i class="bi @(serieCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        </div>
+                    </div>
+
+                    <!-- Numero -->
+                    <div class="validation-row">
+                        <div class="validation-label">Numero</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Formulario</div>
+                                <div class="validation-col-value">@(Model.Numero ?? "-")</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value">@(numeroXml)</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(numeroCoincide ? "valid" : "invalid")">
+                            <i class="bi @(numeroCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        </div>
+                    </div>
+
+                    <!-- Importe -->
+                    <div class="validation-row">
+                        <div class="validation-label">Importe</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Produccion</div>
+                                <div class="validation-col-value">S/ @(importeProduccion.ToString("N2"))</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value">S/ @(importeXml.ToString("N2"))</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(importeCoincide ? "valid" : "invalid")">
+                            <i class="bi @(importeCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        </div>
+                    </div>
+
+                    <!-- Concepto -->
+                    <div class="validation-row" style="flex-wrap: wrap;">
+                        <div class="validation-label">Concepto</div>
+                        <div class="validation-values" style="flex-direction: column;">
+                            <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);">
+                                <div class="validation-col-header">Produccion</div>
+                                <div style="font-size: 0.8rem; font-weight: 500; word-break: break-word;">@(string.IsNullOrEmpty(conceptoProduccion) ? "-" : conceptoProduccion)</div>
+                            </div>
+                            <div style="padding: 0.5rem 0.75rem;">
+                                <div class="validation-col-header">XML (Primer Item)</div>
+                                <div style="font-size: 0.8rem; font-weight: 500; word-break: break-word;">@(string.IsNullOrEmpty(conceptoXml) ? "-" : conceptoXml)</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(conceptoCoincide ? "valid" : "invalid")">
+                            <i class="bi @(conceptoCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        </div>
+                    </div>
+
+                    @if (!puedeEnviar)
+                    {
+                        <div class="error-alert">
+                            <i class="bi bi-x-circle-fill"></i>
+                            <div class="error-alert-text">
+                                <strong>No puede enviar esta factura</strong>
+                                <p>Los datos ingresados en el formulario no coinciden con los datos del archivo XML. Por favor, regrese al formulario y corrija los datos o suba el archivo XML correcto.</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Datos del Comprobante -->
+                <div class="xml-section">
+                    <div class="xml-section-title">
+                        <i class="bi bi-receipt"></i>
+                        Datos del Comprobante (XML)
+                    </div>
+                    <div class="xml-data-grid">
+                        <div class="xml-field">
+                            <span class="xml-label">Tipo</span>
+                            <span class="xml-value">@(Model.DatosXml?.DatosGenerales.TipoDocumento ?? "-")</span>
+                        </div>
+                        <div class="xml-field">
+                            <span class="xml-label">Numero Completo</span>
+                            <span class="xml-value mono">@(Model.DatosXml?.DatosGenerales.NumeroFactura ?? "-")</span>
+                        </div>
+                        <div class="xml-field">
+                            <span class="xml-label">Fecha Emision</span>
+                            <span class="xml-value">@(Model.DatosXml?.DatosGenerales.FechaEmision ?? "-")</span>
+                        </div>
+                        <div class="xml-field">
+                            <span class="xml-label">Moneda</span>
+                            <span class="xml-value">@(Model.DatosXml?.DatosGenerales.Moneda ?? "-")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emisor -->
+                <div class="xml-section">
+                    <div class="xml-section-title">
+                        <i class="bi bi-building"></i>
+                        Emisor
+                    </div>
+                    <div class="xml-field" style="margin-bottom: 0.5rem;">
+                        <span class="xml-label">RUC</span>
+                        <span class="xml-value mono">@(Model.DatosXml?.Emisor.Ruc ?? "-")</span>
+                    </div>
+                    <div class="xml-field" style="margin-bottom: 0.5rem;">
+                        <span class="xml-label">Razon Social</span>
+                        <span class="xml-value">@(Model.DatosXml?.Emisor.RazonSocial ?? "-")</span>
+                    </div>
+                </div>
+
+                <!-- Cliente -->
+                <div class="xml-section">
+                    <div class="xml-section-title">
+                        <i class="bi bi-person"></i>
+                        Cliente
+                    </div>
+                    <div class="xml-data-grid">
+                        <div class="xml-field">
+                            <span class="xml-label">RUC/DNI</span>
+                            <span class="xml-value mono">@(Model.DatosXml?.Cliente.NumeroDocumento ?? "-")</span>
+                        </div>
+                        <div class="xml-field">
+                            <span class="xml-label">Razon Social</span>
+                            <span class="xml-value">@(Model.DatosXml?.Cliente.RazonSocial ?? "-")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Totales -->
+                <div class="xml-section">
+                    <div class="xml-section-title">
+                        <i class="bi bi-calculator"></i>
+                        Totales del XML
+                    </div>
+                    <div class="xml-data-grid">
+                        <div class="xml-field">
+                            <span class="xml-label">Valor Venta</span>
+                            <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.ValorVenta.ToString("N2") ?? "0.00")</span>
+                        </div>
+                        <div class="xml-field">
+                            <span class="xml-label">IGV</span>
+                            <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Igv.ToString("N2") ?? "0.00")</span>
+                        </div>
+                    </div>
+                    <div class="total-highlight">
+                        <span class="xml-label">IMPORTE TOTAL</span>
+                        <span class="total-amount">S/ @(Model.DatosXml?.DesgloseTotales.ImporteTotal.ToString("N2") ?? "0.00")</span>
+                    </div>
+                </div>
+
+                <!-- Items -->
+                @if (Model.DatosXml?.DetalleItems != null && Model.DatosXml.DetalleItems.Count > 0)
+                {
+                    <div class="xml-section">
+                        <div class="xml-section-title">
+                            <i class="bi bi-list-ul"></i>
+                            Detalle de Items (@Model.DatosXml.DetalleItems.Count)
+                        </div>
+                        <div style="max-height: 150px; overflow-y: auto;">
+                            @foreach (var item in Model.DatosXml.DetalleItems)
+                            {
+                                <div class="item-row">
+                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">@item.Descripcion</div>
+                                    <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.8rem;">
+                                        <span>@item.Cantidad @item.UnidadMedida x S/ @item.PrecioUnitario.ToString("N2")</span>
+                                        <span style="font-weight: 600; color: var(--text-primary);">S/ @item.ValorVenta.ToString("N2")</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Barra de acciones -->
+            <div class="action-bar">
+                <form asp-controller="Facturas" asp-action="CancelarVistaPrevia" method="post" style="display: inline;">
+                    <input type="hidden" name="sessionId" value="@Model.SessionId" />
+                    <input type="hidden" name="guidRegistro" value="@Model.GuidRegistro" />
+                    <button type="submit" class="btn-cancel">
+                        <i class="bi bi-arrow-left"></i>
+                        @(puedeEnviar ? "Cancelar" : "Regresar y Corregir")
+                    </button>
+                </form>
+                @if (puedeEnviar)
+                {
+                    <button type="button" id="btnConfirmarEnvio" class="btn-confirm">
+                        <i class="bi bi-send-fill"></i>
+                        Confirmar y Enviar
+                    </button>
+                }
+                else
+                {
+                    <button type="button" disabled class="btn-confirm" title="Corrija los errores para poder enviar">
+                        <i class="bi bi-lock-fill"></i>
+                        No puede enviar
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var btnConfirmar = document.getElementById('btnConfirmarEnvio');
+            var sessionId = '@Model.SessionId';
+            var puedeEnviar = @(puedeEnviar ? "true" : "false");
+
+            if (btnConfirmar && puedeEnviar) {
+                btnConfirmar.addEventListener('click', function() {
+                    Swal.fire({
+                        title: 'Confirmar Envio',
+                        text: '¿Esta seguro de enviar esta factura? Esta accion no se puede deshacer.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#f26522',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Si, Enviar',
+                        cancelButtonText: 'Cancelar'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            btnConfirmar.disabled = true;
+                            btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+
+                            var formData = new FormData();
+                            formData.append('sessionId', sessionId);
+
+                            fetch('@Url.Action("ConfirmarEnvio", "Facturas")', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(function(response) { return response.json(); })
+                            .then(function(data) {
+                                if (data.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Factura Enviada',
+                                        text: data.message,
+                                        confirmButtonColor: '#28a745',
+                                        allowOutsideClick: false
+                                    }).then(function() {
+                                        window.location.href = '@Url.Action("Enviadas", "Facturas")';
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: data.message,
+                                        confirmButtonColor: '#dc3545'
+                                    });
+                                    btnConfirmar.disabled = false;
+                                    btnConfirmar.innerHTML = '<i class="bi bi-send-fill"></i> Confirmar y Enviar';
+                                }
+                            })
+                            .catch(function(error) {
+                                console.error('Error:', error);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Ocurrio un error al enviar la factura.',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                                btnConfirmar.disabled = false;
+                                btnConfirmar.innerHTML = '<i class="bi bi-send-fill"></i> Confirmar y Enviar';
+                            });
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}
