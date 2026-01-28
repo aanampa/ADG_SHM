@@ -62,6 +62,9 @@ public class SubirFacturaViewModel
     public bool RequiereValidacionCuenta { get; set; }
     public bool TieneCuentaBancaria => !string.IsNullOrEmpty(CuentaCorriente) || !string.IsNullOrEmpty(CuentaCci);
     public bool PuedeSubirFactura => !RequiereValidacionCuenta || TieneCuentaBancaria;
+
+    // Control de archivo CDR
+    public bool RequiereCdr { get; set; } = true;
 }
 
 public class DetalleFacturaViewModel

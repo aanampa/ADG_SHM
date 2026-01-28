@@ -350,6 +350,10 @@ public class FacturasController : BaseController
             var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
             var requiereValidacionCuenta = validaCuentaBancaria?.ToUpper() == "S";
 
+            // Obtener parametro de requerimiento de archivo CDR
+            var requiereArchivoCdr = await _parametroService.GetValorByCodigoAsync("SHM_REQUIERE_ARCHIVO_CDR");
+            var requiereCdr = requiereArchivoCdr?.ToUpper() != "N"; // Por defecto es requerido (S o vacio = true)
+
             // Obtener cuenta bancaria de la entidad medica
             string? nombreBanco = null;
             string? cuentaCorriente = null;
@@ -387,7 +391,8 @@ public class FacturasController : BaseController
                 CuentaCorriente = cuentaCorriente,
                 CuentaCci = cuentaCci,
                 Moneda = moneda,
-                RequiereValidacionCuenta = requiereValidacionCuenta
+                RequiereValidacionCuenta = requiereValidacionCuenta,
+                RequiereCdr = requiereCdr
             };
 
             return View(model);
@@ -653,10 +658,16 @@ public class FacturasController : BaseController
                 }
             }
 
+            // Obtener parametro de requerimiento de archivo CDR
+            var requiereArchivoCdrParam = await _parametroService.GetValorByCodigoAsync("SHM_REQUIERE_ARCHIVO_CDR");
+            var requiereCdrSubir = requiereArchivoCdrParam?.ToUpper() != "N";
+
             // Validar archivos requeridos
-            if (archivoPdf == null || archivoXml == null || archivoCdr == null)
+            if (archivoPdf == null || archivoXml == null || (requiereCdrSubir && archivoCdr == null))
             {
-                return Json(new { success = false, message = "Todos los archivos son requeridos (PDF, XML, CDR)" });
+                return Json(new { success = false, message = requiereCdrSubir
+                    ? "Todos los archivos son requeridos (PDF, XML, CDR)"
+                    : "Los archivos PDF y XML son requeridos" });
             }
 
             // Validar que el XML sea una factura electronica valida
@@ -794,12 +805,12 @@ public class FacturasController : BaseController
             // Preparar nombres de archivos usando serie y numero del XML
             var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
             var xmlFileName = $"{serieXml}-{numeroXml}.xml";
-            var cdrExtension = Path.GetExtension(archivoCdr.FileName);
-            var cdrFileName = $"{serieXml}-{numeroXml}-cdr{cdrExtension}";
+            var cdrExtension = archivoCdr != null ? Path.GetExtension(archivoCdr.FileName) : "";
+            var cdrFileName = archivoCdr != null ? $"{serieXml}-{numeroXml}-cdr{cdrExtension}" : null;
 
             var pdfPath = Path.Combine(uploadPath, pdfFileName);
             var xmlPath = Path.Combine(uploadPath, xmlFileName);
-            var cdrPath = Path.Combine(uploadPath, cdrFileName);
+            var cdrPath = cdrFileName != null ? Path.Combine(uploadPath, cdrFileName) : null;
 
             // Guardar archivos físicos primero
             using (var stream = new FileStream(pdfPath, FileMode.Create))
@@ -814,11 +825,15 @@ public class FacturasController : BaseController
             }
             archivosGuardados.Add(xmlPath);
 
-            using (var stream = new FileStream(cdrPath, FileMode.Create))
+            // Guardar CDR solo si existe
+            if (archivoCdr != null && cdrPath != null)
             {
-                await archivoCdr.CopyToAsync(stream);
+                using (var stream = new FileStream(cdrPath, FileMode.Create))
+                {
+                    await archivoCdr.CopyToAsync(stream);
+                }
+                archivosGuardados.Add(cdrPath);
             }
-            archivosGuardados.Add(cdrPath);
 
             // Guardar datos del XML parseado en archivo JSON
             var jsonFileName = $"{serieXml}-{numeroXml}.json";
@@ -863,18 +878,6 @@ public class FacturasController : BaseController
             };
             var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
 
-            // Registrar archivo CDR en BD
-            var archivoCdrDto = new CreateArchivoDto
-            {
-                TipoArchivo = "CDR",
-                NombreOriginal = archivoCdr.FileName,
-                NombreArchivo = cdrFileName,
-                Extension = cdrExtension,
-                Tamano = (int)archivoCdr.Length,
-                Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
-            };
-            var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
-
             // Crear registros en ArchivoComprobante vinculando archivos con producción
             await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
             {
@@ -892,13 +895,28 @@ public class FacturasController : BaseController
                 Descripcion = "Factura XML"
             }, userId);
 
-            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+            // Registrar archivo CDR en BD solo si existe
+            if (archivoCdr != null && cdrFileName != null)
             {
-                IdProduccion = produccion.IdProduccion,
-                IdArchivo = archivoCdrCreado.IdArchivo,
-                TipoArchivo = "CDR",
-                Descripcion = "Constancia CDR"
-            }, userId);
+                var archivoCdrDto = new CreateArchivoDto
+                {
+                    TipoArchivo = "CDR",
+                    NombreOriginal = archivoCdr.FileName,
+                    NombreArchivo = cdrFileName,
+                    Extension = cdrExtension,
+                    Tamano = (int)archivoCdr.Length,
+                    Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
+                };
+                var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
+
+                await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+                {
+                    IdProduccion = produccion.IdProduccion,
+                    IdArchivo = archivoCdrCreado.IdArchivo,
+                    TipoArchivo = "CDR",
+                    Descripcion = "Constancia CDR"
+                }, userId);
+            }
 
             // Actualizar producción con datos del XML
             DateTime? fechaEmisionParaActualizar = null;
@@ -1005,10 +1023,16 @@ public class FacturasController : BaseController
                 return RedirectToAction(nameof(Pendientes));
             }
 
+            // Obtener parametro de requerimiento de archivo CDR
+            var requiereArchivoCdr = await _parametroService.GetValorByCodigoAsync("SHM_REQUIERE_ARCHIVO_CDR");
+            var requiereCdr = requiereArchivoCdr?.ToUpper() != "N";
+
             // Validar archivos requeridos
-            if (archivoPdf == null || archivoXml == null || archivoCdr == null)
+            if (archivoPdf == null || archivoXml == null || (requiereCdr && archivoCdr == null))
             {
-                TempData["Error"] = "Todos los archivos son requeridos (PDF, XML, CDR)";
+                TempData["Error"] = requiereCdr
+                    ? "Todos los archivos son requeridos (PDF, XML, CDR)"
+                    : "Los archivos PDF y XML son requeridos";
                 return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
             }
 
@@ -1043,7 +1067,6 @@ public class FacturasController : BaseController
             // Guardar archivos temporales
             var pdfPath = Path.Combine(tempPath, $"factura.pdf");
             var xmlPath = Path.Combine(tempPath, $"factura.xml");
-            var cdrPath = Path.Combine(tempPath, $"cdr{Path.GetExtension(archivoCdr.FileName)}");
 
             using (var stream = new FileStream(pdfPath, FileMode.Create))
             {
@@ -1053,9 +1076,15 @@ public class FacturasController : BaseController
             {
                 await archivoXml.CopyToAsync(stream);
             }
-            using (var stream = new FileStream(cdrPath, FileMode.Create))
+
+            // Guardar CDR solo si es requerido y se proporciono
+            if (archivoCdr != null)
             {
-                await archivoCdr.CopyToAsync(stream);
+                var cdrPath = Path.Combine(tempPath, $"cdr{Path.GetExtension(archivoCdr.FileName)}");
+                using (var stream = new FileStream(cdrPath, FileMode.Create))
+                {
+                    await archivoCdr.CopyToAsync(stream);
+                }
             }
 
             // Guardar datos del XML en archivo JSON
@@ -1076,7 +1105,8 @@ public class FacturasController : BaseController
                 Serie = serie,
                 Numero = numero,
                 FechaEmision = fechaEmision,
-                CdrExtension = Path.GetExtension(archivoCdr.FileName),
+                CdrExtension = archivoCdr != null ? Path.GetExtension(archivoCdr.FileName) : "",
+                TieneCdr = archivoCdr != null,
                 CreatedAt = DateTime.Now
             };
             var metadataJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
@@ -1291,7 +1321,8 @@ public class FacturasController : BaseController
             var metadata = metadataDoc.RootElement;
 
             var guidRegistro = metadata.GetProperty("GuidRegistro").GetString() ?? "";
-            var cdrExtension = metadata.GetProperty("CdrExtension").GetString() ?? ".zip";
+            var cdrExtension = metadata.TryGetProperty("CdrExtension", out var cdrExtProp) ? cdrExtProp.GetString() ?? ".zip" : ".zip";
+            var tieneCdr = metadata.TryGetProperty("TieneCdr", out var tieneCdrProp) && tieneCdrProp.GetBoolean();
 
             // Obtener produccion
             var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
@@ -1352,11 +1383,11 @@ public class FacturasController : BaseController
 
             var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
             var xmlFileName = $"{serieXml}-{numeroXml}.xml";
-            var cdrFileName = $"{serieXml}-{numeroXml}-cdr{cdrExtension}";
+            var cdrFileName = tieneCdr ? $"{serieXml}-{numeroXml}-cdr{cdrExtension}" : null;
 
             var pdfPath = Path.Combine(uploadPath, pdfFileName);
             var xmlPath = Path.Combine(uploadPath, xmlFileName);
-            var cdrPath = Path.Combine(uploadPath, cdrFileName);
+            var cdrPath = cdrFileName != null ? Path.Combine(uploadPath, cdrFileName) : null;
 
             // Copiar archivos de temporal a definitivo
             System.IO.File.Copy(Path.Combine(tempPath, "factura.pdf"), pdfPath, true);
@@ -1365,11 +1396,16 @@ public class FacturasController : BaseController
             System.IO.File.Copy(Path.Combine(tempPath, "factura.xml"), xmlPath, true);
             archivosGuardados.Add(xmlPath);
 
-            var cdrTempPath = Directory.GetFiles(tempPath, "cdr*").FirstOrDefault();
-            if (cdrTempPath != null)
+            // Copiar CDR solo si existe
+            string? cdrTempPath = null;
+            if (tieneCdr && cdrPath != null)
             {
-                System.IO.File.Copy(cdrTempPath, cdrPath, true);
-                archivosGuardados.Add(cdrPath);
+                cdrTempPath = Directory.GetFiles(tempPath, "cdr*").FirstOrDefault();
+                if (cdrTempPath != null)
+                {
+                    System.IO.File.Copy(cdrTempPath, cdrPath, true);
+                    archivosGuardados.Add(cdrPath);
+                }
             }
 
             // Guardar JSON con datos del XML
@@ -1380,7 +1416,7 @@ public class FacturasController : BaseController
             // Obtener tamaños de archivos
             var pdfSize = (int)new FileInfo(pdfPath).Length;
             var xmlSize = (int)new FileInfo(xmlPath).Length;
-            var cdrSize = cdrTempPath != null ? (int)new FileInfo(cdrPath).Length : 0;
+            var cdrSize = (tieneCdr && cdrPath != null && System.IO.File.Exists(cdrPath)) ? (int)new FileInfo(cdrPath).Length : 0;
 
             // Iniciar transaccion
             using var transactionScope = new TransactionScope(
@@ -1411,17 +1447,6 @@ public class FacturasController : BaseController
             };
             var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
 
-            var archivoCdrDto = new CreateArchivoDto
-            {
-                TipoArchivo = "CDR",
-                NombreOriginal = $"cdr{cdrExtension}",
-                NombreArchivo = cdrFileName,
-                Extension = cdrExtension,
-                Tamano = cdrSize,
-                Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
-            };
-            var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
-
             // Crear registros en ArchivoComprobante
             await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
             {
@@ -1439,13 +1464,28 @@ public class FacturasController : BaseController
                 Descripcion = "Factura XML"
             }, userId);
 
-            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+            // Registrar CDR solo si existe
+            if (tieneCdr && cdrFileName != null)
             {
-                IdProduccion = produccion.IdProduccion,
-                IdArchivo = archivoCdrCreado.IdArchivo,
-                TipoArchivo = "CDR",
-                Descripcion = "Constancia CDR"
-            }, userId);
+                var archivoCdrDto = new CreateArchivoDto
+                {
+                    TipoArchivo = "CDR",
+                    NombreOriginal = $"cdr{cdrExtension}",
+                    NombreArchivo = cdrFileName,
+                    Extension = cdrExtension,
+                    Tamano = cdrSize,
+                    Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
+                };
+                var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
+
+                await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+                {
+                    IdProduccion = produccion.IdProduccion,
+                    IdArchivo = archivoCdrCreado.IdArchivo,
+                    TipoArchivo = "CDR",
+                    Descripcion = "Constancia CDR"
+                }, userId);
+            }
 
             // Actualizar produccion
             DateTime? fechaEmisionParaActualizar = null;
