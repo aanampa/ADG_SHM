@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Factura</title>
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
+
+    <!-- Contenedor Principal -->
+    <div style="background-color: #ffffff; margin: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #5d1665 0%, #8b2472 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">
+                Sistema de Honorarios Médicos
+            </h1>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">
+                Corporativo San Pablo
+            </p>
+        </div>
+
+        <!-- Contenido -->
+        <div style="padding: 40px 30px;">
+
+            <!-- Icono -->
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; width: 70px; height: 70px; background-color: #f8f4f9; border-radius: 50%; line-height: 70px;">
+                    <span style="font-size: 32px;">📄</span>
+                </div>
+            </div>
+
+            <!-- Título -->
+            <h2 style="color: #5d1665; margin: 0 0 20px 0; text-align: center; font-size: 22px; font-weight: 600;">
+                Solicitud de Factura
+            </h2>
+
+            <!-- Saludo -->
+            <p style="margin: 0 0 20px 0; font-size: 16px;">
+                Estimado/a <strong style="color: #5d1665;">{{NOMBRE_DESTINATARIO}}</strong>,
+            </p>
+
+            <!-- Mensaje -->
+            <p style="margin: 0 0 25px 0; color: #555555; font-size: 15px;">
+                Le informamos que se ha generado una solicitud de factura para la siguiente producción:
+            </p>
+
+            <!-- Tabla de Datos -->
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border-radius: 8px; overflow: hidden;">
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f8f4f9; font-weight: 600; color: #5d1665; width: 40%; border-bottom: 1px solid #e8e0ea;">
+                        Producción
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee;">
+                        {{CODIGO_PRODUCCION}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f8f4f9; font-weight: 600; color: #5d1665; border-bottom: 1px solid #e8e0ea;">
+                        Compañía Médica
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee;">
+                        {{RAZON_SOCIAL}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f8f4f9; font-weight: 600; color: #5d1665; border-bottom: 1px solid #e8e0ea;">
+                        Monto Total
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee; font-weight: 600;">
+                        S/ {{MONTO_TOTAL}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f8f4f9; font-weight: 600; color: #5d1665;">
+                        Fecha Límite
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa;">
+                        <strong style="color: #dc3545;">{{FECHA_LIMITE}} {{HORA_LIMITE}}</strong>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Alerta de importancia -->
+            <div style="background-color: #fff8e6; border-left: 4px solid #f0ad4e; padding: 15px; margin: 25px 0; border-radius: 0 5px 5px 0;">
+                <p style="margin: 0; color: #856404; font-size: 14px;">
+                    <strong>⚠️ Importante:</strong> Por favor, envíe la factura correspondiente antes de la fecha y hora límite indicada a través del <strong>Portal de Compañías Médicas</strong>.
+                </p>
+            </div>
+
+            <!-- Documentos requeridos -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0 0 8px 0; color: #555555; font-size: 14px; font-weight: 600;">
+                    📎 Documentos requeridos:
+                </p>
+                <ul style="margin: 0; padding-left: 20px; color: #666666; font-size: 13px;">
+                    <li style="margin-bottom: 4px;">Factura en formato PDF</li>
+                    <li style="margin-bottom: 4px;">Archivo XML del comprobante</li>
+                    <li>Constancia de Detracción (CDR)</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f8f8; padding: 25px 30px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0 0 10px 0; color: #888888; font-size: 12px;">
+                Este es un correo automático, por favor no respondas a este mensaje.
+            </p>
+            <p style="margin: 0; color: #aaaaaa; font-size: 11px;">
+                © {{ANIO}} Corporativo San Pablo. Todos los derechos reservados.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Pie de página externo -->
+    <div style="text-align: center; padding: 20px;">
+        <p style="margin: 0; color: #999999; font-size: 11px;">
+            Sistema de Honorarios Médicos - Portal Web
+        </p>
+    </div>
+
+</body>
+</html>

@@ -12,7 +12,7 @@ Agrega la entidad **Tabla** al proyecto con arquitectura Clean Architecture en `
 - (Describir las columnas de la tabla aqui)
 
 ### Secuencia de base de datos para la clave primaria
-- SGH_SEG_TABLA_SEQ
+- SHM_SEG_TABLA_SEQ
 
 ### Estructura a Crear
 

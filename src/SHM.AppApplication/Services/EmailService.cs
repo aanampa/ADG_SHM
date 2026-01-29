@@ -172,6 +172,93 @@ public class EmailService : IEmailService
         }
     }
 
+    /// <summary>
+    /// Envia un correo electronico de solicitud de factura a la Cia Medica.
+    /// Intenta cargar la plantilla desde archivo HTML externo, si no existe usa plantilla embebida.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-01-26</created>
+    /// </summary>
+    public async Task<bool> EnviarEmailSolicitudFacturaAsync(
+        string email,
+        string nombreDestinatario,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion)
+    {
+        var subject = $"Solicitud de Factura - Producción {codigoProduccion}";
+        var montoFormateado = mtoTotal?.ToString("N2") ?? "0.00";
+        var fechaFormateada = fechaLimite.ToString("dd/MM/yyyy");
+        var horaFormateada = fechaLimite.ToString("hh:mm tt");
+        string body;
+
+        try
+        {
+            // Intentar cargar plantilla desde archivo
+            var templatePath = ObtenerRutaPlantilla("SolicitudFactura.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+            body = body.Replace("{{NOMBRE_DESTINATARIO}}", nombreDestinatario)
+                      .Replace("{{CODIGO_PRODUCCION}}", codigoProduccion)
+                      .Replace("{{RAZON_SOCIAL}}", razonSocial)
+                      .Replace("{{MONTO_TOTAL}}", montoFormateado)
+                      .Replace("{{FECHA_LIMITE}}", fechaFormateada)
+                      .Replace("{{HORA_LIMITE}}", horaFormateada)
+                      .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreDestinatario,
+                subject: subject,
+                body: body,
+                tipoEmail: "SOLICITUD_FACTURA",
+                isHtml: true,
+                idUsuario: null,
+                idEntidadMedica: idEntidadMedica,
+                entidadReferencia: "SHM_PRODUCCION",
+                idReferencia: idProduccion);
+
+            _logger.LogInformation("Email de solicitud de factura enviado a: {Email}, Produccion: {Codigo}",
+                email, codigoProduccion);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de solicitud de factura a: {Email}, Produccion: {Codigo}",
+                email, codigoProduccion);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene la ruta completa de una plantilla HTML, buscando primero en el directorio actual
+    /// (desarrollo) y luego en el directorio base de la aplicacion (publicado).
+    /// </summary>
+    private static string ObtenerRutaPlantilla(string nombreArchivo)
+    {
+        // Buscar primero en el directorio actual (desarrollo)
+        var rutaDesarrollo = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "wwwroot", "archivos", "plantillas_html", nombreArchivo);
+
+        if (File.Exists(rutaDesarrollo))
+            return rutaDesarrollo;
+
+        // Buscar en el directorio base de la aplicacion (publicado)
+        return Path.Combine(
+            System.AppDomain.CurrentDomain.BaseDirectory,
+            "wwwroot", "archivos", "plantillas_html", nombreArchivo);
+    }
+
     private static string GenerarPlantillaRecuperacion(string nombreUsuario, string resetUrl)
     {
         return $@"

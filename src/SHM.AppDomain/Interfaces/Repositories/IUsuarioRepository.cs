@@ -100,4 +100,11 @@ public interface IUsuarioRepository
     /// Elimina un usuario registrando quien realizo la eliminacion.
     /// </summary>
     Task<bool> DeleteAsync(int id, int idModificador);
+
+    /// <summary>
+    /// Obtiene los usuarios activos asociados a una entidad medica.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Lista de usuarios vinculados a la entidad medica</returns>
+    Task<IEnumerable<Usuario>> GetByIdEntidadMedicaAsync(int idEntidadMedica);
 }

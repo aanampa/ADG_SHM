@@ -203,7 +203,7 @@ public class TablaDetalleRepository : ITablaDetalleRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SGH_SEG_TABLA_DETALLE_SEQ.NEXTVAL,
+                SHM_SEG_TABLA_DETALLE_SEQ.NEXTVAL,
                 :IdTabla,
                 :Codigo,
                 :Descripcion,
