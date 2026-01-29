@@ -161,7 +161,7 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SGH_SEG_USUARIO_SEQ.NEXTVAL,
+                SHM_SEG_USUARIO_SEQ.NEXTVAL,
                 :TipoUsuario,
                 :Login,
                 :Password,
@@ -670,5 +670,36 @@ public class UsuarioRepository : IUsuarioRepository
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id, IdModificador = idModificador });
 
         return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Obtiene los usuarios activos asociados a una entidad medica.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-01-26</created>
+    /// </summary>
+    public async Task<IEnumerable<Usuario>> GetByIdEntidadMedicaAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                ID_USUARIO as IdUsuario,
+                TIPO_USUARIO as TipoUsuario,
+                LOGIN as Login,
+                EMAIL as Email,
+                NOMBRES as Nombres,
+                APELLIDO_PATERNO as ApellidoPaterno,
+                APELLIDO_MATERNO as ApellidoMaterno,
+                ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                GUID_REGISTRO as GuidRegistro,
+                ACTIVO as Activo
+            FROM SHM_SEG_USUARIO
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+              AND ACTIVO = 1
+              AND EMAIL IS NOT NULL
+            ORDER BY APELLIDO_PATERNO, NOMBRES";
+
+        return await connection.QueryAsync<Usuario>(sql, new { IdEntidadMedica = idEntidadMedica });
     }
 }

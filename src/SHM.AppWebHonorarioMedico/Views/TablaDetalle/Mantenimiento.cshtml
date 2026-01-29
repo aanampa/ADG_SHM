@@ -1,0 +1,293 @@
+@model SHM.AppWebHonorarioMedico.Models.TablaMantenimientoViewModel
+@{
+    ViewData["Title"] = "Mantenimiento de Tablas Maestras";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 titulo-formulario">
+                            <i class="fas fa-table mr-2"></i>Mantenimiento de Tablas Maestras
+                        </h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                            <li class="breadcrumb-item active">Tablas Maestras</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h3 class="card-title">Lista de Tablas</h3>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="alert alert-info py-1 px-2 mb-0 d-inline-block" style="font-size: 0.8rem;">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Las tablas solo se pueden modificar via scripts de BD
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="tablaListContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal Container para detalles -->
+<div id="modalContainer"></div>
+
+<!-- Modal Container secundario para CRUD de detalle individual -->
+<div id="modalContainerSecondary"></div>
+
+@section Scripts {
+    <script>
+        let currentTablaId = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadTablaList();
+        });
+
+        function loadTablaList() {
+            f_loading();
+            fetch('@Url.Action("GetTablaMantenimientoList")')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('tablaListContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('tablaListContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function openDetallesModal(idTabla) {
+            currentTablaId = idTabla;
+            f_loading();
+            fetch('@Url.Action("GetDetallesModal")?idTabla=' + encodeURIComponent(idTabla))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#detallesModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar los detalles');
+                });
+        }
+
+        function refreshDetallesList() {
+            if (!currentTablaId) return;
+
+            fetch('@Url.Action("GetDetallesListForModal")?idTabla=' + encodeURIComponent(currentTablaId))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('detallesListContainer').innerHTML = html;
+                    // Actualizar contador en la tabla principal
+                    loadTablaList();
+                })
+                .catch(error => {
+                    console.error('Error al refrescar lista de detalles:', error);
+                });
+        }
+
+        function openCreateDetalleModal() {
+            if (!currentTablaId) return;
+
+            fetch('@Url.Action("GetCreateDetalleModalForTabla")?idTabla=' + encodeURIComponent(currentTablaId))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainerSecondary').innerHTML = html;
+                    $('#createDetalleModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openEditDetalleModal(guid) {
+            fetch('@Url.Action("GetEditModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainerSecondary').innerHTML = html;
+                    $('#editModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function openDeleteDetalleModal(guid) {
+            fetch('@Url.Action("GetDeleteModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainerSecondary').innerHTML = html;
+                    $('#deleteModal').modal('show');
+                })
+                .catch(error => {
+                    f_alert('e', '', 'Error al cargar el formulario');
+                });
+        }
+
+        function submitCreateDetalle() {
+            const form = document.getElementById('createDetalleForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                IdTabla: parseInt(document.getElementById('createDetalle_IdTabla').value),
+                Codigo: document.getElementById('createDetalle_Codigo').value,
+                Descripcion: document.getElementById('createDetalle_Descripcion').value,
+                Orden: document.getElementById('createDetalle_Orden').value ? parseInt(document.getElementById('createDetalle_Orden').value) : null
+            };
+
+            const token = document.querySelector('#createDetalleForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Create")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#createDetalleModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshDetallesList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitEdit() {
+            const form = document.getElementById('editForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                GuidRegistro: document.getElementById('edit_GuidRegistro').value,
+                IdTabla: parseInt(document.getElementById('edit_IdTabla').value),
+                Codigo: document.getElementById('edit_Codigo').value,
+                Descripcion: document.getElementById('edit_Descripcion').value,
+                Orden: document.getElementById('edit_Orden').value ? parseInt(document.getElementById('edit_Orden').value) : null,
+                Activo: document.getElementById('edit_Activo').checked ? 1 : 0
+            };
+
+            const token = document.querySelector('#editForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Edit")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#editModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshDetallesList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+
+        function submitDelete() {
+            const data = {
+                GuidRegistro: document.getElementById('delete_GuidRegistro').value
+            };
+
+            const token = document.querySelector('#deleteForm input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('@Url.Action("Delete")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#deleteModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    refreshDetallesList();
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                f_alert('e', '', 'Error al procesar la solicitud');
+            });
+        }
+    </script>
+}

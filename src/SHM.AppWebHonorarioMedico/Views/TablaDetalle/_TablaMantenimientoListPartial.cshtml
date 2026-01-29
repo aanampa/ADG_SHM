@@ -1,0 +1,66 @@
+@model SHM.AppWebHonorarioMedico.Models.TablaMantenimientoViewModel
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th style="width: 150px;">Codigo</th>
+                <th>Descripcion</th>
+                <th style="width: 100px;" class="text-center">Detalles</th>
+                <th style="width: 100px;" class="text-center">Estado</th>
+                <th style="width: 120px;" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Tablas.Any())
+            {
+                @foreach (var item in Model.Tablas)
+                {
+                    <tr>
+                        <td>
+                            <code>@item.Codigo</code>
+                        </td>
+                        <td>@item.Descripcion</td>
+                        <td class="text-center">
+                            <span class="badge badge-info">@item.CantidadDetalles</span>
+                        </td>
+                        <td class="text-center">
+                            @if (item.Activo == 1)
+                            {
+                                <span class="badge badge-success">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-danger">Inactivo</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-morado btn-sm"
+                                    onclick="openDetallesModal(@item.IdTabla)" title="Administrar Detalles">
+                                <i class="fas fa-list-ul mr-1"></i>Detalles
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <i class="fas fa-table fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay tablas registradas</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Tablas.Any())
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Total: @Model.Tablas.Count tabla(s)
+        </small>
+    </div>
+}

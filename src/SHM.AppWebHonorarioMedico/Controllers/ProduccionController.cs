@@ -23,6 +23,8 @@ public class ProduccionController : Controller
     private readonly IArchivoService _archivoService;
     private readonly IArchivoComprobanteService _archivoComprobanteService;
     private readonly IEntidadMedicaService _entidadMedicaService;
+    private readonly IEntidadCuentaBancariaService _entidadCuentaBancariaService;
+    private readonly IBancoService _bancoService;
     private readonly IConfiguration _configuration;
 
     public ProduccionController(
@@ -32,6 +34,8 @@ public class ProduccionController : Controller
         IArchivoService archivoService,
         IArchivoComprobanteService archivoComprobanteService,
         IEntidadMedicaService entidadMedicaService,
+        IEntidadCuentaBancariaService entidadCuentaBancariaService,
+        IBancoService bancoService,
         IConfiguration configuration)
     {
         _logger = logger;
@@ -40,6 +44,8 @@ public class ProduccionController : Controller
         _archivoService = archivoService;
         _archivoComprobanteService = archivoComprobanteService;
         _entidadMedicaService = entidadMedicaService;
+        _entidadCuentaBancariaService = entidadCuentaBancariaService;
+        _bancoService = bancoService;
         _configuration = configuration;
     }
 
@@ -179,6 +185,38 @@ public class ProduccionController : Controller
             }
 
             ViewBag.Archivos = archivos;
+
+            // Cargar datos bancarios de la Cia Medica
+            string? nombreBanco = null;
+            string? cuentaCorriente = null;
+            string? cuentaCci = null;
+            string? moneda = null;
+
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService
+                    .GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (cuentaBancaria != null)
+                {
+                    cuentaCorriente = cuentaBancaria.CuentaCorriente;
+                    cuentaCci = cuentaBancaria.CuentaCci;
+                    moneda = cuentaBancaria.Moneda;
+
+                    if (cuentaBancaria.IdBanco.HasValue)
+                    {
+                        var banco = await _bancoService.GetBancoByIdAsync(cuentaBancaria.IdBanco.Value);
+                        nombreBanco = banco?.NombreBanco;
+                    }
+                }
+            }
+
+            ViewBag.NombreBanco = nombreBanco;
+            ViewBag.CuentaCorriente = cuentaCorriente;
+            ViewBag.CuentaCci = cuentaCci;
+            ViewBag.Moneda = moneda;
+
             return View(produccion);
         }
         catch (Exception ex)

@@ -28,8 +28,22 @@ public class UsuarioController : Controller
         _entidadMedicaService = entidadMedicaService;
     }
 
-    public IActionResult Externos()
+    /// <summary>
+    /// Vista principal del mantenimiento de usuarios externos.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <modified>ADG Vladimir D - 2026-01-28 - Carga de Entidades Medicas para Select2 en memoria</modified>
+    /// </summary>
+    public async Task<IActionResult> Externos()
     {
+        // Cargar Entidades Medicas para el filtro Select2 en memoria
+        var entidadesMedicas = await _entidadMedicaService.GetAllEntidadesMedicasAsync();
+        ViewBag.EntidadesMedicas = entidadesMedicas
+            .Where(e => e.Activo == 1)
+            .OrderBy(e => e.RazonSocial)
+            .Select(e => new { id = e.IdEntidadMedica, text = e.RazonSocial })
+            .ToList();
+
         return View();
     }
 

@@ -1,8 +1,8 @@
 # Flujo de Estados de Facturación
 ## Sistema de Honorarios Médicos (SHM)
 
-**Versión:** 1.0
-**Fecha:** 24 de Enero 2026
+**Versión:** 1.1
+**Fecha:** 25 de Enero 2026
 **Autor:** ADG Vladimir D
 
 ---
@@ -48,6 +48,7 @@ Este documento describe el flujo de estados del proceso de facturación entre la
     │              │                                                    │
     │              │ [Empresa solicita factura]                         │
     │              │ (establece fecha límite)                           │
+    │              │ ✉ Notifica por correo a Cía Médica                 │
     │              ▼                                                    │
     │   ┌─────────────────────┐                                         │
     │   │ FACTURA_SOLICITADA  │                                         │
@@ -93,16 +94,16 @@ Este documento describe el flujo de estados del proceso de facturación entre la
 
 ## 5. Transiciones de Estado
 
-| # | Estado Origen | Estado Destino | Acción | Actor |
-|---|---------------|----------------|--------|-------|
-| 1 | FACTURA_PENDIENTE | FACTURA_SOLICITADA | Solicitar Factura | Empresa |
-| 2 | FACTURA_SOLICITADA | FACTURA_SOLICITADA | Actualizar Fecha Límite | Empresa |
-| 3 | FACTURA_SOLICITADA | FACTURA_ENVIADA | Enviar Factura | Cía Médica |
-| 4 | FACTURA_ENVIADA | FACTURA_ACEPTADA | Aceptar Factura | Empresa |
-| 5 | FACTURA_ENVIADA | FACTURA_DEVUELTA | Devolver Factura | Empresa |
-| 6 | FACTURA_DEVUELTA | FACTURA_ENVIADA | Reenviar Factura | Cía Médica |
-| 7 | FACTURA_ACEPTADA | FACTURA_LIQUIDADA | Procesar Liquidación | Empresa |
-| 8 | FACTURA_LIQUIDADA | FACTURA_PAGADA | Registrar Pago | Empresa |
+| # | Estado Origen | Estado Destino | Acción | Actor | Notifica |
+|---|---------------|----------------|--------|-------|----------|
+| 1 | FACTURA_PENDIENTE | FACTURA_SOLICITADA | Solicitar Factura | Empresa | ✉ Cía Médica |
+| 2 | FACTURA_SOLICITADA | FACTURA_SOLICITADA | Actualizar Fecha Límite | Empresa | - |
+| 3 | FACTURA_SOLICITADA | FACTURA_ENVIADA | Enviar Factura | Cía Médica | - |
+| 4 | FACTURA_ENVIADA | FACTURA_ACEPTADA | Aceptar Factura | Empresa | - |
+| 5 | FACTURA_ENVIADA | FACTURA_DEVUELTA | Devolver Factura | Empresa | - |
+| 6 | FACTURA_DEVUELTA | FACTURA_ENVIADA | Reenviar Factura | Cía Médica | - |
+| 7 | FACTURA_ACEPTADA | FACTURA_LIQUIDADA | Procesar Liquidación | Empresa | - |
+| 8 | FACTURA_LIQUIDADA | FACTURA_PAGADA | Registrar Pago | Empresa | - |
 
 ---
 
@@ -116,6 +117,7 @@ Este documento describe el flujo de estados del proceso de facturación entre la
 ### 6.2 FACTURA_SOLICITADA
 - **Descripción:** La empresa ha solicitado la factura y establecido una fecha límite
 - **Datos requeridos:** Fecha y hora límite para entrega
+- **Notificación:** Se envía correo electrónico a la Cía Médica informando la solicitud de factura y la fecha límite
 - **Acciones disponibles:**
   - Enviar Factura (Cía Médica)
   - Actualizar Fecha Límite (Empresa) - permite modificar la fecha límite si es necesario
@@ -161,10 +163,21 @@ Este documento describe el flujo de estados del proceso de facturación entre la
 2. **Documentos Obligatorios:** Para enviar factura se requiere PDF, XML y CDR
 3. **Reenvío:** Una factura devuelta puede ser reenviada solo dentro del plazo establecido
 4. **Trazabilidad:** Cada cambio de estado registra fecha, hora y usuario que realizó la acción
+5. **Notificación por Correo:** Al solicitar factura, se notifica automáticamente a la Cía Médica
 
 ---
 
-## 8. Campos de Fecha por Estado
+## 8. Notificaciones por Correo
+
+| Evento | Destinatario | Contenido |
+|--------|--------------|-----------|
+| Solicitud de Factura | Cía Médica | Código de producción, monto total, fecha límite de entrega |
+
+> **Nota:** Las notificaciones se envían al correo registrado en la entidad médica
+
+---
+
+## 9. Campos de Fecha por Estado
 
 | Campo | Se registra cuando |
 |-------|-------------------|
@@ -176,7 +189,7 @@ Este documento describe el flujo de estados del proceso de facturación entre la
 
 ---
 
-## 9. Colores de Estado en la Interfaz
+## 10. Colores de Estado en la Interfaz
 
 | Estado | Color | Clase CSS | Código Color |
 |--------|-------|-----------|--------------|

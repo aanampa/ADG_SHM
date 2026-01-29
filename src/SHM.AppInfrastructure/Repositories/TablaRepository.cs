@@ -138,7 +138,7 @@ public class TablaRepository : ITablaRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SGH_SEG_TABLA_SEQ.NEXTVAL,
+                SHM_SEG_TABLA_SEQ.NEXTVAL,
                 :Codigo,
                 :Descripcion,
                 1,

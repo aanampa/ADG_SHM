@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -16,10 +17,20 @@ namespace SHM.AppApplication.Services;
 public class ProduccionService : IProduccionService
 {
     private readonly IProduccionRepository _produccionRepository;
+    private readonly IEmailService _emailService;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly ILogger<ProduccionService> _logger;
 
-    public ProduccionService(IProduccionRepository produccionRepository)
+    public ProduccionService(
+        IProduccionRepository produccionRepository,
+        IEmailService emailService,
+        IUsuarioRepository usuarioRepository,
+        ILogger<ProduccionService> logger)
     {
         _produccionRepository = produccionRepository;
+        _emailService = emailService;
+        _usuarioRepository = usuarioRepository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -260,9 +271,11 @@ public class ProduccionService : IProduccionService
 
     /// <summary>
     /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
+    /// Envia notificacion por correo a los usuarios de la Cia Medica asociada.
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-21</created>
+    /// <modified>ADG Vladimir D - 2026-01-26 - Agregado envio de notificacion por correo a Cia Medica</modified>
     /// </summary>
     public async Task<bool> SolicitarFacturaAsync(SolicitarFacturaDto solicitudDto, int idModificador)
     {
@@ -274,11 +287,47 @@ public class ProduccionService : IProduccionService
 
         const string nuevoEstado = "FACTURA_SOLICITADA";
 
-        return await _produccionRepository.UpdateFechaLimiteEstadoAsync(
+        var resultado = await _produccionRepository.UpdateFechaLimiteEstadoAsync(
             solicitudDto.GuidRegistro,
             fechaLimite,
             nuevoEstado,
             idModificador);
+
+        // Enviar notificacion por correo a la Cia Medica
+        if (resultado)
+        {
+            try
+            {
+                var produccion = await _produccionRepository.GetByGuidWithDetailsAsync(solicitudDto.GuidRegistro);
+                if (produccion != null && produccion.IdEntidadMedica.HasValue)
+                {
+                    var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
+                    foreach (var usuario in usuarios)
+                    {
+                        if (!string.IsNullOrEmpty(usuario.Email))
+                        {
+                            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
+                            await _emailService.EnviarEmailSolicitudFacturaAsync(
+                                email: usuario.Email,
+                                nombreDestinatario: nombreCompleto,
+                                codigoProduccion: produccion.CodigoProduccion ?? "",
+                                razonSocial: produccion.RazonSocial ?? "",
+                                mtoTotal: produccion.MtoTotal,
+                                fechaLimite: fechaLimite,
+                                idEntidadMedica: produccion.IdEntidadMedica,
+                                idProduccion: produccion.IdProduccion);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // El error de envio de correo no debe impedir la operacion principal
+                _logger.LogError(ex, "Error al enviar notificacion de solicitud de factura. GUID: {Guid}", solicitudDto.GuidRegistro);
+            }
+        }
+
+        return resultado;
     }
 
     /// <summary>
