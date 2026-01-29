@@ -11,40 +11,36 @@
         </h3>
     </div>
     <div style="padding: 2rem;">
-        <!-- Seccion de Informacion (Solo Lectura) -->
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger" style="border-radius: 12px; margin-bottom: 1.5rem;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                @TempData["Error"]
+            </div>
+        }
+
+        <!-- Seccion 1: Informacion de la Produccion -->
         <div class="mb-4">
             <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
                 <i class="bi bi-info-circle me-2"></i>Informacion de la Produccion
             </h6>
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
                         <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Sede</span>
                         <span style="font-weight: 600;">@Model.NombreSede</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-2">
                     <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
                         <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Produccion</span>
-                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.CodigoProduccion</span>
-                    </div>
-                </div>
-                <div class="col-md-12">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Concepto</span>
-                        <span style="font-weight: 600;">@(Model.Concepto ?? "-")</span>
+                        <span style="font-weight: 600;">@Model.CodigoProduccion</span>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Importe</span>
-                        <span style="font-weight: 700; color: var(--accent); font-size: 1.25rem;">S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Fecha Limite</span>
-                        <span style="font-weight: 600; color: var(--danger);">@(Model.FechaLimite?.ToString("dd/MM/yyyy") ?? "-")</span>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Descripcion</span>
+                        <span style="font-weight: 600;">@(Model.Descripcion ?? "-")</span>
                     </div>
                 </div>
             </div>
@@ -52,7 +48,7 @@
 
         <hr style="margin: 2rem 0; border-color: var(--border);">
 
-        <!-- Seccion de Datos Bancarios -->
+        <!-- Seccion 2: Datos Bancarios para Pago -->
         <div class="mb-4">
             <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
                 <i class="bi bi-bank me-2"></i>Datos Bancarios para Pago
@@ -104,307 +100,301 @@
 
         <hr style="margin: 2rem 0; border-color: var(--border);">
 
-        <!-- Formulario de Datos de la Factura -->
-        <form id="uploadForm" enctype="multipart/form-data">
-            <input type="hidden" id="guidRegistro" name="guidRegistro" value="@Model.GuidRegistro" />
-
+        <!-- Seccion 3: Datos del Comprobante de Pago -->
+        <div class="mb-4">
             <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
-                <i class="bi bi-pencil-square me-2"></i>Datos de la Factura
+                <i class="bi bi-receipt me-2"></i>Datos del Comprobante de Pago
             </h6>
 
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Tipo Comprobante <span style="color: var(--danger);">*</span></label>
-                    <select class="form-control" id="tipoComprobante" name="tipoComprobante">
-                        <option value="">Seleccione...</option>
-                        <option value="01">Factura</option>
-                        <option value="03">Boleta</option>
-                        <option value="03">Recibo por Honorarios</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Fecha de Emision <span style="color: var(--danger);">*</span></label>
-                    <input type="date" class="form-control" id="fechaEmision" name="fechaEmision">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Serie <span style="color: var(--danger);">*</span></label>
-                    <input type="text" class="form-control" id="serie" name="serie" placeholder="Ej: F001" maxlength="4">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Numero <span style="color: var(--danger);">*</span></label>
-                    <input type="text" class="form-control" id="numero" name="numero" placeholder="Ej: 00001234" maxlength="8">
+            <!-- Mensaje informativo -->
+            <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(90, 17, 96, 0.1) 100%); border: 1px solid #3B82F6; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                    <i class="bi bi-info-circle-fill" style="color: #3B82F6; font-size: 1.1rem; margin-top: 2px;"></i>
+                    <span style="color: #1E40AF; font-size: 0.85rem; line-height: 1.5;">
+                        Utilice estos datos para emitir su comprobante de pago. Asegurese de que el <strong>Concepto</strong>, <strong>RUC del Receptor</strong> e <strong>Importe Total</strong> coincidan exactamente con su factura electronica.
+                    </span>
                 </div>
             </div>
 
-            <hr style="margin: 2rem 0; border-color: var(--border);">
-
-            <!-- Seccion de Archivos -->
-            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
-                <i class="bi bi-file-earmark-arrow-up me-2"></i>Documentos Electronicos
-            </h6>
-
-            <div class="row g-3 mb-4">
-                <!-- PDF -->
-                <div class="col-md-4">
-                    <label class="form-label" style="font-weight: 600;">Archivo PDF <span style="color: var(--danger);">*</span></label>
-                    <div class="file-upload-area" id="pdfArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="bi bi-file-earmark-pdf" style="font-size: 2.5rem; color: var(--danger); margin-bottom: 0.75rem;"></i>
-                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Factura PDF</p>
-                        <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
-                    </div>
-                    <input type="file" id="archivoPdf" name="archivoPdf" accept=".pdf" style="display: none;">
-                    <div id="pdfFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span id="pdfFileNameText"></span>
+            <!-- Fila 1: Emisor y Receptor -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Emisor (Compañia Medica)</label>
+                    <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border); min-height: 38px; display: flex; align-items: center;">
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">@(Model.EmisorRuc ?? "-")</span>
+                        <span style="color: var(--text-secondary); margin: 0 0.5rem;"> - </span>
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">@(Model.EmisorRazonSocial ?? "-")</span>
                     </div>
                 </div>
-
-                <!-- XML -->
-                <div class="col-md-4">
-                    <label class="form-label" style="font-weight: 600;">Archivo XML <span style="color: var(--danger);">*</span></label>
-                    <div class="file-upload-area" id="xmlArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="bi bi-file-earmark-code" style="font-size: 2.5rem; color: var(--warning); margin-bottom: 0.75rem;"></i>
-                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Factura XML</p>
-                        <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
-                    </div>
-                    <input type="file" id="archivoXml" name="archivoXml" accept=".xml" style="display: none;">
-                    <div id="xmlFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span id="xmlFileNameText"></span>
-                    </div>
-                </div>
-
-                <!-- CDR -->
-                <div class="col-md-4">
-                    <label class="form-label" style="font-weight: 600;">Archivo CDR <span style="color: var(--danger);">*</span></label>
-                    <div class="file-upload-area" id="cdrArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="bi bi-file-earmark-zip" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 0.75rem;"></i>
-                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Constancia CDR</p>
-                        <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
-                    </div>
-                    <input type="file" id="archivoCdr" name="archivoCdr" accept=".zip,.xml" style="display: none;">
-                    <div id="cdrFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span id="cdrFileNameText"></span>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Receptor (Sede)</label>
+                    <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border); min-height: 38px; display: flex; align-items: center;">
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">@(Model.ReceptorRuc ?? "-")</span>
+                        <span style="color: var(--text-secondary); margin: 0 0.5rem;"> - </span>
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">@(Model.ReceptorNombre ?? "-")</span>
                     </div>
                 </div>
             </div>
 
-            <div class="d-flex gap-2 mt-4">
-                <a asp-controller="Facturas" asp-action="Pendientes" class="btn btn-secondary" style="border-radius: 12px; padding: 0.875rem 2rem;">
-                    <i class="bi bi-arrow-left me-2"></i>Cancelar
-                </a>
-                @if (Model.PuedeSubirFactura)
-                {
-                    <button type="submit" id="btnSubmit" class="btn-submit flex-grow-1" style="background: var(--accent); color: white; border: none; border-radius: 12px; padding: 0.875rem 2rem; font-weight: 600; transition: all 0.3s ease;">
-                        <i class="bi bi-send-fill me-2"></i>Enviar Factura
-                    </button>
-                }
-                else
-                {
-                    <button type="button" disabled class="btn-submit flex-grow-1" style="background: #6c757d; color: white; border: none; border-radius: 12px; padding: 0.875rem 2rem; font-weight: 600; cursor: not-allowed;">
-                        <i class="bi bi-lock-fill me-2"></i>No puede enviar factura (Sin cuenta bancaria)
-                    </button>
-                }
+            <!-- Fila 2: Concepto e Importes -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Concepto</label>
+                    <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border); min-height: 38px; display: flex; align-items: center;">
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">@(Model.Concepto ?? "-")</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-weight: 600;">SubTotal</label>
+                    <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">S/ @(Model.MtoSubtotal?.ToString("N2") ?? "0.00")</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-weight: 600;">IGV (18%)</label>
+                    <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-weight: 600;">Importe Total</label>
+                    <div style="padding: 0.5rem 1rem; background: linear-gradient(135deg, rgba(242, 101, 34, 0.1) 0%, rgba(90, 17, 96, 0.1) 100%); border-radius: 8px; border: 1px solid var(--accent);">
+                        <span style="font-weight: 700; color: var(--accent); font-size: 1.1rem;">S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")</span>
+                    </div>
+                </div>
             </div>
-        </form>
+
+            <!-- Fila 3: Formulario - Tipo, Fecha, Serie, Numero -->
+            <form id="uploadForm" asp-controller="Facturas" asp-action="PrepararVistaPrevia" method="post" enctype="multipart/form-data" novalidate>
+                <input type="hidden" id="guidRegistro" name="guidRegistro" value="@Model.GuidRegistro" />
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-weight: 600;">Tipo Comprobante <span style="color: var(--danger);">*</span></label>
+                        <select class="form-control" id="tipoComprobante" name="tipoComprobante" required>
+                            <option value="">Seleccione...</option>
+                            @if (Model.TipoComprobante == "01")
+                            {
+                                <option value="01" selected>Factura</option>
+                            }
+                            else
+                            {
+                                <option value="01">Factura</option>
+                            }
+                            @if (Model.TipoComprobante == "03")
+                            {
+                                <option value="03" selected>Boleta</option>
+                            }
+                            else
+                            {
+                                <option value="03">Boleta</option>
+                            }
+                            @if (Model.TipoComprobante == "02")
+                            {
+                                <option value="02" selected>Recibo por Honorarios</option>
+                            }
+                            else
+                            {
+                                <option value="02">Recibo por Honorarios</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-weight: 600;">Fecha Emision <span style="color: var(--danger);">*</span></label>
+                        <input type="date" class="form-control" id="fechaEmision" name="fechaEmision" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-weight: 600;">Serie <span style="color: var(--danger);">*</span></label>
+                        <input type="text" class="form-control" id="serie" name="serie" placeholder="Ej: F001" maxlength="4" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-weight: 600;">Numero <span style="color: var(--danger);">*</span></label>
+                        <input type="text" class="form-control" id="numero" name="numero" placeholder="Ej: 00001234" maxlength="8" required pattern="[0-9]*" inputmode="numeric">
+                    </div>
+                </div>
+
+                <hr style="margin: 2rem 0; border-color: var(--border);">
+
+                <!-- Seccion de Archivos -->
+                <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                    <i class="bi bi-file-earmark-arrow-up me-2"></i>Documentos Electronicos
+                </h6>
+
+                <div class="row g-3 mb-4">
+                    <!-- PDF -->
+                    <div class="@(Model.RequiereCdr ? "col-md-4" : "col-md-6")">
+                        <label class="form-label" style="font-weight: 600;">Archivo PDF <span style="color: var(--danger);">*</span></label>
+                        <div class="file-upload-area" id="pdfArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                            <i class="bi bi-file-earmark-pdf" style="font-size: 2.5rem; color: var(--danger); margin-bottom: 0.75rem;"></i>
+                            <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Factura PDF</p>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
+                        </div>
+                        <input type="file" id="archivoPdf" name="archivoPdf" accept=".pdf" style="display: none;" required>
+                        <div id="pdfFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            <span id="pdfFileNameText"></span>
+                        </div>
+                    </div>
+
+                    <!-- XML -->
+                    <div class="@(Model.RequiereCdr ? "col-md-4" : "col-md-6")">
+                        <label class="form-label" style="font-weight: 600;">Archivo XML <span style="color: var(--danger);">*</span></label>
+                        <div class="file-upload-area" id="xmlArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                            <i class="bi bi-file-earmark-code" style="font-size: 2.5rem; color: var(--warning); margin-bottom: 0.75rem;"></i>
+                            <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Factura XML</p>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
+                        </div>
+                        <input type="file" id="archivoXml" name="archivoXml" accept=".xml" style="display: none;" required>
+                        <div id="xmlFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            <span id="xmlFileNameText"></span>
+                        </div>
+                    </div>
+
+                    @if (Model.RequiereCdr)
+                    {
+                        <!-- CDR -->
+                        <div class="col-md-4">
+                            <label class="form-label" style="font-weight: 600;">Archivo CDR <span style="color: var(--danger);">*</span></label>
+                            <div class="file-upload-area" id="cdrArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                <i class="bi bi-file-earmark-zip" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 0.75rem;"></i>
+                                <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Constancia CDR</p>
+                                <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
+                            </div>
+                            <input type="file" id="archivoCdr" name="archivoCdr" accept=".zip,.xml" style="display: none;" required>
+                            <div id="cdrFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                <span id="cdrFileNameText"></span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <a asp-controller="Facturas" asp-action="Pendientes" class="btn btn-secondary" style="border-radius: 12px; padding: 0.875rem 2rem;">
+                        <i class="bi bi-arrow-left me-2"></i>Cancelar
+                    </a>
+                    @if (Model.PuedeSubirFactura)
+                    {
+                        <button type="submit" id="btnVistaPrevia" class="btn-submit flex-grow-1"
+                                style="background: var(--accent); color: white; border: none; border-radius: 12px; padding: 0.875rem 2rem; font-weight: 600; transition: all 0.3s ease;">
+                            <i class="bi bi-eye-fill me-2"></i>Vista Previa y Enviar
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" disabled class="btn-submit flex-grow-1" style="background: #6c757d; color: white; border: none; border-radius: 12px; padding: 0.875rem 2rem; font-weight: 600; cursor: not-allowed;">
+                            <i class="bi bi-lock-fill me-2"></i>No puede enviar factura (Sin cuenta bancaria)
+                        </button>
+                    }
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        (function() {
-            // Referencias a elementos del DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            // Referencias DOM
             var form = document.getElementById('uploadForm');
-            var btnSubmit = document.getElementById('btnSubmit');
-
-            var pdfArea = document.getElementById('pdfArea');
-            var xmlArea = document.getElementById('xmlArea');
-            var cdrArea = document.getElementById('cdrArea');
-
+            var btnVistaPrevia = document.getElementById('btnVistaPrevia');
             var pdfInput = document.getElementById('archivoPdf');
             var xmlInput = document.getElementById('archivoXml');
             var cdrInput = document.getElementById('archivoCdr');
+            var requiereCdr = @(Model.RequiereCdr ? "true" : "false");
 
-            var pdfFileName = document.getElementById('pdfFileName');
-            var xmlFileName = document.getElementById('xmlFileName');
-            var cdrFileName = document.getElementById('cdrFileName');
-
-            var pdfFileNameText = document.getElementById('pdfFileNameText');
-            var xmlFileNameText = document.getElementById('xmlFileNameText');
-            var cdrFileNameText = document.getElementById('cdrFileNameText');
-
-            // Click handlers para areas de upload
-            pdfArea.onclick = function() { pdfInput.click(); };
-            xmlArea.onclick = function() { xmlInput.click(); };
-            cdrArea.onclick = function() { cdrInput.click(); };
-
-            // Change handlers para inputs de archivo
-            pdfInput.onchange = function(e) {
-                if (e.target.files.length > 0) {
-                    pdfFileNameText.textContent = e.target.files[0].name;
-                    pdfFileName.style.display = 'block';
-                    pdfArea.style.borderColor = 'var(--accent)';
-                }
-            };
-
-            xmlInput.onchange = function(e) {
-                if (e.target.files.length > 0) {
-                    xmlFileNameText.textContent = e.target.files[0].name;
-                    xmlFileName.style.display = 'block';
-                    xmlArea.style.borderColor = 'var(--accent)';
-                }
-            };
-
-            cdrInput.onchange = function(e) {
-                if (e.target.files.length > 0) {
-                    cdrFileNameText.textContent = e.target.files[0].name;
-                    cdrFileName.style.display = 'block';
-                    cdrArea.style.borderColor = 'var(--accent)';
-                }
-            };
-
-            // Hover effects para areas de upload
-            var uploadAreas = document.querySelectorAll('.file-upload-area');
-            for (var i = 0; i < uploadAreas.length; i++) {
-                (function(area) {
-                    area.onmouseenter = function() {
-                        if (this.style.borderColor !== 'var(--accent)') {
-                            this.style.borderColor = 'var(--primary)';
-                            this.style.background = 'rgba(242, 101, 34, 0.05)';
-                        }
-                    };
-                    area.onmouseleave = function() {
-                        if (this.style.borderColor !== 'var(--accent)') {
-                            this.style.borderColor = 'var(--border)';
-                            this.style.background = 'var(--bg-main)';
-                        }
-                    };
-                })(uploadAreas[i]);
+            // Click en areas de upload
+            document.getElementById('pdfArea').addEventListener('click', function() { pdfInput.click(); });
+            document.getElementById('xmlArea').addEventListener('click', function() { xmlInput.click(); });
+            if (requiereCdr && document.getElementById('cdrArea')) {
+                document.getElementById('cdrArea').addEventListener('click', function() { cdrInput.click(); });
             }
 
-            // Funcion para validar formulario
-            function validarFormulario() {
+            // Cambio de archivos
+            pdfInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    document.getElementById('pdfFileNameText').textContent = this.files[0].name;
+                    document.getElementById('pdfFileName').style.display = 'block';
+                    document.getElementById('pdfArea').style.borderColor = 'var(--accent)';
+                }
+            });
+
+            xmlInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    document.getElementById('xmlFileNameText').textContent = this.files[0].name;
+                    document.getElementById('xmlFileName').style.display = 'block';
+                    document.getElementById('xmlArea').style.borderColor = 'var(--accent)';
+                }
+            });
+
+            if (requiereCdr && cdrInput) {
+                cdrInput.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        document.getElementById('cdrFileNameText').textContent = this.files[0].name;
+                        document.getElementById('cdrFileName').style.display = 'block';
+                        document.getElementById('cdrArea').style.borderColor = 'var(--accent)';
+                    }
+                });
+            }
+
+            // Hover en areas de upload
+            document.querySelectorAll('.file-upload-area').forEach(function(area) {
+                area.addEventListener('mouseenter', function() {
+                    if (this.style.borderColor !== 'var(--accent)') {
+                        this.style.borderColor = 'var(--primary)';
+                        this.style.background = 'rgba(242, 101, 34, 0.05)';
+                    }
+                });
+                area.addEventListener('mouseleave', function() {
+                    if (this.style.borderColor !== 'var(--accent)') {
+                        this.style.borderColor = 'var(--border)';
+                        this.style.background = 'var(--bg-main)';
+                    }
+                });
+            });
+
+            // Convertir serie a mayusculas
+            document.getElementById('serie').addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+
+            // Solo permitir numeros en el campo Numero
+            document.getElementById('numero').addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
+            // Validar formulario antes de enviar
+            form.addEventListener('submit', function(e) {
                 var errores = [];
 
-                // Validar tipo comprobante
-                if (!document.getElementById('tipoComprobante').value) {
-                    errores.push('Seleccione el tipo de comprobante');
-                }
+                if (!document.getElementById('tipoComprobante').value) errores.push('Seleccione el tipo de comprobante');
+                if (!document.getElementById('fechaEmision').value) errores.push('Ingrese la fecha de emision');
+                if (!document.getElementById('serie').value.trim()) errores.push('Ingrese la serie del comprobante');
+                if (!document.getElementById('numero').value.trim()) errores.push('Ingrese el numero del comprobante');
+                if (!pdfInput.files[0]) errores.push('Seleccione el archivo PDF');
+                if (!xmlInput.files[0]) errores.push('Seleccione el archivo XML');
+                if (requiereCdr && cdrInput && !cdrInput.files[0]) errores.push('Seleccione el archivo CDR');
 
-                // Validar fecha de emision
-                if (!document.getElementById('fechaEmision').value) {
-                    errores.push('Ingrese la fecha de emision');
-                }
-
-                // Validar serie
-                if (!document.getElementById('serie').value.trim()) {
-                    errores.push('Ingrese la serie del comprobante');
-                }
-
-                // Validar numero
-                if (!document.getElementById('numero').value.trim()) {
-                    errores.push('Ingrese el numero del comprobante');
-                }
-
-                // Validar archivos
-                if (!pdfInput.files[0]) {
-                    errores.push('Seleccione el archivo PDF');
-                }
-                if (!xmlInput.files[0]) {
-                    errores.push('Seleccione el archivo XML');
-                }
-                if (!cdrInput.files[0]) {
-                    errores.push('Seleccione el archivo CDR');
-                }
-
-                return errores;
-            }
-
-            // Form submission con AJAX
-            form.onsubmit = function(e) {
-                e.preventDefault();
-
-                // Validar formulario
-                var errores = validarFormulario();
                 if (errores.length > 0) {
+                    e.preventDefault();
                     Swal.fire({
                         icon: 'warning',
                         title: 'Campos Requeridos',
                         html: '<ul style="text-align: left; margin: 0; padding-left: 1.5rem;">' +
-                              errores.map(function(err) { return '<li>' + err + '</li>'; }).join('') +
-                              '</ul>',
+                              errores.map(function(err) { return '<li>' + err + '</li>'; }).join('') + '</ul>',
                         confirmButtonText: 'Entendido',
                         confirmButtonColor: '#f26522'
                     });
-                    return false;
+                    return;
                 }
 
-                // Deshabilitar boton y mostrar loading
-                btnSubmit.disabled = true;
-                btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enviando...';
-
-                // Crear FormData
-                var formData = new FormData();
-                formData.append('guidRegistro', document.getElementById('guidRegistro').value);
-                formData.append('tipoComprobante', document.getElementById('tipoComprobante').value);
-                formData.append('fechaEmision', document.getElementById('fechaEmision').value);
-                formData.append('serie', document.getElementById('serie').value);
-                formData.append('numero', document.getElementById('numero').value);
-                formData.append('archivoPdf', pdfInput.files[0]);
-                formData.append('archivoXml', xmlInput.files[0]);
-                formData.append('archivoCdr', cdrInput.files[0]);
-
-                // Enviar con fetch
-                fetch('@Url.Action("SubirFactura", "Facturas")', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(data) {
-                    if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Factura Enviada',
-                            text: data.message,
-                            confirmButtonText: 'Aceptar',
-                            confirmButtonColor: '#28a745',
-                            allowOutsideClick: false,
-                            allowEscapeKey: false
-                        }).then(function(result) {
-                            if (result.isConfirmed) {
-                                window.location.href = '@Url.Action("Enviadas", "Facturas")';
-                            }
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: data.message,
-                            confirmButtonText: 'Aceptar',
-                            confirmButtonColor: '#dc3545'
-                        });
-                        btnSubmit.disabled = false;
-                        btnSubmit.innerHTML = '<i class="bi bi-send-fill me-2"></i>Enviar Factura';
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Ocurrio un error al enviar la factura. Intente nuevamente.',
-                        confirmButtonText: 'Aceptar',
-                        confirmButtonColor: '#dc3545'
-                    });
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = '<i class="bi bi-send-fill me-2"></i>Enviar Factura';
-                });
-
-                return false;
-            };
-        })();
+                // Mostrar loading
+                if (btnVistaPrevia) {
+                    btnVistaPrevia.disabled = true;
+                    btnVistaPrevia.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+                }
+            });
+        });
     </script>
 }

@@ -6,10 +6,19 @@ public class FacturaPendienteViewModel
     public string? CodigoProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
+    public decimal? MtoSubtotal { get; set; }
+    public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
     public DateTime? FechaLimite { get; set; }
     public string? Estado { get; set; }
     public string? GuidRegistro { get; set; }
+
+    // Datos para el modal
+    public string? TipoComprobante { get; set; }
+    public string? EmisorRuc { get; set; }
+    public string? EmisorRazonSocial { get; set; }
+    public string? ReceptorRuc { get; set; }
+    public string? ReceptorNombre { get; set; }
 }
 
 public class FacturasPendientesViewModel
@@ -49,8 +58,22 @@ public class SubirFacturaViewModel
     public string? CodigoProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
+    public string? Descripcion { get; set; }
+    public decimal? MtoSubtotal { get; set; }
+    public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
     public DateTime? FechaLimite { get; set; }
+
+    // Tipo de comprobante (01=Factura, 03=Boleta, 02=Recibo por Honorarios)
+    public string? TipoComprobante { get; set; }
+
+    // Datos del Emisor (Compañia Medica)
+    public string? EmisorRuc { get; set; }
+    public string? EmisorRazonSocial { get; set; }
+
+    // Datos del Receptor (Sede)
+    public string? ReceptorRuc { get; set; }
+    public string? ReceptorNombre { get; set; }
 
     // Datos de cuenta bancaria
     public string? NombreBanco { get; set; }
@@ -62,6 +85,9 @@ public class SubirFacturaViewModel
     public bool RequiereValidacionCuenta { get; set; }
     public bool TieneCuentaBancaria => !string.IsNullOrEmpty(CuentaCorriente) || !string.IsNullOrEmpty(CuentaCci);
     public bool PuedeSubirFactura => !RequiereValidacionCuenta || TieneCuentaBancaria;
+
+    // Control de archivo CDR
+    public bool RequiereCdr { get; set; } = true;
 }
 
 public class DetalleFacturaViewModel
@@ -103,4 +129,43 @@ public class ArchivoAdjuntoViewModel
     public string? Extension { get; set; }
     public int? Tamano { get; set; }
     public DateTime FechaCreacion { get; set; }
+}
+
+/// <summary>
+/// ViewModel para la pagina de Vista Previa de Factura.
+/// </summary>
+/// <author>ADG Antonio</author>
+/// <created>2026-01-25</created>
+public class VistaPreviaFacturaViewModel
+{
+    // Identificador unico de la sesion de vista previa
+    public string? SessionId { get; set; }
+
+    // Datos de la produccion
+    public string? GuidRegistro { get; set; }
+    public string? CodigoProduccion { get; set; }
+    public string? NombreSede { get; set; }
+    public string? Concepto { get; set; }
+    public decimal? MtoTotal { get; set; }
+    public DateTime? FechaLimite { get; set; }
+
+    // Datos del formulario ingresados
+    public string? TipoComprobante { get; set; }
+    public string? Serie { get; set; }
+    public string? Numero { get; set; }
+    public DateTime? FechaEmision { get; set; }
+
+    // Datos bancarios
+    public string? NombreBanco { get; set; }
+    public string? CuentaCorriente { get; set; }
+    public string? CuentaCci { get; set; }
+    public string? Moneda { get; set; }
+
+    // Rutas temporales de archivos
+    public string? PdfTempPath { get; set; }
+    public string? XmlTempPath { get; set; }
+    public string? CdrTempPath { get; set; }
+
+    // Datos parseados del XML
+    public FacturaXmlData? DatosXml { get; set; }
 }

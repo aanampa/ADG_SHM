@@ -55,7 +55,7 @@
                         <i class="bi bi-key-fill" style="font-size: 2.5rem; color: var(--accent);"></i>
                     </div>
                     <h2 style="font-size: 2.25rem; font-weight: 700; color: #0F172A; margin-bottom: 0.5rem;">Recuperar Contraseña</h2>
-                    <p style="color: #64748B; font-size: 1rem;">Ingresa tu correo electrónico o usuario para recibir instrucciones de recuperación</p>
+                    <p style="color: #64748B; font-size: 1rem;">Ingresa tu usuario para recibir instrucciones de recuperación</p>
                 </div>
 
                 @if (ViewBag.Success != null)
@@ -74,11 +74,11 @@
 
                 <form asp-controller="Auth" asp-action="RecuperarClave" method="post" id="recoveryForm">
                     <div class="mb-3">
-                        <label class="form-label" style="font-weight: 600;">Correo Electrónico o Usuario</label>
+                        <label class="form-label" style="font-weight: 600;">Usuario</label>
                         <input type="text" class="form-control" name="emailOrUsername" placeholder="Ingrese su correo o usuario" required autocomplete="username">
                         <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748B;">
                             <i class="bi bi-info-circle me-1"></i>
-                            Ingresa el correo electrónico o usuario asociado a tu cuenta
+                            Ingresa el usuario asociado a tu cuenta
                         </div>
                     </div>
 

@@ -28,24 +28,30 @@
                             @{
                                 var badgeClass = factura.Estado?.ToUpper() switch
                                 {
-                                    "PENDIENTE" => "badge-pending",
-                                    "VENCIDO" => "badge-rejected",
+                                    "FACTURA_SOLICITADA" => "badge-pending",
+                                    "FACTURA_DEVUELTA" => "badge-rejected",
                                     _ => "badge-pending"
                                 };
                                 var estadoTexto = factura.Estado?.ToUpper() switch
                                 {
-                                    "PENDIENTE" => "Por Enviar",
-                                    "VENCIDO" => "Vencido",
+                                    "FACTURA_SOLICITADA" => "Por Enviar",
+                                    "FACTURA_DEVUELTA" => "Devuelta",
                                     _ => "Por Enviar"
                                 };
                             }
                             <span class="badge @badgeClass">@estadoTexto</span>
                         </td>
                         <td>
-                            <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action">
-                                <i class="bi bi-upload"></i>
-                                Subir
-                            </a>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn-action btn-ver-datos" data-guid="@factura.GuidRegistro">
+                                    <i class="bi bi-eye"></i>
+                                    Ver
+                                </button>
+                                <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action">
+                                    <i class="bi bi-upload"></i>
+                                    Subir
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 }

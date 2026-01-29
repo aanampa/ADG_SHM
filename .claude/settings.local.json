@@ -4,7 +4,8 @@
       "Bash(cmd //c \"taskkill /F /PID 17092\")",
       "Bash(timeout /t 2)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dotnet build:*)"
     ]
   }
 }
