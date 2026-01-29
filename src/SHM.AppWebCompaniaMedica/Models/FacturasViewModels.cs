@@ -6,10 +6,19 @@ public class FacturaPendienteViewModel
     public string? CodigoProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
+    public decimal? MtoSubtotal { get; set; }
+    public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
     public DateTime? FechaLimite { get; set; }
     public string? Estado { get; set; }
     public string? GuidRegistro { get; set; }
+
+    // Datos para el modal
+    public string? TipoComprobante { get; set; }
+    public string? EmisorRuc { get; set; }
+    public string? EmisorRazonSocial { get; set; }
+    public string? ReceptorRuc { get; set; }
+    public string? ReceptorNombre { get; set; }
 }
 
 public class FacturasPendientesViewModel
@@ -49,8 +58,22 @@ public class SubirFacturaViewModel
     public string? CodigoProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
+    public string? Descripcion { get; set; }
+    public decimal? MtoSubtotal { get; set; }
+    public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
     public DateTime? FechaLimite { get; set; }
+
+    // Tipo de comprobante (01=Factura, 03=Boleta, 02=Recibo por Honorarios)
+    public string? TipoComprobante { get; set; }
+
+    // Datos del Emisor (Compañia Medica)
+    public string? EmisorRuc { get; set; }
+    public string? EmisorRazonSocial { get; set; }
+
+    // Datos del Receptor (Sede)
+    public string? ReceptorRuc { get; set; }
+    public string? ReceptorNombre { get; set; }
 
     // Datos de cuenta bancaria
     public string? NombreBanco { get; set; }

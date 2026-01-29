@@ -9,15 +9,18 @@ namespace SHM.AppWebCompaniaMedica.Controllers;
 public class AuthController : Controller
 {
     private readonly IUsuarioService _usuarioService;
+    private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IEmailService _emailService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IUsuarioService usuarioService,
+        IEntidadMedicaService entidadMedicaService,
         IEmailService emailService,
         ILogger<AuthController> logger)
     {
         _usuarioService = usuarioService;
+        _entidadMedicaService = entidadMedicaService;
         _emailService = emailService;
         _logger = logger;
     }
@@ -67,6 +70,14 @@ public class AuthController : Controller
                 return View();
             }
 
+            // Obtener razon social de la entidad medica
+            string razonSocial = "";
+            if (usuario.IdEntidadMedica.HasValue && usuario.IdEntidadMedica.Value > 0)
+            {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(usuario.IdEntidadMedica.Value);
+                razonSocial = entidadMedica?.RazonSocial ?? "";
+            }
+
             // Crear Claims para el usuario autenticado
             var claims = new List<Claim>
             {
@@ -76,7 +87,8 @@ public class AuthController : Controller
                 new Claim("ApellidoPaterno", usuario.ApellidoPaterno ?? ""),
                 new Claim("ApellidoMaterno", usuario.ApellidoMaterno ?? ""),
                 new Claim(ClaimTypes.Email, usuario.Email ?? ""),
-                new Claim("TipoUsuario", usuario.TipoUsuario)
+                new Claim("TipoUsuario", usuario.TipoUsuario),
+                new Claim("RazonSocial", razonSocial)
             };
 
             if (usuario.IdEntidadMedica.HasValue)

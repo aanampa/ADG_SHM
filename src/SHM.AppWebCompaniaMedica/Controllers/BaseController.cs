@@ -37,7 +37,7 @@ public abstract class BaseController : Controller
         ViewData["Usuario"] = nombreCompleto;
         ViewData["Email"] = email;
         ViewData["Iniciales"] = iniciales.ToUpper();
-        ViewData["RazonSocial"] = "Portal de Honorarios"; // TODO: Obtener de la entidad
+        ViewData["RazonSocial"] = User.FindFirstValue("RazonSocial") ?? "Portal de Honorarios";
 
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (int.TryParse(userIdClaim, out var userId))

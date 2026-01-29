@@ -48,6 +48,7 @@ public class UsuarioController : BaseController
 
             var model = new PerfilViewModel
             {
+                Login = usuario.Login,
                 Nombres = usuario.Nombres,
                 ApellidoPaterno = usuario.ApellidoPaterno,
                 ApellidoMaterno = usuario.ApellidoMaterno,

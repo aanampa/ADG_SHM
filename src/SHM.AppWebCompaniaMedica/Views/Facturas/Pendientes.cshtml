@@ -31,6 +31,81 @@
 </div>
 
 @section Scripts {
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Estilos para el contenido del modal SweetAlert */
+        .swal-datos-factura .dato-row {
+            display: flex;
+            margin-bottom: 0.4rem;
+        }
+        .swal-datos-factura .dato-label {
+            font-weight: 600;
+            color: #64748B;
+            font-size: 0.8rem;
+            min-width: 100px;
+        }
+        .swal-datos-factura .dato-valor {
+            font-weight: 600;
+            color: #0F172A;
+            font-size: 0.9rem;
+        }
+        .swal-datos-factura .seccion {
+            background: #F8FAFC;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #E2E8F0;
+        }
+        .swal-datos-factura .seccion-titulo {
+            font-weight: 700;
+            color: #5a1160;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .swal-datos-factura .importe-total {
+            background: linear-gradient(135deg, rgba(242, 101, 34, 0.1) 0%, rgba(90, 17, 96, 0.1) 100%);
+            border: 1px solid #f26522;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .swal-datos-factura .importe-total .monto {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #f26522;
+        }
+        .btn-copiar {
+            background: transparent;
+            border: 1px solid #CBD5E1;
+            border-radius: 6px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            color: #64748B;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-copiar:hover {
+            background: #F1F5F9;
+            border-color: #5a1160;
+            color: #5a1160;
+        }
+        .btn-copiar.copiado {
+            background: #10B981;
+            border-color: #10B981;
+            color: white;
+        }
+    </style>
     <script>
         let searchTimeout;
 
@@ -61,20 +136,194 @@
                 .then(response => response.text())
                 .then(html => {
                     container.innerHTML = html;
+                    // Re-attach event listeners para los botones "Ver"
+                    attachVerButtons();
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     container.innerHTML = '<div class="text-center p-5 text-danger"><i class="bi bi-exclamation-circle" style="font-size: 2rem;"></i><p class="mt-2">Error al cargar los datos</p></div>';
                 });
         }
+
+        // Función para adjuntar eventos a los botones "Ver"
+        function attachVerButtons() {
+            document.querySelectorAll('.btn-ver-datos').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const guid = this.getAttribute('data-guid');
+                    abrirModalVerDatos(guid);
+                });
+            });
+        }
+
+        // Función para copiar el concepto al portapapeles
+        function copiarConcepto() {
+            const conceptoTexto = document.getElementById('conceptoTexto');
+            if (conceptoTexto) {
+                const texto = conceptoTexto.innerText;
+                navigator.clipboard.writeText(texto).then(() => {
+                    // Cambiar icono y estilo temporalmente
+                    const btnCopiar = document.querySelector('.btn-copiar');
+                    if (btnCopiar) {
+                        btnCopiar.classList.add('copiado');
+                        btnCopiar.innerHTML = '<i class="bi bi-check-lg"></i>';
+                        btnCopiar.title = 'Copiado!';
+
+                        // Restaurar después de 2 segundos
+                        setTimeout(() => {
+                            btnCopiar.classList.remove('copiado');
+                            btnCopiar.innerHTML = '<i class="bi bi-clipboard"></i>';
+                            btnCopiar.title = 'Copiar concepto';
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Error al copiar:', err);
+                });
+            }
+        }
+
+        // Función para abrir el modal usando SweetAlert2
+        function abrirModalVerDatos(guid) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Cargando datos...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Cargar datos
+            fetch(`@Url.Action("GetDatosProduccion", "Facturas")?guid=${encodeURIComponent(guid)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Construir el HTML del contenido
+                        const htmlContent = `
+                            <div class="swal-datos-factura" style="text-align: left;">
+                                <!-- Mensaje informativo -->
+                                <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(90, 17, 96, 0.1) 100%); border: 1px solid #3B82F6; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                                    <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                                        <i class="bi bi-info-circle-fill" style="color: #3B82F6; font-size: 1rem; margin-top: 2px;"></i>
+                                        <span style="color: #1E40AF; font-size: 0.8rem; line-height: 1.4;">
+                                            Utilice estos datos para emitir su comprobante de pago. Asegurese de que el <strong>Concepto</strong>, <strong>RUC del Receptor</strong> e <strong>Importe Total</strong> coincidan exactamente con su factura electrónica.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Produccion y Descripcion -->
+                                <div class="seccion" style="padding: 0.5rem 0.75rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                        <span style="color: #64748B; font-size: 0.8rem;">Producción:</span>
+                                        <span style="font-weight: 600; font-size: 0.85rem; color: #0F172A;">${data.codigoProduccion || '-'}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                                        <span style="color: #64748B; font-size: 0.8rem;">Descripción:</span>
+                                        <span style="font-weight: 600; font-size: 0.85rem; color: #0F172A;">${data.descripcion || '-'}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Emisor y Receptor en dos columnas -->
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <div class="seccion" style="flex: 1;">
+                                        <div class="seccion-titulo">
+                                            <i class="bi bi-building"></i> Emisor
+                                        </div>
+                                        <div class="dato-row">
+                                            <span class="dato-label">RUC:</span>
+                                            <span class="dato-valor" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${data.emisorRuc || '-'}</span>
+                                        </div>
+                                        <div class="dato-row" style="margin-bottom: 0;">
+                                            <span class="dato-valor" style="font-size: 0.85rem;">${data.emisorRazonSocial || '-'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="seccion" style="flex: 1;">
+                                        <div class="seccion-titulo">
+                                            <i class="bi bi-hospital"></i> Receptor
+                                        </div>
+                                        <div class="dato-row">
+                                            <span class="dato-label">RUC:</span>
+                                            <span class="dato-valor" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${data.receptorRuc || '-'}</span>
+                                        </div>
+                                        <div class="dato-row" style="margin-bottom: 0;">
+                                            <span class="dato-valor" style="font-size: 0.85rem;">${data.receptorNombre || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Concepto, Tipo y Fecha Limite -->
+                                <div class="seccion">
+                                    <div class="dato-row" style="align-items: center;">
+                                        <span class="dato-label">Concepto:</span>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                                            <span class="dato-valor" id="conceptoTexto">${data.concepto || '-'}</span>
+                                            ${data.concepto ? '<button type="button" onclick="copiarConcepto()" class="btn-copiar" title="Copiar concepto"><i class="bi bi-clipboard"></i></button>' : ''}
+                                        </div>
+                                    </div>
+                                    <div class="dato-row">
+                                        <span class="dato-label">Tipo:</span>
+                                        <span class="dato-valor" style="color: #5a1160;">${data.tipoComprobante || '-'}</span>
+                                    </div>
+                                    <div class="dato-row" style="margin-bottom: 0;">
+                                        <span class="dato-label">Fecha Límite:</span>
+                                        <span class="dato-valor">${data.fechaLimite || '<span style="color: #64748B; font-weight: 400;">Sin límite</span>'}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Importes -->
+                                <div class="seccion">
+                                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                        <div style="flex: 1;">
+                                            <div style="color: #64748B; font-size: 0.75rem;">SubTotal</div>
+                                            <div style="font-weight: 600; font-size: 0.9rem;">S/ ${data.mtoSubtotal || '0.00'}</div>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="color: #64748B; font-size: 0.75rem;">IGV (18%)</div>
+                                            <div style="font-weight: 600; font-size: 0.9rem;">S/ ${data.mtoIgv || '0.00'}</div>
+                                        </div>
+                                        <div class="importe-total" style="flex: 1.5;">
+                                            <div style="color: #64748B; font-size: 0.75rem;">Total</div>
+                                            <div class="monto">S/ ${data.mtoTotal || '0.00'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        Swal.fire({
+                            title: '<i class="bi bi-file-earmark-text me-2"></i>Datos para Facturación',
+                            html: htmlContent,
+                            width: '600px',
+                            showCloseButton: true,
+                            showConfirmButton: true,
+                            confirmButtonText: '<i class="bi bi-x-lg me-1"></i>Cerrar',
+                            confirmButtonColor: '#5a1160',
+                            customClass: {
+                                title: 'text-start',
+                                htmlContainer: 'text-start'
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'No se pudieron cargar los datos',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al cargar los datos',
+                        confirmButtonColor: '#dc3545'
+                    });
+                });
+        }
+
+        // Adjuntar eventos al cargar la página
+        attachVerButtons();
     </script>
-    <style>
-        .spin {
-            animation: spin 1s linear infinite;
-        }
-        @@keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    </style>
 }

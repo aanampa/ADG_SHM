@@ -20,6 +20,7 @@ public class FacturasController : BaseController
     private readonly IArchivoComprobanteService _archivoComprobanteService;
     private readonly IBitacoraService _bitacoraService;
     private readonly IEntidadCuentaBancariaService _entidadCuentaBancariaService;
+    private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IBancoService _bancoService;
     private readonly IParametroService _parametroService;
     private readonly ILogger<FacturasController> _logger;
@@ -33,6 +34,7 @@ public class FacturasController : BaseController
         IArchivoComprobanteService archivoComprobanteService,
         IBitacoraService bitacoraService,
         IEntidadCuentaBancariaService entidadCuentaBancariaService,
+        IEntidadMedicaService entidadMedicaService,
         IBancoService bancoService,
         IParametroService parametroService,
         ILogger<FacturasController> logger,
@@ -45,6 +47,7 @@ public class FacturasController : BaseController
         _archivoComprobanteService = archivoComprobanteService;
         _bitacoraService = bitacoraService;
         _entidadCuentaBancariaService = entidadCuentaBancariaService;
+        _entidadMedicaService = entidadMedicaService;
         _bancoService = bancoService;
         _parametroService = parametroService;
         _logger = logger;
@@ -77,8 +80,9 @@ public class FacturasController : BaseController
             // Filtrar solo las pendientes (Estado = "PENDIENTE" o sin comprobante)
             var pendientes = producciones
                 .Where(p => p.Activo == 1 &&
-                            p.Estado == "FACTURA_SOLICITADA" 
-                            )
+                            (p.Estado == "FACTURA_SOLICITADA"  ||  
+                             p.Estado == "FACTURA_DEVUELTA"  
+                            ))
                 .ToList();
 
             // Obtener todas las sedes para el mapeo
@@ -178,6 +182,76 @@ public class FacturasController : BaseController
         {
             _logger.LogError(ex, "Error al obtener lista de facturas pendientes");
             return PartialView("_ListPendientesPartial", new FacturasPendientesViewModel());
+        }
+    }
+
+    // GET: Facturas/GetDatosProduccion (AJAX para modal)
+    [HttpGet]
+    public async Task<IActionResult> GetDatosProduccion(string guid)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                return Json(new { success = false, message = "GUID no proporcionado" });
+            }
+
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guid);
+            if (produccion == null)
+            {
+                return Json(new { success = false, message = "Producción no encontrada" });
+            }
+
+            // Obtener datos del emisor (entidad medica)
+            string emisorRuc = "";
+            string emisorRazonSocial = "";
+            if (produccion.IdEntidadMedica.HasValue)
+            {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                if (entidadMedica != null)
+                {
+                    emisorRuc = entidadMedica.Ruc ?? "";
+                    emisorRazonSocial = entidadMedica.RazonSocial ?? "";
+                }
+            }
+
+            // Obtener datos del receptor (sede)
+            var sede = produccion.IdSede.HasValue && produccion.IdSede.Value > 0
+                ? await _sedeService.GetSedeByIdAsync(produccion.IdSede.Value)
+                : null;
+
+            // Convertir tipo de comprobante
+            string tipoComprobanteTexto = produccion.TipoComprobante switch
+            {
+                "01" => "Factura",
+                "03" => "Boleta",
+                "02" => "Recibo por Honorarios",
+                _ => produccion.TipoComprobante ?? "-"
+            };
+
+            var data = new
+            {
+                success = true,
+                codigoProduccion = produccion.CodigoProduccion,
+                concepto = produccion.Concepto ?? produccion.Descripcion ?? "-",
+                descripcion = produccion.Descripcion ?? "-",
+                tipoComprobante = tipoComprobanteTexto,
+                mtoSubtotal = produccion.MtoSubtotal?.ToString("N2") ?? "0.00",
+                mtoIgv = produccion.MtoIgv?.ToString("N2") ?? "0.00",
+                mtoTotal = produccion.MtoTotal?.ToString("N2") ?? "0.00",
+                emisorRuc = emisorRuc,
+                emisorRazonSocial = emisorRazonSocial,
+                receptorRuc = sede?.Ruc ?? "-",
+                receptorNombre = sede?.Nombre ?? "-",
+                fechaLimite = produccion.FechaLimite?.ToString("dd/MM/yyyy") ?? ""
+            };
+
+            return Json(data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener datos de produccion con GUID: {Guid}", guid);
+            return Json(new { success = false, message = "Error al obtener los datos" });
         }
     }
 
@@ -354,6 +428,10 @@ public class FacturasController : BaseController
             var requiereArchivoCdr = await _parametroService.GetValorByCodigoAsync("SHM_REQUIERE_ARCHIVO_CDR");
             var requiereCdr = requiereArchivoCdr?.ToUpper() != "N"; // Por defecto es requerido (S o vacio = true)
 
+            // Obtener datos del Emisor (Entidad Medica)
+            string? emisorRuc = null;
+            string? emisorRazonSocial = null;
+
             // Obtener cuenta bancaria de la entidad medica
             string? nombreBanco = null;
             string? cuentaCorriente = null;
@@ -362,6 +440,13 @@ public class FacturasController : BaseController
 
             if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
             {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                if (entidadMedica != null)
+                {
+                    emisorRuc = entidadMedica.Ruc;
+                    emisorRazonSocial = entidadMedica.RazonSocial;
+                }
+
                 var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
                 var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
 
@@ -385,8 +470,19 @@ public class FacturasController : BaseController
                 CodigoProduccion = produccion.CodigoProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
                 Concepto = produccion.Concepto ?? produccion.Descripcion,
+                Descripcion = produccion.Descripcion,
+                MtoSubtotal = produccion.MtoSubtotal,
+                MtoIgv = produccion.MtoIgv,
                 MtoTotal = produccion.MtoTotal,
                 FechaLimite = produccion.FechaLimite,
+                TipoComprobante = produccion.TipoComprobante,
+                // Datos del Emisor (Compañia Medica)
+                EmisorRuc = emisorRuc,
+                EmisorRazonSocial = emisorRazonSocial,
+                // Datos del Receptor (Sede)
+                ReceptorRuc = sede?.Ruc,
+                ReceptorNombre = sede?.Nombre,
+                // Datos bancarios
                 NombreBanco = nombreBanco,
                 CuentaCorriente = cuentaCorriente,
                 CuentaCci = cuentaCci,
@@ -756,41 +852,30 @@ public class FacturasController : BaseController
             //     erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
             // }
 
-            // // Validar importe total
-            // var importeTotalXml = facturaData.DesgloseTotales.ImporteTotal;
-            // if (produccion.MtoTotal.HasValue && importeTotalXml > 0)
-            // {
-            //     // Comparar con tolerancia de 0.01 para evitar problemas de redondeo
-            //     if (Math.Abs(produccion.MtoTotal.Value - importeTotalXml) > 0.01m)
-            //     {
-            //         erroresCoincidencia.Add($"Importe total: produccion='S/ {produccion.MtoTotal:N2}', XML='S/ {importeTotalXml:N2}'");
-            //     }
-            // }
+            // Validar concepto contra descripcion del primer item del XML (si el parametro lo requiere)
+            var validaConceptoParam = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_FACTURA_CONCEPTO");
+            if (validaConceptoParam?.ToUpper() == "S")
+            {
+                if (facturaData.DetalleItems.Count > 0)
+                {
+                    var descripcionPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
+                    var conceptoProduccion = produccion.Concepto?.Trim();
 
-            // Validar concepto contra descripcion del primer item del XML
-            // if (facturaData.DetalleItems.Count > 0)
-            // {
-            //     var descripcionPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
-            //     var conceptoProduccion = produccion.Concepto?.Trim();
-
-            //     if (!string.IsNullOrEmpty(conceptoProduccion) && !string.IsNullOrEmpty(descripcionPrimerItem))
-            //     {
-            //         if (!string.Equals(conceptoProduccion, descripcionPrimerItem, StringComparison.OrdinalIgnoreCase))
-            //         {
-            //             erroresCoincidencia.Add($"Concepto: produccion='{conceptoProduccion}', XML (primer item)='{descripcionPrimerItem}'");
-            //         }
-            //     }
-            // }
-
-            // if (erroresCoincidencia.Count > 0)
-            // {
-            //     _logger.LogWarning("Los datos del formulario no coinciden con el XML: {Errores}", string.Join("; ", erroresCoincidencia));
-            //     return Json(new
-            //     {
-            //         success = false,
-            //         message = "Los datos ingresados no coinciden con el XML de la factura: " + string.Join("; ", erroresCoincidencia)
-            //     });
-            // }
+                    if (!string.IsNullOrEmpty(conceptoProduccion) && !string.IsNullOrEmpty(descripcionPrimerItem))
+                    {
+                        if (!string.Equals(conceptoProduccion, descripcionPrimerItem, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogWarning("El concepto no coincide. Produccion: '{ConceptoProduccion}', XML: '{ConceptoXml}'",
+                                conceptoProduccion, descripcionPrimerItem);
+                            return Json(new
+                            {
+                                success = false,
+                                message = $"El concepto del XML no coincide con la produccion. Esperado: '{conceptoProduccion}', XML: '{descripcionPrimerItem}'"
+                            });
+                        }
+                    }
+                }
+            }
 
             // Obtener ruta de archivos desde configuración
             var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
@@ -1358,6 +1443,31 @@ public class FacturasController : BaseController
             if (facturaData == null)
             {
                 return Json(new { success = false, message = "Error al leer los datos del XML" });
+            }
+
+            // Validar concepto contra descripcion del primer item del XML (si el parametro lo requiere)
+            var validaConceptoParam = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_FACTURA_CONCEPTO");
+            if (validaConceptoParam?.ToUpper() == "S")
+            {
+                if (facturaData.DetalleItems.Count > 0)
+                {
+                    var descripcionPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
+                    var conceptoProduccion = produccion.Concepto?.Trim();
+
+                    if (!string.IsNullOrEmpty(conceptoProduccion) && !string.IsNullOrEmpty(descripcionPrimerItem))
+                    {
+                        if (!string.Equals(conceptoProduccion, descripcionPrimerItem, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogWarning("El concepto no coincide. Produccion: '{ConceptoProduccion}', XML: '{ConceptoXml}'",
+                                conceptoProduccion, descripcionPrimerItem);
+                            return Json(new
+                            {
+                                success = false,
+                                message = $"El concepto del XML no coincide con la produccion. Esperado: '{conceptoProduccion}', XML: '{descripcionPrimerItem}'"
+                            });
+                        }
+                    }
+                }
             }
 
             // Extraer serie y numero del XML
