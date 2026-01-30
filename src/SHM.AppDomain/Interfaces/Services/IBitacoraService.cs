@@ -39,4 +39,12 @@ public interface IBitacoraService
     /// Elimina una bitacora registrando quien realizo la eliminacion.
     /// </summary>
     Task<bool> DeleteBitacoraAsync(int id, int idModificador);
+
+    /// <summary>
+    /// Obtiene las bitacoras de una entidad especifica por su ID, incluyendo datos del usuario que realizo la accion.
+    /// </summary>
+    /// <param name="entidad">Nombre de la entidad (ej: SHM_PRODUCCION)</param>
+    /// <param name="idEntidad">ID de la entidad</param>
+    /// <returns>Lista de bitacoras con datos del usuario</returns>
+    Task<IEnumerable<BitacoraConUsuarioDto>> GetBitacorasByEntidadYIdAsync(string entidad, int idEntidad);
 }

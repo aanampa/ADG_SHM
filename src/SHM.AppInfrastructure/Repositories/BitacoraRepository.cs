@@ -1,5 +1,6 @@
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppInfrastructure.Configurations;
@@ -221,5 +222,37 @@ public class BitacoraRepository : IBitacoraRepository
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Id = id });
 
         return count > 0;
+    }
+
+    /// <summary>
+    /// Obtiene las bitacoras de una entidad especifica por su ID, incluyendo datos del usuario que realizo la accion.
+    /// </summary>
+    /// <param name="entidad">Nombre de la entidad (ej: SHM_PRODUCCION)</param>
+    /// <param name="idEntidad">ID de la entidad</param>
+    /// <returns>Lista de bitacoras con datos del usuario</returns>
+    public async Task<IEnumerable<BitacoraConUsuarioDto>> GetByEntidadYIdConUsuarioAsync(string entidad, int idEntidad)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                sb.ID_BITACORA as IdBitacora,
+                sb.ID_ENTIDAD as IdEntidad,
+                sb.ENTIDAD as Entidad,
+                sb.ACCION as Accion,
+                sb.DESCRIPCION as Descripcion,
+                sb.FECHA_ACCION as FechaAccion,
+                sb.ID_CREADOR as IdCreador,
+                ssu.APELLIDO_PATERNO as ApellidoPaterno,
+                ssu.APELLIDO_MATERNO as ApellidoMaterno,
+                ssu.NOMBRES as Nombres
+            FROM SHM_BITACORA sb
+            LEFT JOIN SHM_SEG_USUARIO ssu ON sb.ID_CREADOR = ssu.ID_USUARIO
+            WHERE sb.ID_ENTIDAD = :IdEntidad
+              AND sb.ENTIDAD = :Entidad
+              AND sb.ACTIVO = 1
+            ORDER BY sb.FECHA_ACCION DESC";
+
+        return await connection.QueryAsync<BitacoraConUsuarioDto>(sql, new { Entidad = entidad, IdEntidad = idEntidad });
     }
 }

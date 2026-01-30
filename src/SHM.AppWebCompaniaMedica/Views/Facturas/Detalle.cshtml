@@ -295,6 +295,15 @@
             </div>
         }
 
+        <hr style="margin: 2rem 0; border-color: var(--border);">
+
+        <!-- Seccion de Bitacora -->
+        @await Html.PartialAsync("_BitacoraPartial", new SHM.AppWebCompaniaMedica.Models.BitacoraViewModel
+        {
+            Items = Model.Bitacora,
+            Titulo = "Historial de la Factura"
+        })
+
         <div class="d-flex gap-2 mt-4">
             <a asp-controller="Facturas" asp-action="Enviadas" class="btn btn-secondary" style="border-radius: 12px; padding: 0.875rem 2rem;">
                 <i class="bi bi-arrow-left me-2"></i>Volver a Facturas Enviadas

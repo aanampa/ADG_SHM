@@ -54,6 +54,7 @@ public class FacturasEnviadasViewModel
 
 public class SubirFacturaViewModel
 {
+    public int IdProduccion { get; set; }
     public string? GuidRegistro { get; set; }
     public string? CodigoProduccion { get; set; }
     public string? NombreSede { get; set; }
@@ -88,6 +89,9 @@ public class SubirFacturaViewModel
 
     // Control de archivo CDR
     public bool RequiereCdr { get; set; } = true;
+
+    // Bitacora de acciones
+    public List<BitacoraItemViewModel> Bitacora { get; set; } = new();
 }
 
 public class DetalleFacturaViewModel
@@ -118,6 +122,34 @@ public class DetalleFacturaViewModel
     public string? CuentaCorriente { get; set; }
     public string? CuentaCci { get; set; }
     public string? Moneda { get; set; }
+
+    // Bitacora de acciones
+    public List<BitacoraItemViewModel> Bitacora { get; set; } = new();
+}
+
+/// <summary>
+/// ViewModel para mostrar un item de bitacora con informacion del usuario.
+/// Reutilizable en diferentes vistas que necesiten mostrar historial de acciones.
+/// </summary>
+/// <author>ADG Antonio</author>
+/// <created>2026-01-29</created>
+public class BitacoraItemViewModel
+{
+    public string? Descripcion { get; set; }
+    public DateTime? FechaAccion { get; set; }
+    public string? NombreUsuario { get; set; }
+    public string? Accion { get; set; }
+}
+
+/// <summary>
+/// ViewModel para la vista parcial de bitacora reutilizable.
+/// </summary>
+/// <author>ADG Antonio</author>
+/// <created>2026-01-29</created>
+public class BitacoraViewModel
+{
+    public List<BitacoraItemViewModel> Items { get; set; } = new();
+    public string? Titulo { get; set; } = "Bitacora";
 }
 
 public class ArchivoAdjuntoViewModel
