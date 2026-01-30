@@ -344,9 +344,11 @@ public class ProduccionController : Controller
 
     /// <summary>
     /// Descarga un archivo adjunto de comprobante.
+    /// Soporta almacenamiento dual: FILE (sistema de archivos) y BLOB (base de datos).
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-22</created>
+    /// <modified>ADG Vladimir D - 2025-01-30 - Soporte dual FILE/BLOB</modified>
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> DescargarArchivo(string guid)
@@ -358,42 +360,26 @@ public class ProduccionController : Controller
                 return NotFound("Archivo no encontrado");
             }
 
-            var archivo = await _archivoService.GetArchivoByGuidAsync(guid);
-            if (archivo == null || archivo.Activo != 1)
+            // Usar GetArchivoContenidoByGuidAsync que maneja tanto FILE como BLOB
+            var archivoContenido = await _archivoService.GetArchivoContenidoByGuidAsync(guid);
+            if (archivoContenido == null)
             {
+                _logger.LogWarning("Archivo no encontrado o sin contenido: {Guid}", guid);
                 return NotFound("Archivo no encontrado");
             }
 
-            // Obtener ruta base de archivos desde configuracion
-            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            var filePath = Path.Combine(uploadBasePath, archivo.Ruta ?? "");
-
-            if (!System.IO.File.Exists(filePath))
-            {
-                _logger.LogWarning("Archivo fisico no encontrado: {FilePath}", filePath);
-                return NotFound("Archivo fisico no encontrado");
-            }
-
-            // Determinar content type
-            var contentType = archivo.Extension?.ToLower() switch
-            {
-                ".pdf" => "application/pdf",
-                ".xml" => "application/xml",
-                ".zip" => "application/zip",
-                _ => "application/octet-stream"
-            };
-
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-
             // Para PDFs, mostrar inline en el navegador (visor embebido)
             // Para otros archivos, forzar descarga
-            if (archivo.Extension?.ToLower() == ".pdf")
+            if (archivoContenido.Extension?.ToLower() == ".pdf")
             {
-                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivo.NombreArchivo}\"");
-                return File(fileBytes, contentType);
+                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivoContenido.NombreArchivo}\"");
+                return File(archivoContenido.Contenido, archivoContenido.ContentType ?? "application/pdf");
             }
 
-            return File(fileBytes, contentType, archivo.NombreArchivo ?? $"archivo{archivo.Extension}");
+            return File(
+                archivoContenido.Contenido,
+                archivoContenido.ContentType ?? "application/octet-stream",
+                archivoContenido.NombreArchivo);
         }
         catch (Exception ex)
         {
