@@ -11,6 +11,7 @@ public class ParametroItemViewModel
 {
     public string GuidRegistro { get; set; } = string.Empty;
     public string? Codigo { get; set; }
+    public string? Descripcion { get; set; }
     public string? Valor { get; set; }
     public int Activo { get; set; }
 }
@@ -20,6 +21,9 @@ public class ParametroCreateViewModel
     [Required(ErrorMessage = "El codigo es requerido")]
     [MaxLength(100, ErrorMessage = "El codigo no puede exceder 100 caracteres")]
     public string? Codigo { get; set; }
+
+    [MaxLength(1024, ErrorMessage = "La descripcion no puede exceder 1024 caracteres")]
+    public string? Descripcion { get; set; }
 
     [MaxLength(512, ErrorMessage = "El valor no puede exceder 512 caracteres")]
     public string? Valor { get; set; }
@@ -33,6 +37,9 @@ public class ParametroEditViewModel
     [MaxLength(100, ErrorMessage = "El codigo no puede exceder 100 caracteres")]
     public string? Codigo { get; set; }
 
+    [MaxLength(1024, ErrorMessage = "La descripcion no puede exceder 1024 caracteres")]
+    public string? Descripcion { get; set; }
+
     [MaxLength(512, ErrorMessage = "El valor no puede exceder 512 caracteres")]
     public string? Valor { get; set; }
 
@@ -43,5 +50,6 @@ public class ParametroDeleteViewModel
 {
     public string GuidRegistro { get; set; } = string.Empty;
     public string? Codigo { get; set; }
+    public string? Descripcion { get; set; }
     public string? Valor { get; set; }
 }

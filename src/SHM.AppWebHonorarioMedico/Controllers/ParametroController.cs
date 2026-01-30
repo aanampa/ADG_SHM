@@ -39,6 +39,7 @@ public class ParametroController : Controller
                 {
                     GuidRegistro = p.GuidRegistro ?? "",
                     Codigo = p.Codigo,
+                    Descripcion = p.Descripcion,
                     Valor = p.Valor,
                     Activo = p.Activo
                 }).ToList()
@@ -91,6 +92,7 @@ public class ParametroController : Controller
             var createDto = new CreateParametroDto
             {
                 Codigo = model.Codigo!,
+                Descripcion = model.Descripcion,
                 Valor = model.Valor
             };
 
@@ -122,6 +124,7 @@ public class ParametroController : Controller
             {
                 GuidRegistro = parametro.GuidRegistro ?? "",
                 Codigo = parametro.Codigo,
+                Descripcion = parametro.Descripcion,
                 Valor = parametro.Valor,
                 Activo = parametro.Activo
             };
@@ -172,6 +175,7 @@ public class ParametroController : Controller
             var updateDto = new UpdateParametroDto
             {
                 Codigo = model.Codigo,
+                Descripcion = model.Descripcion,
                 Valor = model.Valor,
                 Activo = model.Activo
             };
@@ -209,6 +213,7 @@ public class ParametroController : Controller
             {
                 GuidRegistro = parametro.GuidRegistro ?? "",
                 Codigo = parametro.Codigo,
+                Descripcion = parametro.Descripcion,
                 Valor = parametro.Valor
             };
 

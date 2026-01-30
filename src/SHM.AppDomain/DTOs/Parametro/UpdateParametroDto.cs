@@ -13,6 +13,9 @@ public class UpdateParametroDto
     [MaxLength(100)]
     public string? Codigo { get; set; }
 
+    [MaxLength(1024)]
+    public string? Descripcion { get; set; }
+
     [MaxLength(512)]
     public string? Valor { get; set; }
 

@@ -14,6 +14,9 @@ public class CreateParametroDto
     [MaxLength(100)]
     public string Codigo { get; set; } = string.Empty;
 
+    [MaxLength(1024)]
+    public string? Descripcion { get; set; }
+
     [MaxLength(512)]
     public string? Valor { get; set; }
 }

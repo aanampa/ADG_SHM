@@ -77,6 +77,7 @@ public class ParametroService : IParametroService
         var parametro = new Parametro
         {
             Codigo = createDto.Codigo,
+            Descripcion = createDto.Descripcion,
             Valor = createDto.Valor,
             IdCreador = idCreador,
             Activo = 1
@@ -99,6 +100,9 @@ public class ParametroService : IParametroService
 
         if (!string.IsNullOrEmpty(updateDto.Codigo))
             parametroExistente.Codigo = updateDto.Codigo;
+
+        if (updateDto.Descripcion != null)
+            parametroExistente.Descripcion = updateDto.Descripcion;
 
         if (updateDto.Valor != null)
             parametroExistente.Valor = updateDto.Valor;
@@ -129,6 +133,7 @@ public class ParametroService : IParametroService
         {
             IdParametro = parametro.IdParametro,
             Codigo = parametro.Codigo,
+            Descripcion = parametro.Descripcion,
             Valor = parametro.Valor,
             Activo = parametro.Activo,
             GuidRegistro = parametro.GuidRegistro,
