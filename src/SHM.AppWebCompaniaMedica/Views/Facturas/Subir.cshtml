@@ -289,6 +289,18 @@
                     }
                 </div>
             </form>
+
+            <!-- Seccion de Bitacora (si hay registros) -->
+            @if (Model.Bitacora != null && Model.Bitacora.Any())
+            {
+                <hr style="margin: 2rem 0; border-color: var(--border);">
+
+                @await Html.PartialAsync("_BitacoraPartial", new SHM.AppWebCompaniaMedica.Models.BitacoraViewModel
+                {
+                    Items = Model.Bitacora,
+                    Titulo = "Historial de la Produccion"
+                })
+            }
         </div>
     </div>
 </div>

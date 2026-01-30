@@ -1,0 +1,77 @@
+@model SHM.AppWebCompaniaMedica.Models.BitacoraViewModel
+@*
+    Vista parcial reutilizable para mostrar la bitacora de acciones.
+    Muestra un timeline con descripcion, fecha y usuario que realizo la accion.
+
+    Uso:
+    @await Html.PartialAsync("_BitacoraPartial", new BitacoraViewModel { Items = Model.Bitacora, Titulo = "Historial" })
+
+    @author ADG Antonio
+    @created 2026-01-29
+*@
+
+<div class="mb-4">
+    <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+        <i class="bi bi-clock-history me-2"></i>@(Model.Titulo ?? "Bitacora")
+    </h6>
+
+    @if (Model.Items == null || !Model.Items.Any())
+    {
+        <div class="alert alert-info" style="border-radius: 12px; background: rgba(13, 202, 240, 0.1); border: 1px solid rgba(13, 202, 240, 0.3);">
+            <i class="bi bi-info-circle me-2"></i>
+            No hay registros en la bitacora.
+        </div>
+    }
+    else
+    {
+        <div class="bitacora-timeline" style="position: relative; padding-left: 30px;">
+            <!-- Linea vertical del timeline -->
+            <div style="position: absolute; left: 10px; top: 10px; bottom: 10px; width: 2px; background: linear-gradient(to bottom, var(--accent), var(--border));"></div>
+
+            @foreach (var item in Model.Items)
+            {
+                <div class="bitacora-item" style="position: relative; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-main); border-radius: 12px; border-left: 3px solid var(--accent);">
+                    <!-- Punto del timeline -->
+                    <div style="position: absolute; left: -26px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: var(--accent); border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 3px var(--bg-main);"></div>
+
+                    <!-- Contenido -->
+                    <div class="d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span style="font-weight: 600; color: var(--text-primary);">
+                                @(item.Descripcion ?? "-")
+                            </span>
+                            @if (!string.IsNullOrEmpty(item.Accion))
+                            {
+                                var badgeColor = item.Accion switch
+                                {
+                                    "FACTURA_ENVIADA" => "bg-success",
+                                    "FACTURA_APROBADA" => "bg-primary",
+                                    "FACTURA_RECHAZADA" => "bg-danger",
+                                    "FACTURA_PAGADA" => "bg-info",
+                                    _ => "bg-secondary"
+                                };
+                                var accionTexto = item.Accion switch
+                                {
+                                    "FACTURA_ENVIADA" => "Enviada",
+                                    "FACTURA_APROBADA" => "Aprobada",
+                                    "FACTURA_RECHAZADA" => "Rechazada",
+                                    "FACTURA_PAGADA" => "Pagada",
+                                    _ => item.Accion
+                                };
+                                <span class="badge @badgeColor" style="font-size: 0.75rem;">@accionTexto</span>
+                            }
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small style="color: var(--text-secondary);">
+                                <i class="bi bi-person me-1"></i>@(item.NombreUsuario ?? "Sistema")
+                            </small>
+                            <small style="color: var(--text-secondary);">
+                                <i class="bi bi-calendar3 me-1"></i>@(item.FechaAccion?.ToString("dd/MM/yyyy HH:mm") ?? "-")
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

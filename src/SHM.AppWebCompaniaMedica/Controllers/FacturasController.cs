@@ -400,6 +400,7 @@ public class FacturasController : BaseController
     // GET: Facturas/Subir
     /// <author>ADG Antonio</author>
     /// <modified>ADG Antonio - 2026-01-23 - Agregado datos de cuenta bancaria y validacion por parametro</modified>
+    /// <modified>ADG Antonio - 2026-01-29 - Agregada seccion de bitacora</modified>
     public async Task<IActionResult> Subir(string guid)
     {
         ViewData["Title"] = "Subir Factura";
@@ -464,8 +465,19 @@ public class FacturasController : BaseController
                 }
             }
 
+            // Obtener bitacora de la produccion
+            var bitacoraItems = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_PRODUCCION", produccion.IdProduccion);
+            var bitacora = bitacoraItems.Select(b => new BitacoraItemViewModel
+            {
+                Descripcion = b.Descripcion,
+                FechaAccion = b.FechaAccion,
+                NombreUsuario = b.NombreCompletoUsuario,
+                Accion = b.Accion
+            }).ToList();
+
             var model = new SubirFacturaViewModel
             {
+                IdProduccion = produccion.IdProduccion,
                 GuidRegistro = produccion.GuidRegistro,
                 CodigoProduccion = produccion.CodigoProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
@@ -488,7 +500,8 @@ public class FacturasController : BaseController
                 CuentaCci = cuentaCci,
                 Moneda = moneda,
                 RequiereValidacionCuenta = requiereValidacionCuenta,
-                RequiereCdr = requiereCdr
+                RequiereCdr = requiereCdr,
+                Bitacora = bitacora
             };
 
             return View(model);
@@ -503,6 +516,7 @@ public class FacturasController : BaseController
     // GET: Facturas/Detalle
     /// <author>ADG Antonio</author>
     /// <modified>ADG Antonio - 2026-01-23 - Agregado datos de cuenta bancaria</modified>
+    /// <modified>ADG Antonio - 2026-01-29 - Agregada seccion de bitacora</modified>
     public async Task<IActionResult> Detalle(string guid)
     {
         ViewData["Title"] = "Detalle de Factura";
@@ -573,6 +587,16 @@ public class FacturasController : BaseController
                 }
             }
 
+            // Obtener bitacora de la produccion
+            var bitacoraItems = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_PRODUCCION", produccion.IdProduccion);
+            var bitacora = bitacoraItems.Select(b => new BitacoraItemViewModel
+            {
+                Descripcion = b.Descripcion,
+                FechaAccion = b.FechaAccion,
+                NombreUsuario = b.NombreCompletoUsuario,
+                Accion = b.Accion
+            }).ToList();
+
             var model = new DetalleFacturaViewModel
             {
                 IdProduccion = produccion.IdProduccion,
@@ -598,7 +622,8 @@ public class FacturasController : BaseController
                 NombreBanco = nombreBanco,
                 CuentaCorriente = cuentaCorriente,
                 CuentaCci = cuentaCci,
-                Moneda = moneda
+                Moneda = moneda,
+                Bitacora = bitacora
             };
 
             return View(model);
@@ -1050,6 +1075,7 @@ public class FacturasController : BaseController
                 fechaEmisionParaActualizar = fechaParsedUpdate;
             }
 
+            var glosaPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
             var updateDto = new UpdateProduccionDto
             {
                 TipoComprobante = facturaData.DatosGenerales.CodigoTipoDocumento,
@@ -1057,7 +1083,9 @@ public class FacturasController : BaseController
                 Numero = numeroXml,
                 FechaEmision = fechaEmisionParaActualizar ?? fechaEmision,
                 EstadoComprobante = "ENVIADO",
-                Estado = "FACTURA_ENVIADA"
+                Glosa = glosaPrimerItem,
+                Estado = "FACTURA_ENVIADA",
+                FacturaFechaEnvio = DateTime.Now
             };
 
             var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
@@ -1070,9 +1098,11 @@ public class FacturasController : BaseController
             // Registrar en bitácora
             await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
             {
-                Entidad = "SHM_ARCHIVO_COMPROBANTE",
-                Accion = "Informar Factura",
-                Descripcion = "Factura enviada"
+                Entidad = "SHM_PRODUCCION", 
+                IdEntidad = produccion.IdProduccion,
+                Accion = "FACTURA_ENVIADA",
+                Descripcion = $"Envio de comprobante de pago electrónico: {serie}-{numero}",
+                FechaAccion = DateTime.Now
             }, userId);
 
             // Confirmar transacción
@@ -1651,7 +1681,9 @@ public class FacturasController : BaseController
                 Numero = numeroXml,
                 FechaEmision = fechaEmisionParaActualizar,
                 EstadoComprobante = "ENVIADO",
-                Estado = "FACTURA_ENVIADA"
+                Estado = "FACTURA_ENVIADA",
+                Glosa = facturaData.DetalleItems[0].Descripcion?.Trim(),
+                FacturaFechaEnvio = DateTime.Now
             };
 
             var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
@@ -1664,9 +1696,11 @@ public class FacturasController : BaseController
             // Registrar en bitacora
             await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
             {
-                Entidad = "SHM_ARCHIVO_COMPROBANTE",
-                Accion = "Informar Factura",
-                Descripcion = "Factura enviada desde vista previa"
+                Entidad = "SHM_PRODUCCION",
+                IdEntidad = produccion.IdProduccion,
+                Accion = "FACTURA_ENVIADA",
+                Descripcion = $"Envio de comprobante de pago electrónico: {serieXml}-{numeroXml}", 
+                FechaAccion = DateTime.Now
             }, userId);
 
             transactionScope.Complete();
