@@ -36,6 +36,7 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -60,6 +61,7 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -84,6 +86,7 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -108,6 +111,7 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -132,6 +136,7 @@ public class ParametroRepository : IParametroRepository
             INSERT INTO SHM_PARAMETRO (
                 ID_PARAMETRO,
                 CODIGO,
+                DESCRIPCION,
                 VALOR,
                 GUID_REGISTRO,
                 ACTIVO,
@@ -140,6 +145,7 @@ public class ParametroRepository : IParametroRepository
             ) VALUES (
                 SHM_PARAMETRO_SEQ.NEXTVAL,
                 :Codigo,
+                :Descripcion,
                 :Valor,
                 SYS_GUID(),
                 1,
@@ -150,6 +156,7 @@ public class ParametroRepository : IParametroRepository
 
         var parameters = new DynamicParameters();
         parameters.Add("Codigo", parametro.Codigo);
+        parameters.Add("Descripcion", parametro.Descripcion);
         parameters.Add("Valor", parametro.Valor);
         parameters.Add("IdCreador", parametro.IdCreador);
         parameters.Add("IdParametro", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
@@ -170,6 +177,7 @@ public class ParametroRepository : IParametroRepository
             UPDATE SHM_PARAMETRO
             SET
                 CODIGO = :Codigo,
+                DESCRIPCION = :Descripcion,
                 VALOR = :Valor,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
@@ -180,6 +188,7 @@ public class ParametroRepository : IParametroRepository
         {
             IdParametro = id,
             parametro.Codigo,
+            parametro.Descripcion,
             parametro.Valor,
             parametro.Activo,
             parametro.IdModificador

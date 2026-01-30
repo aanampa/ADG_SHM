@@ -902,15 +902,9 @@ public class FacturasController : BaseController
                 }
             }
 
-            // Obtener ruta de archivos desde configuración
-            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            uploadPath = Path.Combine(uploadBasePath, "facturas", guidRegistro);
-
-            // Crear directorio si no existe
-            if (!Directory.Exists(uploadPath))
-            {
-                Directory.CreateDirectory(uploadPath);
-            }
+            // Determinar tipo de almacenamiento configurado (FILE o BLOB)
+            var tipoAlmacenamientoParam = await _parametroService.GetValorByCodigoAsync("SHM_TIPO_ALMACENAMIENTO_ARCHIVO");
+            var usarBlobStorage = tipoAlmacenamientoParam?.ToUpper() == "BLOB";
 
             // Preparar nombres de archivos usando serie y numero del XML
             var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
@@ -918,45 +912,88 @@ public class FacturasController : BaseController
             var cdrExtension = archivoCdr != null ? Path.GetExtension(archivoCdr.FileName) : "";
             var cdrFileName = archivoCdr != null ? $"{serieXml}-{numeroXml}-cdr{cdrExtension}" : null;
 
-            var pdfPath = Path.Combine(uploadPath, pdfFileName);
-            var xmlPath = Path.Combine(uploadPath, xmlFileName);
-            var cdrPath = cdrFileName != null ? Path.Combine(uploadPath, cdrFileName) : null;
+            // Variables para contenido BLOB (solo se usan si usarBlobStorage = true)
+            byte[]? pdfContent = null;
+            byte[]? xmlContent = null;
+            byte[]? cdrContent = null;
 
-            // Guardar archivos físicos primero
-            using (var stream = new FileStream(pdfPath, FileMode.Create))
+            if (usarBlobStorage)
             {
-                await archivoPdf.CopyToAsync(stream);
-            }
-            archivosGuardados.Add(pdfPath);
+                // Modo BLOB: Leer contenido de archivos en memoria
+                _logger.LogInformation("Usando almacenamiento BLOB para archivos");
 
-            using (var stream = new FileStream(xmlPath, FileMode.Create))
-            {
-                await archivoXml.CopyToAsync(stream);
-            }
-            archivosGuardados.Add(xmlPath);
-
-            // Guardar CDR solo si existe
-            if (archivoCdr != null && cdrPath != null)
-            {
-                using (var stream = new FileStream(cdrPath, FileMode.Create))
+                using (var ms = new MemoryStream())
                 {
-                    await archivoCdr.CopyToAsync(stream);
+                    await archivoPdf.CopyToAsync(ms);
+                    pdfContent = ms.ToArray();
                 }
-                archivosGuardados.Add(cdrPath);
-            }
 
-            // Guardar datos del XML parseado en archivo JSON
-            var jsonFileName = $"{serieXml}-{numeroXml}.json";
-            var jsonPath = Path.Combine(uploadPath, jsonFileName);
-            var jsonOptions = new JsonSerializerOptions
+                using (var ms = new MemoryStream())
+                {
+                    await archivoXml.CopyToAsync(ms);
+                    xmlContent = ms.ToArray();
+                }
+
+                if (archivoCdr != null)
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        await archivoCdr.CopyToAsync(ms);
+                        cdrContent = ms.ToArray();
+                    }
+                }
+            }
+            else
             {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-            var jsonContent = JsonSerializer.Serialize(facturaData, jsonOptions);
-            await System.IO.File.WriteAllTextAsync(jsonPath, jsonContent);
-            archivosGuardados.Add(jsonPath);
-            _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
+                // Modo FILE: Guardar archivos en sistema de archivos
+                _logger.LogInformation("Usando almacenamiento FILE para archivos");
+
+                var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                uploadPath = Path.Combine(uploadBasePath, "facturas", guidRegistro);
+
+                if (!Directory.Exists(uploadPath))
+                {
+                    Directory.CreateDirectory(uploadPath);
+                }
+
+                var pdfPath = Path.Combine(uploadPath, pdfFileName);
+                var xmlPath = Path.Combine(uploadPath, xmlFileName);
+                var cdrPath = cdrFileName != null ? Path.Combine(uploadPath, cdrFileName) : null;
+
+                using (var stream = new FileStream(pdfPath, FileMode.Create))
+                {
+                    await archivoPdf.CopyToAsync(stream);
+                }
+                archivosGuardados.Add(pdfPath);
+
+                using (var stream = new FileStream(xmlPath, FileMode.Create))
+                {
+                    await archivoXml.CopyToAsync(stream);
+                }
+                archivosGuardados.Add(xmlPath);
+
+                if (archivoCdr != null && cdrPath != null)
+                {
+                    using (var stream = new FileStream(cdrPath, FileMode.Create))
+                    {
+                        await archivoCdr.CopyToAsync(stream);
+                    }
+                    archivosGuardados.Add(cdrPath);
+                }
+
+                // Guardar datos del XML parseado en archivo JSON (solo en modo FILE)
+                var jsonFileName = $"{serieXml}-{numeroXml}.json";
+                var jsonPath = Path.Combine(uploadPath, jsonFileName);
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+                var jsonContent = JsonSerializer.Serialize(facturaData, jsonOptions);
+                await System.IO.File.WriteAllTextAsync(jsonPath, jsonContent);
+                archivosGuardados.Add(jsonPath);
+                _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
+            }
 
             // Iniciar transacción para operaciones de base de datos
             using var transactionScope = new TransactionScope(
@@ -972,7 +1009,8 @@ public class FacturasController : BaseController
                 NombreArchivo = pdfFileName,
                 Extension = ".pdf",
                 Tamano = (int)archivoPdf.Length,
-                Ruta = Path.Combine("facturas", guidRegistro, pdfFileName)
+                Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, pdfFileName),
+                ContenidoArchivo = pdfContent
             };
             var archivoPdfCreado = await _archivoService.CreateArchivoAsync(archivoPdfDto, userId);
 
@@ -984,7 +1022,8 @@ public class FacturasController : BaseController
                 NombreArchivo = xmlFileName,
                 Extension = ".xml",
                 Tamano = (int)archivoXml.Length,
-                Ruta = Path.Combine("facturas", guidRegistro, xmlFileName)
+                Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, xmlFileName),
+                ContenidoArchivo = xmlContent
             };
             var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
 
@@ -1015,7 +1054,8 @@ public class FacturasController : BaseController
                     NombreArchivo = cdrFileName,
                     Extension = cdrExtension,
                     Tamano = (int)archivoCdr.Length,
-                    Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
+                    Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, cdrFileName),
+                    ContenidoArchivo = cdrContent
                 };
                 var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
 
@@ -1736,6 +1776,12 @@ public class FacturasController : BaseController
         return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
     }
 
+    /// <summary>
+    /// Descarga un archivo por su GUID.
+    /// Soporta almacenamiento FILE y BLOB automaticamente.
+    ///
+    /// <modified>ADG Vladimir - 2026-01-29 - Soporte para almacenamiento dual FILE/BLOB</modified>
+    /// </summary>
     // GET: Facturas/DescargarArchivo
     public async Task<IActionResult> DescargarArchivo(string guid)
     {
@@ -1746,42 +1792,26 @@ public class FacturasController : BaseController
                 return NotFound("Archivo no encontrado");
             }
 
-            var archivo = await _archivoService.GetArchivoByGuidAsync(guid);
-            if (archivo == null || archivo.Activo != 1)
+            // Usar el nuevo metodo que maneja ambos tipos de almacenamiento (FILE y BLOB)
+            var archivoContenido = await _archivoService.GetArchivoContenidoByGuidAsync(guid);
+            if (archivoContenido == null)
             {
+                _logger.LogWarning("Archivo no encontrado o sin contenido: {Guid}", guid);
                 return NotFound("Archivo no encontrado");
             }
 
-            // Obtener ruta base de archivos desde configuración
-            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            var filePath = Path.Combine(uploadBasePath, archivo.Ruta ?? "");
-
-            if (!System.IO.File.Exists(filePath))
-            {
-                _logger.LogWarning("Archivo físico no encontrado: {FilePath}", filePath);
-                return NotFound("Archivo físico no encontrado");
-            }
-
-            // Determinar content type
-            var contentType = archivo.Extension?.ToLower() switch
-            {
-                ".pdf" => "application/pdf",
-                ".xml" => "application/xml",
-                ".zip" => "application/zip",
-                _ => "application/octet-stream"
-            };
-
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-
             // Para PDFs, mostrar inline en el navegador (visor embebido)
             // Para otros archivos, forzar descarga
-            if (archivo.Extension?.ToLower() == ".pdf")
+            if (archivoContenido.Extension?.ToLower() == ".pdf")
             {
-                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivo.NombreArchivo}\"");
-                return File(fileBytes, contentType);
+                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivoContenido.NombreArchivo}\"");
+                return File(archivoContenido.Contenido, archivoContenido.ContentType ?? "application/pdf");
             }
 
-            return File(fileBytes, contentType, archivo.NombreArchivo ?? $"archivo{archivo.Extension}");
+            return File(
+                archivoContenido.Contenido,
+                archivoContenido.ContentType ?? "application/octet-stream",
+                archivoContenido.NombreArchivo);
         }
         catch (Exception ex)
         {

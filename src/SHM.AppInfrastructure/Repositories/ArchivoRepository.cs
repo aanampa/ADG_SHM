@@ -12,6 +12,7 @@ namespace SHM.AppInfrastructure.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Vladimir - 2026-01-29 - Agregado soporte para almacenamiento BLOB</modified>
 /// </summary>
 public class ArchivoRepository : IArchivoRepository
 {
@@ -44,6 +45,7 @@ public class ArchivoRepository : IArchivoRepository
                 EXTENSION as Extension,
                 TAMANO as Tamano,
                 RUTA as Ruta,
+                TIPO_ALMACENAMIENTO as TipoAlmacenamiento,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -72,6 +74,7 @@ public class ArchivoRepository : IArchivoRepository
                 EXTENSION as Extension,
                 TAMANO as Tamano,
                 RUTA as Ruta,
+                TIPO_ALMACENAMIENTO as TipoAlmacenamiento,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -100,6 +103,7 @@ public class ArchivoRepository : IArchivoRepository
                 EXTENSION as Extension,
                 TAMANO as Tamano,
                 RUTA as Ruta,
+                TIPO_ALMACENAMIENTO as TipoAlmacenamiento,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -113,7 +117,7 @@ public class ArchivoRepository : IArchivoRepository
     }
 
     /// <summary>
-    /// Crea un nuevo archivo en la base de datos.
+    /// Crea un nuevo archivo en la base de datos (almacenamiento FILE).
     /// </summary>
     public async Task<int> CreateAsync(Archivo archivo)
     {
@@ -128,6 +132,7 @@ public class ArchivoRepository : IArchivoRepository
                 EXTENSION,
                 TAMANO,
                 RUTA,
+                TIPO_ALMACENAMIENTO,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -140,6 +145,7 @@ public class ArchivoRepository : IArchivoRepository
                 :Extension,
                 :Tamano,
                 :Ruta,
+                'FILE',
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -160,6 +166,90 @@ public class ArchivoRepository : IArchivoRepository
         await connection.ExecuteAsync(sql, parameters);
 
         return parameters.Get<int>("IdArchivo");
+    }
+
+    /// <summary>
+    /// Crea un nuevo archivo con contenido BLOB en la base de datos.
+    /// </summary>
+    public async Task<int> CreateWithBlobAsync(Archivo archivo, byte[] contenido)
+    {
+        using var connection = new OracleConnection(_connectionString);
+        await connection.OpenAsync();
+
+        var sql = @"
+            INSERT INTO SHM_ARCHIVO (
+                ID_ARCHIVO,
+                TIPO_ARCHIVO,
+                NOMBRE_ORIGINAL,
+                NOMBRE_ARCHIVO,
+                EXTENSION,
+                TAMANO,
+                RUTA,
+                CONTENIDO_ARCHIVO,
+                TIPO_ALMACENAMIENTO,
+                GUID_REGISTRO,
+                ACTIVO,
+                ID_CREADOR,
+                FECHA_CREACION
+            ) VALUES (
+                SHM_ARCHIVO_SEQ.NEXTVAL,
+                :TipoArchivo,
+                :NombreOriginal,
+                :NombreArchivo,
+                :Extension,
+                :Tamano,
+                NULL,
+                :ContenidoArchivo,
+                'BLOB',
+                SYS_GUID(),
+                1,
+                :IdCreador,
+                SYSDATE
+            )
+            RETURNING ID_ARCHIVO INTO :IdArchivo";
+
+        using var cmd = new OracleCommand(sql, connection);
+        cmd.Parameters.Add("TipoArchivo", OracleDbType.Varchar2).Value = archivo.TipoArchivo ?? (object)DBNull.Value;
+        cmd.Parameters.Add("NombreOriginal", OracleDbType.Varchar2).Value = archivo.NombreOriginal ?? (object)DBNull.Value;
+        cmd.Parameters.Add("NombreArchivo", OracleDbType.Varchar2).Value = archivo.NombreArchivo ?? (object)DBNull.Value;
+        cmd.Parameters.Add("Extension", OracleDbType.Varchar2).Value = archivo.Extension ?? (object)DBNull.Value;
+        cmd.Parameters.Add("Tamano", OracleDbType.Int32).Value = archivo.Tamano ?? (object)DBNull.Value;
+        cmd.Parameters.Add("ContenidoArchivo", OracleDbType.Blob).Value = contenido;
+        cmd.Parameters.Add("IdCreador", OracleDbType.Int32).Value = archivo.IdCreador;
+
+        var outputParam = cmd.Parameters.Add("IdArchivo", OracleDbType.Int32);
+        outputParam.Direction = System.Data.ParameterDirection.Output;
+
+        await cmd.ExecuteNonQueryAsync();
+
+        return Convert.ToInt32(outputParam.Value.ToString());
+    }
+
+    /// <summary>
+    /// Obtiene el contenido BLOB de un archivo.
+    /// </summary>
+    public async Task<byte[]?> GetBlobContentAsync(int idArchivo)
+    {
+        using var connection = new OracleConnection(_connectionString);
+        await connection.OpenAsync();
+
+        var sql = "SELECT CONTENIDO_ARCHIVO FROM SHM_ARCHIVO WHERE ID_ARCHIVO = :Id AND TIPO_ALMACENAMIENTO = 'BLOB'";
+
+        using var cmd = new OracleCommand(sql, connection);
+        cmd.Parameters.Add("Id", OracleDbType.Int32).Value = idArchivo;
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            if (!reader.IsDBNull(0))
+            {
+                var blob = reader.GetOracleBlob(0);
+                var buffer = new byte[blob.Length];
+                await blob.ReadAsync(buffer, 0, (int)blob.Length);
+                return buffer;
+            }
+        }
+        return null;
     }
 
     /// <summary>
