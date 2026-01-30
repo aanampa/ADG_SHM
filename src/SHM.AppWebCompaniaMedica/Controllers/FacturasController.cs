@@ -1001,6 +1001,23 @@ public class FacturasController : BaseController
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
                 TransactionScopeAsyncFlowOption.Enabled);
 
+            // Inactivar archivos anteriores de esta produccion (si existen)
+            var archivosAnteriores = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
+            foreach (var archivoAnterior in archivosAnteriores.Where(a => a.Activo == 1))
+            {
+                // Inactivar el registro ArchivoComprobante
+                await _archivoComprobanteService.DeleteArchivoComprobanteAsync(archivoAnterior.IdArchivoComprobante, userId);
+
+                // Inactivar el archivo asociado
+                if (archivoAnterior.IdArchivo.HasValue)
+                {
+                    await _archivoService.DeleteArchivoAsync(archivoAnterior.IdArchivo.Value, userId);
+                }
+
+                _logger.LogInformation("Archivo anterior inactivado. IdArchivoComprobante: {IdAC}, IdArchivo: {IdA}",
+                    archivoAnterior.IdArchivoComprobante, archivoAnterior.IdArchivo);
+            }
+
             // Registrar archivo PDF en BD
             var archivoPdfDto = new CreateArchivoDto
             {
@@ -1557,46 +1574,72 @@ public class FacturasController : BaseController
                 numeroXml = numeroInt.ToString("D8");
             }
 
-            // Preparar rutas de archivos definitivos
-            uploadPath = Path.Combine(uploadBasePath, "facturas", guidRegistro);
-            Directory.CreateDirectory(uploadPath);
+            // Determinar tipo de almacenamiento configurado (FILE o BLOB)
+            var tipoAlmacenamientoParam = await _parametroService.GetValorByCodigoAsync("SHM_TIPO_ALMACENAMIENTO_ARCHIVO");
+            var usarBlobStorage = tipoAlmacenamientoParam?.ToUpper() == "BLOB";
 
+            // Preparar nombres de archivos
             var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
             var xmlFileName = $"{serieXml}-{numeroXml}.xml";
             var cdrFileName = tieneCdr ? $"{serieXml}-{numeroXml}-cdr{cdrExtension}" : null;
 
-            var pdfPath = Path.Combine(uploadPath, pdfFileName);
-            var xmlPath = Path.Combine(uploadPath, xmlFileName);
-            var cdrPath = cdrFileName != null ? Path.Combine(uploadPath, cdrFileName) : null;
+            // Rutas de archivos temporales
+            var pdfTempPath = Path.Combine(tempPath, "factura.pdf");
+            var xmlTempPath = Path.Combine(tempPath, "factura.xml");
+            string? cdrTempPath = tieneCdr ? Directory.GetFiles(tempPath, "cdr*").FirstOrDefault() : null;
 
-            // Copiar archivos de temporal a definitivo
-            System.IO.File.Copy(Path.Combine(tempPath, "factura.pdf"), pdfPath, true);
-            archivosGuardados.Add(pdfPath);
+            // Obtener tamaños de archivos desde temporales
+            var pdfSize = (int)new FileInfo(pdfTempPath).Length;
+            var xmlSize = (int)new FileInfo(xmlTempPath).Length;
+            var cdrSize = (tieneCdr && cdrTempPath != null && System.IO.File.Exists(cdrTempPath)) ? (int)new FileInfo(cdrTempPath).Length : 0;
 
-            System.IO.File.Copy(Path.Combine(tempPath, "factura.xml"), xmlPath, true);
-            archivosGuardados.Add(xmlPath);
+            // Variables para contenido BLOB (solo se usan si usarBlobStorage = true)
+            byte[]? pdfContent = null;
+            byte[]? xmlContent = null;
+            byte[]? cdrContent = null;
 
-            // Copiar CDR solo si existe
-            string? cdrTempPath = null;
-            if (tieneCdr && cdrPath != null)
+            if (usarBlobStorage)
             {
-                cdrTempPath = Directory.GetFiles(tempPath, "cdr*").FirstOrDefault();
-                if (cdrTempPath != null)
+                // Modo BLOB: Leer contenido de archivos temporales en memoria
+                _logger.LogInformation("ConfirmarEnvio: Usando almacenamiento BLOB para archivos");
+
+                pdfContent = await System.IO.File.ReadAllBytesAsync(pdfTempPath);
+                xmlContent = await System.IO.File.ReadAllBytesAsync(xmlTempPath);
+
+                if (tieneCdr && cdrTempPath != null)
+                {
+                    cdrContent = await System.IO.File.ReadAllBytesAsync(cdrTempPath);
+                }
+            }
+            else
+            {
+                // Modo FILE: Copiar archivos de temporal a directorio definitivo
+                _logger.LogInformation("ConfirmarEnvio: Usando almacenamiento FILE para archivos");
+
+                uploadPath = Path.Combine(uploadBasePath, "facturas", guidRegistro);
+                Directory.CreateDirectory(uploadPath);
+
+                var pdfPath = Path.Combine(uploadPath, pdfFileName);
+                var xmlPath = Path.Combine(uploadPath, xmlFileName);
+                var cdrPath = cdrFileName != null ? Path.Combine(uploadPath, cdrFileName) : null;
+
+                System.IO.File.Copy(pdfTempPath, pdfPath, true);
+                archivosGuardados.Add(pdfPath);
+
+                System.IO.File.Copy(xmlTempPath, xmlPath, true);
+                archivosGuardados.Add(xmlPath);
+
+                if (tieneCdr && cdrTempPath != null && cdrPath != null)
                 {
                     System.IO.File.Copy(cdrTempPath, cdrPath, true);
                     archivosGuardados.Add(cdrPath);
                 }
+
+                // Guardar JSON con datos del XML (solo en modo FILE)
+                var jsonFinalPath = Path.Combine(uploadPath, $"{serieXml}-{numeroXml}.json");
+                System.IO.File.Copy(jsonPath, jsonFinalPath, true);
+                archivosGuardados.Add(jsonFinalPath);
             }
-
-            // Guardar JSON con datos del XML
-            var jsonFinalPath = Path.Combine(uploadPath, $"{serieXml}-{numeroXml}.json");
-            System.IO.File.Copy(jsonPath, jsonFinalPath, true);
-            archivosGuardados.Add(jsonFinalPath);
-
-            // Obtener tamaños de archivos
-            var pdfSize = (int)new FileInfo(pdfPath).Length;
-            var xmlSize = (int)new FileInfo(xmlPath).Length;
-            var cdrSize = (tieneCdr && cdrPath != null && System.IO.File.Exists(cdrPath)) ? (int)new FileInfo(cdrPath).Length : 0;
 
             // Iniciar transaccion
             using var transactionScope = new TransactionScope(
@@ -1604,7 +1647,24 @@ public class FacturasController : BaseController
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
                 TransactionScopeAsyncFlowOption.Enabled);
 
-            // Registrar archivos en BD
+            // Inactivar archivos anteriores de esta produccion (si existen)
+            var archivosAnteriores = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
+            foreach (var archivoAnterior in archivosAnteriores.Where(a => a.Activo == 1))
+            {
+                // Inactivar el registro ArchivoComprobante
+                await _archivoComprobanteService.DeleteArchivoComprobanteAsync(archivoAnterior.IdArchivoComprobante, userId);
+
+                // Inactivar el archivo asociado
+                if (archivoAnterior.IdArchivo.HasValue)
+                {
+                    await _archivoService.DeleteArchivoAsync(archivoAnterior.IdArchivo.Value, userId);
+                }
+
+                _logger.LogInformation("ConfirmarEnvio: Archivo anterior inactivado. IdArchivoComprobante: {IdAC}, IdArchivo: {IdA}",
+                    archivoAnterior.IdArchivoComprobante, archivoAnterior.IdArchivo);
+            }
+
+            // Registrar archivo PDF en BD
             var archivoPdfDto = new CreateArchivoDto
             {
                 TipoArchivo = "PDF",
@@ -1612,10 +1672,12 @@ public class FacturasController : BaseController
                 NombreArchivo = pdfFileName,
                 Extension = ".pdf",
                 Tamano = pdfSize,
-                Ruta = Path.Combine("facturas", guidRegistro, pdfFileName)
+                Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, pdfFileName),
+                ContenidoArchivo = pdfContent
             };
             var archivoPdfCreado = await _archivoService.CreateArchivoAsync(archivoPdfDto, userId);
 
+            // Registrar archivo XML en BD
             var archivoXmlDto = new CreateArchivoDto
             {
                 TipoArchivo = "XML",
@@ -1623,11 +1685,12 @@ public class FacturasController : BaseController
                 NombreArchivo = xmlFileName,
                 Extension = ".xml",
                 Tamano = xmlSize,
-                Ruta = Path.Combine("facturas", guidRegistro, xmlFileName)
+                Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, xmlFileName),
+                ContenidoArchivo = xmlContent
             };
             var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
 
-            // Crear registros en ArchivoComprobante
+            // Crear registros en ArchivoComprobante vinculando archivos con producción
             await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
             {
                 IdProduccion = produccion.IdProduccion,
@@ -1644,7 +1707,7 @@ public class FacturasController : BaseController
                 Descripcion = "Factura XML"
             }, userId);
 
-            // Registrar CDR solo si existe
+            // Registrar archivo CDR en BD solo si existe
             if (tieneCdr && cdrFileName != null)
             {
                 var archivoCdrDto = new CreateArchivoDto
@@ -1654,7 +1717,8 @@ public class FacturasController : BaseController
                     NombreArchivo = cdrFileName,
                     Extension = cdrExtension,
                     Tamano = cdrSize,
-                    Ruta = Path.Combine("facturas", guidRegistro, cdrFileName)
+                    Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, cdrFileName),
+                    ContenidoArchivo = cdrContent
                 };
                 var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
 
