@@ -43,13 +43,13 @@
                         </td>
                         <td>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn-action btn-ver-datos" data-guid="@factura.GuidRegistro">
+                                <button type="button" class="btn-action btn-ver-datos" data-guid="@factura.GuidRegistro" title="Ver Datos para Facturación">
                                     <i class="bi bi-eye"></i>
-                                    Ver
+                                    Ver Datos
                                 </button>
-                                <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action">
+                                <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action" title="Enviar Factura">
                                     <i class="bi bi-upload"></i>
-                                    Subir
+                                    Enviar
                                 </a>
                             </div>
                         </td>
