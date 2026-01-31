@@ -7,7 +7,9 @@ using SHM.AppInfrastructure.Configurations;
 using SHM.AppInfrastructure.Repositories;
 
 // Configurar NLog temprano para capturar todos los errores de inicio
-var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
+//var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
+var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+
 logger.Debug("Iniciando aplicación SHM Honorario Medico API");
 
 try
@@ -64,6 +66,10 @@ try
     builder.Services.AddScoped<IBancoService, BancoService>();
     builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
     builder.Services.AddScoped<IProduccionInterfaceService, ProduccionInterfaceService>();
+
+    builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
+    builder.Services.AddScoped<IParametroService, ParametroService>();
+
 
     var app = builder.Build();
 
