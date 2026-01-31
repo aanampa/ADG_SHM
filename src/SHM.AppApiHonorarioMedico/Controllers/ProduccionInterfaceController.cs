@@ -39,6 +39,7 @@ public class ProduccionInterfaceController : ControllerBase
 
             _logger.LogInformation("Inicio de creacion masiva de producciones mediante interface");
 
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
