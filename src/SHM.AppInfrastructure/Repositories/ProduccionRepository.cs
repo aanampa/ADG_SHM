@@ -382,7 +382,7 @@ public class ProduccionRepository : IProduccionRepository
         return count > 0;
     }
 
-/// <summary>
+    /// <summary>
     /// Verifica si existe un registro de produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
     ///
     /// <author>ADG Antonio</author>
@@ -406,7 +406,7 @@ public class ProduccionRepository : IProduccionRepository
 
         return count > 0;
     }
-    
+
     /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     ///
@@ -414,6 +414,7 @@ public class ProduccionRepository : IProduccionRepository
     /// <created>2025-01-20</created>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
         string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize)
@@ -442,74 +443,82 @@ public class ProduccionRepository : IProduccionRepository
 
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Produccion = produccion, Estado = estado, IdEntidadMedica = idEntidadMedica });
 
-        // Query principal con paginacion
-        var offset = (pageNumber - 1) * pageSize;
+        // Query principal con paginacion - Compatible con Oracle 11g (ROWNUM)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
+
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
         var sql = $@"
-            SELECT
-                p.ID_PRODUCCION AS IdProduccion,
-                p.GUID_REGISTRO AS GuidRegistro,
-                p.ID_SEDE AS IdSede,
-                p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
-                p.CODIGO_PRODUCCION AS CodigoProduccion,
-                p.TIPO_PRODUCCION AS TipoProduccion,
-                tp.DESCRIPCION AS DesTipoProduccion,
-                p.TIPO_MEDICO AS TipoMedico,
-                tm.DESCRIPCION AS DesTipoMedico,
-                p.TIPO_RUBRO AS TipoRubro,
-                tr.DESCRIPCION AS DesTipoRubro,
-                p.ESTADO AS Estado,
-                ep.DESCRIPCION AS DesEstado,
-                p.DESCRIPCION AS Descripcion,
-                p.PERIODO AS Periodo,
-                p.ESTADO_PRODUCCION AS EstadoProduccion,
-                p.MTO_CONSUMO AS MtoConsumo,
-                p.MTO_DESCUENTO AS MtoDescuento,
-                p.MTO_SUBTOTAL AS MtoSubtotal,
-                p.MTO_RENTA AS MtoRenta,
-                p.MTO_IGV AS MtoIgv,
-                p.MTO_TOTAL AS MtoTotal,
-                p.TIPO_COMPROBANTE AS TipoComprobante,
-                p.CONCEPTO AS Concepto,
-                p.FECHA_LIMITE AS FechaLimite,
-                p.SERIE AS Serie,
-                p.NUMERO AS Numero,
-                p.FECHA_EMISION AS FechaEmision,
-                p.GLOSA AS Glosa,
-                p.ESTADO_COMPROBANTE AS EstadoComprobante,
-                p.FACTURA_FECHA_SOLICITUD AS FacturaFechaSolicitud,
-                p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
-                p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
-                p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
-                p.ACTIVO AS Activo,
-                p.ID_CREADOR AS IdCreador,
-                p.FECHA_CREACION AS FechaCreacion,
-                p.ID_MODIFICADOR AS IdModificador,
-                p.FECHA_MODIFICACION AS FechaModificacion,
-                s.CODIGO AS CodigoSede,
-                s.NOMBRE AS NombreSede,
-                em.RUC AS Ruc,
-                em.RAZON_SOCIAL AS RazonSocial,
-                em.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
-                tem.DESCRIPCION AS DesTipoEntidadMedica
-            FROM SHM_PRODUCCION p
-            LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
-            LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-            LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
-            LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
-            LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
-            LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
-            LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
-            {whereClause}
-            ORDER BY p.CODIGO_PRODUCCION DESC
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        p.ID_PRODUCCION AS IdProduccion,
+                        p.GUID_REGISTRO AS GuidRegistro,
+                        p.ID_SEDE AS IdSede,
+                        p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
+                        p.CODIGO_PRODUCCION AS CodigoProduccion,
+                        p.TIPO_PRODUCCION AS TipoProduccion,
+                        tp.DESCRIPCION AS DesTipoProduccion,
+                        p.TIPO_MEDICO AS TipoMedico,
+                        tm.DESCRIPCION AS DesTipoMedico,
+                        p.TIPO_RUBRO AS TipoRubro,
+                        tr.DESCRIPCION AS DesTipoRubro,
+                        p.ESTADO AS Estado,
+                        ep.DESCRIPCION AS DesEstado,
+                        p.DESCRIPCION AS Descripcion,
+                        p.PERIODO AS Periodo,
+                        p.ESTADO_PRODUCCION AS EstadoProduccion,
+                        p.MTO_CONSUMO AS MtoConsumo,
+                        p.MTO_DESCUENTO AS MtoDescuento,
+                        p.MTO_SUBTOTAL AS MtoSubtotal,
+                        p.MTO_RENTA AS MtoRenta,
+                        p.MTO_IGV AS MtoIgv,
+                        p.MTO_TOTAL AS MtoTotal,
+                        p.TIPO_COMPROBANTE AS TipoComprobante,
+                        p.CONCEPTO AS Concepto,
+                        p.FECHA_LIMITE AS FechaLimite,
+                        p.SERIE AS Serie,
+                        p.NUMERO AS Numero,
+                        p.FECHA_EMISION AS FechaEmision,
+                        p.GLOSA AS Glosa,
+                        p.ESTADO_COMPROBANTE AS EstadoComprobante,
+                        p.FACTURA_FECHA_SOLICITUD AS FacturaFechaSolicitud,
+                        p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
+                        p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
+                        p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                        p.ACTIVO AS Activo,
+                        p.ID_CREADOR AS IdCreador,
+                        p.FECHA_CREACION AS FechaCreacion,
+                        p.ID_MODIFICADOR AS IdModificador,
+                        p.FECHA_MODIFICACION AS FechaModificacion,
+                        s.CODIGO AS CodigoSede,
+                        s.NOMBRE AS NombreSede,
+                        em.RUC AS Ruc,
+                        em.RAZON_SOCIAL AS RazonSocial,
+                        em.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
+                        tem.DESCRIPCION AS DesTipoEntidadMedica
+                    FROM SHM_PRODUCCION p
+                    LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
+                    LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
+                    LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
+                    {whereClause}
+                    ORDER BY p.CODIGO_PRODUCCION DESC
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
 
         var items = await connection.QueryAsync<ProduccionListaResponseDto>(sql, new
         {
             Produccion = produccion,
             Estado = estado,
             IdEntidadMedica = idEntidadMedica,
-            Offset = offset,
-            PageSize = pageSize
+            MinRow = minRow,
+            MaxRow = maxRow
         });
 
         return (items, totalCount);
@@ -640,7 +649,7 @@ public class ProduccionRepository : IProduccionRepository
 
         return rowsAffected > 0;
     }
-    
+
     /// Obtiene estadisticas del dashboard para una entidad medica.
     ///
     /// <author>ADG Antonio</author>

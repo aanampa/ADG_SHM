@@ -127,7 +127,7 @@ public class EntidadCuentaBancariaRepository : IEntidadCuentaBancariaRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SHM_ENTIDAD_CUENTA_BANCARIA_SEQ.NEXTVAL,
+                SHM_ENTIDAD_CUENTA_BANCO_SEQ.NEXTVAL,
                 :IdEntidad,
                 :IdBanco,
                 :CuentaCorriente,

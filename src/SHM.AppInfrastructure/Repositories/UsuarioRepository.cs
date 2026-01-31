@@ -536,6 +536,8 @@ public class UsuarioRepository : IUsuarioRepository
 
     /// <summary>
     /// Obtiene usuarios externos de forma paginada con opcion de busqueda.
+    /// Utiliza sintaxis compatible con Oracle 11g (ROWNUM).
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<Usuario> Items, int TotalCount)> GetPaginatedExternosAsync(string? searchTerm, int pageNumber, int pageSize)
     {
@@ -561,42 +563,53 @@ public class UsuarioRepository : IUsuarioRepository
             {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { SearchTerm = searchTerm });
 
-        var offset = (pageNumber - 1) * pageSize;
-        var dataSql = $@"
-            SELECT
-                u.ID_USUARIO as IdUsuario,
-                u.TIPO_USUARIO as TipoUsuario,
-                u.LOGIN as Login,
-                u.PASSWORD as Password,
-                u.EMAIL as Email,
-                u.NUMERO_DOCUMENTO as NumeroDocumento,
-                u.NOMBRES as Nombres,
-                u.APELLIDO_PATERNO as ApellidoPaterno,
-                u.APELLIDO_MATERNO as ApellidoMaterno,
-                u.CELULAR as Celular,
-                u.TELEFONO as Telefono,
-                u.CARGO as Cargo,
-                u.ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                u.ID_ROL as IdRol,
-                u.GUID_REGISTRO as GuidRegistro,
-                u.ACTIVO as Activo,
-                u.ID_CREADOR as IdCreador,
-                u.FECHA_CREACION as FechaCreacion,
-                u.ID_MODIFICADOR as IdModificador,
-                u.FECHA_MODIFICACION as FechaModificacion
-            FROM SHM_SEG_USUARIO u
-            LEFT JOIN SHM_ENTIDAD_MEDICA em ON u.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
-            {whereClause}
-            ORDER BY u.APELLIDO_PATERNO, u.NOMBRES
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+        // Calcular rangos para paginacion con ROWNUM (Oracle 11g)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
 
-        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, Offset = offset, PageSize = pageSize });
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
+        var dataSql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        u.ID_USUARIO as IdUsuario,
+                        u.TIPO_USUARIO as TipoUsuario,
+                        u.LOGIN as Login,
+                        u.PASSWORD as Password,
+                        u.EMAIL as Email,
+                        u.NUMERO_DOCUMENTO as NumeroDocumento,
+                        u.NOMBRES as Nombres,
+                        u.APELLIDO_PATERNO as ApellidoPaterno,
+                        u.APELLIDO_MATERNO as ApellidoMaterno,
+                        u.CELULAR as Celular,
+                        u.TELEFONO as Telefono,
+                        u.CARGO as Cargo,
+                        u.ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                        u.ID_ROL as IdRol,
+                        u.GUID_REGISTRO as GuidRegistro,
+                        u.ACTIVO as Activo,
+                        u.ID_CREADOR as IdCreador,
+                        u.FECHA_CREACION as FechaCreacion,
+                        u.ID_MODIFICADOR as IdModificador,
+                        u.FECHA_MODIFICACION as FechaModificacion
+                    FROM SHM_SEG_USUARIO u
+                    LEFT JOIN SHM_ENTIDAD_MEDICA em ON u.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
+                    {whereClause}
+                    ORDER BY u.APELLIDO_PATERNO, u.NOMBRES
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, MinRow = minRow, MaxRow = maxRow });
 
         return (items, totalCount);
     }
 
     /// <summary>
     /// Obtiene usuarios internos de forma paginada con opcion de busqueda.
+    /// Utiliza sintaxis compatible con Oracle 11g (ROWNUM).
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<Usuario> Items, int TotalCount)> GetPaginatedInternosAsync(string? searchTerm, int pageNumber, int pageSize)
     {
@@ -620,35 +633,44 @@ public class UsuarioRepository : IUsuarioRepository
             {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { SearchTerm = searchTerm });
 
-        var offset = (pageNumber - 1) * pageSize;
-        var dataSql = $@"
-            SELECT
-                ID_USUARIO as IdUsuario,
-                TIPO_USUARIO as TipoUsuario,
-                LOGIN as Login,
-                PASSWORD as Password,
-                EMAIL as Email,
-                NUMERO_DOCUMENTO as NumeroDocumento,
-                NOMBRES as Nombres,
-                APELLIDO_PATERNO as ApellidoPaterno,
-                APELLIDO_MATERNO as ApellidoMaterno,
-                CELULAR as Celular,
-                TELEFONO as Telefono,
-                CARGO as Cargo,
-                ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                ID_ROL as IdRol,
-                GUID_REGISTRO as GuidRegistro,
-                ACTIVO as Activo,
-                ID_CREADOR as IdCreador,
-                FECHA_CREACION as FechaCreacion,
-                ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
-            FROM SHM_SEG_USUARIO
-            {whereClause}
-            ORDER BY APELLIDO_PATERNO, NOMBRES
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+        // Calcular rangos para paginacion con ROWNUM (Oracle 11g)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
 
-        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, Offset = offset, PageSize = pageSize });
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
+        var dataSql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        ID_USUARIO as IdUsuario,
+                        TIPO_USUARIO as TipoUsuario,
+                        LOGIN as Login,
+                        PASSWORD as Password,
+                        EMAIL as Email,
+                        NUMERO_DOCUMENTO as NumeroDocumento,
+                        NOMBRES as Nombres,
+                        APELLIDO_PATERNO as ApellidoPaterno,
+                        APELLIDO_MATERNO as ApellidoMaterno,
+                        CELULAR as Celular,
+                        TELEFONO as Telefono,
+                        CARGO as Cargo,
+                        ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                        ID_ROL as IdRol,
+                        GUID_REGISTRO as GuidRegistro,
+                        ACTIVO as Activo,
+                        ID_CREADOR as IdCreador,
+                        FECHA_CREACION as FechaCreacion,
+                        ID_MODIFICADOR as IdModificador,
+                        FECHA_MODIFICACION as FechaModificacion
+                    FROM SHM_SEG_USUARIO
+                    {whereClause}
+                    ORDER BY APELLIDO_PATERNO, NOMBRES
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, MinRow = minRow, MaxRow = maxRow });
 
         return (items, totalCount);
     }
