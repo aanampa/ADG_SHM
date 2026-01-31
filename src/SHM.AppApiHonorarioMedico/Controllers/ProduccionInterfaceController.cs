@@ -24,6 +24,25 @@ public class ProduccionInterfaceController : ControllerBase
     }
 
     /// <summary>
+    /// Metodo de prueba para validar si el API esta activo.
+    /// Devuelve la fecha y hora actual del servidor.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-30</created>
+    [HttpGet("test")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult Test()
+    {
+        return Ok(new
+        {
+            status = "OK",
+            message = "API activa",
+            serverDateTime = DateTime.Now,
+            serverDateTimeUtc = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
     /// Crea multiples producciones a partir de una coleccion de datos.
     /// Resuelve automaticamente los codigos de sede y entidad medica a sus respectivos IDs.
     /// Valida duplicados por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion).
