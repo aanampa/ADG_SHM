@@ -64,6 +64,8 @@ try
     builder.Services.AddScoped<IBancoService, BancoService>();
     builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
     builder.Services.AddScoped<IProduccionInterfaceService, ProduccionInterfaceService>();
+    builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
+    builder.Services.AddScoped<IParametroService, ParametroService>();
 
     var app = builder.Build();
 

@@ -307,6 +307,8 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
 
     /// <summary>
     /// Obtiene entidades medicas de forma paginada con opcion de busqueda.
+    /// Utiliza sintaxis compatible con Oracle 11g (ROWNUM).
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<EntidadMedica> Items, int TotalCount)> GetPaginatedAsync(string? searchTerm, int pageNumber, int pageSize)
     {
@@ -324,30 +326,39 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
         var countSql = $"SELECT COUNT(1) FROM SHM_ENTIDAD_MEDICA {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { SearchTerm = searchTerm });
 
-        var offset = (pageNumber - 1) * pageSize;
-        var dataSql = $@"
-            SELECT
-                ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                CODIGO_ENTIDAD as CodigoEntidad,
-                RAZON_SOCIAL as RazonSocial,
-                RUC as Ruc,
-                TIPO_ENTIDAD_MEDICA as TipoEntidadMedica,
-                TELEFONO as Telefono,
-                CELULAR as Celular,
-                CODIGO_ACREEDOR as CodigoAcreedor,
-                DIRECCION as Direccion,
-                GUID_REGISTRO as GuidRegistro,
-                ACTIVO as Activo,
-                FECHA_CREACION as FechaCreacion,
-                ID_CREADOR as IdCreador,
-                FECHA_MODIFICACION as FechaModificacion,
-                ID_MODIFICADOR as IdModificador
-            FROM SHM_ENTIDAD_MEDICA
-            {whereClause}
-            ORDER BY RAZON_SOCIAL
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+        // Calcular rangos para paginacion con ROWNUM (Oracle 11g)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
 
-        var items = await connection.QueryAsync<EntidadMedica>(dataSql, new { SearchTerm = searchTerm, Offset = offset, PageSize = pageSize });
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
+        var dataSql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                        CODIGO_ENTIDAD as CodigoEntidad,
+                        RAZON_SOCIAL as RazonSocial,
+                        RUC as Ruc,
+                        TIPO_ENTIDAD_MEDICA as TipoEntidadMedica,
+                        TELEFONO as Telefono,
+                        CELULAR as Celular,
+                        CODIGO_ACREEDOR as CodigoAcreedor,
+                        DIRECCION as Direccion,
+                        GUID_REGISTRO as GuidRegistro,
+                        ACTIVO as Activo,
+                        FECHA_CREACION as FechaCreacion,
+                        ID_CREADOR as IdCreador,
+                        FECHA_MODIFICACION as FechaModificacion,
+                        ID_MODIFICADOR as IdModificador
+                    FROM SHM_ENTIDAD_MEDICA
+                    {whereClause}
+                    ORDER BY RAZON_SOCIAL
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<EntidadMedica>(dataSql, new { SearchTerm = searchTerm, MinRow = minRow, MaxRow = maxRow });
 
         return (items, totalCount);
     }
