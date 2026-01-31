@@ -1,9 +1,12 @@
+using System.Text.Json;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NLog;
 using NLog.Web;
 using SHM.AppApplication.Services;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
+using SHM.AppInfrastructure.HealthChecks;
 using SHM.AppInfrastructure.Repositories;
 
 // Configurar NLog temprano para capturar todos los errores de inicio
@@ -72,6 +75,9 @@ try
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
     builder.Services.AddScoped<IParametroService, ParametroService>();
 
+    // Health Checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<OracleHealthCheck>("oracle-database", tags: new[] { "db", "oracle" });
 
     var app = builder.Build();
 
@@ -92,6 +98,35 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+
+    // Health Check endpoint con respuesta JSON detallada
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+
+            var response = new
+            {
+                status = report.Status.ToString(),
+                totalDuration = report.TotalDuration.TotalMilliseconds + " ms",
+                timestamp = DateTime.Now,
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration.TotalMilliseconds + " ms"
+                })
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        }
+    });
 
     logger.Info("Aplicación iniciada correctamente");
     app.Run();
