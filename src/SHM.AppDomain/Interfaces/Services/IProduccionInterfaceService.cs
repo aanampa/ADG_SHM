@@ -7,6 +7,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-19</created>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado metodo UpdateLiquidacionesAsync</modified>
 /// </summary>
 public interface IProduccionInterfaceService
 {
@@ -17,4 +18,10 @@ public interface IProduccionInterfaceService
     /// Si hay error, aborta toda la operacion.
     /// </summary>
     Task<InterfaceProduccionResultDto> CreateProduccionesAsync(IEnumerable<CreateInterfaceProduccionDto> createDtos, int idCreador);
+
+    /// <summary>
+    /// Actualiza los datos de liquidacion de multiples producciones.
+    /// Busca por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
+    /// </summary>
+    Task<InterfaceProduccionResultDto> UpdateLiquidacionesAsync(IEnumerable<UpdateInterfaceLiquidacionDto> updateDtos, int idModificador);
 }

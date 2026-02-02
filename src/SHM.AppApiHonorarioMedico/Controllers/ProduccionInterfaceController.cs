@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.DTOs.Common;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Interfaces.Services;
 
@@ -9,6 +10,7 @@ namespace SHM.AppApiHonorarioMedico.Controllers;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-19</created>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado metodo UpdateLiquidaciones</modified>
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -48,22 +50,26 @@ public class ProduccionInterfaceController : ControllerBase
     /// Valida duplicados por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion).
     /// Si ya existe, lo omite. Si hay error, aborta toda la operacion.
     /// </summary>
-    [HttpPost]
-    [ProducesResponseType(typeof(InterfaceProduccionResultDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<InterfaceProduccionResultDto>> Create([FromBody] IEnumerable<CreateInterfaceProduccionDto> createDtos)
+    [HttpPost("producciones")]
+    [ProducesResponseType(typeof(ApiResponseDto<InterfaceProduccionResultDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponseDto<InterfaceProduccionResultDto>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponseDto<InterfaceProduccionResultDto>>> Create([FromBody] IEnumerable<CreateInterfaceProduccionDto> createDtos)
     {
         try
         {
-
             _logger.LogInformation("Inicio de creacion masiva de producciones mediante interface");
 
-
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", errors));
+            }
 
             if (createDtos == null || !createDtos.Any())
-                return BadRequest(new { message = "La coleccion de producciones no puede estar vacia" });
+                return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", "La coleccion de producciones no puede estar vacia"));
 
             const int idCreador = 1;
             var resultado = await _produccionInterfaceService.CreateProduccionesAsync(createDtos, idCreador);
@@ -74,17 +80,69 @@ public class ProduccionInterfaceController : ControllerBase
                 resultado.CantidadCreados,
                 resultado.CantidadObviados);
 
-            return StatusCode(StatusCodes.Status201Created, resultado);
+            return StatusCode(StatusCodes.Status201Created, ApiResponseDto<InterfaceProduccionResultDto>.Success(resultado, "Correcto."));
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Error de validacion al crear producciones");
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al crear producciones mediante interface");
-            return StatusCode(500, new { message = "Error interno del servidor" });
+            return StatusCode(500, ApiResponseDto<InterfaceProduccionResultDto>.Error("Error interno del servidor.", ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Actualiza los datos de liquidacion de multiples producciones.
+    /// Busca por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
+    /// Si no existe la produccion, la omite. Si hay error, aborta toda la operacion.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-31</created>
+    /// </summary>
+    [HttpPost("liquidaciones")]
+    [ProducesResponseType(typeof(ApiResponseDto<InterfaceProduccionResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponseDto<InterfaceProduccionResultDto>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponseDto<InterfaceProduccionResultDto>>> UpdateLiquidaciones([FromBody] IEnumerable<UpdateInterfaceLiquidacionDto> updateDtos)
+    {
+        try
+        {
+            _logger.LogInformation("Inicio de actualizacion masiva de liquidaciones mediante interface");
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", errors));
+            }
+
+            if (updateDtos == null || !updateDtos.Any())
+                return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", "La coleccion de liquidaciones no puede estar vacia"));
+
+            const int idModificador = 1;
+            var resultado = await _produccionInterfaceService.UpdateLiquidacionesAsync(updateDtos, idModificador);
+
+            _logger.LogInformation(
+                "Liquidaciones procesadas: {TotalProcesados}, Actualizados: {CantidadCreados}, Obviados: {CantidadObviados}",
+                resultado.TotalProcesados,
+                resultado.CantidadCreados,
+                resultado.CantidadObviados);
+
+            return Ok(ApiResponseDto<InterfaceProduccionResultDto>.Success(resultado, "Correcto."));
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Error de validacion al actualizar liquidaciones");
+            return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar liquidaciones mediante interface");
+            return StatusCode(500, ApiResponseDto<InterfaceProduccionResultDto>.Error("Error interno del servidor.", ex.Message));
         }
     }
 }
