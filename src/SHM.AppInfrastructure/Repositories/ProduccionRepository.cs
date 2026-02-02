@@ -15,6 +15,8 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
+/// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
 /// </summary>
 public class ProduccionRepository : IProduccionRepository
 {
@@ -36,11 +38,14 @@ public class ProduccionRepository : IProduccionRepository
         ID_SEDE as IdSede,
         ID_ENTIDAD_MEDICA as IdEntidadMedica,
         CODIGO_PRODUCCION as CodigoProduccion,
+        NUMERO_PRODUCCION as NumeroProduccion,
         TIPO_PRODUCCION as TipoProduccion,
+        TIPO_ENTIDAD_MEDICA as TipoEntidadMedica,
         TIPO_MEDICO as TipoMedico,
         TIPO_RUBRO as TipoRubro,
         DESCRIPCION as Descripcion,
         PERIODO as Periodo,
+        FECHA_PRODUCCION as FechaProduccion,
         ESTADO_PRODUCCION as EstadoProduccion,
         MTO_CONSUMO as MtoConsumo,
         MTO_DESCUENTO as MtoDescuento,
@@ -61,6 +66,12 @@ public class ProduccionRepository : IProduccionRepository
         FACTURA_FECHA_ENVIO as FacturaFechaEnvio,
         FACTURA_FECHA_ACEPTACION as FacturaFechaAceptacion,
         FACTURA_FECHA_PAGO as FacturaFechaPago,
+        NUMERO_LIQUIDACION as NumeroLiquidacion,
+        CODIGO_LIQUIDACION as CodigoLiquidacion,
+        PERIODO_LIQUIDACION as PeriodoLiquidacion,
+        ESTADO_LIQUIDACION as EstadoLiquidacion,
+        FECHA_LIQUIDACION as FechaLiquidacion,
+        DESCRIPCION_LIQUIDACION as DescripcionLiquidacion,
         GUID_REGISTRO as GuidRegistro,
         ACTIVO as Activo,
         ID_CREADOR as IdCreador,
@@ -165,11 +176,14 @@ public class ProduccionRepository : IProduccionRepository
                 ID_SEDE,
                 ID_ENTIDAD_MEDICA,
                 CODIGO_PRODUCCION,
+                NUMERO_PRODUCCION,
                 TIPO_PRODUCCION,
+                TIPO_ENTIDAD_MEDICA,
                 TIPO_MEDICO,
                 TIPO_RUBRO,
                 DESCRIPCION,
                 PERIODO,
+                FECHA_PRODUCCION,
                 ESTADO_PRODUCCION,
                 MTO_CONSUMO,
                 MTO_DESCUENTO,
@@ -190,6 +204,12 @@ public class ProduccionRepository : IProduccionRepository
                 FACTURA_FECHA_ENVIO,
                 FACTURA_FECHA_ACEPTACION,
                 FACTURA_FECHA_PAGO,
+                NUMERO_LIQUIDACION,
+                CODIGO_LIQUIDACION,
+                PERIODO_LIQUIDACION,
+                ESTADO_LIQUIDACION,
+                FECHA_LIQUIDACION,
+                DESCRIPCION_LIQUIDACION,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -199,11 +219,14 @@ public class ProduccionRepository : IProduccionRepository
                 :IdSede,
                 :IdEntidadMedica,
                 :CodigoProduccion,
+                :NumeroProduccion,
                 :TipoProduccion,
+                :TipoEntidadMedica,
                 :TipoMedico,
                 :TipoRubro,
                 :Descripcion,
                 :Periodo,
+                :FechaProduccion,
                 :EstadoProduccion,
                 :MtoConsumo,
                 :MtoDescuento,
@@ -224,6 +247,12 @@ public class ProduccionRepository : IProduccionRepository
                 :FacturaFechaEnvio,
                 :FacturaFechaAceptacion,
                 :FacturaFechaPago,
+                :NumeroLiquidacion,
+                :CodigoLiquidacion,
+                :PeriodoLiquidacion,
+                :EstadoLiquidacion,
+                :FechaLiquidacion,
+                :DescripcionLiquidacion,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -235,11 +264,14 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("IdSede", produccion.IdSede);
         parameters.Add("IdEntidadMedica", produccion.IdEntidadMedica);
         parameters.Add("CodigoProduccion", produccion.CodigoProduccion);
+        parameters.Add("NumeroProduccion", produccion.NumeroProduccion);
         parameters.Add("TipoProduccion", produccion.TipoProduccion);
+        parameters.Add("TipoEntidadMedica", produccion.TipoEntidadMedica);
         parameters.Add("TipoMedico", produccion.TipoMedico);
         parameters.Add("TipoRubro", produccion.TipoRubro);
         parameters.Add("Descripcion", produccion.Descripcion);
         parameters.Add("Periodo", produccion.Periodo);
+        parameters.Add("FechaProduccion", produccion.FechaProduccion);
         parameters.Add("EstadoProduccion", produccion.EstadoProduccion);
         parameters.Add("MtoConsumo", produccion.MtoConsumo);
         parameters.Add("MtoDescuento", produccion.MtoDescuento);
@@ -260,6 +292,12 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("FacturaFechaEnvio", produccion.FacturaFechaEnvio);
         parameters.Add("FacturaFechaAceptacion", produccion.FacturaFechaAceptacion);
         parameters.Add("FacturaFechaPago", produccion.FacturaFechaPago);
+        parameters.Add("NumeroLiquidacion", produccion.NumeroLiquidacion);
+        parameters.Add("CodigoLiquidacion", produccion.CodigoLiquidacion);
+        parameters.Add("PeriodoLiquidacion", produccion.PeriodoLiquidacion);
+        parameters.Add("EstadoLiquidacion", produccion.EstadoLiquidacion);
+        parameters.Add("FechaLiquidacion", produccion.FechaLiquidacion);
+        parameters.Add("DescripcionLiquidacion", produccion.DescripcionLiquidacion);
         parameters.Add("IdCreador", produccion.IdCreador);
         parameters.Add("IdProduccion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -281,11 +319,14 @@ public class ProduccionRepository : IProduccionRepository
                 ID_SEDE = :IdSede,
                 ID_ENTIDAD_MEDICA = :IdEntidadMedica,
                 CODIGO_PRODUCCION = :CodigoProduccion,
+                NUMERO_PRODUCCION = :NumeroProduccion,
                 TIPO_PRODUCCION = :TipoProduccion,
+                TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica,
                 TIPO_MEDICO = :TipoMedico,
                 TIPO_RUBRO = :TipoRubro,
                 DESCRIPCION = :Descripcion,
                 PERIODO = :Periodo,
+                FECHA_PRODUCCION = :FechaProduccion,
                 ESTADO_PRODUCCION = :EstadoProduccion,
                 MTO_CONSUMO = :MtoConsumo,
                 MTO_DESCUENTO = :MtoDescuento,
@@ -306,6 +347,12 @@ public class ProduccionRepository : IProduccionRepository
                 FACTURA_FECHA_ENVIO = :FacturaFechaEnvio,
                 FACTURA_FECHA_ACEPTACION = :FacturaFechaAceptacion,
                 FACTURA_FECHA_PAGO = :FacturaFechaPago,
+                NUMERO_LIQUIDACION = :NumeroLiquidacion,
+                CODIGO_LIQUIDACION = :CodigoLiquidacion,
+                PERIODO_LIQUIDACION = :PeriodoLiquidacion,
+                ESTADO_LIQUIDACION = :EstadoLiquidacion,
+                FECHA_LIQUIDACION = :FechaLiquidacion,
+                DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -317,11 +364,14 @@ public class ProduccionRepository : IProduccionRepository
             produccion.IdSede,
             produccion.IdEntidadMedica,
             produccion.CodigoProduccion,
+            produccion.NumeroProduccion,
             produccion.TipoProduccion,
+            produccion.TipoEntidadMedica,
             produccion.TipoMedico,
             produccion.TipoRubro,
             produccion.Descripcion,
             produccion.Periodo,
+            produccion.FechaProduccion,
             produccion.EstadoProduccion,
             produccion.MtoConsumo,
             produccion.MtoDescuento,
@@ -342,6 +392,12 @@ public class ProduccionRepository : IProduccionRepository
             produccion.FacturaFechaEnvio,
             produccion.FacturaFechaAceptacion,
             produccion.FacturaFechaPago,
+            produccion.NumeroLiquidacion,
+            produccion.CodigoLiquidacion,
+            produccion.PeriodoLiquidacion,
+            produccion.EstadoLiquidacion,
+            produccion.FechaLiquidacion,
+            produccion.DescripcionLiquidacion,
             produccion.Activo,
             produccion.IdModificador
         });
@@ -383,25 +439,31 @@ public class ProduccionRepository : IProduccionRepository
     }
 
     /// <summary>
-    /// Verifica si existe un registro de produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    /// Verifica si existe un registro de produccion con la llave compuesta
+    /// (IdSede, IdEntidadMedica, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-19</created>
+    /// <modified>ADG Antonio - 2026-01-31 - Ampliada llave compuesta</modified>
     /// </summary>
-    public async Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion)
+    public async Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion, string? numeroProduccion, string? tipoEntidadMedica)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = @"SELECT COUNT(1) FROM SHM_PRODUCCION
                     WHERE ID_SEDE = :IdSede
                     AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
-                    AND CODIGO_PRODUCCION = :CodigoProduccion";
+                    AND CODIGO_PRODUCCION = :CodigoProduccion
+                    AND ((:NumeroProduccion IS NULL AND NUMERO_PRODUCCION IS NULL) OR NUMERO_PRODUCCION = :NumeroProduccion)
+                    AND ((:TipoEntidadMedica IS NULL AND TIPO_ENTIDAD_MEDICA IS NULL) OR TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica)";
 
         var count = await connection.ExecuteScalarAsync<int>(sql, new
         {
             IdSede = idSede,
             IdEntidadMedica = idEntidadMedica,
-            CodigoProduccion = codigoProduccion
+            CodigoProduccion = codigoProduccion,
+            NumeroProduccion = numeroProduccion,
+            TipoEntidadMedica = tipoEntidadMedica
         });
 
         return count > 0;
@@ -739,5 +801,63 @@ public class ProduccionRepository : IProduccionRepository
             Enviadas: (int)r.ENVIADAS,
             Pendientes: (int)r.PENDIENTES
         ));
+    }
+
+    /// <summary>
+    /// Actualiza los datos de liquidacion de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-31</created>
+    /// </summary>
+    public async Task<bool> UpdateLiquidacionByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string numeroProduccion,
+        string tipoEntidadMedica,
+        string numeroLiquidacion,
+        string codigoLiquidacion,
+        string periodoLiquidacion,
+        string estadoLiquidacion,
+        DateTime fechaLiquidacion,
+        string descripcionLiquidacion,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET
+                NUMERO_LIQUIDACION = :NumeroLiquidacion,
+                CODIGO_LIQUIDACION = :CodigoLiquidacion,
+                PERIODO_LIQUIDACION = :PeriodoLiquidacion,
+                ESTADO_LIQUIDACION = :EstadoLiquidacion,
+                FECHA_LIQUIDACION = :FechaLiquidacion,
+                DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_SEDE = :IdSede
+            AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND CODIGO_PRODUCCION = :CodigoProduccion
+            AND NUMERO_PRODUCCION = :NumeroProduccion
+            AND TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdSede = idSede,
+            IdEntidadMedica = idEntidadMedica,
+            CodigoProduccion = codigoProduccion,
+            NumeroProduccion = numeroProduccion,
+            TipoEntidadMedica = tipoEntidadMedica,
+            NumeroLiquidacion = numeroLiquidacion,
+            CodigoLiquidacion = codigoLiquidacion,
+            PeriodoLiquidacion = periodoLiquidacion,
+            EstadoLiquidacion = estadoLiquidacion,
+            FechaLiquidacion = fechaLiquidacion,
+            DescripcionLiquidacion = descripcionLiquidacion,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
     }
 }

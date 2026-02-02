@@ -1,0 +1,1120 @@
+<!DOCTYPE html><html><head>
+      <title>API_ProduccionInterface</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\anton\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.20\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. --><script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script></head><body for="html-export">
+    
+    
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="api-produccion-interface">API Produccion Interface </h1>
+<h2 id="descripcion-general">Descripcion General </h2>
+<p>API para el registro masivo de producciones medicas y actualizacion de liquidaciones a traves de una interfaz de integracion. Permite crear multiples registros de produccion y actualizar datos de liquidacion en una sola llamada, validando duplicados y manejando transacciones de forma segura.</p>
+<hr>
+<h2 id="instalacion-y-despliegue">Instalacion y Despliegue </h2>
+<h3 id="informacion-del-servidor">Informacion del Servidor </h3>
+<table>
+<thead>
+<tr>
+<th>Atributo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Servidor</strong></td>
+<td>192.1.0.173</td>
+</tr>
+<tr>
+<td><strong>URL Local</strong></td>
+<td><a href="http://localhost:92">http://localhost:92</a></td>
+</tr>
+<tr>
+<td><strong>URL Swagger</strong></td>
+<td><a href="http://localhost:92/swagger">http://localhost:92/swagger</a></td>
+</tr>
+<tr>
+<td><strong>Carpeta Fisica</strong></td>
+<td>D:\appweb\shmappapi</td>
+</tr>
+<tr>
+<td><strong>Plataforma</strong></td>
+<td>IIS (Internet Information Services)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuracion-en-iis">Configuracion en IIS </h3>
+<p><img src="images/api_iis_config.png" alt="Configuracion IIS"></p>
+<h3 id="swagger-ui">Swagger UI </h3>
+<p>Para probar los endpoints de forma interactiva, acceda a la interfaz de Swagger:</p>
+<p><strong>URL:</strong> <code>http://localhost:92/swagger</code></p>
+<p><img src="images/api_swagger.png" alt="Swagger UI"></p>
+<h3 id="estructura-de-carpetas">Estructura de Carpetas </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>D:\appweb\shmappapi\
+├── appsettings.json
+├── appsettings.Production.json
+├── SHM.AppApiHonorarioMedico.dll
+├── SHM.AppApiHonorarioMedico.exe
+├── web.config
+└── ...
+</code></pre><h3 id="verificacion-de-instalacion">Verificacion de Instalacion </h3>
+<p>Para verificar que el API esta funcionando correctamente:</p>
+<ol>
+<li>Abra un navegador web</li>
+<li>Acceda a: <code>http://localhost:92/api/ProduccionInterface/test</code></li>
+<li>Deberia recibir una respuesta como:</li>
+</ol>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"OK"</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"API activa"</span><span class="token punctuation">,</span>
+  <span class="token property">"serverDateTime"</span><span class="token operator">:</span> <span class="token string">"2026-01-31T10:30:00"</span><span class="token punctuation">,</span>
+  <span class="token property">"serverDateTimeUtc"</span><span class="token operator">:</span> <span class="token string">"2026-01-31T15:30:00Z"</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="health-check-monitoreo-de-salud">Health Check (Monitoreo de Salud) </h3>
+<p>El API incluye un endpoint de <strong>Health Check</strong> para monitorear el estado de la aplicacion y sus dependencias (base de datos Oracle).</p>
+<p><strong>URL:</strong> <code>http://localhost:92/health</code></p>
+<p><strong>Response (Healthy):</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Healthy"</span><span class="token punctuation">,</span>
+  <span class="token property">"totalDuration"</span><span class="token operator">:</span> <span class="token string">"125.45 ms"</span><span class="token punctuation">,</span>
+  <span class="token property">"timestamp"</span><span class="token operator">:</span> <span class="token string">"2026-01-31T10:30:00"</span><span class="token punctuation">,</span>
+  <span class="token property">"checks"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"oracle-database"</span><span class="token punctuation">,</span>
+      <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Healthy"</span><span class="token punctuation">,</span>
+      <span class="token property">"description"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+      <span class="token property">"duration"</span><span class="token operator">:</span> <span class="token string">"120.32 ms"</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><p><strong>Response (Unhealthy):</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Unhealthy"</span><span class="token punctuation">,</span>
+  <span class="token property">"totalDuration"</span><span class="token operator">:</span> <span class="token string">"5023.12 ms"</span><span class="token punctuation">,</span>
+  <span class="token property">"timestamp"</span><span class="token operator">:</span> <span class="token string">"2026-01-31T10:30:00"</span><span class="token punctuation">,</span>
+  <span class="token property">"checks"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"oracle-database"</span><span class="token punctuation">,</span>
+      <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Unhealthy"</span><span class="token punctuation">,</span>
+      <span class="token property">"description"</span><span class="token operator">:</span> <span class="token string">"Error de conexion a Oracle"</span><span class="token punctuation">,</span>
+      <span class="token property">"duration"</span><span class="token operator">:</span> <span class="token string">"5000.00 ms"</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><table>
+<thead>
+<tr>
+<th>Estado</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Healthy</strong></td>
+<td>Todos los servicios funcionan correctamente</td>
+</tr>
+<tr>
+<td><strong>Degraded</strong></td>
+<td>Algunos servicios tienen problemas pero el API sigue operativo</td>
+</tr>
+<tr>
+<td><strong>Unhealthy</strong></td>
+<td>Servicios criticos no disponibles</td>
+</tr>
+</tbody>
+</table>
+<h3 id="logs-nlog">Logs (NLog) </h3>
+<p>El API utiliza <strong>NLog</strong> para el registro de eventos y errores. Los logs se generan diariamente en la carpeta <code>/Log</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Atributo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Carpeta</strong></td>
+<td>D:\appweb\shmappapi\Log</td>
+</tr>
+<tr>
+<td><strong>Formato archivo</strong></td>
+<td>Log_yyyyMMdd.txt</td>
+</tr>
+<tr>
+<td><strong>Ejemplo</strong></td>
+<td>Log_20260131.txt</td>
+</tr>
+<tr>
+<td><strong>Rotacion</strong></td>
+<td>Diaria (un archivo por dia)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Estructura de carpeta:</strong></p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>D:\appweb\shmappapi\
+├── Log\
+│   ├── Log_20260129.txt
+│   ├── Log_20260130.txt
+│   └── Log_20260131.txt
+├── appsettings.json
+└── ...
+</code></pre><p><strong>Ejemplo de contenido del log:</strong></p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>2026-01-31 10:30:15.123 |INFO| Inicio de creacion masiva de producciones mediante interface
+2026-01-31 10:30:15.456 |INFO| Producciones procesadas: 10, Creados: 8, Obviados: 2
+2026-01-31 10:35:22.789 |WARN| Error de validacion al crear producciones - Sede con codigo 'XXX' no encontrada
+2026-01-31 10:40:33.012 |ERROR| Error al crear producciones mediante interface - ORA-12541: TNS:no listener
+</code></pre><p><strong>Niveles de log:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DEBUG</strong></td>
+<td>Informacion detallada para depuracion</td>
+</tr>
+<tr>
+<td><strong>INFO</strong></td>
+<td>Eventos normales de operacion</td>
+</tr>
+<tr>
+<td><strong>WARN</strong></td>
+<td>Advertencias (errores de validacion)</td>
+</tr>
+<tr>
+<td><strong>ERROR</strong></td>
+<td>Errores de sistema o excepciones</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="endpoints-disponibles">Endpoints Disponibles </h2>
+<table>
+<thead>
+<tr>
+<th>Metodo</th>
+<th>URL</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/health</code></td>
+<td>Health Check - Estado del API y BD</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ProduccionInterface/test</code></td>
+<td>Prueba de conexion</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ProduccionInterface/producciones</code></td>
+<td>Crear producciones</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ProduccionInterface/liquidaciones</code></td>
+<td>Actualizar liquidaciones</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="formato-de-respuesta-estandarizado">Formato de Respuesta Estandarizado </h2>
+<p>Todos los endpoints devuelven una respuesta con la siguiente estructura:</p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span> ... <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>isSuccess</code></td>
+<td>boolean</td>
+<td>Indica si la operacion fue exitosa</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>string</td>
+<td>Mensaje descriptivo del resultado</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>object</td>
+<td>Datos de la respuesta (segun endpoint)</td>
+</tr>
+<tr>
+<td><code>errors</code></td>
+<td>array</td>
+<td>Lista de errores si los hubiera</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="1-test-de-conexion">1. Test de Conexion </h2>
+<h3 id="informacion-del-endpoint">Informacion del Endpoint </h3>
+<table>
+<thead>
+<tr>
+<th>Atributo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>URL</strong></td>
+<td><code>GET /api/ProduccionInterface/test</code></td>
+</tr>
+<tr>
+<td><strong>Metodo HTTP</strong></td>
+<td>GET</td>
+</tr>
+<tr>
+<td><strong>Autenticacion</strong></td>
+<td>No requerida</td>
+</tr>
+</tbody>
+</table>
+<h3 id="response-http-200-ok">Response (HTTP 200 OK) </h3>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"OK"</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"API activa"</span><span class="token punctuation">,</span>
+  <span class="token property">"serverDateTime"</span><span class="token operator">:</span> <span class="token string">"2026-01-31T10:30:00"</span><span class="token punctuation">,</span>
+  <span class="token property">"serverDateTimeUtc"</span><span class="token operator">:</span> <span class="token string">"2026-01-31T15:30:00Z"</span>
+<span class="token punctuation">}</span>
+</code></pre><hr>
+<h2 id="2-crear-producciones">2. Crear Producciones </h2>
+<h3 id="informacion-del-endpoint-1">Informacion del Endpoint </h3>
+<table>
+<thead>
+<tr>
+<th>Atributo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>URL</strong></td>
+<td><code>POST /api/ProduccionInterface/producciones</code></td>
+</tr>
+<tr>
+<td><strong>Metodo HTTP</strong></td>
+<td>POST</td>
+</tr>
+<tr>
+<td><strong>Content-Type</strong></td>
+<td>application/json</td>
+</tr>
+<tr>
+<td><strong>Autenticacion</strong></td>
+<td>No requerida (version actual)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="estructura-del-body">Estructura del Body </h3>
+<p>El endpoint recibe un <strong>array JSON</strong> de objetos con la siguiente estructura:</p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"tipoProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"tipoMedico"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"tipoRubro"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"descripcion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"periodo"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"fechaProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"estadoProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"mtoConsumo"</span><span class="token operator">:</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+    <span class="token property">"mtoDescuento"</span><span class="token operator">:</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+    <span class="token property">"mtoSubtotal"</span><span class="token operator">:</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+    <span class="token property">"mtoRenta"</span><span class="token operator">:</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+    <span class="token property">"mtoIgv"</span><span class="token operator">:</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+    <span class="token property">"mtoTotal"</span><span class="token operator">:</span> <span class="token number">0.00</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre><h3 id="descripcion-de-campos">Descripcion de Campos </h3>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Obligatorio</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>codigoSede</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo de la sede. Se utiliza para obtener el IdSede interno.</td>
+</tr>
+<tr>
+<td><code>codigoEntidad</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo de la entidad medica. Se utiliza para obtener el IdEntidadMedica interno.</td>
+</tr>
+<tr>
+<td><code>codigoProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo unico de la produccion.</td>
+</tr>
+<tr>
+<td><code>numeroProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Numero de la produccion.</td>
+</tr>
+<tr>
+<td><code>tipoProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Tipo de produccion (ej: "CONS", "PROC").</td>
+</tr>
+<tr>
+<td><code>tipoEntidadMedica</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Tipo de entidad medica (ej: "MEDICO", "CLINICA").</td>
+</tr>
+<tr>
+<td><code>tipoMedico</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Tipo de medico (ej: "IN", "EX").</td>
+</tr>
+<tr>
+<td><code>tipoRubro</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Tipo de rubro.</td>
+</tr>
+<tr>
+<td><code>descripcion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Descripcion de la produccion.</td>
+</tr>
+<tr>
+<td><code>periodo</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Periodo de la produccion en formato <code>dd/MM/yyyy</code> (ej: "12/01/2026").</td>
+</tr>
+<tr>
+<td><code>fechaProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Fecha de produccion en formato <code>dd/MM/yyyy HH:mm:ss</code> (ej: "31/01/2026 14:30:00").</td>
+</tr>
+<tr>
+<td><code>estadoProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Estado de la produccion (ej: "ACTIVO", "PENDIENTE").</td>
+</tr>
+<tr>
+<td><code>mtoConsumo</code></td>
+<td>decimal</td>
+<td>Si</td>
+<td>Monto de consumo.</td>
+</tr>
+<tr>
+<td><code>mtoDescuento</code></td>
+<td>decimal</td>
+<td>Si</td>
+<td>Monto de descuento.</td>
+</tr>
+<tr>
+<td><code>mtoSubtotal</code></td>
+<td>decimal</td>
+<td>Si</td>
+<td>Monto subtotal.</td>
+</tr>
+<tr>
+<td><code>mtoRenta</code></td>
+<td>decimal</td>
+<td>Si</td>
+<td>Monto de renta.</td>
+</tr>
+<tr>
+<td><code>mtoIgv</code></td>
+<td>decimal</td>
+<td>Si</td>
+<td>Monto de IGV.</td>
+</tr>
+<tr>
+<td><code>mtoTotal</code></td>
+<td>decimal</td>
+<td>Si</td>
+<td>Monto total.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="llave-unica-producciones">Llave Unica (Producciones) </h3>
+<p>La combinacion de los siguientes campos forma la <strong>llave unica</strong> para identificar registros duplicados:</p>
+<ul>
+<li><code>codigoSede</code> (convertido a IdSede)</li>
+<li><code>codigoEntidad</code> (convertido a IdEntidadMedica)</li>
+<li><code>codigoProduccion</code></li>
+<li><code>numeroProduccion</code></li>
+<li><code>tipoEntidadMedica</code></li>
+</ul>
+<p>Si un registro con esta llave ya existe en la base de datos, sera <strong>omitido</strong> (no se creara duplicado).</p>
+<h3 id="respuesta-exitosa-http-201-created">Respuesta Exitosa (HTTP 201 Created) </h3>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cantidadCreados"</span><span class="token operator">:</span> <span class="token number">8</span><span class="token punctuation">,</span>
+    <span class="token property">"cantidadObviados"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+    <span class="token property">"totalProcesados"</span><span class="token operator">:</span> <span class="token number">10</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="respuesta-de-error---validacion-http-400-bad-request">Respuesta de Error - Validacion (HTTP 400 Bad Request) </h3>
+<p><strong>Coleccion vacia:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"La coleccion de producciones no puede estar vacia"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><p><strong>Sede no encontrada:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"Sede con codigo 'SEDE001' no encontrada"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><p><strong>Entidad medica no encontrada:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"Entidad medica con codigo 'ENT001' no encontrada"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><p><strong>Validacion de campos obligatorios:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">"The CodigoSede field is required."</span><span class="token punctuation">,</span>
+    <span class="token string">"The TipoEntidadMedica field is required."</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="respuesta-de-error---servidor-http-500-internal-server-error">Respuesta de Error - Servidor (HTTP 500 Internal Server Error) </h3>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error interno del servidor."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"Detalle del error"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><hr>
+<h2 id="3-actualizar-liquidaciones">3. Actualizar Liquidaciones </h2>
+<h3 id="informacion-del-endpoint-2">Informacion del Endpoint </h3>
+<table>
+<thead>
+<tr>
+<th>Atributo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>URL</strong></td>
+<td><code>POST /api/ProduccionInterface/liquidaciones</code></td>
+</tr>
+<tr>
+<td><strong>Metodo HTTP</strong></td>
+<td>POST</td>
+</tr>
+<tr>
+<td><strong>Content-Type</strong></td>
+<td>application/json</td>
+</tr>
+<tr>
+<td><strong>Autenticacion</strong></td>
+<td>No requerida (version actual)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="estructura-del-body-1">Estructura del Body </h3>
+<p>El endpoint recibe un <strong>array JSON</strong> de objetos con la siguiente estructura:</p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"numeroLiquidacion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoLiquidacion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"periodoLiquidacion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"estadoLiquidacion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"fechaLiquidacion"</span><span class="token operator">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+    <span class="token property">"descripcionLiquidacion"</span><span class="token operator">:</span> <span class="token string">"string"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre><h3 id="descripcion-de-campos-1">Descripcion de Campos </h3>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Obligatorio</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>codigoSede</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo de la sede (llave para busqueda).</td>
+</tr>
+<tr>
+<td><code>codigoEntidad</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo de la entidad medica (llave para busqueda).</td>
+</tr>
+<tr>
+<td><code>codigoProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo de la produccion (llave para busqueda).</td>
+</tr>
+<tr>
+<td><code>numeroProduccion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Numero de la produccion (llave para busqueda).</td>
+</tr>
+<tr>
+<td><code>tipoEntidadMedica</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Tipo de entidad medica (llave para busqueda).</td>
+</tr>
+<tr>
+<td><code>numeroLiquidacion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Numero de liquidacion a registrar.</td>
+</tr>
+<tr>
+<td><code>codigoLiquidacion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Codigo de liquidacion a registrar.</td>
+</tr>
+<tr>
+<td><code>periodoLiquidacion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Periodo de liquidacion (ej: "202601").</td>
+</tr>
+<tr>
+<td><code>estadoLiquidacion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Estado de la liquidacion (ej: "PROCESADO", "PENDIENTE").</td>
+</tr>
+<tr>
+<td><code>fechaLiquidacion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Fecha de liquidacion en formato <code>dd/MM/yyyy HH:mm:ss</code>.</td>
+</tr>
+<tr>
+<td><code>descripcionLiquidacion</code></td>
+<td>string</td>
+<td>Si</td>
+<td>Descripcion de la liquidacion.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="llave-de-busqueda-liquidaciones">Llave de Busqueda (Liquidaciones) </h3>
+<p>La combinacion de los siguientes campos se usa para <strong>localizar</strong> la produccion a actualizar:</p>
+<ul>
+<li><code>codigoSede</code> (convertido a IdSede)</li>
+<li><code>codigoEntidad</code> (convertido a IdEntidadMedica)</li>
+<li><code>codigoProduccion</code></li>
+<li><code>numeroProduccion</code></li>
+<li><code>tipoEntidadMedica</code></li>
+</ul>
+<p>Si la produccion <strong>no existe</strong>, el registro sera <strong>omitido</strong> (cantidadObviados).</p>
+<h3 id="respuesta-exitosa-http-200-ok">Respuesta Exitosa (HTTP 200 OK) </h3>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cantidadCreados"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+    <span class="token property">"cantidadObviados"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token property">"totalProcesados"</span><span class="token operator">:</span> <span class="token number">6</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><blockquote>
+<p><strong>Nota:</strong> En este endpoint, <code>cantidadCreados</code> representa la cantidad de registros <strong>actualizados</strong> exitosamente.</p>
+</blockquote>
+<h3 id="respuesta-de-error---validacion-http-400-bad-request-1">Respuesta de Error - Validacion (HTTP 400 Bad Request) </h3>
+<p><strong>Coleccion vacia:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"La coleccion de liquidaciones no puede estar vacia"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><p><strong>Formato de fecha invalido:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"Formato de fecha invalido para FechaLiquidacion: '2026-01-31'. Use formato dd/MM/yyyy HH:mm:ss"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><hr>
+<h2 id="comportamiento-transaccional">Comportamiento Transaccional </h2>
+<p>Ambos endpoints implementan un comportamiento <strong>transaccional</strong> para garantizar la integridad de los datos:</p>
+<ol>
+<li>
+<p><strong>Fase de Validacion</strong>: Se validan todos los registros antes de crear/actualizar cualquiera.</p>
+<ul>
+<li>Se verifica que exista cada <code>codigoSede</code></li>
+<li>Se verifica que exista cada <code>codigoEntidad</code></li>
+<li>Se parsean las fechas con el formato requerido</li>
+<li>Se identifican los registros duplicados/inexistentes</li>
+</ul>
+</li>
+<li>
+<p><strong>Fase de Ejecucion</strong>: Los registros validos se procesan dentro de una transaccion.</p>
+<ul>
+<li>Si ocurre un error durante la operacion, <strong>se revierte toda la operacion</strong></li>
+<li>Ningún registro se guarda si hay un fallo</li>
+</ul>
+</li>
+</ol>
+<h3 id="diagrama-de-flujo">Diagrama de Flujo </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>┌─────────────────────────────────────────────────────────────┐
+│                    Recibe Coleccion                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              FASE 1: VALIDACION                             │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Para cada registro:                                    │ │
+│  │   • Buscar IdSede por CodigoSede                       │ │
+│  │   • Buscar IdEntidadMedica por CodigoEntidad           │ │
+│  │   • Parsear fechas (formato dd/MM/yyyy HH:mm:ss)       │ │
+│  │   • Verificar existencia por llave compuesta           │ │
+│  │     - Producciones: Si existe → "obviado"              │ │
+│  │     - Liquidaciones: Si NO existe → "obviado"          │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              │ ¿Error en validacion?         │
+              └───────────────┬───────────────┘
+                    Si │             │ No
+                       ▼             ▼
+              ┌─────────────┐ ┌─────────────────────────────────┐
+              │ HTTP 400    │ │      FASE 2: EJECUCION          │
+              │ Bad Request │ │  ┌─────────────────────────────┐ │
+              └─────────────┘ │  │ BEGIN TRANSACTION           │ │
+                              │  │   Para cada registro valido:│ │
+                              │  │     • Crear/Actualizar en BD│ │
+                              │  │   Si error → ROLLBACK       │ │
+                              │  │   Si OK → COMMIT            │ │
+                              │  └─────────────────────────────┘ │
+                              └─────────────────────────────────┘
+                                            │
+                                            ▼
+                              ┌─────────────────────────────────┐
+                              │    HTTP 201/200 - Respuesta     │
+                              │  {                              │
+                              │    "isSuccess": true,           │
+                              │    "message": "Correcto.",      │
+                              │    "data": {                    │
+                              │      "cantidadCreados": N,      │
+                              │      "cantidadObviados": M,     │
+                              │      "totalProcesados": N+M     │
+                              │    },                           │
+                              │    "errors": []                 │
+                              │  }                              │
+                              └─────────────────────────────────┘
+</code></pre><hr>
+<h2 id="ejemplos-de-uso">Ejemplos de Uso </h2>
+<h3 id="ejemplo-1-crear-producciones">Ejemplo 1: Crear Producciones </h3>
+<p><strong>Request:</strong></p>
+<pre data-role="codeBlock" data-info="http" class="language-http http"><code><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/api/ProduccionInterface/producciones</span> <span class="token http-version property">HTTP/1.1</span></span>
+<span class="token header"><span class="token header-name keyword">Host</span><span class="token punctuation">:</span> <span class="token header-value">localhost:5001</span></span>
+<span class="token header"><span class="token header-name keyword">Content-Type</span><span class="token punctuation">:</span> <span class="token header-value">application/json</span></span>
+<span class="token application-json">
+<span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token string-property property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"SEDE001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"MED001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD0001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoProduccion"</span><span class="token operator">:</span> <span class="token string">"CONS"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoMedico"</span><span class="token operator">:</span> <span class="token string">"IN"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoRubro"</span><span class="token operator">:</span> <span class="token string">"RUB01"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"descripcion"</span><span class="token operator">:</span> <span class="token string">"Consulta medica general"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"periodo"</span><span class="token operator">:</span> <span class="token string">"202601"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"fechaProduccion"</span><span class="token operator">:</span> <span class="token string">"31/01/2026 10:30:00"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"estadoProduccion"</span><span class="token operator">:</span> <span class="token string">"ACTIVO"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoConsumo"</span><span class="token operator">:</span> <span class="token number">150.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoDescuento"</span><span class="token operator">:</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoSubtotal"</span><span class="token operator">:</span> <span class="token number">150.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoRenta"</span><span class="token operator">:</span> <span class="token number">15.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoIgv"</span><span class="token operator">:</span> <span class="token number">27.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoTotal"</span><span class="token operator">:</span> <span class="token number">162.00</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token string-property property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"SEDE001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"MED002"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD0002"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROC"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoMedico"</span><span class="token operator">:</span> <span class="token string">"EX"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoRubro"</span><span class="token operator">:</span> <span class="token string">"RUB02"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"descripcion"</span><span class="token operator">:</span> <span class="token string">"Procedimiento quirurgico menor"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"periodo"</span><span class="token operator">:</span> <span class="token string">"202601"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"fechaProduccion"</span><span class="token operator">:</span> <span class="token string">"31/01/2026 14:00:00"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"estadoProduccion"</span><span class="token operator">:</span> <span class="token string">"PENDIENTE"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoConsumo"</span><span class="token operator">:</span> <span class="token number">500.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoDescuento"</span><span class="token operator">:</span> <span class="token number">50.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoSubtotal"</span><span class="token operator">:</span> <span class="token number">450.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoRenta"</span><span class="token operator">:</span> <span class="token number">45.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoIgv"</span><span class="token operator">:</span> <span class="token number">81.00</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"mtoTotal"</span><span class="token operator">:</span> <span class="token number">486.00</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</span></code></pre><p><strong>Response (201 Created):</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cantidadCreados"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+    <span class="token property">"cantidadObviados"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token property">"totalProcesados"</span><span class="token operator">:</span> <span class="token number">2</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="ejemplo-2-actualizar-liquidaciones">Ejemplo 2: Actualizar Liquidaciones </h3>
+<p><strong>Request:</strong></p>
+<pre data-role="codeBlock" data-info="http" class="language-http http"><code><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/api/ProduccionInterface/liquidaciones</span> <span class="token http-version property">HTTP/1.1</span></span>
+<span class="token header"><span class="token header-name keyword">Host</span><span class="token punctuation">:</span> <span class="token header-value">localhost:5001</span></span>
+<span class="token header"><span class="token header-name keyword">Content-Type</span><span class="token punctuation">:</span> <span class="token header-value">application/json</span></span>
+<span class="token application-json">
+<span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token string-property property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"SEDE001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"MED001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD0001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"numeroLiquidacion"</span><span class="token operator">:</span> <span class="token string">"LIQ2026001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"codigoLiquidacion"</span><span class="token operator">:</span> <span class="token string">"COD001"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"periodoLiquidacion"</span><span class="token operator">:</span> <span class="token string">"202601"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"estadoLiquidacion"</span><span class="token operator">:</span> <span class="token string">"PROCESADO"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"fechaLiquidacion"</span><span class="token operator">:</span> <span class="token string">"31/01/2026 18:00:00"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"descripcionLiquidacion"</span><span class="token operator">:</span> <span class="token string">"Liquidacion enero 2026"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</span></code></pre><p><strong>Response (200 OK):</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cantidadCreados"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token property">"cantidadObviados"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token property">"totalProcesados"</span><span class="token operator">:</span> <span class="token number">1</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="ejemplo-3-crear-producciones-con-curl">Ejemplo 3: Crear Producciones con cURL </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:92/api/ProduccionInterface/producciones"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">"Content-Type: application/json"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-d</span> <span class="token string">'[
+    {
+      "codigoSede": "001",
+      "codigoEntidad": "ENT001",
+      "codigoProduccion": "PROD2026001",
+      "numeroProduccion": "0001",
+      "tipoProduccion": "HONORARIO",
+      "tipoEntidadMedica": "MEDICO",
+      "tipoMedico": "STAFF",
+      "tipoRubro": "CONSULTA",
+      "descripcion": "Consulta ambulatoria cardiologia",
+      "periodo": "202601",
+      "fechaProduccion": "15/01/2026 09:00:00",
+      "estadoProduccion": "PROCESADO",
+      "mtoConsumo": 200.00,
+      "mtoDescuento": 0.00,
+      "mtoSubtotal": 200.00,
+      "mtoRenta": 20.00,
+      "mtoIgv": 36.00,
+      "mtoTotal": 216.00
+    }
+  ]'</span>
+</code></pre><h3 id="ejemplo-4-actualizar-liquidaciones-con-curl">Ejemplo 4: Actualizar Liquidaciones con cURL </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:92/api/ProduccionInterface/liquidaciones"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">"Content-Type: application/json"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-d</span> <span class="token string">'[
+    {
+      "codigoSede": "001",
+      "codigoEntidad": "ENT001",
+      "codigoProduccion": "PROD2026001",
+      "numeroProduccion": "0001",
+      "tipoEntidadMedica": "MEDICO",
+      "numeroLiquidacion": "LIQ-2026-00001",
+      "codigoLiquidacion": "LQ001",
+      "periodoLiquidacion": "202601",
+      "estadoLiquidacion": "LIQUIDADO",
+      "fechaLiquidacion": "31/01/2026 23:59:59",
+      "descripcionLiquidacion": "Liquidacion mensual enero 2026 - Cardiologia"
+    }
+  ]'</span>
+</code></pre><h3 id="ejemplo-5-producciones-con-registros-duplicados">Ejemplo 5: Producciones con Registros Duplicados </h3>
+<p>Cuando se envian registros que ya existen en la base de datos:</p>
+<p><strong>Request:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span> <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"ENT001"</span><span class="token punctuation">,</span> <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD001"</span><span class="token punctuation">,</span> <span class="token property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span> <span class="token property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span> ... <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span> <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"ENT001"</span><span class="token punctuation">,</span> <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD002"</span><span class="token punctuation">,</span> <span class="token property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span> <span class="token property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span> ... <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span> <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"ENT001"</span><span class="token punctuation">,</span> <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD003"</span><span class="token punctuation">,</span> <span class="token property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span> <span class="token property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span> ... <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre><p><strong>Response (201 Created):</strong> <em>(si PROD001 y PROD002 ya existian)</em></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cantidadCreados"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token property">"cantidadObviados"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+    <span class="token property">"totalProcesados"</span><span class="token operator">:</span> <span class="token number">3</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="ejemplo-6-error-por-sede-no-encontrada">Ejemplo 6: Error por Sede No Encontrada </h3>
+<p><strong>Request:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"SEDE_INVALIDA"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"ENT001"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD001"</span><span class="token punctuation">,</span>
+    ...
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre><p><strong>Response (400 Bad Request):</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Error de validacion."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"Sede con codigo 'SEDE_INVALIDA' no encontrada"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="ejemplo-7-liquidaciones-con-produccion-no-encontrada">Ejemplo 7: Liquidaciones con Produccion No Encontrada </h3>
+<p>Cuando se intenta actualizar liquidacion de una produccion que no existe:</p>
+<p><strong>Request:</strong></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"codigoSede"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoEntidad"</span><span class="token operator">:</span> <span class="token string">"ENT001"</span><span class="token punctuation">,</span>
+    <span class="token property">"codigoProduccion"</span><span class="token operator">:</span> <span class="token string">"PROD_NO_EXISTE"</span><span class="token punctuation">,</span>
+    <span class="token property">"numeroProduccion"</span><span class="token operator">:</span> <span class="token string">"001"</span><span class="token punctuation">,</span>
+    <span class="token property">"tipoEntidadMedica"</span><span class="token operator">:</span> <span class="token string">"MEDICO"</span><span class="token punctuation">,</span>
+    <span class="token property">"numeroLiquidacion"</span><span class="token operator">:</span> <span class="token string">"LIQ001"</span><span class="token punctuation">,</span>
+    ...
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre><p><strong>Response (200 OK):</strong> <em>(el registro se omite, no genera error)</em></p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"isSuccess"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"Correcto."</span><span class="token punctuation">,</span>
+  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cantidadCreados"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token property">"cantidadObviados"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token property">"totalProcesados"</span><span class="token operator">:</span> <span class="token number">1</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><hr>
+<h2 id="codigos-de-estado-http">Codigos de Estado HTTP </h2>
+<table>
+<thead>
+<tr>
+<th>Codigo</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>200 OK</strong></td>
+<td>Operacion exitosa (liquidaciones).</td>
+</tr>
+<tr>
+<td><strong>201 Created</strong></td>
+<td>Operacion exitosa (producciones).</td>
+</tr>
+<tr>
+<td><strong>400 Bad Request</strong></td>
+<td>Error de validacion: campos faltantes, sede/entidad no encontrada, formato de fecha invalido, o coleccion vacia.</td>
+</tr>
+<tr>
+<td><strong>500 Internal Server Error</strong></td>
+<td>Error interno del servidor.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="consideraciones-importantes">Consideraciones Importantes </h2>
+<ol>
+<li>
+<p><strong>Idempotencia</strong>: El API de producciones es seguro para reintentos. Si se envia la misma coleccion multiples veces, los registros duplicados seran omitidos automaticamente.</p>
+</li>
+<li>
+<p><strong>Atomicidad</strong>: Si ocurre un error durante la creacion/actualizacion de cualquier registro, <strong>ningun registro se guarda</strong>. La operacion es todo o nada.</p>
+</li>
+<li>
+<p><strong>Validacion previa</strong>: Todos los codigos de sede y entidad medica son validados antes de iniciar la operacion, evitando operaciones parciales.</p>
+</li>
+<li>
+<p><strong>Formato de fechas</strong>: Las fechas deben enviarse en formato <code>dd/MM/yyyy HH:mm:ss</code> (ej: "31/01/2026 14:30:00").</p>
+</li>
+<li>
+<p><strong>Rendimiento</strong>: Para grandes volumenes de datos, considere enviar lotes de maximo 1000 registros por llamada.</p>
+</li>
+</ol>
+<hr>
+<h2 id="informacion-tecnica">Informacion Tecnica </h2>
+<table>
+<thead>
+<tr>
+<th>Atributo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Autor</strong></td>
+<td>ADG Antonio</td>
+</tr>
+<tr>
+<td><strong>Fecha de Creacion</strong></td>
+<td>2026-01-19</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td><strong>Proyecto</strong></td>
+<td>SHM.AppApiHonorarioMedico</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="changelog">Changelog </h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Fecha</th>
+<th>Descripcion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0</td>
+<td>2026-01-19</td>
+<td>Version inicial del API</td>
+</tr>
+<tr>
+<td>2.0</td>
+<td>2026-01-31</td>
+<td>- Nueva ruta <code>/producciones</code> para crear producciones</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>- Nuevo endpoint <code>/liquidaciones</code> para actualizar liquidaciones</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>- Nueva llave compuesta de 5 campos</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>- Formato de respuesta estandarizado (isSuccess, message, data, errors)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>- Campos agregados: numeroProduccion, tipoEntidadMedica, fechaProduccion</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>- Campos removidos: fechaCreacion, concepto</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>- Formato de fecha: dd/MM/yyyy HH:mm:ss</td>
+</tr>
+</tbody>
+</table>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+  
+    </body></html>

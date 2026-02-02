@@ -8,6 +8,8 @@ namespace SHM.AppDomain.DTOs.Produccion;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
+/// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
 /// </summary>
 public class UpdateProduccionDto
 {
@@ -17,8 +19,14 @@ public class UpdateProduccionDto
     [MaxLength(8)]
     public string? CodigoProduccion { get; set; }
 
+    [MaxLength(10)]
+    public string? NumeroProduccion { get; set; }
+
     [MaxLength(5)]
     public string? TipoProduccion { get; set; }
+
+    [MaxLength(2)]
+    public string? TipoEntidadMedica { get; set; }
 
     [MaxLength(2)]
     public string? TipoMedico { get; set; }
@@ -31,6 +39,8 @@ public class UpdateProduccionDto
 
     [MaxLength(10)]
     public string? Periodo { get; set; }
+
+    public DateTime? FechaProduccion { get; set; }
 
     [MaxLength(30)]
     public string? EstadoProduccion { get; set; }
@@ -71,6 +81,24 @@ public class UpdateProduccionDto
     public DateTime? FacturaFechaEnvio { get; set; }
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
+
+    // Campos de Liquidacion
+    [MaxLength(10)]
+    public string? NumeroLiquidacion { get; set; }
+
+    [MaxLength(2)]
+    public string? CodigoLiquidacion { get; set; }
+
+    [MaxLength(10)]
+    public string? PeriodoLiquidacion { get; set; }
+
+    [MaxLength(10)]
+    public string? EstadoLiquidacion { get; set; }
+
+    public DateTime? FechaLiquidacion { get; set; }
+
+    [MaxLength(300)]
+    public string? DescripcionLiquidacion { get; set; }
 
     public int? Activo { get; set; }
 }

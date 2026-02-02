@@ -9,6 +9,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Actualizada llave compuesta en ExistsByKeyAsync</modified>
 /// </summary>
 public interface IProduccionRepository
 {
@@ -68,12 +69,14 @@ public interface IProduccionRepository
     Task<bool> ExistsAsync(int id);
 
     /// <summary>
-    /// Verifica si existe una produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    /// Verifica si existe una produccion con la llave compuesta
+    /// (IdSede, IdEntidadMedica, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-19</created>
+    /// <modified>ADG Antonio - 2026-01-31 - Ampliada llave compuesta</modified>
     /// </summary>
-    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
+    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion, string? numeroProduccion, string? tipoEntidadMedica);
 
     /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
@@ -131,5 +134,25 @@ public interface IProduccionRepository
     /// <param name="idEntidadMedica">ID de la entidad medica</param>
     /// <returns>Lista de datos por mes</returns>
     Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Actualiza los datos de liquidacion de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-31</created>
+    /// </summary>
+    Task<bool> UpdateLiquidacionByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string numeroProduccion,
+        string tipoEntidadMedica,
+        string numeroLiquidacion,
+        string codigoLiquidacion,
+        string periodoLiquidacion,
+        string estadoLiquidacion,
+        DateTime fechaLiquidacion,
+        string descripcionLiquidacion,
+        int idModificador);
 
 }
