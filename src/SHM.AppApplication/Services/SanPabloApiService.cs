@@ -147,7 +147,7 @@ public class SanPabloApiService : ISanPabloApiService
                 codigoSede, tipoEntidad, codigoEntidad);
 
             // Construir URL con parametros
-            var url = $"/api/HHMM/v1/ListarObtenerEntidad?Codigo={Uri.EscapeDataString(codigoSede)}&flgCIAMedica={Uri.EscapeDataString(tipoEntidad)}&codigoEntidad={Uri.EscapeDataString(codigoEntidad)}";
+            var url = $"/api/HHMM/v1/ObtenerEntidad?Codigo={Uri.EscapeDataString(codigoSede)}&flgCIAMedica={Uri.EscapeDataString(tipoEntidad)}&codigoEntidad={Uri.EscapeDataString(codigoEntidad)}";
 
             _logger.LogDebug("GetEntidadMedicaAsync url: {url}", url);
 
