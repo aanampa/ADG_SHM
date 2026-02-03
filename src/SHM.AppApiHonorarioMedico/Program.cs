@@ -3,6 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NLog;
 using NLog.Web;
 using SHM.AppApplication.Services;
+using SHM.AppDomain.DTOs.SanPabloApi;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
@@ -72,8 +73,17 @@ try
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
     builder.Services.AddScoped<IParametroService, ParametroService>();
 
-    builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
-    builder.Services.AddScoped<IParametroService, ParametroService>();
+    // Configuracion del API externo de San Pablo
+    builder.Services.Configure<SanPabloApiSettings>(
+        builder.Configuration.GetSection("SanPabloApi"));
+
+    // Registrar HttpClient y servicio para API San Pablo
+    builder.Services.AddHttpClient<ISanPabloApiService, SanPabloApiService>()
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            // Permitir certificados auto-firmados en desarrollo
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
 
     // Health Checks
     builder.Services.AddHealthChecks()

@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Transactions;
+using Microsoft.Extensions.Logging;
+using SHM.AppDomain.DTOs.EntidadMedica;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -11,25 +13,36 @@ namespace SHM.AppApplication.Services;
 /// Servicio para la creacion masiva de producciones a traves de interface.
 /// Resuelve codigos a IDs y crea las producciones en el sistema.
 /// Valida duplicados por llave compuesta y maneja transacciones.
+/// Si una entidad medica no existe localmente, la consulta del API externo de San Pablo y la registra.
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Nueva llave compuesta, quitado Concepto y liquidacion, formato fecha dd/MM/yyyy HH:mm:ss</modified>
+/// <modified>ADG Antonio - 2026-02-02 - Auto-registro de entidades medicas desde API San Pablo</modified>
 /// </summary>
 public class ProduccionInterfaceService : IProduccionInterfaceService
 {
     private readonly IProduccionRepository _produccionRepository;
     private readonly ISedeRepository _sedeRepository;
     private readonly IEntidadMedicaRepository _entidadMedicaRepository;
+    private readonly IEntidadMedicaService _entidadMedicaService;
+    private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly ILogger<ProduccionInterfaceService> _logger;
 
     public ProduccionInterfaceService(
         IProduccionRepository produccionRepository,
         ISedeRepository sedeRepository,
-        IEntidadMedicaRepository entidadMedicaRepository)
+        IEntidadMedicaRepository entidadMedicaRepository,
+        IEntidadMedicaService entidadMedicaService,
+        ISanPabloApiService sanPabloApiService,
+        ILogger<ProduccionInterfaceService> logger)
     {
         _produccionRepository = produccionRepository;
         _sedeRepository = sedeRepository;
         _entidadMedicaRepository = entidadMedicaRepository;
+        _entidadMedicaService = entidadMedicaService;
+        _sanPabloApiService = sanPabloApiService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -54,8 +67,26 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
 
             // Obtener IdEntidadMedica a partir del CodigoEntidad
             var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(createDto.CodigoEntidad);
+
+            // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
             if (entidadMedica == null)
-                throw new ArgumentException($"Entidad medica con codigo '{createDto.CodigoEntidad}' no encontrada");
+            {
+                _logger.LogInformation(
+                    "Entidad medica '{CodigoEntidad}' no encontrada localmente. Consultando API San Pablo...",
+                    createDto.CodigoEntidad);
+
+                entidadMedica = await GetOrCreateEntidadMedicaFromApiAsync(
+                    createDto.CodigoSede,
+                    createDto.TipoEntidadMedica,
+                    createDto.CodigoEntidad,
+                    idCreador);
+
+                if (entidadMedica == null)
+                {
+                    throw new ArgumentException(
+                        $"Entidad medica con codigo '{createDto.CodigoEntidad}' no encontrada localmente ni en el API de San Pablo");
+                }
+            }
 
             // Verificar si ya existe por llave compuesta
             var existe = await _produccionRepository.ExistsByKeyAsync(
@@ -223,5 +254,79 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Obtiene una entidad medica del API de San Pablo y la registra localmente si no existe.
+    /// </summary>
+    /// <param name="codigoSede">Codigo de la sede.</param>
+    /// <param name="tipoEntidad">Tipo de entidad (C=Compania, M=Medico).</param>
+    /// <param name="codigoEntidad">Codigo de la entidad medica.</param>
+    /// <param name="idCreador">ID del usuario creador.</param>
+    /// <returns>La entidad medica creada o null si no se pudo obtener.</returns>
+    private async Task<EntidadMedica?> GetOrCreateEntidadMedicaFromApiAsync(
+        string codigoSede,
+        string tipoEntidad,
+        string codigoEntidad,
+        int idCreador)
+    {
+        try
+        {
+            // Consultar el API de San Pablo
+            var entidadApi = await _sanPabloApiService.GetEntidadMedicaAsync(codigoSede, tipoEntidad, codigoEntidad);
+
+            if (entidadApi == null)
+            {
+                _logger.LogWarning(
+                    "Entidad medica '{CodigoEntidad}' no encontrada en API San Pablo",
+                    codigoEntidad);
+                return null;
+            }
+
+            // Crear la entidad medica localmente
+            // Mapeo de campos API San Pablo -> SHM:
+            // - Nombre -> RAZON_SOCIAL
+            // - Tipo_Entidad -> TIPO_ENTIDAD_MEDICA
+            // - Codigo_SAP -> CODIGO_ACREEDOR
+            // - Codigo_Correntista -> CODIGO_CORRIENTISTA
+            _logger.LogInformation(
+                "Registrando nueva entidad medica desde API San Pablo. Codigo: {Codigo}, Nombre: {Nombre}",
+                entidadApi.Codigo, entidadApi.Nombre);
+
+            var createDto = new CreateEntidadMedicaDto
+            {
+                CodigoEntidad = entidadApi.Codigo ?? codigoEntidad,
+                RazonSocial = entidadApi.Nombre,
+                Ruc = entidadApi.Ruc,
+                TipoEntidadMedica = entidadApi.Tipo_Entidad ?? tipoEntidad,
+                Direccion = entidadApi.Direccion,
+                CodigoAcreedor = entidadApi.Codigo_SAP,
+                CodigoCorrientista = entidadApi.Codigo_Correntista
+            };
+
+            var entidadCreada = await _entidadMedicaService.CreateEntidadMedicaAsync(createDto, idCreador);
+
+            if (entidadCreada == null)
+            {
+                _logger.LogError(
+                    "Error al crear entidad medica localmente. Codigo: {Codigo}",
+                    codigoEntidad);
+                return null;
+            }
+
+            _logger.LogInformation(
+                "Entidad medica registrada exitosamente. ID: {Id}, Codigo: {Codigo}",
+                entidadCreada.IdEntidadMedica, entidadCreada.CodigoEntidad);
+
+            // Obtener la entidad recien creada desde el repositorio usando el ID
+            return await _entidadMedicaRepository.GetByIdAsync(entidadCreada.IdEntidadMedica);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error al obtener/crear entidad medica desde API San Pablo. Codigo: {CodigoEntidad}",
+                codigoEntidad);
+            return null;
+        }
     }
 }
