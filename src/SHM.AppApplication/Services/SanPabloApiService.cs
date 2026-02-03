@@ -60,11 +60,18 @@ public class SanPabloApiService : ISanPabloApiService
         {
             _logger.LogInformation("Obteniendo nuevo token de API San Pablo");
 
+            _logger.LogInformation("- URL: {Url}", _settings.BaseUrl);
+            _logger.LogInformation("- Timeout (s): {Timeout}", _settings.TimeoutSeconds);
+            _logger.LogInformation("- Usuario: {Usuario}", _settings.Usuario);
+            _logger.LogInformation("- Password: {Password}",  _settings.Password.Length);
+
             var loginRequest = new SanPabloLoginRequestDto
             {
                 Usuario = _settings.Usuario,
                 Password = _settings.Password
             };
+
+            _logger.LogInformation("- paso 1");
 
             var content = new StringContent(
                 JsonSerializer.Serialize(loginRequest, _jsonOptions),
@@ -73,27 +80,35 @@ public class SanPabloApiService : ISanPabloApiService
 
             var response = await _httpClient.PostAsync("/api/Usuario/Login", content);
 
+            _logger.LogInformation("- paso 2");
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Error al obtener token de San Pablo. StatusCode: {StatusCode}", response.StatusCode);
                 return null;
             }
 
+            _logger.LogInformation("- paso 3");
+
             var responseContent = await response.Content.ReadAsStringAsync();
             _logger.LogDebug("Respuesta de login: {Response}", responseContent);
+            _logger.LogInformation("Respuesta de login: {Response}", responseContent);
+
+            _logger.LogInformation("- paso 4");
 
             var loginResponse = JsonSerializer.Deserialize<SanPabloLoginResponseDto>(responseContent, _jsonOptions);
 
-            if (loginResponse?.Success == true && !string.IsNullOrEmpty(loginResponse.Token))
+            if (!string.IsNullOrEmpty(loginResponse?.AccessToken))
             {
-                _cachedToken = loginResponse.Token;
+                _cachedToken = loginResponse.AccessToken;
                 // Token valido por 55 minutos (asumiendo expiracion de 1 hora)
                 _tokenExpiration = DateTime.Now.AddMinutes(55);
-                _logger.LogInformation("Token de San Pablo obtenido exitosamente");
+                _logger.LogInformation("Token de San Pablo obtenido exitosamente. Usuario: {Usuario}",
+                    loginResponse.UserInfo?.Usuario ?? "N/A");
                 return _cachedToken;
             }
 
-            _logger.LogWarning("Login a San Pablo fallido: {Message}", loginResponse?.Message);
+            _logger.LogWarning("Login a San Pablo fallido: No se recibio access_token en la respuesta");
             return null;
         }
         catch (HttpRequestException ex)
@@ -133,6 +148,9 @@ public class SanPabloApiService : ISanPabloApiService
 
             // Construir URL con parametros
             var url = $"/api/HHMM/v1/ListarObtenerEntidad?Codigo={Uri.EscapeDataString(codigoSede)}&flgCIAMedica={Uri.EscapeDataString(tipoEntidad)}&codigoEntidad={Uri.EscapeDataString(codigoEntidad)}";
+
+            _logger.LogDebug("GetEntidadMedicaAsync url: {url}", url);
+
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
