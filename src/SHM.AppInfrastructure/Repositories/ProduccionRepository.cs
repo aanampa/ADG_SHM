@@ -479,7 +479,7 @@ public class ProduccionRepository : IProduccionRepository
     /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize)
+        string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize)
     {
         using var connection = new OracleConnection(_connectionString);
 
@@ -496,6 +496,10 @@ public class ProduccionRepository : IProduccionRepository
         {
             whereClause += " AND p.ID_ENTIDAD_MEDICA = :IdEntidadMedica";
         }
+        if (idSede.HasValue && idSede.Value > 0)
+        {
+            whereClause += " AND p.ID_SEDE = :IdSede";
+        }
 
         // Query para obtener el total de registros
         var countSql = $@"
@@ -503,7 +507,7 @@ public class ProduccionRepository : IProduccionRepository
             FROM SHM_PRODUCCION p
             {whereClause}";
 
-        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Produccion = produccion, Estado = estado, IdEntidadMedica = idEntidadMedica });
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Produccion = produccion, Estado = estado, IdEntidadMedica = idEntidadMedica, IdSede = idSede });
 
         // Query principal con paginacion - Compatible con Oracle 11g (ROWNUM)
         var minRow = (pageNumber - 1) * pageSize;
@@ -579,6 +583,7 @@ public class ProduccionRepository : IProduccionRepository
             Produccion = produccion,
             Estado = estado,
             IdEntidadMedica = idEntidadMedica,
+            IdSede = idSede,
             MinRow = minRow,
             MaxRow = maxRow
         });

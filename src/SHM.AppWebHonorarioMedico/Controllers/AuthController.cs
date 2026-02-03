@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 using System.Security.Claims;
@@ -15,17 +16,20 @@ public class AuthController : Controller
     private readonly IConfiguration _configuration;
     private readonly IUsuarioService _usuarioService;
     private readonly IEmailService _emailService;
+    private readonly IUsuarioSedeRepository _usuarioSedeRepository;
 
     public AuthController(
         ILogger<AuthController> logger,
         IConfiguration configuration,
         IUsuarioService usuarioService,
-        IEmailService emailService)
+        IEmailService emailService,
+        IUsuarioSedeRepository usuarioSedeRepository)
     {
         _logger = logger;
         _configuration = configuration;
         _usuarioService = usuarioService;
         _emailService = emailService;
+        _usuarioSedeRepository = usuarioSedeRepository;
     }
 
     [HttpGet]
@@ -126,6 +130,11 @@ public class AuthController : Controller
                     return View(model);
                 }
 
+                // Obtener sede del usuario (prioridad: ES_ULTIMA_SEDE = 1, sino el primer registro)
+                var sedeDevInfo = await _usuarioSedeRepository.GetSedeSeleccionadaLoginAsync(usuarioDev.IdUsuario);
+                var idSedeDev = sedeDevInfo?.IdSede.ToString() ?? "0";
+                var nombreSedeDev = sedeDevInfo?.NombreSede ?? "";
+
                 // Crear Claims con datos reales del usuario
                 var devClaims = new List<Claim>
                 {
@@ -135,8 +144,8 @@ public class AuthController : Controller
                     new Claim("NombreUsuario", $"{usuarioDev.Nombres} {usuarioDev.ApellidoPaterno}".Trim()),
                     new Claim("IdUsuario", usuarioDev.IdUsuario.ToString()),
                     new Claim("Email", usuarioDev.Email ?? ""),
-                    new Claim("IdSede", "0"),
-                    new Claim("NombreSede", ""),
+                    new Claim("IdSede", idSedeDev),
+                    new Claim("NombreSede", nombreSedeDev),
                     new Claim("IdArea", "0"),
                     new Claim("NombreArea", "")
                 };
@@ -182,6 +191,11 @@ public class AuthController : Controller
                 return View(model);
             }
 
+            // Obtener sede del usuario (prioridad: ES_ULTIMA_SEDE = 1, sino el primer registro)
+            var sedeInfo = await _usuarioSedeRepository.GetSedeSeleccionadaLoginAsync(usuario.IdUsuario);
+            var idSede = sedeInfo?.IdSede.ToString() ?? "0";
+            var nombreSede = sedeInfo?.NombreSede ?? "";
+
             // Crear Claims para el usuario autenticado
             var userClaims = new List<Claim>
             {
@@ -191,8 +205,8 @@ public class AuthController : Controller
                 new Claim("NombreUsuario", $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim()),
                 new Claim("IdUsuario", usuario.IdUsuario.ToString()),
                 new Claim("Email", usuario.Email ?? ""),
-                new Claim("IdSede", "0"),
-                new Claim("NombreSede", ""),
+                new Claim("IdSede", idSede),
+                new Claim("NombreSede", nombreSede),
                 new Claim("IdArea", "0"),
                 new Claim("NombreArea", "")
             };

@@ -69,6 +69,7 @@ try
     builder.Services.AddScoped<IEntidadCuentaBancariaRepository, EntidadCuentaBancariaRepository>();
     builder.Services.AddScoped<IBancoRepository, BancoRepository>();
     builder.Services.AddScoped<ISedeRepository, SedeRepository>();
+    builder.Services.AddScoped<IUsuarioSedeRepository, UsuarioSedeRepository>();
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
     builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
     builder.Services.AddScoped<IArchivoRepository, ArchivoRepository>();

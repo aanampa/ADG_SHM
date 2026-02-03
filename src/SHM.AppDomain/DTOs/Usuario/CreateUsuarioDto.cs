@@ -50,4 +50,10 @@ public class CreateUsuarioDto
     public int? IdEntidadMedica { get; set; }
 
     public int? IdRol { get; set; }
+
+    /// <summary>
+    /// Lista de IDs de sedes asignadas al usuario interno.
+    /// Solo aplica para usuarios internos (TipoUsuario = "I").
+    /// </summary>
+    public List<int>? IdsSedesSeleccionadas { get; set; }
 }

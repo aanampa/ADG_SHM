@@ -85,6 +85,30 @@
             </div>
         </div>
         <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label for="IdsSedesSeleccionadas">Sedes <span class="text-danger">*</span></label>
+                    <select class="form-control select2-sedes" id="IdsSedesSeleccionadas" name="IdsSedesSeleccionadas" multiple="multiple" required style="width: 100%;">
+                        @foreach (var sede in Model.SedesDisponibles)
+                        {
+                            var isSelected = Model.IdsSedesSeleccionadas.Contains(int.Parse(sede.Value));
+                            if (isSelected)
+                            {
+                                <option value="@sede.Value" selected>@sede.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@sede.Value">@sede.Text</option>
+                            }
+                        }
+                    </select>
+                    <small class="form-text text-muted">
+                        Seleccione una o mas sedes a las que tendra acceso el usuario.
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="Activo">Estado <span class="text-danger">*</span></label>
@@ -113,3 +137,14 @@
         </button>
     </div>
 </form>
+
+<script>
+    $(document).ready(function() {
+        $('#IdsSedesSeleccionadas').select2({
+            placeholder: 'Seleccione las sedes',
+            allowClear: true,
+            dropdownParent: $('#modalContainer'),
+            width: '100%'
+        });
+    });
+</script>

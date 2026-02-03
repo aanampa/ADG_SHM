@@ -79,6 +79,22 @@
         <div class="row">
             <div class="col-md-12">
                 <div class="form-group">
+                    <label for="IdsSedesSeleccionadas">Sedes <span class="text-danger">*</span></label>
+                    <select class="form-control select2-sedes" id="IdsSedesSeleccionadas" name="IdsSedesSeleccionadas" multiple="multiple" required style="width: 100%;">
+                        @foreach (var sede in Model.SedesDisponibles)
+                        {
+                            <option value="@sede.Value">@sede.Text</option>
+                        }
+                    </select>
+                    <small class="form-text text-muted">
+                        Seleccione una o mas sedes a las que tendra acceso el usuario.
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
                     <div class="custom-control custom-checkbox">
                         <input type="checkbox" class="custom-control-input" id="EnviarCorreo" name="EnviarCorreo" checked>
                         <label class="custom-control-label" for="EnviarCorreo">
@@ -101,3 +117,14 @@
         </button>
     </div>
 </form>
+
+<script>
+    $(document).ready(function() {
+        $('#IdsSedesSeleccionadas').select2({
+            placeholder: 'Seleccione las sedes',
+            allowClear: true,
+            dropdownParent: $('#modalContainer'),
+            width: '100%'
+        });
+    });
+</script>

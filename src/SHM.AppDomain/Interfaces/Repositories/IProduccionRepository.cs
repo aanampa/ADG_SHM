@@ -84,11 +84,12 @@ public interface IProduccionRepository
     /// <param name="produccion">Filtro por codigo de produccion (opcional)</param>
     /// <param name="estado">Filtro por estado del proceso (opcional)</param>
     /// <param name="idEntidadMedica">Filtro por ID de Cia Medica (opcional)</param>
+    /// <param name="idSede">Filtro por ID de Sede del usuario logueado (opcional)</param>
     /// <param name="pageNumber">Numero de pagina</param>
     /// <param name="pageSize">Tamaño de pagina</param>
     /// <returns>Tupla con lista de producciones y total de registros</returns>
     Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize);
+        string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize);
 
     /// <summary>
     /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).

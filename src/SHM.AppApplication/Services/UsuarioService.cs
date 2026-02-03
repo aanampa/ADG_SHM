@@ -1,3 +1,4 @@
+using System.Transactions;
 using SHM.AppDomain.DTOs.Opcion;
 using SHM.AppDomain.DTOs.Usuario;
 using SHM.AppDomain.Entities;
@@ -15,10 +16,12 @@ namespace SHM.AppApplication.Services;
 public class UsuarioService : IUsuarioService
 {
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IUsuarioSedeRepository _usuarioSedeRepository;
 
-    public UsuarioService(IUsuarioRepository usuarioRepository)
+    public UsuarioService(IUsuarioRepository usuarioRepository, IUsuarioSedeRepository usuarioSedeRepository)
     {
         _usuarioRepository = usuarioRepository;
+        _usuarioSedeRepository = usuarioSedeRepository;
     }
 
     /// <summary>
@@ -393,14 +396,14 @@ public class UsuarioService : IUsuarioService
         }
 
         // Verificar si el email ya existe
-        if (!string.IsNullOrEmpty(createDto.Email))
-        {
-            var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
-            if (existeEmail != null)
-            {
-                return (false, "Ya existe un usuario con el mismo correo electronico", null);
-            }
-        }
+        // if (!string.IsNullOrEmpty(createDto.Email))
+        // {
+        //     var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
+        //     if (existeEmail != null)
+        //     {
+        //         return (false, "Ya existe un usuario con el mismo correo electronico", null);
+        //     }
+        // }
 
         // Generar clave aleatoria si no se proporciona
         var generatedPassword = string.IsNullOrEmpty(createDto.Password)
@@ -444,7 +447,8 @@ public class UsuarioService : IUsuarioService
     }
 
     /// <summary>
-    /// Crea un usuario interno con generacion automatica de clave
+    /// Crea un usuario interno con generacion automatica de clave.
+    /// Usa TransactionScope para garantizar consistencia entre SHM_SEG_USUARIO y SHM_SEG_USUARIO_SEDE.
     /// </summary>
     public async Task<(bool Success, string? ErrorMessage, string? GeneratedPassword)> CreateUsuarioInternoAsync(CreateUsuarioDto createDto, int idCreador, bool enviarCorreo)
     {
@@ -456,14 +460,14 @@ public class UsuarioService : IUsuarioService
         }
 
         // Verificar si el email ya existe
-        if (!string.IsNullOrEmpty(createDto.Email))
-        {
-            var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
-            if (existeEmail != null)
-            {
-                return (false, "Ya existe un usuario con el mismo correo electronico", null);
-            }
-        }
+        // if (!string.IsNullOrEmpty(createDto.Email))
+        // {
+        //     var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
+        //     if (existeEmail != null)
+        //     {
+        //         return (false, "Ya existe un usuario con el mismo correo electronico", null);
+        //     }
+        // }
 
         // Generar clave aleatoria si no se proporciona
         var generatedPassword = string.IsNullOrEmpty(createDto.Password)
@@ -489,11 +493,43 @@ public class UsuarioService : IUsuarioService
             Activo = 1
         };
 
+        // Usar TransactionScope para operaciones en multiples tablas
+        using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
         var idUsuario = await _usuarioRepository.CreateAsync(usuario);
+
+        // Asignar sedes al usuario interno si se proporcionaron
+        if (createDto.IdsSedesSeleccionadas != null && createDto.IdsSedesSeleccionadas.Count > 0)
+        {
+            await _usuarioSedeRepository.UpdateSedesUsuarioAsync(idUsuario, createDto.IdsSedesSeleccionadas, idCreador);
+        }
+
+        // Commit de la transaccion - si no se llama, se hace rollback automatico
+        transactionScope.Complete();
 
         // TODO: Si enviarCorreo es true, enviar email con credenciales
 
         return (true, null, generatedPassword);
+    }
+
+    /// <summary>
+    /// Obtiene los IDs de sedes asignadas a un usuario interno.
+    /// </summary>
+    public async Task<IEnumerable<int>> GetSedesUsuarioInternoAsync(int idUsuario)
+    {
+        return await _usuarioSedeRepository.GetSedeIdsByUsuarioIdAsync(idUsuario);
+    }
+
+    /// <summary>
+    /// Actualiza las sedes de un usuario interno.
+    /// </summary>
+    public async Task<bool> UpdateSedesUsuarioInternoAsync(int idUsuario, List<int>? idsSedesSeleccionadas, int idModificador)
+    {
+        if (idsSedesSeleccionadas == null)
+        {
+            idsSedesSeleccionadas = new List<int>();
+        }
+        return await _usuarioSedeRepository.UpdateSedesUsuarioAsync(idUsuario, idsSedesSeleccionadas, idModificador);
     }
 
     /// <summary>

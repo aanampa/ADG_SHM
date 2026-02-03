@@ -70,7 +70,19 @@
     </div>
 </div>
 
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--bootstrap4 .select2-selection--multiple {
+            min-height: calc(2.25rem + 2px) !important;
+        }
+    </style>
+}
+
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
     <script>
         let currentPage = 1;
         const pageSize = 10;
@@ -178,6 +190,13 @@
                 return;
             }
 
+            // Obtener sedes seleccionadas del Select2
+            var sedesSeleccionadas = $('#IdsSedesSeleccionadas').val();
+            if (!sedesSeleccionadas || sedesSeleccionadas.length === 0) {
+                showToast('Debe seleccionar al menos una sede', 'error');
+                return;
+            }
+
             var formData = {
                 login: document.getElementById('Login').value,
                 email: document.getElementById('Email').value,
@@ -187,7 +206,8 @@
                 numeroDocumento: document.getElementById('NumeroDocumento').value,
                 celular: document.getElementById('Celular').value,
                 idRol: document.getElementById('IdRol').value || null,
-                enviarCorreo: document.getElementById('EnviarCorreo').checked
+                enviarCorreo: document.getElementById('EnviarCorreo').checked,
+                idsSedesSeleccionadas: sedesSeleccionadas.map(Number)
             };
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
@@ -228,6 +248,13 @@
                 return;
             }
 
+            // Obtener sedes seleccionadas del Select2
+            var sedesSeleccionadas = $('#IdsSedesSeleccionadas').val();
+            if (!sedesSeleccionadas || sedesSeleccionadas.length === 0) {
+                showToast('Debe seleccionar al menos una sede', 'error');
+                return;
+            }
+
             var formData = {
                 guidRegistro: document.getElementById('GuidRegistro').value,
                 login: document.getElementById('Login').value,
@@ -238,7 +265,8 @@
                 numeroDocumento: document.getElementById('NumeroDocumento').value,
                 celular: document.getElementById('Celular').value,
                 idRol: document.getElementById('IdRol').value || null,
-                activo: parseInt(document.getElementById('Activo').value)
+                activo: parseInt(document.getElementById('Activo').value),
+                idsSedesSeleccionadas: sedesSeleccionadas.map(Number)
             };
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;

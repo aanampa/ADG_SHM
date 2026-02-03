@@ -70,6 +70,12 @@ public class UsuarioInternoCreateViewModel
     public bool EnviarCorreo { get; set; } = true;
 
     public List<SelectListItem> Roles { get; set; } = new();
+
+    [Required(ErrorMessage = "Debe seleccionar al menos una sede")]
+    [Display(Name = "Sedes")]
+    public List<int> IdsSedesSeleccionadas { get; set; } = new();
+
+    public List<SelectListItem> SedesDisponibles { get; set; } = new();
 }
 
 public class UsuarioInternoEditViewModel
@@ -118,6 +124,12 @@ public class UsuarioInternoEditViewModel
     public int Activo { get; set; } = 1;
 
     public List<SelectListItem> Roles { get; set; } = new();
+
+    [Required(ErrorMessage = "Debe seleccionar al menos una sede")]
+    [Display(Name = "Sedes")]
+    public List<int> IdsSedesSeleccionadas { get; set; } = new();
+
+    public List<SelectListItem> SedesDisponibles { get; set; } = new();
 }
 
 public class UsuarioInternoDeleteViewModel

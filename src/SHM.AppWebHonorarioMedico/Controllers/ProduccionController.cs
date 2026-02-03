@@ -87,13 +87,17 @@ public class ProduccionController : Controller
     /// <created>2025-01-20</created>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
+    /// <modified>ADG Vladimir D - 2026-02-02 - Agregado filtro interno por IdSede del usuario logueado</modified>
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetList(string? produccion, string? estado, int? idEntidadMedica, int pageNumber = 1, int pageSize = 10)
     {
         try
         {
-            var (items, totalCount) = await _produccionService.GetPaginatedListAsync(produccion, estado, idEntidadMedica, pageNumber, pageSize);
+            // Obtener IdSede del usuario logueado desde los claims
+            var idSede = GetCurrentUserIdSede();
+
+            var (items, totalCount) = await _produccionService.GetPaginatedListAsync(produccion, estado, idEntidadMedica, idSede, pageNumber, pageSize);
 
             var model = new ProduccionListViewModel
             {
@@ -396,5 +400,15 @@ public class ProduccionController : Controller
             return idUsuario;
         }
         return 0;
+    }
+
+    private int? GetCurrentUserIdSede()
+    {
+        var sedeIdClaim = User.FindFirstValue("IdSede");
+        if (!string.IsNullOrEmpty(sedeIdClaim) && int.TryParse(sedeIdClaim, out int idSede) && idSede > 0)
+        {
+            return idSede;
+        }
+        return null;
     }
 }

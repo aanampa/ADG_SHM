@@ -15,17 +15,20 @@ public class UsuarioController : Controller
     private readonly IUsuarioService _usuarioService;
     private readonly IRolService _rolService;
     private readonly IEntidadMedicaService _entidadMedicaService;
+    private readonly ISedeService _sedeService;
 
     public UsuarioController(
         ILogger<UsuarioController> logger,
         IUsuarioService usuarioService,
         IRolService rolService,
-        IEntidadMedicaService entidadMedicaService)
+        IEntidadMedicaService entidadMedicaService,
+        ISedeService sedeService)
     {
         _logger = logger;
         _usuarioService = usuarioService;
         _rolService = rolService;
         _entidadMedicaService = entidadMedicaService;
+        _sedeService = sedeService;
     }
 
     /// <summary>
@@ -502,12 +505,19 @@ public class UsuarioController : Controller
     public async Task<IActionResult> GetCreateInternoModal()
     {
         var roles = await _rolService.GetAllRolesAsync();
+        var sedes = await _sedeService.GetAllSedesAsync();
+
         var model = new UsuarioInternoCreateViewModel
         {
             Roles = roles.Where(r => r.Activo == 1).Select(r => new SelectListItem
             {
                 Value = r.IdRol.ToString(),
                 Text = r.Descripcion
+            }).ToList(),
+            SedesDisponibles = sedes.Where(s => s.Activo == 1).Select(s => new SelectListItem
+            {
+                Value = s.IdSede.ToString(),
+                Text = s.Nombre
             }).ToList()
         };
 
@@ -547,7 +557,8 @@ public class UsuarioController : Controller
                 NumeroDocumento = model.NumeroDocumento,
                 Celular = model.Celular,
                 IdEntidadMedica = null, // Usuario interno no tiene entidad medica
-                IdRol = model.IdRol
+                IdRol = model.IdRol,
+                IdsSedesSeleccionadas = model.IdsSedesSeleccionadas
             };
 
             var (success, errorMessage, generatedPassword) = await _usuarioService.CreateUsuarioInternoAsync(createDto, idCreador, model.EnviarCorreo);
@@ -590,6 +601,9 @@ public class UsuarioController : Controller
             }
 
             var roles = await _rolService.GetAllRolesAsync();
+            var sedes = await _sedeService.GetAllSedesAsync();
+            var sedesUsuario = await _usuarioService.GetSedesUsuarioInternoAsync(usuario.IdUsuario);
+            var sedesUsuarioList = sedesUsuario.ToList();
 
             var model = new UsuarioInternoEditViewModel
             {
@@ -608,7 +622,13 @@ public class UsuarioController : Controller
                     Value = r.IdRol.ToString(),
                     Text = r.Descripcion,
                     Selected = r.IdRol == usuario.IdRol
-                }).ToList()
+                }).ToList(),
+                SedesDisponibles = sedes.Where(s => s.Activo == 1).Select(s => new SelectListItem
+                {
+                    Value = s.IdSede.ToString(),
+                    Text = s.Nombre
+                }).ToList(),
+                IdsSedesSeleccionadas = sedesUsuarioList
             };
 
             return PartialView("_EditInternoModal", model);
@@ -658,7 +678,8 @@ public class UsuarioController : Controller
                 Celular = model.Celular,
                 IdEntidadMedica = null, // Usuario interno no tiene entidad medica
                 IdRol = model.IdRol,
-                Activo = model.Activo
+                Activo = model.Activo,
+                IdsSedesSeleccionadas = model.IdsSedesSeleccionadas
             };
 
             var result = await _usuarioService.UpdateUsuarioAsync(usuario.IdUsuario, updateDto, idModificador);
@@ -666,6 +687,9 @@ public class UsuarioController : Controller
             {
                 return Json(new { success = false, message = "No se pudo actualizar el usuario" });
             }
+
+            // Actualizar sedes del usuario interno
+            await _usuarioService.UpdateSedesUsuarioInternoAsync(usuario.IdUsuario, model.IdsSedesSeleccionadas, idModificador);
 
             _logger.LogInformation("Usuario interno actualizado: {Login} por usuario {IdUsuario}", model.Login, idModificador);
             return Json(new { success = true, message = "Usuario actualizado exitosamente" });
