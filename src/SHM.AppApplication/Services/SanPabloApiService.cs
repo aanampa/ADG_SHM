@@ -160,12 +160,26 @@ public class SanPabloApiService : ISanPabloApiService
 
             var entidadResponse = JsonSerializer.Deserialize<SanPabloEntidadMedicaResponseDto>(responseContent, _jsonOptions);
 
-            if (entidadResponse?.Success == true && entidadResponse.Data != null)
+            if (entidadResponse?.IsSuccess == true && entidadResponse.Data != null && entidadResponse.Data.Count > 0)
             {
+                // Buscar la entidad por codigo en el array de resultados
+                var entidad = entidadResponse.Data.FirstOrDefault(e =>
+                    e.CODIGO?.Equals(codigoEntidad, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (entidad != null)
+                {
+                    _logger.LogInformation(
+                        "Entidad medica encontrada en San Pablo. Codigo: {Codigo}, Nombre: {Nombre}",
+                        entidad.CODIGO, entidad.NOMBRE);
+                    return entidad;
+                }
+
+                // Si no se encuentra por codigo exacto, tomar el primer resultado
+                entidad = entidadResponse.Data.First();
                 _logger.LogInformation(
-                    "Entidad medica encontrada en San Pablo. Codigo: {Codigo}, Nombre: {Nombre}",
-                    entidadResponse.Data.Codigo, entidadResponse.Data.Nombre);
-                return entidadResponse.Data;
+                    "Entidad medica encontrada en San Pablo (primer resultado). Codigo: {Codigo}, Nombre: {Nombre}",
+                    entidad.CODIGO, entidad.NOMBRE);
+                return entidad;
             }
 
             _logger.LogWarning(

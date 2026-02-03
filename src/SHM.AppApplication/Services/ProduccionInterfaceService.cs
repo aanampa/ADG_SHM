@@ -285,23 +285,26 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
 
             // Crear la entidad medica localmente
             // Mapeo de campos API San Pablo -> SHM:
-            // - Nombre -> RAZON_SOCIAL
-            // - Tipo_Entidad -> TIPO_ENTIDAD_MEDICA
-            // - Codigo_SAP -> CODIGO_ACREEDOR
-            // - Codigo_Correntista -> CODIGO_CORRIENTISTA
+            // - CODIGO -> CODIGO_ENTIDAD (CodigoEntidad)
+            // - CODIGO_TIPOENTIDAD -> TIPO_ENTIDAD_MEDICA (TipoEntidadMedica)
+            // - NOMBRE -> RAZON_SOCIAL (RazonSocial)
+            // - RUC -> RUC (Ruc)
+            // - DIRECCION -> DIRECCION (Direccion)
+            // - CODIGO_SAP -> CODIGO_ACREEDOR (CodigoAcreedor)
+            // - CODIGO_CORRENTISTA -> CODIGO_CORRIENTISTA (CodigoCorrientista)
             _logger.LogInformation(
                 "Registrando nueva entidad medica desde API San Pablo. Codigo: {Codigo}, Nombre: {Nombre}",
-                entidadApi.Codigo, entidadApi.Nombre);
+                entidadApi.CODIGO, entidadApi.NOMBRE);
 
             var createDto = new CreateEntidadMedicaDto
             {
-                CodigoEntidad = entidadApi.Codigo ?? codigoEntidad,
-                RazonSocial = entidadApi.Nombre,
-                Ruc = entidadApi.Ruc,
-                TipoEntidadMedica = entidadApi.Tipo_Entidad ?? tipoEntidad,
-                Direccion = entidadApi.Direccion,
-                CodigoAcreedor = entidadApi.Codigo_SAP,
-                CodigoCorrientista = entidadApi.Codigo_Correntista
+                CodigoEntidad = entidadApi.CODIGO ?? codigoEntidad,
+                RazonSocial = entidadApi.NOMBRE,
+                Ruc = entidadApi.RUC,
+                TipoEntidadMedica = entidadApi.CODIGO_TIPOENTIDAD ?? tipoEntidad,
+                Direccion = entidadApi.DIRECCION,
+                CodigoAcreedor = entidadApi.CODIGO_SAP,
+                CodigoCorrientista = entidadApi.CODIGO_CORRENTISTA
             };
 
             var entidadCreada = await _entidadMedicaService.CreateEntidadMedicaAsync(createDto, idCreador);

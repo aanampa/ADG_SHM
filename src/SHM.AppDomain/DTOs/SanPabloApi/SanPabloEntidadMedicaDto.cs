@@ -5,37 +5,42 @@ namespace SHM.AppDomain.DTOs.SanPabloApi;
 /// Mapea los campos que devuelve el endpoint ListarObtenerEntidad.
 ///
 /// Mapeo de campos API San Pablo -> SHM:
-/// - Tipo_Entidad -> TIPO_ENTIDAD_MEDICA
-/// - Nombre -> RAZON_SOCIAL
-/// - Ruc -> RUC
-/// - Direccion -> DIRECCION
-/// - Codigo_SAP -> CODIGO_ACREEDOR
-/// - Codigo_Correntista -> CODIGO_CORRIENTISTA
+/// - CODIGO -> CODIGO_ENTIDAD (CodigoEntidad)
+/// - CODIGO_TIPOENTIDAD -> TIPO_ENTIDAD_MEDICA (TipoEntidadMedica)
+/// - NOMBRE -> RAZON_SOCIAL (RazonSocial)
+/// - RUC -> RUC (Ruc)
+/// - DIRECCION -> DIRECCION (Direccion)
+/// - CODIGO_SAP -> CODIGO_ACREEDOR (CodigoAcreedor)
+/// - CODIGO_CORRENTISTA -> CODIGO_CORRIENTISTA (CodigoCorrientista)
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-02-02</created>
-/// <modified>ADG Antonio - 2026-02-02 - Agregado CodigoSap y CodigoCorrientista</modified>
+/// <modified>ADG Antonio - 2026-02-02 - Actualizado segun nueva estructura del API</modified>
 /// </summary>
 public class SanPabloEntidadMedicaDto
 {
-    public string? Codigo { get; set; }
-    public string? Nombre { get; set; }
-    public string? Ruc { get; set; }
-    public string? Tipo_Entidad { get; set; }
-    public string? Direccion { get; set; }
-    public string? Codigo_SAP { get; set; }
-    public string? Codigo_Correntista { get; set; }
+    public string? CODIGO { get; set; }
+    public string? CODIGO_TIPOENTIDAD { get; set; }
+    public string? TIPO_ENTIDAD { get; set; }
+    public string? NOMBRE { get; set; }
+    public string? RUC { get; set; }
+    public string? DIRECCION { get; set; }
+    public string? CODIGO_SAP { get; set; }
+    public string? CODIGO_CORRENTISTA { get; set; }
 }
 
 /// <summary>
 /// DTO para la respuesta del endpoint ListarObtenerEntidad del API de San Pablo.
+/// La respuesta contiene IsSuccess, Title, Message y Data como array de entidades.
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-02-02</created>
+/// <modified>ADG Antonio - 2026-02-02 - Data es ahora una lista de entidades</modified>
 /// </summary>
 public class SanPabloEntidadMedicaResponseDto
 {
-    public bool Success { get; set; }
+    public bool IsSuccess { get; set; }
+    public string? Title { get; set; }
     public string? Message { get; set; }
-    public SanPabloEntidadMedicaDto? Data { get; set; }
+    public List<SanPabloEntidadMedicaDto>? Data { get; set; }
 }
