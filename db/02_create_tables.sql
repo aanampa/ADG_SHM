@@ -26,7 +26,8 @@ CREATE TABLE SHM_ENTIDAD_MEDICA(
   TELEFONO Varchar2(20 ),
   CELULAR Varchar2(20 ),
   DIRECCION NVarchar2(300),
-  CODIGO_ACREEDOR Varchar2(100 ),
+  CODIGO_ACREEDOR Varchar2(20 ),
+  CODIGO_CORRIENTISTA Varchar2(20 ),
   GUID_REGISTRO Varchar2(100 ),
   ACTIVO Number(1),
   ID_CREADOR Number,
@@ -394,32 +395,20 @@ ALTER TABLE SHM_PARAMETRO ADD CONSTRAINT PK_SHM_PARAMETRO PRIMARY KEY (ID_PARAME
 
 CREATE TABLE SHM_EMAIL_LOG (
     ID_EMAIL_LOG         NUMBER NOT NULL,
-
-    -- Informacion del destinatario
     EMAIL_DESTINO        VARCHAR2(200) NOT NULL,
     NOMBRE_DESTINO       VARCHAR2(200),
-
-    -- Informacion del mensaje
     ASUNTO               VARCHAR2(500) NOT NULL,
     TIPO_EMAIL           VARCHAR2(50) NOT NULL,
     CONTENIDO            CLOB,
     ES_HTML              NUMBER(1) DEFAULT 0,
-
-    -- Estado del envio
     ESTADO               VARCHAR2(20) NOT NULL,
     MENSAJE_ERROR        VARCHAR2(4000),
-
-    -- Referencia opcional a entidades relacionadas
     ID_USUARIO           NUMBER,
     ID_ENTIDAD_MEDICA    NUMBER,
     ENTIDAD_REFERENCIA   VARCHAR2(50),
     ID_REFERENCIA        NUMBER,
-
-    -- Informacion tecnica
     SERVIDOR_SMTP        VARCHAR2(100),
     IP_ORIGEN            VARCHAR2(50),
-
-    -- Campos de auditoria estandar
     GUID_REGISTRO        VARCHAR2(100) NOT NULL,
     ACTIVO               NUMBER(1) DEFAULT 1,
     ID_CREADOR           NUMBER,
