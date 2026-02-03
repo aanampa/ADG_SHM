@@ -49,4 +49,10 @@ public class UpdateUsuarioDto
     public int? IdRol { get; set; }
 
     public int? Activo { get; set; }
+
+    /// <summary>
+    /// Lista de IDs de sedes asignadas al usuario interno.
+    /// Solo aplica para usuarios internos (TipoUsuario = "I").
+    /// </summary>
+    public List<int>? IdsSedesSeleccionadas { get; set; }
 }

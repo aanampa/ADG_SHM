@@ -7,7 +7,7 @@
 | **Nombre** | SHM - Sistema de Honorarios Medicos |
 | **Cliente** | Grupo San Pablo |
 | **Framework** | ASP.NET Core 8 MVC |
-| **Base de Datos** | Oracle 21c XE (Docker) |
+| **Base de Datos** | Oracle 11g |
 | **ORM** | Dapper |
 | **Arquitectura** | Clean Architecture |
 

@@ -262,11 +262,12 @@ public class ProduccionService : IProduccionService
     /// <created>2025-01-20</created>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
+    /// <modified>ADG Vladimir D - 2026-02-02 - Agregado filtro por IdSede del usuario logueado</modified>
     /// </summary>
     public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize)
+        string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize)
     {
-        return await _produccionRepository.GetPaginatedListAsync(produccion, estado, idEntidadMedica, pageNumber, pageSize);
+        return await _produccionRepository.GetPaginatedListAsync(produccion, estado, idEntidadMedica, idSede, pageNumber, pageSize);
     }
 
     /// <summary>
