@@ -72,6 +72,12 @@ try
     builder.Services.AddScoped<IProduccionInterfaceService, ProduccionInterfaceService>();
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
     builder.Services.AddScoped<IParametroService, ParametroService>();
+    builder.Services.AddScoped<IOrdenPagoRepository, OrdenPagoRepository>();
+    builder.Services.AddScoped<IOrdenPagoService, OrdenPagoService>();
+    builder.Services.AddScoped<IOrdenPagoLiquidacionRepository, OrdenPagoLiquidacionRepository>();
+    builder.Services.AddScoped<IOrdenPagoLiquidacionService, OrdenPagoLiquidacionService>();
+    builder.Services.AddScoped<IOrdenPagoAprobacionRepository, OrdenPagoAprobacionRepository>();
+    builder.Services.AddScoped<IOrdenPagoAprobacionService, OrdenPagoAprobacionService>();
 
     // Configuracion del API externo de San Pablo
     builder.Services.Configure<SanPabloApiSettings>(

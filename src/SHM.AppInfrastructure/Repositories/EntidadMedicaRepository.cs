@@ -42,7 +42,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
-                CODIGO_CORRIENTISTA as CodigoCorrientista,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -73,7 +73,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
-                CODIGO_CORRIENTISTA as CodigoCorrientista,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -104,7 +104,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
-                CODIGO_CORRIENTISTA as CodigoCorrientista,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -135,7 +135,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
-                CODIGO_CORRIENTISTA as CodigoCorrientista,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -166,7 +166,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO,
                 CELULAR,
                 CODIGO_ACREEDOR,
-                CODIGO_CORRIENTISTA,
+                CODIGO_CORRENTISTA,
                 DIRECCION,
                 GUID_REGISTRO,
                 ACTIVO,
@@ -181,7 +181,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 :Telefono,
                 :Celular,
                 :CodigoAcreedor,
-                :CodigoCorrientista,
+                :CodigoCorrentista,
                 :Direccion,
                 SYS_GUID(),
                 1,
@@ -198,7 +198,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
         parameters.Add("Telefono", entidadMedica.Telefono);
         parameters.Add("Celular", entidadMedica.Celular);
         parameters.Add("CodigoAcreedor", entidadMedica.CodigoAcreedor);
-        parameters.Add("CodigoCorrientista", entidadMedica.CodigoCorrientista);
+        parameters.Add("CodigoCorrentista", entidadMedica.CodigoCorrentista);
         parameters.Add("Direccion", entidadMedica.Direccion);
         parameters.Add("IdCreador", entidadMedica.IdCreador);
         parameters.Add("IdEntidadMedica", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
@@ -225,7 +225,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO = :Telefono,
                 CELULAR = :Celular,
                 CODIGO_ACREEDOR = :CodigoAcreedor,
-                CODIGO_CORRIENTISTA = :CodigoCorrientista,
+                CODIGO_CORRENTISTA = :CodigoCorrentista,
                 DIRECCION = :Direccion,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
@@ -242,7 +242,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
             entidadMedica.Telefono,
             entidadMedica.Celular,
             entidadMedica.CodigoAcreedor,
-            entidadMedica.CodigoCorrientista,
+            entidadMedica.CodigoCorrentista,
             entidadMedica.Direccion,
             entidadMedica.Activo,
             entidadMedica.IdModificador
@@ -301,7 +301,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
-                CODIGO_CORRIENTISTA as CodigoCorrientista,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -353,7 +353,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                         TELEFONO as Telefono,
                         CELULAR as Celular,
                         CODIGO_ACREEDOR as CodigoAcreedor,
-                        CODIGO_CORRIENTISTA as CodigoCorrientista,
+                        CODIGO_CORRENTISTA as CodigoCorrentista,
                         DIRECCION as Direccion,
                         GUID_REGISTRO as GuidRegistro,
                         ACTIVO as Activo,

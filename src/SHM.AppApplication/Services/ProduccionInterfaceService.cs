@@ -291,7 +291,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
             // - RUC -> RUC (Ruc)
             // - DIRECCION -> DIRECCION (Direccion)
             // - CODIGO_SAP -> CODIGO_ACREEDOR (CodigoAcreedor)
-            // - CODIGO_CORRENTISTA -> CODIGO_CORRIENTISTA (CodigoCorrientista)
+            // - CODIGO_CORRENTISTA -> CODIGO_CORRIENTISTA (CodigoCorrentista)
             _logger.LogInformation(
                 "Registrando nueva entidad medica desde API San Pablo. Codigo: {Codigo}, Nombre: {Nombre}",
                 entidadApi.CODIGO, entidadApi.NOMBRE);
@@ -304,7 +304,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 TipoEntidadMedica = entidadApi.CODIGO_TIPOENTIDAD ?? tipoEntidad,
                 Direccion = entidadApi.DIRECCION,
                 CodigoAcreedor = entidadApi.CODIGO_SAP,
-                CodigoCorrientista = entidadApi.CODIGO_CORRENTISTA
+                CodigoCorrentista = entidadApi.CODIGO_CORRENTISTA
             };
 
             var entidadCreada = await _entidadMedicaService.CreateEntidadMedicaAsync(createDto, idCreador);

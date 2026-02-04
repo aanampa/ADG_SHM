@@ -17,7 +17,7 @@ public class EntidadMedica
     public string? Telefono { get; set; }
     public string? Celular { get; set; }
     public string? CodigoAcreedor { get; set; }
-    public string? CodigoCorrientista { get; set; }
+    public string? CodigoCorrentista { get; set; }
     public string? Direccion { get; set; }
     public string GuidRegistro { get; set; } = string.Empty;
     public int Activo { get; set; }

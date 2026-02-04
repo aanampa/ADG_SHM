@@ -70,7 +70,7 @@ public class EntidadMedicaService : IEntidadMedicaService
             Telefono = createDto.Telefono,
             Celular = createDto.Celular,
             CodigoAcreedor = createDto.CodigoAcreedor,
-            CodigoCorrientista = createDto.CodigoCorrientista,
+            CodigoCorrentista = createDto.CodigoCorrentista,
             Direccion = createDto.Direccion,
             IdCreador = idCreador,
             Activo = 1
@@ -112,8 +112,8 @@ public class EntidadMedicaService : IEntidadMedicaService
         if (updateDto.CodigoAcreedor != null)
             entidadExistente.CodigoAcreedor = updateDto.CodigoAcreedor;
 
-        if (updateDto.CodigoCorrientista != null)
-            entidadExistente.CodigoCorrientista = updateDto.CodigoCorrientista;
+        if (updateDto.CodigoCorrentista != null)
+            entidadExistente.CodigoCorrentista = updateDto.CodigoCorrentista;
 
         if (updateDto.Direccion != null)
             entidadExistente.Direccion = updateDto.Direccion;
@@ -169,7 +169,7 @@ public class EntidadMedicaService : IEntidadMedicaService
             Telefono = entidad.Telefono,
             Celular = entidad.Celular,
             CodigoAcreedor = entidad.CodigoAcreedor,
-            CodigoCorrientista = entidad.CodigoCorrientista,
+            CodigoCorrentista = entidad.CodigoCorrentista,
             Direccion = entidad.Direccion,
             GuidRegistro = entidad.GuidRegistro,
             Activo = entidad.Activo,
