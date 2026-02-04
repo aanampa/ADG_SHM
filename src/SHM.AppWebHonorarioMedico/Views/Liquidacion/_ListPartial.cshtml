@@ -1,0 +1,95 @@
+@model SHM.AppWebHonorarioMedico.Models.LiquidacionListViewModel
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
+        <thead>
+            <tr>
+                <th style="width: 100px;">Liquidacion</th>
+                <th>Descripcion</th>
+                <th style="width: 100px;">Tipo Liq.</th>
+                <th style="width: 100px;">Periodo Liq.</th>
+                <th style="width: 100px;">Estado Liq.</th>
+                <th>Cia Medica</th>
+                <th style="width: 120px;">Banco</th>
+                <th style="width: 100px;" class="text-right">Total S/.</th>
+                <th style="width: 120px;">Comprobante</th>
+                <th style="width: 80px;" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Any())
+            {
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@(item.CodigoLiquidacion ?? "-")</td>
+                        <td>@(item.DescripcionLiquidacion ?? "-")</td>
+                        <td>@(item.DesTipoProduccion ?? "-")</td>
+                        <td>@(item.PeriodoLiquidacion ?? "-")</td>
+                        <td>@(item.EstadoLiquidacion ?? "-")</td>
+                        <td>@item.RazonSocial</td>
+                        <td>@(item.NombreBanco ?? "-")</td>
+                        <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                        <td>@(item.ComprobanteFactura ?? "-")</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-info btn-xs" onclick="verDetalle('@item.GuidRegistro')"
+                                title="Ver Detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No se encontraron liquidaciones</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <div class="card-footer clearfix">
+        <div class="float-left">
+            <small class="text-muted">
+                Mostrando @((Model.PageNumber - 1) * Model.PageSize + 1) -
+                @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)) de @Model.TotalCount registros
+            </small>
+        </div>
+        <ul class="pagination pagination-sm m-0 float-right">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" href="javascript:void(0)" onclick="@(Model.PageNumber > 1 ? $"loadList({Model.PageNumber - 1})" : "")">
+                    Anterior
+                </a>
+            </li>
+
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                var pageNum = i;
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@pageNum)">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="javascript:void(0)" onclick="@(Model.PageNumber < Model.TotalPages ? $"loadList({Model.PageNumber + 1})" : "")">
+                    Siguiente
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+else if (Model.TotalCount > 0)
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Mostrando @Model.TotalCount registro(s)
+        </small>
+    </div>
+}

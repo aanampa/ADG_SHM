@@ -75,6 +75,7 @@ try
     builder.Services.AddScoped<IArchivoRepository, ArchivoRepository>();
     builder.Services.AddScoped<IArchivoComprobanteRepository, ArchivoComprobanteRepository>();
     builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
+    builder.Services.AddScoped<ILiquidacionRepository, LiquidacionRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -91,6 +92,7 @@ try
     builder.Services.AddScoped<IProduccionService, ProduccionService>();
     builder.Services.AddScoped<IArchivoService, ArchivoService>();
     builder.Services.AddScoped<IArchivoComprobanteService, ArchivoComprobanteService>();
+    builder.Services.AddScoped<ILiquidacionService, LiquidacionService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));

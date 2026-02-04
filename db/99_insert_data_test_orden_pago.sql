@@ -1,0 +1,112 @@
+ 
+-- FACTURAS LIQUIDADAS : ACTUALIZACION DE ESTADO  Y NUMERACION DE FACTURAS EN SHM_PRODUCCION
+UPDATE SHM_PRODUCCION 
+SET NUMERO_PRODUCCION = LPAD(TRUNC(DBMS_RANDOM.VALUE(0,1000)), 5, '0'),
+
+
+UPDATE SHM_PRODUCCION
+ SET ESTADO = 'FACTURA_LIQUIDADA' 
+WHERE ESTADO = 'FACTURA_PENDIENTE'
+ AND ID_PRODUCCION < 35
+
+ UPDATE SHM_PRODUCCION
+ SET SERIE = 'F005',
+ 	 NUMERO = LPAD(TRUNC(DBMS_RANDOM.VALUE(0,1000)), 7, '0')
+WHERE ESTADO = 'FACTURA_LIQUIDADA'
+
+UPDATE SHM_PRODUCCION
+SET 
+    -- NUMERO_LIQUIDACION: Convierte NUMERO_PRODUCCION a número, suma 15, y vuelve a VARCHAR2
+    NUMERO_LIQUIDACION = TO_CHAR(TO_NUMBER(NUMERO_PRODUCCION) + 15),
+    
+    -- CODIGO_LIQUIDACION: Convierte CODIGO_PRODUCCION a número, suma 20, y vuelve a VARCHAR2(15)
+    CODIGO_LIQUIDACION = LPAD(TO_CHAR(TO_NUMBER(CODIGO_PRODUCCION) + 20), 6, '0'),
+    
+    -- PERIODO_LIQUIDACION: Convierte PERIODO de 'DD/MM/YYYY' a fecha, suma 5 días, y vuelve a VARCHAR2
+    PERIODO_LIQUIDACION = TO_CHAR(TO_DATE(PERIODO, 'DD/MM/YYYY') + 5, 'DD/MM/YYYY'),
+    
+    -- ESTADO_LIQUIDACION: Valor fijo
+    ESTADO_LIQUIDACION = 'AUTORIZADO',
+    
+    -- FECHA_LIQUIDACION: PERIODO_LIQUIDACION + 5 días (tipo DATE)
+    FECHA_LIQUIDACION = FECHA_PRODUCCION + 10,  -- 5 días para PERIODO_LIQUIDACION + 5 días más
+    
+    -- DESCRIPCION_LIQUIDACION: Concatenación con CODIGO_PRODUCCION
+    DESCRIPCION_LIQUIDACION = 'SEGUNDA SEMANA ENERO, PROD ' || CODIGO_PRODUCCION,
+    
+    -- Campos de auditoría
+    ID_MODIFICADOR = 1,
+    FECHA_MODIFICACION = SYSDATE
+WHERE 
+    ESTADO = 'FACTURA_LIQUIDADA'
+    AND ACTIVO = 1;
+---
+-- =====================================================
+-- Insert de datos de prueba para SHM_ENTIDAD_CUENTA_BANCO
+-- Genera una cuenta bancaria para cada Entidad Medica
+-- =====================================================
+
+INSERT INTO SHM_ENTIDAD_CUENTA_BANCO (
+    ID_CUENTA_BANCO,
+    ID_ENTIDAD_MEDICA,
+    ID_BANCO,
+    CUENTA_CORRIENTE,
+    CUENTA_CCI,
+    MONEDA,
+    GUID_REGISTRO,
+    ACTIVO,
+    ID_CREADOR,
+    FECHA_CREACION,
+    ID_MODIFICADOR,
+    FECHA_MODIFICACION
+)
+SELECT
+    SHM_ENTIDAD_CUENTA_BANCO_SEQ.NEXTVAL,
+    em.ID_ENTIDAD_MEDICA,
+    1,  -- ID_BANCO = 1
+    -- Cuenta Corriente: 13 digitos aleatorios
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(1000000000000, 9999999999999)), 13, '0'),
+    -- Cuenta CCI: 23 digitos aleatorios (concatenando 2 numeros)
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(100000000000, 999999999999)), 12, '0') || 
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(10000000000, 99999999999)), 11, '0'),
+    'S',  -- MONEDA = Soles
+    SYS_GUID(),
+    1,    -- ACTIVO
+    1,    -- ID_CREADOR
+    SYSDATE,
+    NULL, -- ID_MODIFICADOR
+    NULL  -- FECHA_MODIFICACION
+FROM SHM_ENTIDAD_MEDICA em
+WHERE em.ACTIVO = 1
+  AND NOT EXISTS (
+      SELECT 1 
+      FROM SHM_ENTIDAD_CUENTA_BANCO ecb 
+      WHERE ecb.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
+  );
+
+-- =====================================================
+-- Update de ID_BANCO en SHM_ENTIDAD_CUENTA_BANCO
+-- Distribucion por rangos ordenados por ID_CUENTA_BANCO
+-- =====================================================
+
+-- Opcion 1: Usando MERGE con ROW_NUMBER (recomendado)
+MERGE INTO SHM_ENTIDAD_CUENTA_BANCO dest
+USING (
+    SELECT 
+        ID_CUENTA_BANCO,
+        CASE 
+            WHEN rn <= 25 THEN 1      -- Primeros 25 registros
+            WHEN rn <= 40 THEN 2      -- Siguientes 15 (26-40)
+            WHEN rn <= 55 THEN 3      -- Siguientes 15 (41-55)
+            ELSE 4                     -- El resto (56+)
+        END AS NUEVO_ID_BANCO
+    FROM (
+        SELECT 
+            ID_CUENTA_BANCO,
+            ROW_NUMBER() OVER (ORDER BY ID_CUENTA_BANCO) AS rn
+        FROM SHM_ENTIDAD_CUENTA_BANCO
+    )
+) src
+ON (dest.ID_CUENTA_BANCO = src.ID_CUENTA_BANCO)
+WHEN MATCHED THEN
+    UPDATE SET dest.ID_BANCO = src.NUEVO_ID_BANCO;
