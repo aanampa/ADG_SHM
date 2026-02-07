@@ -66,3 +66,48 @@ public class LiquidacionItemViewModel
 
     public int Activo { get; set; }
 }
+
+/// <summary>
+/// ViewModel para el listado agrupado de liquidaciones.
+/// Agrupa por CODIGO_LIQUIDACION e ID_BANCO.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-02-06</created>
+/// </summary>
+public class LiquidacionGrupoListViewModel
+{
+    public List<LiquidacionGrupoItemViewModel> Items { get; set; } = new();
+    public int? IdBanco { get; set; }
+}
+
+/// <summary>
+/// ViewModel para un item de liquidacion agrupado.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-02-06</created>
+/// </summary>
+public class LiquidacionGrupoItemViewModel
+{
+    public string CodigoLiquidacion { get; set; } = string.Empty;
+    public string? NumeroLiquidacion { get; set; }
+    public int? IdBanco { get; set; }
+    public string? CodigoBanco { get; set; }
+    public string? NombreBanco { get; set; }
+    public string? DesTipoProduccion { get; set; }
+    public string? Descripcion { get; set; }
+    public string? Periodo { get; set; }
+    public decimal? MtoTotal { get; set; }
+    public int CantidadFacturas { get; set; }
+}
+
+/// <summary>
+/// Request para generar una orden de pago.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-02-06</created>
+/// </summary>
+public class GenerarOrdenPagoRequest
+{
+    public IEnumerable<string>? CodigosLiquidacion { get; set; }
+    public int? IdBanco { get; set; }
+}

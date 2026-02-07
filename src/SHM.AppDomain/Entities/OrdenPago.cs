@@ -10,6 +10,7 @@ namespace SHM.AppDomain.Entities;
 public class OrdenPago
 {
     public int IdOrdenPago { get; set; }
+    public int IdSede { get; set; }
     public int IdBanco { get; set; }
     public string? NumeroOrdenPago { get; set; }
     public DateTime? FechaGeneracion { get; set; }

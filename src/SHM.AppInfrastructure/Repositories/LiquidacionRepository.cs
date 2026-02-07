@@ -259,4 +259,173 @@ public class LiquidacionRepository : ILiquidacionRepository
 
         return await connection.QueryFirstOrDefaultAsync<LiquidacionListaResponseDto>(sql, new { GuidRegistro = guidRegistro });
     }
+
+    /// <summary>
+    /// Obtiene el listado agrupado de liquidaciones por CODIGO_LIQUIDACION e ID_BANCO.
+    /// Para la generacion de ordenes de pago.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    public async Task<IEnumerable<LiquidacionGrupoResponseDto>> GetGruposAsync(int? idBanco, int idSede)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        // Construccion dinamica de WHERE
+        var whereClause = "WHERE p.ACTIVO = 1 AND p.ESTADO = 'FACTURA_LIQUIDADA' AND p.ID_SEDE = :IdSede";
+
+        if (idBanco.HasValue)
+        {
+            whereClause += " AND cb.ID_BANCO = :IdBanco";
+        }
+
+        var sql = $@"
+            SELECT
+                p.ID_SEDE AS IdSede,
+                p.CODIGO_LIQUIDACION AS CodigoLiquidacion,
+                MAX(p.NUMERO_LIQUIDACION) AS NumeroLiquidacion,
+                cb.ID_BANCO AS IdBanco,
+                MAX(b.CODIGO_BANCO) AS CodigoBanco,
+                MAX(b.NOMBRE_BANCO) AS NombreBanco,
+                MAX(p.TIPO_PRODUCCION) AS TipoProduccion,
+                MAX(tp.DESCRIPCION) AS DesTipoProduccion,
+                MAX(p.TIPO_MEDICO) AS TipoMedico,
+                MAX(tm.DESCRIPCION) AS DesTipoMedico,
+                MAX(p.TIPO_RUBRO) AS TipoRubro,
+                MAX(tr.DESCRIPCION) AS DesTipoRubro,
+                MAX(p.DESCRIPCION_LIQUIDACION) AS Descripcion,
+                MAX(p.PERIODO) AS Periodo,
+                SUM(p.MTO_TOTAL) AS MtoTotal,
+                COUNT(p.ID_PRODUCCION) AS CantidadFacturas
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
+            LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN (
+                SELECT ecb.ID_BANCO, ecb.ID_ENTIDAD_MEDICA
+                FROM SHM_ENTIDAD_CUENTA_BANCO ecb
+                WHERE ecb.ACTIVO = 1
+                  AND ecb.ID_CUENTA_BANCO = (
+                      SELECT MIN(ecb2.ID_CUENTA_BANCO)
+                      FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
+                      WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
+                        AND ecb2.ACTIVO = 1
+                  )
+            ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_BANCO b ON b.ID_BANCO = cb.ID_BANCO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
+            {whereClause}
+            GROUP BY p.ID_SEDE, p.CODIGO_LIQUIDACION, cb.ID_BANCO
+            ORDER BY p.CODIGO_LIQUIDACION DESC";
+
+        return await connection.QueryAsync<LiquidacionGrupoResponseDto>(sql, new { IdBanco = idBanco, IdSede = idSede });
+    }
+
+    /// <summary>
+    /// Obtiene las producciones de un codigo de liquidacion especifico.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    /// <modified>ADG Vladimir D - 2026-02-06 - Agregado filtro por ID_BANCO</modified>
+    public async Task<IEnumerable<LiquidacionListaResponseDto>> GetProduccionesByCodigoLiquidacionAsync(
+        string codigoLiquidacion, int idSede, int? idBanco = null)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        // Construccion dinamica de WHERE para filtro opcional por banco
+        var whereClause = @"WHERE p.ACTIVO = 1
+              AND p.ESTADO = 'FACTURA_LIQUIDADA'
+              AND p.CODIGO_LIQUIDACION = :CodigoLiquidacion
+              AND p.ID_SEDE = :IdSede";
+
+        if (idBanco.HasValue)
+        {
+            whereClause += " AND cb.ID_BANCO = :IdBanco";
+        }
+
+        var sql = $@"
+            SELECT
+                p.ID_PRODUCCION AS IdProduccion,
+                p.GUID_REGISTRO AS GuidRegistro,
+                p.ID_SEDE AS IdSede,
+                p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION AS CodigoProduccion,
+                p.TIPO_PRODUCCION AS TipoProduccion,
+                tp.DESCRIPCION AS DesTipoProduccion,
+                p.DESCRIPCION AS Descripcion,
+                p.PERIODO AS Periodo,
+                p.MTO_CONSUMO AS MtoConsumo,
+                p.MTO_DESCUENTO AS MtoDescuento,
+                p.MTO_SUBTOTAL AS MtoSubtotal,
+                p.MTO_RENTA AS MtoRenta,
+                p.MTO_IGV AS MtoIgv,
+                p.MTO_TOTAL AS MtoTotal,
+                p.SERIE AS Serie,
+                p.NUMERO AS Numero,
+                p.FECHA_EMISION AS FechaEmision,
+                p.NUMERO_LIQUIDACION AS NumeroLiquidacion,
+                p.CODIGO_LIQUIDACION AS CodigoLiquidacion,
+                p.PERIODO_LIQUIDACION AS PeriodoLiquidacion,
+                p.ESTADO_LIQUIDACION AS EstadoLiquidacion,
+                p.FECHA_LIQUIDACION AS FechaLiquidacion,
+                cb.ID_BANCO AS IdBanco,
+                b.CODIGO_BANCO AS CodigoBanco,
+                b.NOMBRE_BANCO AS NombreBanco,
+                em.RUC AS Ruc,
+                em.RAZON_SOCIAL AS RazonSocial,
+                p.ACTIVO AS Activo
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN (
+                SELECT ecb.ID_BANCO, ecb.ID_ENTIDAD_MEDICA
+                FROM SHM_ENTIDAD_CUENTA_BANCO ecb
+                WHERE ecb.ACTIVO = 1
+                  AND ecb.ID_CUENTA_BANCO = (
+                      SELECT MIN(ecb2.ID_CUENTA_BANCO)
+                      FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
+                      WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
+                        AND ecb2.ACTIVO = 1
+                  )
+            ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_BANCO b ON b.ID_BANCO = cb.ID_BANCO
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            {whereClause}
+            ORDER BY p.ID_PRODUCCION";
+
+        return await connection.QueryAsync<LiquidacionListaResponseDto>(sql, new
+        {
+            CodigoLiquidacion = codigoLiquidacion,
+            IdSede = idSede,
+            IdBanco = idBanco
+        });
+    }
+
+    /// <summary>
+    /// Actualiza el estado de las producciones por lista de IDs.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    public async Task<int> UpdateEstadoProduccionesAsync(IEnumerable<int> idsProduccion, string nuevoEstado, int idModificador)
+    {
+        if (idsProduccion == null || !idsProduccion.Any())
+            return 0;
+
+        using var connection = new OracleConnection(_connectionString);
+
+        // Construir lista de IDs para IN clause
+        var idsList = string.Join(",", idsProduccion);
+
+        var sql = $@"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :NuevoEstado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_PRODUCCION IN ({idsList})";
+
+        return await connection.ExecuteAsync(sql, new
+        {
+            NuevoEstado = nuevoEstado,
+            IdModificador = idModificador
+        });
+    }
 }

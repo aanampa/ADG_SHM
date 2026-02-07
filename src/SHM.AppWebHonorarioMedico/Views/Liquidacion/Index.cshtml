@@ -25,7 +25,7 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="row align-items-center">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group mb-0">
                                     <label class="mb-1 small">Banco</label>
                                     <select id="cboBanco" class="form-control form-control-sm">
@@ -33,7 +33,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <label class="mb-1 small">&nbsp;</label>
                                 <div>
                                     <button type="button" class="btn btn-primary btn-sm" onclick="searchList()">
@@ -47,6 +47,9 @@
                             <div class="col-md-6 text-right">
                                 <label class="mb-1 small">&nbsp;</label>
                                 <div>
+                                    <button type="button" id="btnGenerarOrdenPago" class="btn btn-warning btn-sm" onclick="generarOrdenPago()" disabled>
+                                        <i class="fas fa-file-invoice mr-1"></i>Generar Orden de Pago (0)
+                                    </button>
                                     <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
                                         <i class="fas fa-file-excel mr-1"></i>Exportar
                                     </button>
@@ -64,6 +67,33 @@
                 </div>
             </div>
         </section>
+    </div>
+</div>
+
+<!-- Modal Producciones -->
+<div class="modal fade" id="modalProducciones" tabindex="-1" role="dialog" aria-labelledby="modalProduccionesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white py-2">
+                <h5 class="modal-title" id="modalProduccionesLabel">
+                    <i class="fas fa-list mr-2"></i>Producciones de Liquidacion
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0" id="modalProduccionesContent">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Cargando...</p>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -96,6 +126,13 @@
             padding: 0.25rem 0.5rem !important;
             text-transform: uppercase;
         }
+        .row-selected {
+            background-color: #fff3cd !important;
+        }
+        .checkbox-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 }
 
@@ -103,11 +140,13 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
     <script>
-        let currentPage = 1;
-        const pageSize = 10;
-
         // Datos de Bancos cargados en memoria
         var bancosData = @Html.Raw(JsonSerializer.Serialize(bancos));
+
+        // Variables para seleccion multiple
+        let selectedItems = [];         // Array de codigosLiquidacion
+        let currentBancoId = null;      // Banco de la primera seleccion
+        let currentBancoNombre = null;  // Nombre del banco seleccionado
 
         document.addEventListener('DOMContentLoaded', function () {
             // Inicializar Select2 para Banco con busqueda en memoria
@@ -138,7 +177,7 @@
             });
 
             // Cargar lista inicial
-            loadList(1);
+            loadList();
 
             // Buscar al cambiar el filtro de banco
             $('#cboBanco').on('change', function () {
@@ -146,18 +185,15 @@
             });
         });
 
-        function loadList(page) {
-            currentPage = page || 1;
+        function loadList() {
             const idBanco = $('#cboBanco').val() || '';
 
             const params = new URLSearchParams({
-                idBanco: idBanco,
-                pageNumber: currentPage,
-                pageSize: pageSize
+                idBanco: idBanco
             });
 
             f_loading();
-            fetch('@Url.Action("GetList")?' + params.toString())
+            fetch('@Url.Action("GetListGrupos")?' + params.toString())
                 .then(response => {
                     if (!response.ok) throw new Error('Error en la respuesta');
                     return response.text();
@@ -165,6 +201,8 @@
                 .then(html => {
                     document.getElementById('listContainer').innerHTML = html;
                     f_remove_loading();
+                    // Restaurar checkboxes seleccionados
+                    restoreCheckboxSelection();
                 })
                 .catch(error => {
                     f_remove_loading();
@@ -176,16 +214,187 @@
         }
 
         function searchList() {
-            loadList(1);
+            // Limpiar seleccion al cambiar filtros
+            clearSelection();
+            loadList();
         }
 
         function clearFilters() {
             $('#cboBanco').val(null).trigger('change');
-            loadList(1);
+            clearSelection();
+            loadList();
         }
 
         function refreshList() {
-            loadList(currentPage);
+            loadList();
+        }
+
+        // Limpiar seleccion
+        function clearSelection() {
+            selectedItems = [];
+            currentBancoId = null;
+            currentBancoNombre = null;
+            updateGenerarButton();
+        }
+
+        // Restaurar checkboxes seleccionados despues de recargar
+        function restoreCheckboxSelection() {
+            selectedItems.forEach(function(codigo) {
+                const checkbox = document.querySelector(`input[data-codigo="${codigo}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                    checkbox.closest('tr').classList.add('row-selected');
+                }
+            });
+            updateCheckboxStates();
+        }
+
+        // Manejar cambio de checkbox
+        function onCheckboxChange(checkbox, codigoLiq, idBanco, nombreBanco) {
+            const row = checkbox.closest('tr');
+
+            if (checkbox.checked) {
+                // Validar mismo banco
+                if (currentBancoId !== null && idBanco !== currentBancoId) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Banco diferente',
+                        html: `Solo puede seleccionar liquidaciones del mismo banco.<br><br>
+                               <strong>Banco seleccionado:</strong> ${currentBancoNombre}`,
+                        confirmButtonColor: '#f26522'
+                    });
+                    checkbox.checked = false;
+                    return;
+                }
+
+                // Primera seleccion - guardar banco
+                if (currentBancoId === null) {
+                    currentBancoId = idBanco;
+                    currentBancoNombre = nombreBanco;
+                }
+
+                // Agregar a la lista
+                if (!selectedItems.includes(codigoLiq)) {
+                    selectedItems.push(codigoLiq);
+                }
+                row.classList.add('row-selected');
+            } else {
+                // Remover de la lista
+                selectedItems = selectedItems.filter(x => x !== codigoLiq);
+                row.classList.remove('row-selected');
+
+                // Si no hay mas seleccionados, limpiar banco
+                if (selectedItems.length === 0) {
+                    currentBancoId = null;
+                    currentBancoNombre = null;
+                }
+            }
+
+            updateCheckboxStates();
+            updateGenerarButton();
+        }
+
+        // Actualizar estados de checkboxes (deshabilitar otros bancos)
+        function updateCheckboxStates() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][data-codigo]');
+            checkboxes.forEach(function(cb) {
+                const idBanco = parseInt(cb.getAttribute('data-banco'));
+                if (currentBancoId !== null && idBanco !== currentBancoId && !cb.checked) {
+                    cb.disabled = true;
+                    cb.closest('td').classList.add('checkbox-disabled');
+                } else {
+                    cb.disabled = false;
+                    cb.closest('td').classList.remove('checkbox-disabled');
+                }
+            });
+        }
+
+        // Actualizar boton Generar Orden de Pago
+        function updateGenerarButton() {
+            const btn = document.getElementById('btnGenerarOrdenPago');
+            btn.disabled = selectedItems.length === 0;
+            btn.innerHTML = `<i class="fas fa-file-invoice mr-1"></i>Generar Orden de Pago (${selectedItems.length})`;
+        }
+
+        // Generar orden de pago
+        function generarOrdenPago() {
+            if (selectedItems.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin seleccion',
+                    text: 'Debe seleccionar al menos una liquidacion.',
+                    confirmButtonColor: '#f26522'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Confirmar generacion',
+                html: `¿Desea generar una orden de pago para <strong>${selectedItems.length}</strong> liquidacion(es)?<br><br>
+                       <strong>Banco:</strong> ${currentBancoNombre}`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Si, generar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ejecutarGenerarOrdenPago();
+                }
+            });
+        }
+
+        function ejecutarGenerarOrdenPago() {
+            f_loading();
+
+            const data = {
+                codigosLiquidacion: selectedItems,
+                idBanco: currentBancoId
+            };
+
+            fetch('@Url.Action("GenerarOrdenPago")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Orden generada',
+                        html: `${result.message}<br><br>
+                               <strong>Producciones:</strong> ${result.data.cantidadProducciones}<br>
+                               <strong>Liquidaciones:</strong> ${result.data.cantidadLiquidaciones}<br>
+                               <strong>Monto Total:</strong> S/. ${result.data.montoTotal.toFixed(2)}`,
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        clearSelection();
+                        loadList();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message,
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            })
+            .catch(error => {
+                f_remove_loading();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al generar la orden de pago.',
+                    confirmButtonColor: '#dc3545'
+                });
+            });
         }
 
         function verDetalle(guid) {
@@ -194,6 +403,43 @@
 
         function exportToExcel() {
             toastr.info('Funcionalidad en desarrollo', 'Exportar');
+        }
+
+        // Ver producciones de una liquidacion en modal
+        function verProducciones(codigoLiquidacion, idBanco, descripcion, tipo) {
+            // Actualizar titulo del modal: Liquidacion + Tipo
+            document.getElementById('modalProduccionesLabel').innerHTML =
+                `<i class="fas fa-list mr-2"></i>Liquidacion ${codigoLiquidacion} - ${tipo}`;
+
+            // Mostrar loading
+            document.getElementById('modalProduccionesContent').innerHTML =
+                '<div class="text-center py-5">' +
+                '<i class="fas fa-spinner fa-spin fa-2x"></i>' +
+                '<p class="mt-2">Cargando producciones...</p></div>';
+
+            // Abrir modal
+            $('#modalProducciones').modal('show');
+
+            // Cargar contenido (incluye idBanco para filtrar consistentemente con CantidadFacturas)
+            const params = new URLSearchParams({
+                codigoLiquidacion: codigoLiquidacion,
+                idBanco: idBanco || ''
+            });
+
+            fetch('@Url.Action("GetProduccionesByLiquidacion")?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalProduccionesContent').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('modalProduccionesContent').innerHTML =
+                        '<div class="text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar las producciones</p></div>';
+                });
         }
     </script>
 }
