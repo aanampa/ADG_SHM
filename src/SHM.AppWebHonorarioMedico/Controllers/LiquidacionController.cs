@@ -303,6 +303,7 @@ public class LiquidacionController : Controller
             // Crear la orden de pago
             var ordenPago = new OrdenPago
             {
+                IdSede = idSede.Value,
                 IdBanco = request.IdBanco.Value,
                 NumeroOrdenPago = numeroOrdenPago,
                 FechaGeneracion = DateTime.Now,
@@ -332,8 +333,12 @@ public class LiquidacionController : Controller
 
             await _ordenPagoLiquidacionRepository.CreateBulkAsync(ordenPagoLiquidaciones);
 
-            _logger.LogInformation("Orden de pago {NumeroOrden} generada. ID: {Id}, Banco: {Banco}, Total: {Total}",
-                numeroOrdenPago, idOrdenPago, request.IdBanco, mtoTotalAcum);
+            // Actualizar estado de las producciones a FACTURA_ORDEN_PAGO
+            var idsProduccion = todasLasProducciones.Select(p => p.IdProduccion).ToList();
+            await _liquidacionService.UpdateEstadoProduccionesAsync(idsProduccion, "FACTURA_ORDEN_PAGO", idUsuario.Value);
+
+            _logger.LogInformation("Orden de pago {NumeroOrden} generada. ID: {Id}, Banco: {Banco}, Total: {Total}, Producciones actualizadas: {Count}",
+                numeroOrdenPago, idOrdenPago, request.IdBanco, mtoTotalAcum, idsProduccion.Count);
 
             return Json(new
             {

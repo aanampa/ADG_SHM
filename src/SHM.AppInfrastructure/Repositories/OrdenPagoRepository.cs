@@ -20,6 +20,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
     private const string SELECT_BASE = @"
         SELECT
             op.ID_ORDEN_PAGO as IdOrdenPago,
+            op.ID_SEDE as IdSede,
             op.ID_BANCO as IdBanco,
             op.NUMERO_ORDEN_PAGO as NumeroOrdenPago,
             op.FECHA_GENERACION as FechaGeneracion,
@@ -171,6 +172,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
         var sql = @"
             INSERT INTO SHM_ORDEN_PAGO (
                 ID_ORDEN_PAGO,
+                ID_SEDE,
                 ID_BANCO,
                 NUMERO_ORDEN_PAGO,
                 FECHA_GENERACION,
@@ -190,6 +192,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
                 FECHA_CREACION
             ) VALUES (
                 SHM_ORDEN_PAGO_SEQ.NEXTVAL,
+                :IdSede,
                 :IdBanco,
                 :NumeroOrdenPago,
                 :FechaGeneracion,
@@ -211,6 +214,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
             RETURNING ID_ORDEN_PAGO INTO :IdOrdenPago";
 
         var parameters = new DynamicParameters();
+        parameters.Add("IdSede", ordenPago.IdSede);
         parameters.Add("IdBanco", ordenPago.IdBanco);
         parameters.Add("NumeroOrdenPago", ordenPago.NumeroOrdenPago);
         parameters.Add("FechaGeneracion", ordenPago.FechaGeneracion);

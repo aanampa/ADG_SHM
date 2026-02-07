@@ -72,4 +72,15 @@ public class LiquidacionService : ILiquidacionService
     {
         return await _liquidacionRepository.GetProduccionesByCodigoLiquidacionAsync(codigoLiquidacion, idSede, idBanco);
     }
+
+    /// <summary>
+    /// Actualiza el estado de las producciones por lista de IDs.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    /// </summary>
+    public async Task<int> UpdateEstadoProduccionesAsync(IEnumerable<int> idsProduccion, string nuevoEstado, int idModificador)
+    {
+        return await _liquidacionRepository.UpdateEstadoProduccionesAsync(idsProduccion, nuevoEstado, idModificador);
+    }
 }

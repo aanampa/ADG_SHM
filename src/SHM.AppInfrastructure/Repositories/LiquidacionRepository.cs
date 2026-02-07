@@ -399,4 +399,33 @@ public class LiquidacionRepository : ILiquidacionRepository
             IdBanco = idBanco
         });
     }
+
+    /// <summary>
+    /// Actualiza el estado de las producciones por lista de IDs.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    public async Task<int> UpdateEstadoProduccionesAsync(IEnumerable<int> idsProduccion, string nuevoEstado, int idModificador)
+    {
+        if (idsProduccion == null || !idsProduccion.Any())
+            return 0;
+
+        using var connection = new OracleConnection(_connectionString);
+
+        // Construir lista de IDs para IN clause
+        var idsList = string.Join(",", idsProduccion);
+
+        var sql = $@"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :NuevoEstado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_PRODUCCION IN ({idsList})";
+
+        return await connection.ExecuteAsync(sql, new
+        {
+            NuevoEstado = nuevoEstado,
+            IdModificador = idModificador
+        });
+    }
 }

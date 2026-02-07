@@ -46,4 +46,13 @@ public interface ILiquidacionService
     /// <returns>Lista de producciones asociadas</returns>
     Task<IEnumerable<LiquidacionListaResponseDto>> GetProduccionesByCodigoLiquidacionAsync(
         string codigoLiquidacion, int idSede, int? idBanco = null);
+
+    /// <summary>
+    /// Actualiza el estado de las producciones por lista de IDs.
+    /// </summary>
+    /// <param name="idsProduccion">Lista de IDs de produccion</param>
+    /// <param name="nuevoEstado">Nuevo estado a asignar</param>
+    /// <param name="idModificador">ID del usuario que modifica</param>
+    /// <returns>Cantidad de registros actualizados</returns>
+    Task<int> UpdateEstadoProduccionesAsync(IEnumerable<int> idsProduccion, string nuevoEstado, int idModificador);
 }
