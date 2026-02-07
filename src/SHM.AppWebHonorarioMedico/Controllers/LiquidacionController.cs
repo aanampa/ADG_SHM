@@ -24,14 +24,14 @@ public class LiquidacionController : Controller
     private readonly ILiquidacionService _liquidacionService;
     private readonly IBancoService _bancoService;
     private readonly IOrdenPagoRepository _ordenPagoRepository;
-    private readonly IOrdenPagoLiquidacionRepository _ordenPagoLiquidacionRepository;
+    private readonly IOrdenPagoProduccionRepository _ordenPagoLiquidacionRepository;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
         ILiquidacionService liquidacionService,
         IBancoService bancoService,
         IOrdenPagoRepository ordenPagoRepository,
-        IOrdenPagoLiquidacionRepository ordenPagoLiquidacionRepository)
+        IOrdenPagoProduccionRepository ordenPagoLiquidacionRepository)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
@@ -323,7 +323,7 @@ public class LiquidacionController : Controller
             var idOrdenPago = await _ordenPagoRepository.CreateAsync(ordenPago);
 
             // Crear las relaciones con las producciones
-            var ordenPagoLiquidaciones = todasLasProducciones.Select(p => new OrdenPagoLiquidacion
+            var ordenPagoLiquidaciones = todasLasProducciones.Select(p => new OrdenPagoProduccion
             {
                 IdOrdenPago = idOrdenPago,
                 IdProduccion = p.IdProduccion,

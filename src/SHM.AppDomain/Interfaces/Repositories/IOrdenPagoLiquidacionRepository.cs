@@ -6,7 +6,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 /// Interface del repositorio para la entidad OrdenPagoLiquidacion.
 ///
 /// <author>ADG Antonio</author>
-/// <created>2026-02-03</created>
+/// <created>2026-02-07</created>
 /// </summary>
 public interface IOrdenPagoLiquidacionRepository
 {
@@ -15,10 +15,9 @@ public interface IOrdenPagoLiquidacionRepository
     Task<OrdenPagoLiquidacion?> GetByIdAsync(int id);
     Task<OrdenPagoLiquidacion?> GetByGuidAsync(string guid);
     Task<IEnumerable<OrdenPagoLiquidacion>> GetByOrdenPagoIdAsync(int idOrdenPago);
-    Task<IEnumerable<OrdenPagoLiquidacion>> GetByProduccionIdAsync(int idProduccion);
-    Task<OrdenPagoLiquidacion?> GetByOrdenPagoAndProduccionAsync(int idOrdenPago, int idProduccion);
+    Task<OrdenPagoLiquidacion?> GetByNumeroLiquidacionAsync(string numeroLiquidacion);
+    Task<OrdenPagoLiquidacion?> GetByCodigoLiquidacionAsync(string codigoLiquidacion);
     Task<int> CreateAsync(OrdenPagoLiquidacion ordenPagoLiquidacion);
-    Task<int> CreateBulkAsync(IEnumerable<OrdenPagoLiquidacion> liquidaciones);
     Task<bool> UpdateAsync(OrdenPagoLiquidacion ordenPagoLiquidacion);
     Task<bool> DeleteAsync(int id, int idModificador);
     Task<bool> DeleteByOrdenPagoIdAsync(int idOrdenPago, int idModificador);
