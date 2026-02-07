@@ -6,10 +6,10 @@ using SHM.AppDomain.Interfaces.Services;
 namespace SHM.AppApplication.Services;
 
 /// <summary>
-/// Servicio para la gestion de relaciones orden de pago - liquidacion.
+/// Servicio para la gestion de liquidaciones de ordenes de pago.
 ///
 /// <author>ADG Antonio</author>
-/// <created>2026-02-03</created>
+/// <created>2026-02-07</created>
 /// </summary>
 public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
 {
@@ -21,7 +21,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Obtiene todas las relaciones orden de pago - liquidacion.
+    /// Obtiene todas las liquidaciones de ordenes de pago.
     /// </summary>
     public async Task<IEnumerable<OrdenPagoLiquidacionResponseDto>> GetAllAsync()
     {
@@ -30,7 +30,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Obtiene todas las relaciones activas.
+    /// Obtiene todas las liquidaciones activas.
     /// </summary>
     public async Task<IEnumerable<OrdenPagoLiquidacionResponseDto>> GetAllActiveAsync()
     {
@@ -39,7 +39,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Obtiene una relacion por su identificador.
+    /// Obtiene una liquidacion por su identificador.
     /// </summary>
     public async Task<OrdenPagoLiquidacionResponseDto?> GetByIdAsync(int id)
     {
@@ -48,7 +48,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Obtiene una relacion por su GUID.
+    /// Obtiene una liquidacion por su GUID.
     /// </summary>
     public async Task<OrdenPagoLiquidacionResponseDto?> GetByGuidAsync(string guid)
     {
@@ -66,23 +66,23 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Obtiene todas las ordenes de pago de una produccion.
-    /// </summary>
-    public async Task<IEnumerable<OrdenPagoLiquidacionResponseDto>> GetByProduccionIdAsync(int idProduccion)
-    {
-        var items = await _repository.GetByProduccionIdAsync(idProduccion);
-        return items.Select(MapToResponseDto);
-    }
-
-    /// <summary>
-    /// Crea una nueva relacion orden de pago - liquidacion.
+    /// Crea una nueva liquidacion de orden de pago.
     /// </summary>
     public async Task<OrdenPagoLiquidacionResponseDto> CreateAsync(CreateOrdenPagoLiquidacionDto dto, int idCreador)
     {
         var entity = new OrdenPagoLiquidacion
         {
             IdOrdenPago = dto.IdOrdenPago,
-            IdProduccion = dto.IdProduccion,
+            NumeroLiquidacion = dto.NumeroLiquidacion,
+            CodigoLiquidacion = dto.CodigoLiquidacion,
+            MtoConsumoAcum = dto.MtoConsumoAcum,
+            MtoDescuentoAcum = dto.MtoDescuentoAcum,
+            MtoSubtotalAcum = dto.MtoSubtotalAcum,
+            MtoRentaAcum = dto.MtoRentaAcum,
+            MtoIgvAcum = dto.MtoIgvAcum,
+            MtoTotalAcum = dto.MtoTotalAcum,
+            CantComprobantes = dto.CantComprobantes,
+            Comentarios = dto.Comentarios,
             IdCreador = idCreador,
             Activo = 1
         };
@@ -94,34 +94,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Crea multiples relaciones en una sola operacion.
-    /// </summary>
-    public async Task<IEnumerable<OrdenPagoLiquidacionResponseDto>> CreateBulkAsync(
-        IEnumerable<CreateOrdenPagoLiquidacionDto> dtos, int idCreador)
-    {
-        var entities = dtos.Select(dto => new OrdenPagoLiquidacion
-        {
-            IdOrdenPago = dto.IdOrdenPago,
-            IdProduccion = dto.IdProduccion,
-            IdCreador = idCreador,
-            Activo = 1
-        });
-
-        await _repository.CreateBulkAsync(entities);
-
-        // Obtener las liquidaciones creadas para la primera orden de pago
-        var firstDto = dtos.FirstOrDefault();
-        if (firstDto != null)
-        {
-            var items = await _repository.GetByOrdenPagoIdAsync(firstDto.IdOrdenPago);
-            return items.Select(MapToResponseDto);
-        }
-
-        return Enumerable.Empty<OrdenPagoLiquidacionResponseDto>();
-    }
-
-    /// <summary>
-    /// Actualiza una relacion existente.
+    /// Actualiza una liquidacion existente.
     /// </summary>
     public async Task<OrdenPagoLiquidacionResponseDto?> UpdateAsync(UpdateOrdenPagoLiquidacionDto dto, int idModificador)
     {
@@ -130,7 +103,16 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
             return null;
 
         existing.IdOrdenPago = dto.IdOrdenPago;
-        existing.IdProduccion = dto.IdProduccion;
+        existing.NumeroLiquidacion = dto.NumeroLiquidacion;
+        existing.CodigoLiquidacion = dto.CodigoLiquidacion;
+        existing.MtoConsumoAcum = dto.MtoConsumoAcum;
+        existing.MtoDescuentoAcum = dto.MtoDescuentoAcum;
+        existing.MtoSubtotalAcum = dto.MtoSubtotalAcum;
+        existing.MtoRentaAcum = dto.MtoRentaAcum;
+        existing.MtoIgvAcum = dto.MtoIgvAcum;
+        existing.MtoTotalAcum = dto.MtoTotalAcum;
+        existing.CantComprobantes = dto.CantComprobantes;
+        existing.Comentarios = dto.Comentarios;
         existing.IdModificador = idModificador;
 
         var updated = await _repository.UpdateAsync(existing);
@@ -142,7 +124,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
     }
 
     /// <summary>
-    /// Elimina logicamente una relacion por su GUID.
+    /// Elimina logicamente una liquidacion por su GUID.
     /// </summary>
     public async Task<bool> DeleteAsync(string guid, int idModificador)
     {
@@ -167,9 +149,17 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
         {
             IdOrdenPagoLiquidacion = entity.IdOrdenPagoLiquidacion,
             IdOrdenPago = entity.IdOrdenPago,
-            IdProduccion = entity.IdProduccion,
             NumeroOrdenPago = entity.NumeroOrdenPago,
             NumeroLiquidacion = entity.NumeroLiquidacion,
+            CodigoLiquidacion = entity.CodigoLiquidacion,
+            MtoConsumoAcum = entity.MtoConsumoAcum,
+            MtoDescuentoAcum = entity.MtoDescuentoAcum,
+            MtoSubtotalAcum = entity.MtoSubtotalAcum,
+            MtoRentaAcum = entity.MtoRentaAcum,
+            MtoIgvAcum = entity.MtoIgvAcum,
+            MtoTotalAcum = entity.MtoTotalAcum,
+            CantComprobantes = entity.CantComprobantes,
+            Comentarios = entity.Comentarios,
             GuidRegistro = entity.GuidRegistro,
             Activo = entity.Activo,
             FechaCreacion = entity.FechaCreacion,

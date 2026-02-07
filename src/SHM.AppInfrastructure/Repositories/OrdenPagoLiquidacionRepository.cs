@@ -7,11 +7,11 @@ using SHM.AppInfrastructure.Configurations;
 namespace SHM.AppInfrastructure.Repositories;
 
 /// <summary>
-/// Repositorio para la gestion de relaciones orden de pago - liquidacion.
+/// Repositorio para la gestion de liquidaciones de ordenes de pago.
 /// Utiliza Dapper con Oracle Database.
 ///
 /// <author>ADG Antonio</author>
-/// <created>2026-02-03</created>
+/// <created>2026-02-07</created>
 /// </summary>
 public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
 {
@@ -21,18 +21,25 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
         SELECT
             opl.ID_ORDEN_PAGO_LIQUIDACION as IdOrdenPagoLiquidacion,
             opl.ID_ORDEN_PAGO as IdOrdenPago,
-            opl.ID_PRODUCCION as IdProduccion,
+            opl.NUMERO_LIQUIDACION as NumeroLiquidacion,
+            opl.CODIGO_LIQUIDACION as CodigoLiquidacion,
+            opl.MTO_CONSUMO_ACUM as MtoConsumoAcum,
+            opl.MTO_DESCUENTO_ACUM as MtoDescuentoAcum,
+            opl.MTO_SUBTOTAL_ACUM as MtoSubtotalAcum,
+            opl.MTO_RENTA_ACUM as MtoRentaAcum,
+            opl.MTO_IGV_ACUM as MtoIgvAcum,
+            opl.MTO_TOTAL_ACUM as MtoTotalAcum,
+            opl.CANT_COMPROBANTES as CantComprobantes,
+            opl.COMENTARIOS as Comentarios,
             opl.GUID_REGISTRO as GuidRegistro,
             opl.ACTIVO as Activo,
             opl.ID_CREADOR as IdCreador,
             opl.FECHA_CREACION as FechaCreacion,
             opl.ID_MODIFICADOR as IdModificador,
             opl.FECHA_MODIFICACION as FechaModificacion,
-            op.NUMERO_ORDEN_PAGO as NumeroOrdenPago,
-            p.NUMERO_LIQUIDACION as NumeroLiquidacion
+            op.NUMERO_ORDEN_PAGO as NumeroOrdenPago
         FROM SHM_ORDEN_PAGO_LIQUIDACION opl
-        LEFT JOIN SHM_ORDEN_PAGO op ON opl.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
-        LEFT JOIN SHM_PRODUCCION p ON opl.ID_PRODUCCION = p.ID_PRODUCCION";
+        LEFT JOIN SHM_ORDEN_PAGO op ON opl.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO";
 
     public OrdenPagoLiquidacionRepository(DatabaseConfig databaseConfig)
     {
@@ -43,7 +50,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Obtiene todas las relaciones orden de pago - liquidacion.
+    /// Obtiene todas las liquidaciones de ordenes de pago.
     /// </summary>
     public async Task<IEnumerable<OrdenPagoLiquidacion>> GetAllAsync()
     {
@@ -56,7 +63,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Obtiene todas las relaciones activas.
+    /// Obtiene todas las liquidaciones activas.
     /// </summary>
     public async Task<IEnumerable<OrdenPagoLiquidacion>> GetAllActiveAsync()
     {
@@ -70,7 +77,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Obtiene una relacion por su identificador.
+    /// Obtiene una liquidacion por su identificador.
     /// </summary>
     public async Task<OrdenPagoLiquidacion?> GetByIdAsync(int id)
     {
@@ -83,7 +90,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Obtiene una relacion por su GUID.
+    /// Obtiene una liquidacion por su GUID.
     /// </summary>
     public async Task<OrdenPagoLiquidacion?> GetByGuidAsync(string guid)
     {
@@ -110,37 +117,33 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Obtiene todas las ordenes de pago de una produccion.
+    /// Obtiene una liquidacion por su numero.
     /// </summary>
-    public async Task<IEnumerable<OrdenPagoLiquidacion>> GetByProduccionIdAsync(int idProduccion)
+    public async Task<OrdenPagoLiquidacion?> GetByNumeroLiquidacionAsync(string numeroLiquidacion)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = $@"{SELECT_BASE}
-            WHERE opl.ID_PRODUCCION = :IdProduccion AND opl.ACTIVO = 1
-            ORDER BY opl.ID_ORDEN_PAGO_LIQUIDACION";
+            WHERE opl.NUMERO_LIQUIDACION = :NumeroLiquidacion AND opl.ACTIVO = 1";
 
-        return await connection.QueryAsync<OrdenPagoLiquidacion>(sql, new { IdProduccion = idProduccion });
+        return await connection.QueryFirstOrDefaultAsync<OrdenPagoLiquidacion>(sql, new { NumeroLiquidacion = numeroLiquidacion });
     }
 
     /// <summary>
-    /// Obtiene una relacion especifica por orden de pago y produccion.
+    /// Obtiene una liquidacion por su codigo.
     /// </summary>
-    public async Task<OrdenPagoLiquidacion?> GetByOrdenPagoAndProduccionAsync(int idOrdenPago, int idProduccion)
+    public async Task<OrdenPagoLiquidacion?> GetByCodigoLiquidacionAsync(string codigoLiquidacion)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = $@"{SELECT_BASE}
-            WHERE opl.ID_ORDEN_PAGO = :IdOrdenPago
-              AND opl.ID_PRODUCCION = :IdProduccion
-              AND opl.ACTIVO = 1";
+            WHERE opl.CODIGO_LIQUIDACION = :CodigoLiquidacion AND opl.ACTIVO = 1";
 
-        return await connection.QueryFirstOrDefaultAsync<OrdenPagoLiquidacion>(sql,
-            new { IdOrdenPago = idOrdenPago, IdProduccion = idProduccion });
+        return await connection.QueryFirstOrDefaultAsync<OrdenPagoLiquidacion>(sql, new { CodigoLiquidacion = codigoLiquidacion });
     }
 
     /// <summary>
-    /// Crea una nueva relacion orden de pago - liquidacion.
+    /// Crea una nueva liquidacion de orden de pago.
     /// </summary>
     public async Task<int> CreateAsync(OrdenPagoLiquidacion ordenPagoLiquidacion)
     {
@@ -150,7 +153,16 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             INSERT INTO SHM_ORDEN_PAGO_LIQUIDACION (
                 ID_ORDEN_PAGO_LIQUIDACION,
                 ID_ORDEN_PAGO,
-                ID_PRODUCCION,
+                NUMERO_LIQUIDACION,
+                CODIGO_LIQUIDACION,
+                MTO_CONSUMO_ACUM,
+                MTO_DESCUENTO_ACUM,
+                MTO_SUBTOTAL_ACUM,
+                MTO_RENTA_ACUM,
+                MTO_IGV_ACUM,
+                MTO_TOTAL_ACUM,
+                CANT_COMPROBANTES,
+                COMENTARIOS,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -158,7 +170,16 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             ) VALUES (
                 SHM_ORDEN_PAGO_LIQUIDACION_SEQ.NEXTVAL,
                 :IdOrdenPago,
-                :IdProduccion,
+                :NumeroLiquidacion,
+                :CodigoLiquidacion,
+                :MtoConsumoAcum,
+                :MtoDescuentoAcum,
+                :MtoSubtotalAcum,
+                :MtoRentaAcum,
+                :MtoIgvAcum,
+                :MtoTotalAcum,
+                :CantComprobantes,
+                :Comentarios,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -168,7 +189,16 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
 
         var parameters = new DynamicParameters();
         parameters.Add("IdOrdenPago", ordenPagoLiquidacion.IdOrdenPago);
-        parameters.Add("IdProduccion", ordenPagoLiquidacion.IdProduccion);
+        parameters.Add("NumeroLiquidacion", ordenPagoLiquidacion.NumeroLiquidacion);
+        parameters.Add("CodigoLiquidacion", ordenPagoLiquidacion.CodigoLiquidacion);
+        parameters.Add("MtoConsumoAcum", ordenPagoLiquidacion.MtoConsumoAcum);
+        parameters.Add("MtoDescuentoAcum", ordenPagoLiquidacion.MtoDescuentoAcum);
+        parameters.Add("MtoSubtotalAcum", ordenPagoLiquidacion.MtoSubtotalAcum);
+        parameters.Add("MtoRentaAcum", ordenPagoLiquidacion.MtoRentaAcum);
+        parameters.Add("MtoIgvAcum", ordenPagoLiquidacion.MtoIgvAcum);
+        parameters.Add("MtoTotalAcum", ordenPagoLiquidacion.MtoTotalAcum);
+        parameters.Add("CantComprobantes", ordenPagoLiquidacion.CantComprobantes);
+        parameters.Add("Comentarios", ordenPagoLiquidacion.Comentarios);
         parameters.Add("IdCreador", ordenPagoLiquidacion.IdCreador);
         parameters.Add("IdOrdenPagoLiquidacion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -178,61 +208,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Crea multiples relaciones en una sola operacion.
-    /// </summary>
-    public async Task<int> CreateBulkAsync(IEnumerable<OrdenPagoLiquidacion> liquidaciones)
-    {
-        using var connection = new OracleConnection(_connectionString);
-        await connection.OpenAsync();
-
-        using var transaction = connection.BeginTransaction();
-
-        try
-        {
-            var count = 0;
-            foreach (var item in liquidaciones)
-            {
-                var sql = @"
-                    INSERT INTO SHM_ORDEN_PAGO_LIQUIDACION (
-                        ID_ORDEN_PAGO_LIQUIDACION,
-                        ID_ORDEN_PAGO,
-                        ID_PRODUCCION,
-                        GUID_REGISTRO,
-                        ACTIVO,
-                        ID_CREADOR,
-                        FECHA_CREACION
-                    ) VALUES (
-                        SHM_ORDEN_PAGO_LIQUIDACION_SEQ.NEXTVAL,
-                        :IdOrdenPago,
-                        :IdProduccion,
-                        SYS_GUID(),
-                        1,
-                        :IdCreador,
-                        SYSDATE
-                    )";
-
-                await connection.ExecuteAsync(sql, new
-                {
-                    item.IdOrdenPago,
-                    item.IdProduccion,
-                    item.IdCreador
-                }, transaction);
-
-                count++;
-            }
-
-            transaction.Commit();
-            return count;
-        }
-        catch
-        {
-            transaction.Rollback();
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Actualiza una relacion existente.
+    /// Actualiza una liquidacion existente.
     /// </summary>
     public async Task<bool> UpdateAsync(OrdenPagoLiquidacion ordenPagoLiquidacion)
     {
@@ -242,7 +218,16 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             UPDATE SHM_ORDEN_PAGO_LIQUIDACION
             SET
                 ID_ORDEN_PAGO = :IdOrdenPago,
-                ID_PRODUCCION = :IdProduccion,
+                NUMERO_LIQUIDACION = :NumeroLiquidacion,
+                CODIGO_LIQUIDACION = :CodigoLiquidacion,
+                MTO_CONSUMO_ACUM = :MtoConsumoAcum,
+                MTO_DESCUENTO_ACUM = :MtoDescuentoAcum,
+                MTO_SUBTOTAL_ACUM = :MtoSubtotalAcum,
+                MTO_RENTA_ACUM = :MtoRentaAcum,
+                MTO_IGV_ACUM = :MtoIgvAcum,
+                MTO_TOTAL_ACUM = :MtoTotalAcum,
+                CANT_COMPROBANTES = :CantComprobantes,
+                COMENTARIOS = :Comentarios,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_ORDEN_PAGO_LIQUIDACION = :IdOrdenPagoLiquidacion";
@@ -251,7 +236,16 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
         {
             ordenPagoLiquidacion.IdOrdenPagoLiquidacion,
             ordenPagoLiquidacion.IdOrdenPago,
-            ordenPagoLiquidacion.IdProduccion,
+            ordenPagoLiquidacion.NumeroLiquidacion,
+            ordenPagoLiquidacion.CodigoLiquidacion,
+            ordenPagoLiquidacion.MtoConsumoAcum,
+            ordenPagoLiquidacion.MtoDescuentoAcum,
+            ordenPagoLiquidacion.MtoSubtotalAcum,
+            ordenPagoLiquidacion.MtoRentaAcum,
+            ordenPagoLiquidacion.MtoIgvAcum,
+            ordenPagoLiquidacion.MtoTotalAcum,
+            ordenPagoLiquidacion.CantComprobantes,
+            ordenPagoLiquidacion.Comentarios,
             ordenPagoLiquidacion.IdModificador
         });
 
@@ -259,7 +253,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
     }
 
     /// <summary>
-    /// Elimina logicamente una relacion.
+    /// Elimina logicamente una liquidacion.
     /// </summary>
     public async Task<bool> DeleteAsync(int id, int idModificador)
     {
