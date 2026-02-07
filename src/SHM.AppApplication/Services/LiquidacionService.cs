@@ -47,4 +47,29 @@ public class LiquidacionService : ILiquidacionService
     {
         return await _liquidacionRepository.GetByGuidWithDetailsAsync(guidRegistro);
     }
+
+    /// <summary>
+    /// Obtiene el listado agrupado de liquidaciones por CODIGO_LIQUIDACION e ID_BANCO.
+    /// Para la generacion de ordenes de pago.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    /// </summary>
+    public async Task<IEnumerable<LiquidacionGrupoResponseDto>> GetGruposAsync(int? idBanco, int idSede)
+    {
+        return await _liquidacionRepository.GetGruposAsync(idBanco, idSede);
+    }
+
+    /// <summary>
+    /// Obtiene las producciones de un codigo de liquidacion especifico.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-06</created>
+    /// <modified>ADG Vladimir D - 2026-02-06 - Agregado filtro por ID_BANCO</modified>
+    /// </summary>
+    public async Task<IEnumerable<LiquidacionListaResponseDto>> GetProduccionesByCodigoLiquidacionAsync(
+        string codigoLiquidacion, int idSede, int? idBanco = null)
+    {
+        return await _liquidacionRepository.GetProduccionesByCodigoLiquidacionAsync(codigoLiquidacion, idSede, idBanco);
+    }
 }

@@ -28,4 +28,23 @@ public interface ILiquidacionRepository
     /// <param name="guidRegistro">GUID del registro de produccion</param>
     /// <returns>Liquidacion con datos relacionados o null si no existe</returns>
     Task<LiquidacionListaResponseDto?> GetByGuidWithDetailsAsync(string guidRegistro);
+
+    /// <summary>
+    /// Obtiene el listado agrupado de liquidaciones por CODIGO_LIQUIDACION e ID_BANCO.
+    /// Para la generacion de ordenes de pago.
+    /// </summary>
+    /// <param name="idBanco">Filtro por ID de Banco (opcional)</param>
+    /// <param name="idSede">Filtro por ID de Sede del usuario logueado</param>
+    /// <returns>Lista de liquidaciones agrupadas</returns>
+    Task<IEnumerable<LiquidacionGrupoResponseDto>> GetGruposAsync(int? idBanco, int idSede);
+
+    /// <summary>
+    /// Obtiene las producciones de un codigo de liquidacion especifico.
+    /// </summary>
+    /// <param name="codigoLiquidacion">Codigo de liquidacion</param>
+    /// <param name="idSede">ID de Sede</param>
+    /// <param name="idBanco">ID de Banco (opcional para filtrar por banco)</param>
+    /// <returns>Lista de producciones asociadas</returns>
+    Task<IEnumerable<LiquidacionListaResponseDto>> GetProduccionesByCodigoLiquidacionAsync(
+        string codigoLiquidacion, int idSede, int? idBanco = null);
 }
