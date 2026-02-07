@@ -144,6 +144,7 @@ Ninguno
 | Tipo Comprobante | string | Si | Tipo de comprobante (Factura, Boleta, etc.) |
 | Serie | string | Si | Serie del comprobante |
 | Numero Comprobante | string | Si | Numero del comprobante |
+| Año | string | Si |  Año de emisión del comprobante |
 
 #### Datos de Salida Requeridos
 
@@ -153,6 +154,7 @@ Ninguno
 | Tipo Comprobante | Tipo de comprobante |
 | Serie | Serie del comprobante |
 | Numero Comprobante | Numero del comprobante |
+| Año | Año de emisión del comprobante |
 | Estado Pago | Estado del pago (Pendiente, Pagado, Anulado, etc.) |
 | Fecha Pago | Fecha en que se realizo el pago |
 | Numero Operacion | Numero de operacion bancaria |
@@ -169,6 +171,7 @@ Ninguno
         "tipoComprobante": "01",
         "serie": "F001",
         "numeroComprobante": "00012345",
+        "anio":"2025",
         "estadoPago": "PAGADO",
         "fechaPago": "2026-01-15",
         "numeroOperacion": "OP-2026-0001234",
