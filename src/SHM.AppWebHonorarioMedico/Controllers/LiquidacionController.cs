@@ -24,19 +24,22 @@ public class LiquidacionController : Controller
     private readonly ILiquidacionService _liquidacionService;
     private readonly IBancoService _bancoService;
     private readonly IOrdenPagoRepository _ordenPagoRepository;
-    private readonly IOrdenPagoProduccionRepository _ordenPagoLiquidacionRepository;
+    private readonly IOrdenPagoProduccionRepository _ordenPagoProduccionRepository;
+    private readonly IOrdenPagoLiquidacionRepository _ordenPagoLiquidacionRepository;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
         ILiquidacionService liquidacionService,
         IBancoService bancoService,
         IOrdenPagoRepository ordenPagoRepository,
-        IOrdenPagoProduccionRepository ordenPagoLiquidacionRepository)
+        IOrdenPagoProduccionRepository ordenPagoProduccionRepository,
+        IOrdenPagoLiquidacionRepository ordenPagoLiquidacionRepository)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
         _bancoService = bancoService;
         _ordenPagoRepository = ordenPagoRepository;
+        _ordenPagoProduccionRepository = ordenPagoProduccionRepository;
         _ordenPagoLiquidacionRepository = ordenPagoLiquidacionRepository;
     }
 
@@ -307,7 +310,7 @@ public class LiquidacionController : Controller
                 IdBanco = request.IdBanco.Value,
                 NumeroOrdenPago = numeroOrdenPago,
                 FechaGeneracion = DateTime.Now,
-                Estado = "PENDIENTE",
+                Estado = "APROBACION_PENDIENTE",
                 MtoConsumoAcum = mtoConsumoAcum,
                 MtoDescuentoAcum = mtoDescuentoAcum,
                 MtoSubtotalAcum = mtoSubtotalAcum,
@@ -331,7 +334,30 @@ public class LiquidacionController : Controller
                 Activo = 1
             }).ToList();
 
-            await _ordenPagoLiquidacionRepository.CreateBulkAsync(ordenPagoLiquidaciones);
+            await _ordenPagoProduccionRepository.CreateBulkAsync(ordenPagoLiquidaciones);
+
+            // Crear registros en SHM_ORDEN_PAGO_LIQUIDACION agrupando por CodigoLiquidacion
+            var gruposLiquidacion = todasLasProducciones
+                .GroupBy(p => p.CodigoLiquidacion)
+                .Select(g => new OrdenPagoLiquidacion
+                {
+                    IdOrdenPago = idOrdenPago,
+                    NumeroLiquidacion = g.First().NumeroLiquidacion,
+                    CodigoLiquidacion = g.Key,
+                    MtoConsumoAcum = g.Sum(p => p.MtoConsumo ?? 0),
+                    MtoDescuentoAcum = g.Sum(p => p.MtoDescuento ?? 0),
+                    MtoSubtotalAcum = g.Sum(p => p.MtoSubtotal ?? 0),
+                    MtoRentaAcum = g.Sum(p => p.MtoRenta ?? 0),
+                    MtoIgvAcum = g.Sum(p => p.MtoIgv ?? 0),
+                    MtoTotalAcum = g.Sum(p => p.MtoTotal ?? 0),
+                    CantComprobantes = g.Count(),
+                    IdCreador = idUsuario.Value
+                }).ToList();
+
+            foreach (var liquidacion in gruposLiquidacion)
+            {
+                await _ordenPagoLiquidacionRepository.CreateAsync(liquidacion);
+            }
 
             // Actualizar estado de las producciones a FACTURA_ORDEN_PAGO
             var idsProduccion = todasLasProducciones.Select(p => p.IdProduccion).ToList();
