@@ -251,7 +251,7 @@ public class BitacoraRepository : IBitacoraRepository
             WHERE sb.ID_ENTIDAD = :IdEntidad
               AND sb.ENTIDAD = :Entidad
               AND sb.ACTIVO = 1
-            ORDER BY sb.FECHA_ACCION DESC";
+            ORDER BY sb.FECHA_CREACION ASC";
 
         return await connection.QueryAsync<BitacoraConUsuarioDto>(sql, new { Entidad = entidad, IdEntidad = idEntidad });
     }

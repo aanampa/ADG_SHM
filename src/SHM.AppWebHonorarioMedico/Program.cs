@@ -80,6 +80,7 @@ try
     builder.Services.AddScoped<IOrdenPagoAprobacionRepository, OrdenPagoAprobacionRepository>();
     builder.Services.AddScoped<IOrdenPagoLiquidacionRepository, OrdenPagoLiquidacionRepository>();
     builder.Services.AddScoped<ILiquidacionRepository, LiquidacionRepository>();
+    builder.Services.AddScoped<IBitacoraRepository, BitacoraRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -101,6 +102,7 @@ try
     builder.Services.AddScoped<IOrdenPagoAprobacionService, OrdenPagoAprobacionService>();
     builder.Services.AddScoped<IOrdenPagoLiquidacionService, OrdenPagoLiquidacionService>();
     builder.Services.AddScoped<ILiquidacionService, LiquidacionService>();
+    builder.Services.AddScoped<IBitacoraService, BitacoraService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));

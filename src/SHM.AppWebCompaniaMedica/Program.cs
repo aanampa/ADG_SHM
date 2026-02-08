@@ -51,6 +51,7 @@ try
 
     // Registrar repositorios
     builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+    builder.Services.AddScoped<IUsuarioSedeRepository, UsuarioSedeRepository>();
     builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
     builder.Services.AddScoped<ISedeRepository, SedeRepository>();
     builder.Services.AddScoped<IArchivoRepository, ArchivoRepository>();
