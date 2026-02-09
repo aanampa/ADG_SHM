@@ -1,3 +1,4 @@
+using SHM.AppDomain.DTOs.OrdenPagoLiquidacion;
 using SHM.AppDomain.Entities;
 
 namespace SHM.AppDomain.Interfaces.Repositories;
@@ -21,4 +22,5 @@ public interface IOrdenPagoLiquidacionRepository
     Task<bool> UpdateAsync(OrdenPagoLiquidacion ordenPagoLiquidacion);
     Task<bool> DeleteAsync(int id, int idModificador);
     Task<bool> DeleteByOrdenPagoIdAsync(int idOrdenPago, int idModificador);
+    Task<IEnumerable<DetalleLiquidacionItemDto>> GetDetalleLiquidacionesByOrdenPagoIdAsync(int idOrdenPago);
 }

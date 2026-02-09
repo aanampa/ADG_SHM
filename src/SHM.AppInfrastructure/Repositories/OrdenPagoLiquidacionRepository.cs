@@ -1,5 +1,6 @@
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using SHM.AppDomain.DTOs.OrdenPagoLiquidacion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppInfrastructure.Configurations;
@@ -30,6 +31,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             opl.MTO_IGV_ACUM as MtoIgvAcum,
             opl.MTO_TOTAL_ACUM as MtoTotalAcum,
             opl.CANT_COMPROBANTES as CantComprobantes,
+            opl.DESCRIPCION_LIQUIDACION as DescripcionLiquidacion,
+            opl.PERIODO_LIQUIDACION as PeriodoLiquidacion,
+            opl.ID_BANCO as IdBanco,
+            opl.TIPO_LIQUIDACION as TipoLiquidacion,
             opl.COMENTARIOS as Comentarios,
             opl.GUID_REGISTRO as GuidRegistro,
             opl.ACTIVO as Activo,
@@ -37,9 +42,11 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             opl.FECHA_CREACION as FechaCreacion,
             opl.ID_MODIFICADOR as IdModificador,
             opl.FECHA_MODIFICACION as FechaModificacion,
-            op.NUMERO_ORDEN_PAGO as NumeroOrdenPago
+            op.NUMERO_ORDEN_PAGO as NumeroOrdenPago,
+            b.NOMBRE_BANCO as NombreBanco
         FROM SHM_ORDEN_PAGO_LIQUIDACION opl
-        LEFT JOIN SHM_ORDEN_PAGO op ON opl.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO";
+        LEFT JOIN SHM_ORDEN_PAGO op ON opl.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+        LEFT JOIN SHM_BANCO b ON opl.ID_BANCO = b.ID_BANCO";
 
     public OrdenPagoLiquidacionRepository(DatabaseConfig databaseConfig)
     {
@@ -162,6 +169,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 MTO_IGV_ACUM,
                 MTO_TOTAL_ACUM,
                 CANT_COMPROBANTES,
+                DESCRIPCION_LIQUIDACION,
+                PERIODO_LIQUIDACION,
+                ID_BANCO,
+                TIPO_LIQUIDACION,
                 COMENTARIOS,
                 GUID_REGISTRO,
                 ACTIVO,
@@ -179,6 +190,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 :MtoIgvAcum,
                 :MtoTotalAcum,
                 :CantComprobantes,
+                :DescripcionLiquidacion,
+                :PeriodoLiquidacion,
+                :IdBanco,
+                :TipoLiquidacion,
                 :Comentarios,
                 SYS_GUID(),
                 1,
@@ -198,6 +213,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
         parameters.Add("MtoIgvAcum", ordenPagoLiquidacion.MtoIgvAcum);
         parameters.Add("MtoTotalAcum", ordenPagoLiquidacion.MtoTotalAcum);
         parameters.Add("CantComprobantes", ordenPagoLiquidacion.CantComprobantes);
+        parameters.Add("DescripcionLiquidacion", ordenPagoLiquidacion.DescripcionLiquidacion);
+        parameters.Add("PeriodoLiquidacion", ordenPagoLiquidacion.PeriodoLiquidacion);
+        parameters.Add("IdBanco", ordenPagoLiquidacion.IdBanco);
+        parameters.Add("TipoLiquidacion", ordenPagoLiquidacion.TipoLiquidacion);
         parameters.Add("Comentarios", ordenPagoLiquidacion.Comentarios);
         parameters.Add("IdCreador", ordenPagoLiquidacion.IdCreador);
         parameters.Add("IdOrdenPagoLiquidacion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
@@ -227,6 +246,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 MTO_IGV_ACUM = :MtoIgvAcum,
                 MTO_TOTAL_ACUM = :MtoTotalAcum,
                 CANT_COMPROBANTES = :CantComprobantes,
+                DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
+                PERIODO_LIQUIDACION = :PeriodoLiquidacion,
+                ID_BANCO = :IdBanco,
+                TIPO_LIQUIDACION = :TipoLiquidacion,
                 COMENTARIOS = :Comentarios,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -245,6 +268,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             ordenPagoLiquidacion.MtoIgvAcum,
             ordenPagoLiquidacion.MtoTotalAcum,
             ordenPagoLiquidacion.CantComprobantes,
+            ordenPagoLiquidacion.DescripcionLiquidacion,
+            ordenPagoLiquidacion.PeriodoLiquidacion,
+            ordenPagoLiquidacion.IdBanco,
+            ordenPagoLiquidacion.TipoLiquidacion,
             ordenPagoLiquidacion.Comentarios,
             ordenPagoLiquidacion.IdModificador
         });
@@ -288,5 +315,50 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
         var rowsAffected = await connection.ExecuteAsync(sql, new { IdOrdenPago = idOrdenPago, IdModificador = idModificador });
 
         return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Obtiene el detalle de producciones por liquidacion para una orden de pago.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-08</created>
+    /// </summary>
+    public async Task<IEnumerable<DetalleLiquidacionItemDto>> GetDetalleLiquidacionesByOrdenPagoIdAsync(int idOrdenPago)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                T1.CODIGO_LIQUIDACION AS CodigoLiquidacion,
+                T1.DESCRIPCION_LIQUIDACION AS DescripcionLiquidacion,
+                T1.TIPO_LIQUIDACION AS TipoLiquidacion,
+                T1.PERIODO_LIQUIDACION AS PeriodoLiquidacion,
+                EM.RUC AS Ruc,
+                EM.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
+                EM.RAZON_SOCIAL AS RazonSocial,
+                B.NOMBRE_BANCO AS NombreBanco,
+                T1.TIPO_COMPROBANTE AS TipoComprobante,
+                T1.SERIE AS Serie,
+                T1.NUMERO AS Numero,
+                T1.MTO_SUBTOTAL AS MtoSubtotal,
+                T1.MTO_IGV AS MtoIgv,
+                T1.MTO_RENTA AS MtoRenta,
+                T1.MTO_TOTAL AS MtoTotal
+            FROM SHM_PRODUCCION T1
+            INNER JOIN SHM_ENTIDAD_MEDICA EM
+                ON T1.ID_ENTIDAD_MEDICA = EM.ID_ENTIDAD_MEDICA
+            INNER JOIN SHM_ENTIDAD_CUENTA_BANCO ECB
+                ON T1.ID_CUENTA_BANCO = ECB.ID_CUENTA_BANCO
+            INNER JOIN SHM_ORDEN_PAGO_LIQUIDACION T2
+                ON T1.NUMERO_LIQUIDACION = T2.NUMERO_LIQUIDACION
+                AND T1.CODIGO_LIQUIDACION = T2.CODIGO_LIQUIDACION
+                AND ECB.ID_BANCO = T2.ID_BANCO
+            LEFT JOIN SHM_BANCO B
+                ON ECB.ID_BANCO = B.ID_BANCO
+            WHERE T2.ID_ORDEN_PAGO = :IdOrdenPago
+                AND T1.ACTIVO = 1
+            ORDER BY T1.CODIGO_LIQUIDACION, T1.CODIGO_PRODUCCION";
+
+        return await connection.QueryAsync<DetalleLiquidacionItemDto>(sql, new { IdOrdenPago = idOrdenPago });
     }
 }

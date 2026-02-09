@@ -93,6 +93,15 @@ public class OrdenPagoService : IOrdenPagoService
     }
 
     /// <summary>
+    /// Obtiene ordenes de pago pendientes de aprobacion para un usuario.
+    /// </summary>
+    public async Task<IEnumerable<OrdenPagoResponseDto>> GetPendingForApprovalByUserAsync(int idUsuario)
+    {
+        var ordenes = await _ordenPagoRepository.GetPendingForApprovalByUserAsync(idUsuario);
+        return ordenes.Select(MapToResponseDto);
+    }
+
+    /// <summary>
     /// Crea una nueva orden de pago.
     /// </summary>
     public async Task<OrdenPagoResponseDto> CreateAsync(CreateOrdenPagoDto dto, int idCreador)

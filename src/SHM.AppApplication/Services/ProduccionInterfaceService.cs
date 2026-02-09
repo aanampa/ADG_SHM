@@ -19,6 +19,7 @@ namespace SHM.AppApplication.Services;
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Nueva llave compuesta, quitado Concepto y liquidacion, formato fecha dd/MM/yyyy HH:mm:ss</modified>
 /// <modified>ADG Antonio - 2026-02-02 - Auto-registro de entidades medicas desde API San Pablo</modified>
+/// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro, sin abortar ante errores individuales</modified>
 /// </summary>
 public class ProduccionInterfaceService : IProduccionInterfaceService
 {
@@ -48,83 +49,90 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     /// <summary>
     /// Crea multiples producciones en el sistema a partir de una coleccion de DTOs.
     /// Valida duplicados por llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
-    /// Si hay error, aborta toda la operacion.
+    /// Registra el estado individual de cada registro procesado.
+    ///
+    /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro, sin abortar ante errores individuales</modified>
     /// </summary>
     public async Task<InterfaceProduccionResultDto> CreateProduccionesAsync(IEnumerable<CreateInterfaceProduccionDto> createDtos, int idCreador)
     {
         var result = new InterfaceProduccionResultDto();
         var dtosList = createDtos.ToList();
 
-        // Fase 1: Validar todos los datos antes de crear (resolver codigos y verificar existencia)
-        var produccionesParaCrear = new List<(CreateInterfaceProduccionDto Dto, int IdSede, int IdEntidadMedica)>();
-
         foreach (var createDto in dtosList)
         {
-            // Obtener IdSede a partir del CodigoSede
-            var sede = await _sedeRepository.GetByCodigoAsync(createDto.CodigoSede);
-            if (sede == null)
-                throw new ArgumentException($"Sede con codigo '{createDto.CodigoSede}' no encontrada");
-
-            // Obtener IdEntidadMedica a partir del CodigoEntidad
-            var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(createDto.CodigoEntidad);
-
-            // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
-            if (entidadMedica == null)
+            var detalle = new InterfaceProduccionDetalleDto
             {
-                _logger.LogInformation(
-                    "Entidad medica '{CodigoEntidad}' no encontrada localmente. Consultando API San Pablo...",
-                    createDto.CodigoEntidad);
+                CodigoSede = createDto.CodigoSede,
+                CodigoEntidad = createDto.CodigoEntidad,
+                CodigoProduccion = createDto.CodigoProduccion,
+                TipoEntidadMedica = createDto.TipoEntidadMedica
+            };
 
-                entidadMedica = await GetOrCreateEntidadMedicaFromApiAsync(
-                    createDto.CodigoSede,
-                    createDto.TipoEntidadMedica,
-                    createDto.CodigoEntidad,
-                    idCreador);
+            try
+            {
+                // Obtener IdSede a partir del CodigoSede
+                var sede = await _sedeRepository.GetByCodigoAsync(createDto.CodigoSede);
+                if (sede == null)
+                {
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = $"Sede con codigo '{createDto.CodigoSede}' no encontrada";
+                    result.CantidadErrores++;
+                    result.Detalle.Add(detalle);
+                    continue;
+                }
 
+                // Obtener IdEntidadMedica a partir del CodigoEntidad
+                var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(createDto.CodigoEntidad);
+
+                // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
                 if (entidadMedica == null)
                 {
-                    throw new ArgumentException(
-                        $"Entidad medica con codigo '{createDto.CodigoEntidad}' no encontrada localmente ni en el API de San Pablo");
+                    _logger.LogInformation(
+                        "Entidad medica '{CodigoEntidad}' no encontrada localmente. Consultando API San Pablo...",
+                        createDto.CodigoEntidad);
+
+                    entidadMedica = await GetOrCreateEntidadMedicaFromApiAsync(
+                        createDto.CodigoSede,
+                        createDto.TipoEntidadMedica,
+                        createDto.CodigoEntidad,
+                        idCreador);
+
+                    if (entidadMedica == null)
+                    {
+                        detalle.Estado = "ER";
+                        detalle.Mensaje = $"Entidad medica con codigo '{createDto.CodigoEntidad}' no encontrada localmente ni en el API de San Pablo";
+                        result.CantidadErrores++;
+                        result.Detalle.Add(detalle);
+                        continue;
+                    }
                 }
-            }
 
-            // Verificar si ya existe por llave compuesta
-            var existe = await _produccionRepository.ExistsByKeyAsync(
-                sede.IdSede,
-                entidadMedica.IdEntidadMedica,
-                createDto.CodigoProduccion,
-                createDto.NumeroProduccion,
-                createDto.TipoEntidadMedica);
+                // Verificar si ya existe por llave compuesta
+                var existe = await _produccionRepository.ExistsByKeyAsync(
+                    sede.IdSede,
+                    entidadMedica.IdEntidadMedica,
+                    createDto.CodigoProduccion,
+                    createDto.NumeroProduccion,
+                    createDto.TipoEntidadMedica);
 
-            if (existe)
-            {
-                result.CantidadObviados++;
-            }
-            else
-            {
-                produccionesParaCrear.Add((createDto, sede.IdSede, entidadMedica.IdEntidadMedica));
-            }
-        }
+                if (existe)
+                {
+                    detalle.Estado = "OK";
+                    detalle.Mensaje = "Registro ya existe, obviado";
+                    result.CantidadObviados++;
+                    result.Detalle.Add(detalle);
+                    continue;
+                }
 
-        // Fase 2: Crear las producciones dentro de una transaccion
-        if (produccionesParaCrear.Count > 0)
-        {
-            using var transactionScope = new TransactionScope(
-                TransactionScopeOption.Required,
-                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-                TransactionScopeAsyncFlowOption.Enabled);
-
-            foreach (var (dto, idSede, idEntidadMedica) in produccionesParaCrear)
-            {
                 // Parsear fechas si vienen en el DTO (formato: dd/MM/yyyy HH:mm:ss)
                 DateTime? fechaProduccion = null;
-                if (!string.IsNullOrEmpty(dto.FechaProduccion))
+                if (!string.IsNullOrEmpty(createDto.FechaProduccion))
                 {
-                    if (DateTime.TryParseExact(dto.FechaProduccion, "dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var fechaProdParsed))
+                    if (DateTime.TryParseExact(createDto.FechaProduccion, "dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var fechaProdParsed))
                     {
                         fechaProduccion = fechaProdParsed;
                     }
-                    else if (DateTime.TryParse(dto.FechaProduccion, out var fechaProdFallback))
+                    else if (DateTime.TryParse(createDto.FechaProduccion, out var fechaProdFallback))
                     {
                         fechaProduccion = fechaProdFallback;
                     }
@@ -132,33 +140,45 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
 
                 var produccion = new Produccion
                 {
-                    IdSede = idSede,
-                    IdEntidadMedica = idEntidadMedica,
-                    CodigoProduccion = dto.CodigoProduccion,
-                    NumeroProduccion = dto.NumeroProduccion,
-                    TipoProduccion = dto.TipoProduccion,
-                    TipoEntidadMedica = dto.TipoEntidadMedica,
-                    TipoMedico = dto.TipoMedico,
-                    TipoRubro = dto.TipoRubro,
-                    Descripcion = dto.Descripcion,
-                    Periodo = dto.Periodo,
+                    IdSede = sede.IdSede,
+                    IdEntidadMedica = entidadMedica.IdEntidadMedica,
+                    CodigoProduccion = createDto.CodigoProduccion,
+                    NumeroProduccion = createDto.NumeroProduccion,
+                    TipoProduccion = createDto.TipoProduccion,
+                    TipoEntidadMedica = createDto.TipoEntidadMedica,
+                    TipoMedico = createDto.TipoMedico,
+                    TipoRubro = createDto.TipoRubro,
+                    Descripcion = createDto.Descripcion,
+                    Periodo = createDto.Periodo,
                     FechaProduccion = fechaProduccion,
-                    EstadoProduccion = dto.EstadoProduccion,
-                    MtoConsumo = dto.MtoConsumo,
-                    MtoDescuento = dto.MtoDescuento,
-                    MtoSubtotal = dto.MtoSubtotal,
-                    MtoRenta = dto.MtoRenta,
-                    MtoIgv = dto.MtoIgv,
-                    MtoTotal = dto.MtoTotal,
+                    EstadoProduccion = createDto.EstadoProduccion,
+                    MtoConsumo = createDto.MtoConsumo,
+                    MtoDescuento = createDto.MtoDescuento,
+                    MtoSubtotal = createDto.MtoSubtotal,
+                    MtoRenta = createDto.MtoRenta,
+                    MtoIgv = createDto.MtoIgv,
+                    MtoTotal = createDto.MtoTotal,
                     IdCreador = idCreador,
                     Activo = 1
                 };
 
                 await _produccionRepository.CreateAsync(produccion);
                 result.CantidadCreados++;
-            }
 
-            transactionScope.Complete();
+                detalle.Estado = "OK";
+                detalle.Mensaje = "Creado exitosamente";
+                result.Detalle.Add(detalle);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar produccion: Sede={CodigoSede}, Entidad={CodigoEntidad}, Produccion={CodigoProduccion}",
+                    createDto.CodigoSede, createDto.CodigoEntidad, createDto.CodigoProduccion);
+
+                detalle.Estado = "ER";
+                detalle.Mensaje = ex.Message;
+                result.CantidadErrores++;
+                result.Detalle.Add(detalle);
+            }
         }
 
         return result;
@@ -167,90 +187,122 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     /// <summary>
     /// Actualiza los datos de liquidacion de multiples producciones.
     /// Busca por llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
-    /// Si hay error, aborta toda la operacion.
+    /// Registra el estado individual de cada registro procesado.
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-31</created>
+    /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro, sin abortar ante errores individuales</modified>
     /// </summary>
     public async Task<InterfaceProduccionResultDto> UpdateLiquidacionesAsync(IEnumerable<UpdateInterfaceLiquidacionDto> updateDtos, int idModificador)
     {
         var result = new InterfaceProduccionResultDto();
         var dtosList = updateDtos.ToList();
 
-        // Fase 1: Validar todos los datos antes de actualizar (resolver codigos y parsear fechas)
-        var liquidacionesParaActualizar = new List<(UpdateInterfaceLiquidacionDto Dto, int IdSede, int IdEntidadMedica, DateTime FechaLiquidacion)>();
-
         foreach (var updateDto in dtosList)
         {
-            // Obtener IdSede a partir del CodigoSede
-            var sede = await _sedeRepository.GetByCodigoAsync(updateDto.CodigoSede);
-            if (sede == null)
-                throw new ArgumentException($"Sede con codigo '{updateDto.CodigoSede}' no encontrada");
-
-            // Obtener IdEntidadMedica a partir del CodigoEntidad
-            var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(updateDto.CodigoEntidad);
-            if (entidadMedica == null)
-                throw new ArgumentException($"Entidad medica con codigo '{updateDto.CodigoEntidad}' no encontrada");
-
-            // Parsear FechaLiquidacion (formato: dd/MM/yyyy HH:mm:ss)
-            DateTime fechaLiquidacion;
-            if (!DateTime.TryParseExact(updateDto.FechaLiquidacion, "dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out fechaLiquidacion))
+            var detalle = new InterfaceProduccionDetalleDto
             {
-                if (!DateTime.TryParse(updateDto.FechaLiquidacion, out fechaLiquidacion))
+                CodigoSede = updateDto.CodigoSede,
+                CodigoEntidad = updateDto.CodigoEntidad,
+                CodigoProduccion = updateDto.CodigoProduccion,
+                TipoEntidadMedica = updateDto.TipoEntidadMedica
+            };
+
+            try
+            {
+                // Obtener IdSede a partir del CodigoSede
+                var sede = await _sedeRepository.GetByCodigoAsync(updateDto.CodigoSede);
+                if (sede == null)
                 {
-                    throw new ArgumentException($"Formato de fecha invalido para FechaLiquidacion: '{updateDto.FechaLiquidacion}'. Use formato dd/MM/yyyy HH:mm:ss");
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = $"Sede con codigo '{updateDto.CodigoSede}' no encontrada";
+                    result.CantidadErrores++;
+                    result.Detalle.Add(detalle);
+                    continue;
                 }
-            }
 
-            // Verificar si existe la produccion por llave compuesta
-            var existe = await _produccionRepository.ExistsByKeyAsync(
-                sede.IdSede,
-                entidadMedica.IdEntidadMedica,
-                updateDto.CodigoProduccion,
-                updateDto.NumeroProduccion,
-                updateDto.TipoEntidadMedica);
+                // Obtener IdEntidadMedica a partir del CodigoEntidad
+                var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(updateDto.CodigoEntidad);
+                if (entidadMedica == null)
+                {
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = $"Entidad medica con codigo '{updateDto.CodigoEntidad}' no encontrada";
+                    result.CantidadErrores++;
+                    result.Detalle.Add(detalle);
+                    continue;
+                }
 
-            if (!existe)
-            {
-                result.CantidadObviados++;
-            }
-            else
-            {
-                liquidacionesParaActualizar.Add((updateDto, sede.IdSede, entidadMedica.IdEntidadMedica, fechaLiquidacion));
-            }
-        }
+                // Parsear FechaLiquidacion (formato: dd/MM/yyyy HH:mm:ss)
+                DateTime fechaLiquidacion;
+                if (!DateTime.TryParseExact(updateDto.FechaLiquidacion, "dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out fechaLiquidacion))
+                {
+                    if (!DateTime.TryParse(updateDto.FechaLiquidacion, out fechaLiquidacion))
+                    {
+                        detalle.Estado = "ER";
+                        detalle.Mensaje = $"Formato de fecha invalido para FechaLiquidacion: '{updateDto.FechaLiquidacion}'. Use formato dd/MM/yyyy HH:mm:ss";
+                        result.CantidadErrores++;
+                        result.Detalle.Add(detalle);
+                        continue;
+                    }
+                }
 
-        // Fase 2: Actualizar las liquidaciones dentro de una transaccion
-        if (liquidacionesParaActualizar.Count > 0)
-        {
-            using var transactionScope = new TransactionScope(
-                TransactionScopeOption.Required,
-                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-                TransactionScopeAsyncFlowOption.Enabled);
+                // Verificar si existe la produccion por llave compuesta
+                var existe = await _produccionRepository.ExistsByKeyAsync(
+                    sede.IdSede,
+                    entidadMedica.IdEntidadMedica,
+                    updateDto.CodigoProduccion,
+                    updateDto.NumeroProduccion,
+                    updateDto.TipoEntidadMedica);
 
-            foreach (var (dto, idSede, idEntidadMedica, fechaLiquidacion) in liquidacionesParaActualizar)
-            {
+                if (!existe)
+                {
+                    detalle.Estado = "OK";
+                    detalle.Mensaje = "Produccion no encontrada, obviado";
+                    result.CantidadObviados++;
+                    result.Detalle.Add(detalle);
+                    continue;
+                }
+
                 var actualizado = await _produccionRepository.UpdateLiquidacionByKeyAsync(
-                    idSede,
-                    idEntidadMedica,
-                    dto.CodigoProduccion,
-                    dto.NumeroProduccion,
-                    dto.TipoEntidadMedica,
-                    dto.NumeroLiquidacion,
-                    dto.CodigoLiquidacion,
-                    dto.PeriodoLiquidacion,
-                    dto.EstadoLiquidacion,
+                    sede.IdSede,
+                    entidadMedica.IdEntidadMedica,
+                    updateDto.CodigoProduccion,
+                    updateDto.NumeroProduccion,
+                    updateDto.TipoEntidadMedica,
+                    updateDto.NumeroLiquidacion,
+                    updateDto.CodigoLiquidacion,
+                    updateDto.PeriodoLiquidacion,
+                    updateDto.EstadoLiquidacion,
                     fechaLiquidacion,
-                    dto.DescripcionLiquidacion,
+                    updateDto.DescripcionLiquidacion,
+                    updateDto.TipoLiquidacion,
                     idModificador);
 
                 if (actualizado)
                 {
                     result.CantidadCreados++;
+                    detalle.Estado = "OK";
+                    detalle.Mensaje = "Actualizado exitosamente";
                 }
-            }
+                else
+                {
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = "No se pudo actualizar la produccion";
+                    result.CantidadErrores++;
+                }
 
-            transactionScope.Complete();
+                result.Detalle.Add(detalle);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar liquidacion: Sede={CodigoSede}, Entidad={CodigoEntidad}, Produccion={CodigoProduccion}",
+                    updateDto.CodigoSede, updateDto.CodigoEntidad, updateDto.CodigoProduccion);
+
+                detalle.Estado = "ER";
+                detalle.Mensaje = ex.Message;
+                result.CantidadErrores++;
+                result.Detalle.Add(detalle);
+            }
         }
 
         return result;

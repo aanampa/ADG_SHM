@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SHM.AppDomain.DTOs.PerfilAprobacionUsuario;
 using SHM.AppDomain.DTOs.Usuario;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
@@ -16,19 +17,25 @@ public class UsuarioController : Controller
     private readonly IRolService _rolService;
     private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly ISedeService _sedeService;
+    private readonly IPerfilAprobacionService _perfilAprobacionService;
+    private readonly IPerfilAprobacionUsuarioService _perfilAprobacionUsuarioService;
 
     public UsuarioController(
         ILogger<UsuarioController> logger,
         IUsuarioService usuarioService,
         IRolService rolService,
         IEntidadMedicaService entidadMedicaService,
-        ISedeService sedeService)
+        ISedeService sedeService,
+        IPerfilAprobacionService perfilAprobacionService,
+        IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService)
     {
         _logger = logger;
         _usuarioService = usuarioService;
         _rolService = rolService;
         _entidadMedicaService = entidadMedicaService;
         _sedeService = sedeService;
+        _perfilAprobacionService = perfilAprobacionService;
+        _perfilAprobacionUsuarioService = perfilAprobacionUsuarioService;
     }
 
     /// <summary>
@@ -834,6 +841,112 @@ public class UsuarioController : Controller
         {
             _logger.LogError(ex, "Error al resetear clave de usuario interno");
             return Json(new { success = false, message = "Error al resetear la clave" });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetPerfilAprobacionModal(string guid)
+    {
+        try
+        {
+            var usuario = await _usuarioService.GetUsuarioByGuidAsync(guid);
+            if (usuario == null)
+            {
+                return NotFound();
+            }
+
+            var asignaciones = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(usuario.IdUsuario);
+            var perfiles = await _perfilAprobacionService.GetAllActiveAsync();
+            var sedes = await _sedeService.GetAllSedesAsync();
+
+            var model = new PerfilAprobacionUsuarioModalViewModel
+            {
+                GuidRegistro = usuario.GuidRegistro ?? "",
+                NombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim(),
+                IdUsuario = usuario.IdUsuario,
+                Asignaciones = asignaciones.Select(a => new PerfilAprobacionUsuarioItemViewModel
+                {
+                    IdPerfilAprobacion = a.IdPerfilAprobacion,
+                    IdUsuario = a.IdUsuario,
+                    NombrePerfil = a.NombrePerfil,
+                    IdSede = a.IdSede,
+                    NombreSede = a.NombreSede
+                }).ToList(),
+                PerfilesDisponibles = perfiles.Select(p => new SelectListItem
+                {
+                    Value = p.IdPerfilAprobacion.ToString(),
+                    Text = $"{p.Codigo} - {p.Descripcion}"
+                }).ToList(),
+                SedesDisponibles = sedes.Where(s => s.Activo == 1).Select(s => new SelectListItem
+                {
+                    Value = s.IdSede.ToString(),
+                    Text = s.Nombre
+                }).ToList()
+            };
+
+            return PartialView("_PerfilAprobacionUsuarioModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener modal de perfiles de aprobacion para usuario: {Guid}", guid);
+            return StatusCode(500);
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AsignarPerfil([FromBody] AsignarPerfilRequest request)
+    {
+        try
+        {
+            var usuario = await _usuarioService.GetUsuarioByGuidAsync(request.GuidRegistro);
+            if (usuario == null)
+            {
+                return Json(new { success = false, message = "Usuario no encontrado" });
+            }
+
+            var createDto = new CreatePerfilAprobacionUsuarioDto
+            {
+                IdPerfilAprobacion = request.IdPerfilAprobacion,
+                IdUsuario = usuario.IdUsuario,
+                IdSede = request.IdSede
+            };
+
+            await _perfilAprobacionUsuarioService.CreateAsync(createDto);
+
+            _logger.LogInformation("Perfil de aprobacion {IdPerfil} asignado al usuario {IdUsuario}",
+                request.IdPerfilAprobacion, usuario.IdUsuario);
+
+            return Json(new { success = true, message = "Perfil asignado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al asignar perfil de aprobacion");
+            return Json(new { success = false, message = "Error al asignar el perfil. Verifique que no exista una asignacion duplicada." });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> QuitarPerfil([FromBody] QuitarPerfilRequest request)
+    {
+        try
+        {
+            var result = await _perfilAprobacionUsuarioService.DeleteAsync(request.IdPerfilAprobacion, request.IdUsuario);
+            if (!result)
+            {
+                return Json(new { success = false, message = "No se pudo quitar la asignacion" });
+            }
+
+            _logger.LogInformation("Perfil de aprobacion {IdPerfil} quitado del usuario {IdUsuario}",
+                request.IdPerfilAprobacion, request.IdUsuario);
+
+            return Json(new { success = true, message = "Perfil quitado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al quitar perfil de aprobacion");
+            return Json(new { success = false, message = "Error al quitar el perfil" });
         }
     }
 

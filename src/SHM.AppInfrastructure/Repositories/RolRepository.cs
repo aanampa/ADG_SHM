@@ -138,7 +138,7 @@ public class RolRepository : IRolRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SHM_ROL_SEQ.NEXTVAL,
+                SHM_SEG_ROL_SEQ.NEXTVAL,
                 :Codigo,
                 :Descripcion,
                 SYS_GUID(),

@@ -14,10 +14,14 @@ namespace SHM.AppApplication.Services;
 public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
 {
     private readonly IOrdenPagoAprobacionRepository _repository;
+    private readonly IOrdenPagoRepository _ordenPagoRepository;
 
-    public OrdenPagoAprobacionService(IOrdenPagoAprobacionRepository repository)
+    public OrdenPagoAprobacionService(
+        IOrdenPagoAprobacionRepository repository,
+        IOrdenPagoRepository ordenPagoRepository)
     {
         _repository = repository;
+        _ordenPagoRepository = ordenPagoRepository;
     }
 
     /// <summary>
@@ -66,12 +70,71 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
     }
 
     /// <summary>
-    /// Obtiene todas las aprobaciones de un rol.
+    /// Obtiene todas las aprobaciones de un perfil de aprobacion.
     /// </summary>
-    public async Task<IEnumerable<OrdenPagoAprobacionResponseDto>> GetByRolIdAsync(int idRol)
+    public async Task<IEnumerable<OrdenPagoAprobacionResponseDto>> GetByPerfilAprobacionIdAsync(int idPerfilAprobacion)
     {
-        var items = await _repository.GetByRolIdAsync(idRol);
+        var items = await _repository.GetByPerfilAprobacionIdAsync(idPerfilAprobacion);
         return items.Select(MapToResponseDto);
+    }
+
+    /// <summary>
+    /// Aprueba una orden de pago para el usuario actual.
+    /// Valida que el usuario tenga el perfil correspondiente y que sea su turno.
+    /// Si todos los niveles estan aprobados, cambia el estado de la orden a APROBADO.
+    /// </summary>
+    public async Task<(bool success, string message)> AprobarAsync(int idOrdenPago, int idUsuario)
+    {
+        // Buscar la aprobacion pendiente que corresponde al usuario
+        var aprobacion = await _repository.GetPendingByOrdenPagoForUserAsync(idOrdenPago, idUsuario);
+        if (aprobacion == null)
+            return (false, "No tiene permisos para aprobar esta orden o ya fue procesada.");
+
+        // Aprobar el nivel actual
+        var aprobado = await _repository.AprobarAsync(aprobacion.IdOrdenPagoAprobacion, idUsuario, idUsuario);
+        if (!aprobado)
+            return (false, "No se pudo procesar la aprobación. La orden ya fue procesada por otro usuario.");
+
+        // Verificar si quedan niveles pendientes
+        var aprobaciones = await _repository.GetByOrdenPagoIdAsync(idOrdenPago);
+        var pendientes = aprobaciones.Where(a => a.Estado == "PENDIENTE").Any();
+
+        if (!pendientes)
+        {
+            // Todos los niveles aprobados: actualizar estado de la orden
+            await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, "APROBADO", idUsuario);
+        }
+
+        return (true, "Orden de pago aprobada exitosamente.");
+    }
+
+    /// <summary>
+    /// Rechaza una orden de pago para el usuario actual.
+    /// Cambia el estado de la orden a RECHAZADO y registra el comentario.
+    /// </summary>
+    public async Task<(bool success, string message)> RechazarAsync(int idOrdenPago, int idUsuario, string? comentario)
+    {
+        // Buscar la aprobacion pendiente que corresponde al usuario
+        var aprobacion = await _repository.GetPendingByOrdenPagoForUserAsync(idOrdenPago, idUsuario);
+        if (aprobacion == null)
+            return (false, "No tiene permisos para rechazar esta orden o ya fue procesada.");
+
+        // Rechazar el nivel actual
+        var rechazado = await _repository.RechazarAsync(aprobacion.IdOrdenPagoAprobacion, idUsuario, idUsuario);
+        if (!rechazado)
+            return (false, "No se pudo procesar el rechazo. La orden ya fue procesada por otro usuario.");
+
+        // Actualizar estado de la orden a RECHAZADO
+        var orden = await _ordenPagoRepository.GetByIdAsync(idOrdenPago);
+        if (orden != null)
+        {
+            orden.Estado = "RECHAZADO";
+            orden.Comentarios = comentario;
+            orden.IdModificador = idUsuario;
+            await _ordenPagoRepository.UpdateAsync(orden);
+        }
+
+        return (true, "Orden de pago rechazada.");
     }
 
     /// <summary>
@@ -82,7 +145,9 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         var entity = new OrdenPagoAprobacion
         {
             IdOrdenPago = dto.IdOrdenPago,
-            IdRol = dto.IdRol,
+            IdPerfilAprobacion = dto.IdPerfilAprobacion,
+            Orden = dto.Orden,
+            Estado = dto.Estado ?? "PENDIENTE",
             IdCreador = idCreador,
             Activo = 1
         };
@@ -103,7 +168,11 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
             return null;
 
         existing.IdOrdenPago = dto.IdOrdenPago;
-        existing.IdRol = dto.IdRol;
+        existing.IdPerfilAprobacion = dto.IdPerfilAprobacion;
+        existing.Orden = dto.Orden;
+        existing.Estado = dto.Estado;
+        existing.FechaAprobacion = dto.FechaAprobacion;
+        existing.IdUsuarioAprobador = dto.IdUsuarioAprobador;
         existing.IdModificador = idModificador;
 
         var updated = await _repository.UpdateAsync(existing);
@@ -140,9 +209,13 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         {
             IdOrdenPagoAprobacion = entity.IdOrdenPagoAprobacion,
             IdOrdenPago = entity.IdOrdenPago,
-            IdRol = entity.IdRol,
+            IdPerfilAprobacion = entity.IdPerfilAprobacion,
+            Orden = entity.Orden,
+            Estado = entity.Estado,
+            FechaAprobacion = entity.FechaAprobacion,
+            IdUsuarioAprobador = entity.IdUsuarioAprobador,
             NumeroOrdenPago = entity.NumeroOrdenPago,
-            NombreRol = entity.NombreRol,
+            NombrePerfil = entity.NombrePerfil,
             NombreAprobador = entity.NombreAprobador,
             GuidRegistro = entity.GuidRegistro,
             Activo = entity.Activo,

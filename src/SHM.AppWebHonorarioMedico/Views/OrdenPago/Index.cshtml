@@ -1,534 +1,213 @@
-﻿
+@using System.Text.Json
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Orden de Pago";
+    var bancos = ViewBag.Bancos ?? new List<object>();
 }
 
-@section Styles {
+<div class="wrapper">
+    <div class="content-wrapper">
 
-    <!-- DataTables CSS -->
-    <link href="~/vendor/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
-
-    <style>
-        .dataTables_paginate {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px; /* Para darle espacio al paginador */
-        }
-
-        /* Centra el paginador */
-        .dt-paging {
-            text-align: center !important;
-            float: none !important;
-            margin-top: 1em;
-        }
-
-        thead th {
-            vertical-align: middle !important;
-        }
-
-        td.dt-center {
-            text-align: center;
-        }
-
-
-        /* Estilo para los select */
-        .custom-select-width {
-            width: 200px; /* Ancho fijo para los select */
-        }
-
-        /* Mejorar la apariencia de los select en Bootstrap */
-        .form-select {
-            font-size: 1rem; /* Tamaño de fuente */
-            padding: 0.5rem 1rem; /* Espaciado interno */
-            border: 1px solid #ced4da; /* Borde */
-            border-radius: 0.25rem; /* Bordes redondeados */
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Transiciones suaves */
-        }
-
-            /* Estilo para el indicador de selección (flecha) */
-            .form-select::after {
-                position: absolute;
-                top: 50%;
-                right: 1rem;
-                transform: translateY(-50%);
-                content: "▼"; /* Flecha hacia abajo */
-                pointer-events: none;
-                font-size: 1.2rem;
-                color: #6c757d;
-            }
-
-
-        /* Aplica a la celda completa */
-        td.fechas-td {
-            vertical-align: top !important;
-            white-space: normal !important;
-            text-align: left !important;
-            padding: 1px;
-        }
-
-
-        .tabla-pequena {
-            font-size: 14px;
-        }
-
-
-        /* Estilo de la tabla interna (sin bordes visibles) */
-        .tabla-fechas-interna {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 12px;
-        }
-
-            /* Estilo para las celdas internas */
-            .tabla-fechas-interna td {
-                border: none;
-                padding: 1px 1px;
-                vertical-align: top;
-            }
-
-                .tabla-fechas-interna td:first-child {
-                    width: 95px; /* o lo que necesites */
-                    white-space: nowrap; /* evita que se rompa la línea */
-                }
-
-
-
-
-    </style>
-
-}
-
-<input type="hidden" value="@TempData["APP_RESPONSE"]" id="app-response" />
-<input type="hidden" value="@TempData["APP_MESSAGE"]" id="app-message" />
-
-<!-- Content Wrapper. Contains page content -->
-<div class="content-wrapper">
-
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-sm-6">
-                    <h1 class="m-0 titulo-formulario">Orden de Pago</h1>
-                </div><!-- /.col -->
-                <div class="col-sm-6">
-                    <ol class="breadcrumb float-sm-right">
-                    </ol>
-                </div><!-- /.col -->
-            </div><!-- /.row -->
-
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
+        <div class="content-header py-2">
+            <div class="container-fluid">
+                <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
+                    <i class="fas fa-money-check-alt mr-2"></i>Orden de Pago
+                </h1>
+                <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
                     <li class="breadcrumb-item">Corporativo</li>
-                    <li class="breadcrumb-item active" aria-current="page">Orden de Pago</li>
+                    <li class="breadcrumb-item active">Orden de Pago</li>
                 </ol>
-            </nav>
-
-            <div class="row">
-                <div class="col-sm-6">
-                    <label class="my-0 py-0">
-                        Ver Video Tutorial
-                        <button type="button" class="btn btn-link p-0 ml-2"
-                                data-toggle="modal"
-                                data-target="#verVideoModal"
-                                data-videourl="/archivos/manuales/SGD_MUS_ModuloSGD_Corporativo.mp4"
-                                title="Ver tutorial en video">
-                            <i class="fas fa-video fa-lg text-primary"></i>
-                        </button>
-                    </label>
-                </div>
             </div>
+        </div>
 
-        </div><!-- /.container-fluid -->
-    </div>
-
-    <!-- /.content-header -->
-    <!-- Main content -->
-    <div class="content">
-        <div class="container-fluid">
-
-            <div class="card card-primary">
-                <div class="card-body p-2 pt-3">
-
-                    <div class="row">
-                        <div class="col-lg-2 mt-1">
-                            <div class="d-flex" style="gap: 4px;">
-                                <div style="flex: 3.5;">
-                                    <select id="txtEstado" name="txtEstado"
-                                            class="form-select w-100">
-                                        <option value="0" selected>- Todos los Bancos -</option>
-                                        <option value="Pendiente de Factura">BBVA</option>
-                                        <option value="Facturado">Banco de Crédito BCP</option>
-                                        <option value="Facturado">Banco Interbank</option>
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <div class="form-group mb-0">
+                                    <label class="mb-1 small">Banco</label>
+                                    <select id="cboBanco" class="form-control form-control-sm">
+                                        <option value="">- Todos -</option>
                                     </select>
                                 </div>
                             </div>
-
+                            <div class="col-md-3">
+                                <div class="form-group mb-0">
+                                    <label class="mb-1 small">Estado</label>
+                                    <select id="cboEstado" class="form-control form-control-sm">
+                                        <option value="">- Todos -</option>
+                                        <option value="PENDIENTE">Pendiente</option>
+                                        <option value="EN_APROBACION">En Aprobaci&oacute;n</option>
+                                        <option value="APROBADO">Aprobado</option>
+                                        <option value="PAGADO">Pagado</option>
+                                        <option value="RECHAZADO">Rechazado</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="mb-1 small">&nbsp;</label>
+                                <div>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="searchList()">
+                                        <i class="fas fa-search mr-1"></i>Buscar
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearFilters()">
+                                        <i class="fas fa-eraser mr-1"></i>Limpiar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-right">
+                                <label class="mb-1 small">&nbsp;</label>
+                                <div>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
+                                        <i class="fas fa-file-excel mr-1"></i>Exportar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="col-lg-5 mt-1">
-
-                            <button type="button"
-                                    id="btnBuscar"
-                                    data-target="#BuscarModal"
-                                    data-toggle="modal"
-                                    class="btn btn-primary">
-                                Buscar...
-                            </button>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
                         </div>
-
-                    </div>
-
-                    <div class="row mt-2">
-
-                        <div class="col-12">
-                            <table id="facturasTable" class="table table-sm table-bordered table-background-white tabla-pequena table-hover" style="background-color:#FFFFFF;width:100%">
-                                <thead class="bg-secondary">
-                                    <tr class="text-center">
-                                        <th width="30px"></th>
-                                        <th>Orden de Pago</th>
-                                        <th>Fecha de Generación</th>
-                                        <th>Banco</th>
-                                        <th>N° de Liquidaciones</th>
-                                        <th>N° de Facturas</th>
-                                        <th>Estado de Aprobación</th>
-                                        <th>Sub Total<br />S/.</th>
-                                        <th>IGV<br />S/.</th>
-                                        <th>Imp. Renta<br />S/.</th>
-                                        <th>Total<br />S/.</th>
-
-                                        @* <th>Usuario<br />Registro</th> *@
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    <tr>
-                                        <td class="text-center">
-                                            <button class="btn btn-primary btn-sm"
-                                                    onclick="location.href='@Url.Action("DetalleOP", "CorporativoLista", new { id = "1" })'">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                        <td align="center">20251101</td>
-                                        <td align="center">10/11/2025</td>
-                                        <td align="center">BBVA</td>
-                                        <td align="center">5</td>
-                                        <td align="center">20</td>
-                                        <td class="text-center"><span class="badge badge-danger text-sm">En Aprobación</span></td>
-                                        <td align="center">50,000.00</td>
-                                        <td align="center">9,00.00</td>
-                                        <td align="center"> -- </td>
-                                        <td align="center">59,000.00</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">
-                                            <button class="btn btn-primary btn-sm"
-                                                    onclick="location.href='@Url.Action("DetalleOP", "CorporativoLista", new { id = "1" })'">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                        <td align="center">20251102</td>
-                                        <td align="center">09/11/2025</td>
-                                        <td align="center">Banco de Crédito BCP</td>
-                                        <td align="center">4</td>
-                                        <td align="center">15</td>
-                                        <td class="text-center"><span class="badge badge-danger text-sm">En Aprobación</span></td>
-                                        <td align="center">50,000.00</td>
-                                        <td align="center">9,00.00</td>
-                                        <td align="center"> -- </td>
-                                        <td align="center">59,000.00</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">
-                                            <button class="btn btn-primary btn-sm"
-                                                    onclick="location.href='@Url.Action("DetalleOP", "CorporativoLista", new { id = "1" })'">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                        <td align="center">20251103</td>
-                                        <td align="center">09/11/2025</td>
-                                        <td align="center">Interbank</td>
-                                        <td align="center">4</td>
-                                        <td align="center">15</td>
-                                        <td class="text-center"><span class="badge badge-primary text-sm">Aprobado</span></td>
-                                        <td align="center">50,000.00</td>
-                                        <td align="center">9,00.00</td>
-                                        <td align="center"> -- </td>
-                                        <td align="center">59,000.00</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">
-                                            <button class="btn btn-primary btn-sm"
-                                                    onclick="location.href='@Url.Action("DetalleOP", "CorporativoLista", new { id = "1" })'">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                        <td align="center">20251104</td>
-                                        <td align="center">09/11/2025</td>
-                                        <td align="center">BBVA</td>
-                                        <td align="center">4</td>
-                                        <td align="center">15</td>
-                                        <td class="text-center"><span class="badge badge-primary text-sm">Aprobado</span></td>
-                                        <td align="center">50,000.00</td>
-                                        <td align="center">9,00.00</td>
-                                        <td align="center"> -- </td>
-                                        <td align="center">59,000.00</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">
-                                            <button class="btn btn-primary btn-sm"
-                                                    onclick="location.href='@Url.Action("DetalleOP", "CorporativoLista", new { id = "1" })'">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                        <td align="center">20251105</td>
-                                        <td align="center">08/11/2025</td>
-                                        <td align="center">BBVA</td>
-                                        <td align="center">3</td>
-                                        <td align="center">10</td>
-                                        <td class="text-center"><span class="badge badge-success text-sm">Pagado</span></td>
-                                        <td align="center">50,000.00</td>
-                                        <td align="center">9,00.00</td>
-                                        <td align="center"> -- </td>
-                                        <td align="center">59,000.00</td>
-                                    </tr>
-
-                                </tbody>
-
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-
-        </div><!-- /.container-fluid -->
-
-    </div>
-    <!-- /.content -->
-</div>
-<!-- /.content-wrapper -->
-
-<div class="modal fade" data-backdrop="static" id="BuscarModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content custom-modal-width">
-
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    Buscar
-                </h5>
-            </div>
-
-            <div class="modal-body">
-
-
-                <div class="row">
-                    <div class="col-6">
-                        <label class="col-form-label-sm mb-0">Producción</label>
-                        <input type="text" id="txtNumeroBuscar" class="form-control" placeholder="Número" autocomplete="off" maxlength="8">
-                    </div>
-                    <div class="col-6">
-                        <label class="col-form-label-sm mb-0">Factura</label>
-                        <input type="text" id="txtNumeroBuscar" class="form-control" placeholder="Número" autocomplete="off" maxlength="8">
-                        @* <div class="invalid-feedback">El número debe contener solo números (máx. 8 dígitos).</div> *@
                     </div>
                 </div>
-
-
-
-
-                <div class="row">
-                    <div class="col-6">
-                        <label class="col-form-label-sm mb-0">Cía Médica</label>
-                        @* <input type="text" id="txtSerieBuscar" class="form-control" placeholder="Serie" autocomplete="off" maxlength="4">
-                        <div class="invalid-feedback">La serie debe contener solo números (máx. 4 dígitos).</div> *@
-                        <select id="txtSerieBuscar" name="txtSerieBuscar"
-                                class="form-control">
-                            <option value="">- Todos -</option>
-                            <option value="">Lab Suiza</option>
-                            <option value="">Carranza EIRL</option>
-                        </select>
-
-                    </div>
-                    <div class="col-6">
-                        <label class="col-form-label-sm mb-0">RUC</label>
-                        <input type="text" id="txtNumeroBuscar" class="form-control" placeholder="Número" autocomplete="off" maxlength="8">
-                        @* <div class="invalid-feedback">El número debe contener solo números (máx. 8 dígitos).</div> *@
-                    </div>
-                </div>
-
-
             </div>
-
-            <div class="modal-footer">
-
-                <button type="button" id="btnBuscarModal" name="btnBuscarModal" class="btn btn-primary">
-                    Buscar
-                </button>
-
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    Cerrar
-                </button>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" data-backdrop="static" id="RegistroFacturaModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content custom-modal-width">
-
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    Registro
-                </h5>
-            </div>
-
-            <div class="modal-body">
-
-                <div class="row">
-                    <div class="col-12">
-                        <label class="col-form-label-sm mb-0">Sede</label>
-                        <select id="CodigoSede" name="CodigoSede" required
-                                @* asp-items="@(new SelectList(Model.ListaSedes, "Codigo", "Nombre"))" *@
-                                class="form-control">
-                            <option value="">- Seleccione -</option>
-                        </select>
-                        <div class="invalid-feedback" style="display: none;">⚠️ Por favor, seleccione una sede</div>
-                    </div>
-                </div>
-
-                <div class="row" hidden>
-
-                    <div class="col-12">
-                        <label class="col-form-label-sm mb-0">Origen</label>
-                        <select id="Origen" name="Origen" class="form-control" required>
-                            @* <option value="">- Seleccione -</option> *@
-                            <option value="A" selected>Ambulatorio</option>
-                            <option value="H">Hospitalario</option>
-                        </select>
-                        <div class="invalid-feedback" style="display: none;">⚠️ Por favor, seleccione un origen</div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <label class="col-form-label-sm mb-0">Tipo de Comprobante</label>
-                        <select id="TipoComprobante" name="TipoComprobante" class="form-control" required>
-                            <option value="">- Seleccione -</option>
-                            <option value="01">Factura</option>
-                            <option value="03">Boleta</option>
-                        </select>
-                        <div class="invalid-feedback" style="display: none;">⚠️ Por favor, seleccione un tipo de comprobante</div>
-                    </div>
-
-                </div>
-
-                <div class="row mt-2">
-
-                    <div class="col-6">
-                        <label class="col-form-label-sm mb-0">Serie</label>
-                        <input type="text" id="Serie" name="Serie" class="form-control" value="" autocomplete="off" maxlength="4" required />
-                        <div class="invalid-feedback">La serie debe contener solo números (máx. 4 dígitos).</div>
-                    </div>
-
-                    <div class="col-6">
-                        <label class="col-form-label-sm mb-0">Número</label>
-                        <input type="text" id="Numero" name="Numero" class="form-control" value="" autocomplete="off" maxlength="10" required />
-                        <div class="invalid-feedback">El número debe contener solo números (máx. 10 dígitos).</div>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="modal-footer">
-
-                <button type="button" class="btn btn-primary" id="btnRegistrarFactura">
-                    Registrar
-                </button>
-
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    Cerrar
-                </button>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="verVideoModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ver Video</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <video id="videoVisor" width="100%" height="auto" controls>
-                    <source id="videoSource" src="" type="video/mp4" />
-                    Tu navegador no soporta reproducción de video.
-                </video>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
+        </section>
     </div>
 </div>
 
 @Html.AntiForgeryToken()
 
-<input type="hidden" value="@TempData["APP_RESPONSE"]" id="app-response" />
-<input type="hidden" value="@TempData["APP_MESSAGE"]" id="app-message" />
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--bootstrap-5 .select2-selection--single {
+            height: 31px !important;
+            min-height: 31px !important;
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.875rem !important;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            line-height: 1.4 !important;
+            padding-left: 0 !important;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+            height: 29px !important;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown {
+            font-size: 0.875rem !important;
+        }
+        .select2-container--bootstrap-5 .select2-results__option {
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.875rem !important;
+        }
+        .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+            font-size: 0.875rem !important;
+            padding: 0.25rem 0.5rem !important;
+            text-transform: uppercase;
+        }
+    </style>
+}
 
-<input type="hidden" name="hdnSerieBuscar" id="hdnSerieBuscar" value="" />
-<input type="hidden" name="hdnNumeroBuscar" id="hdnNumeroBuscar" value="" />
-<input type="hidden" name="hdnIafaBuscar" id="hdnIafaBuscar" value="" />
-<input type="hidden" name="hdnEstadoBuscar" id="hdnEstadoBuscar" value="0" />
-<input type="hidden" name="hdnfDevolucionDesdeBuscar" id="hdnfDevolucionDesdeBuscar" value="" />
-<input type="hidden" name="hdnfDevolucionHastaBuscar" id="hdnfDevolucionHastaBuscar" value="" />
-<input type="hidden" name="hdnfRegistroDesdeBuscar" id="hdnfRegistroDesdeBuscar" value="" />
-<input type="hidden" name="hdnfRegistroHastaBuscar" id="hdnfRegistroHastaBuscar" value="" />
-
-@section scripts {
-
-    <!-- DataTables  & Plugins -->
-    <script src="~/vendor/plugins/datatables/jquery.dataTables.min.js"></script>
-    <script src="~/vendor/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
-
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
     <script>
-        $('#verVideoModal').on('show.bs.modal', function (event) {
-          var button = $(event.relatedTarget);
-          var videoUrl = button.data('videourl');
-          var modal = $(this);
-          var video = modal.find('#videoVisor');
-          var source = modal.find('#videoSource');
+        // Datos de Bancos cargados en memoria
+        var bancosData = @Html.Raw(JsonSerializer.Serialize(bancos));
 
-          source.attr('src', videoUrl);
-          video[0].load();
-          video[0].play();
+        document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar Select2 para Banco
+            $('#cboBanco').select2({
+                theme: 'bootstrap-5',
+                data: bancosData,
+                placeholder: '- Seleccionar Banco -',
+                allowClear: true,
+                language: 'es',
+                width: '100%',
+                matcher: function(params, data) {
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+                    if (data.text && data.text.toUpperCase().indexOf(params.term.toUpperCase()) > -1) {
+                        return data;
+                    }
+                    return null;
+                }
+            });
+
+            // Foco automatico en el campo de busqueda al abrir el dropdown
+            $('#cboBanco').on('select2:open', function() {
+                setTimeout(function() {
+                    var searchField = document.querySelector('.select2-container--open .select2-search__field');
+                    if (searchField) searchField.focus();
+                }, 0);
+            });
+
+            // Cargar lista inicial
+            loadList();
+
+            // Buscar al cambiar filtros
+            $('#cboBanco').on('change', function () {
+                searchList();
+            });
+
+            $('#cboEstado').on('change', function () {
+                searchList();
+            });
         });
 
-        $('#verVideoModal').on('hidden.bs.modal', function () {
-          var video = document.getElementById("videoVisor");
-          video.pause();
-          video.currentTime = 0;
-        });
-    </script>
+        function loadList(pageNumber) {
+            const idBanco = $('#cboBanco').val() || '';
+            const estado = $('#cboEstado').val() || '';
 
-    <script type="text/javascript">
+            const params = new URLSearchParams({
+                idBanco: idBanco,
+                estado: estado,
+                pageNumber: pageNumber || 1,
+                pageSize: 10
+            });
 
+            f_loading();
+            fetch('@Url.Action("GetList")?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
 
+        function searchList() {
+            loadList(1);
+        }
 
+        function clearFilters() {
+            $('#cboBanco').val(null).trigger('change');
+            $('#cboEstado').val('');
+            loadList(1);
+        }
 
+        function verDetalle(guid) {
+            window.location.href = '@Url.Action("Detalle")/' + guid;
+        }
+
+        function exportToExcel() {
+            toastr.info('Funcionalidad en desarrollo', 'Exportar');
+        }
     </script>
 }

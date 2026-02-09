@@ -72,6 +72,7 @@ public class ProduccionRepository : IProduccionRepository
         ESTADO_LIQUIDACION as EstadoLiquidacion,
         FECHA_LIQUIDACION as FechaLiquidacion,
         DESCRIPCION_LIQUIDACION as DescripcionLiquidacion,
+        TIPO_LIQUIDACION as TipoLiquidacion,
         GUID_REGISTRO as GuidRegistro,
         ACTIVO as Activo,
         ID_CREADOR as IdCreador,
@@ -210,6 +211,7 @@ public class ProduccionRepository : IProduccionRepository
                 ESTADO_LIQUIDACION,
                 FECHA_LIQUIDACION,
                 DESCRIPCION_LIQUIDACION,
+                TIPO_LIQUIDACION,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -253,6 +255,7 @@ public class ProduccionRepository : IProduccionRepository
                 :EstadoLiquidacion,
                 :FechaLiquidacion,
                 :DescripcionLiquidacion,
+                :TipoLiquidacion,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -298,6 +301,7 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("EstadoLiquidacion", produccion.EstadoLiquidacion);
         parameters.Add("FechaLiquidacion", produccion.FechaLiquidacion);
         parameters.Add("DescripcionLiquidacion", produccion.DescripcionLiquidacion);
+        parameters.Add("TipoLiquidacion", produccion.TipoLiquidacion);
         parameters.Add("IdCreador", produccion.IdCreador);
         parameters.Add("IdProduccion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -353,6 +357,7 @@ public class ProduccionRepository : IProduccionRepository
                 ESTADO_LIQUIDACION = :EstadoLiquidacion,
                 FECHA_LIQUIDACION = :FechaLiquidacion,
                 DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
+                TIPO_LIQUIDACION = :TipoLiquidacion,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -398,6 +403,7 @@ public class ProduccionRepository : IProduccionRepository
             produccion.EstadoLiquidacion,
             produccion.FechaLiquidacion,
             produccion.DescripcionLiquidacion,
+            produccion.TipoLiquidacion,
             produccion.Activo,
             produccion.IdModificador
         });
@@ -826,6 +832,7 @@ public class ProduccionRepository : IProduccionRepository
         string estadoLiquidacion,
         DateTime fechaLiquidacion,
         string descripcionLiquidacion,
+        string? tipoLiquidacion,
         int idModificador)
     {
         using var connection = new OracleConnection(_connectionString);
@@ -839,6 +846,7 @@ public class ProduccionRepository : IProduccionRepository
                 ESTADO_LIQUIDACION = :EstadoLiquidacion,
                 FECHA_LIQUIDACION = :FechaLiquidacion,
                 DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
+                TIPO_LIQUIDACION = :TipoLiquidacion,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_SEDE = :IdSede
@@ -860,6 +868,7 @@ public class ProduccionRepository : IProduccionRepository
             EstadoLiquidacion = estadoLiquidacion,
             FechaLiquidacion = fechaLiquidacion,
             DescripcionLiquidacion = descripcionLiquidacion,
+            TipoLiquidacion = tipoLiquidacion,
             IdModificador = idModificador
         });
 

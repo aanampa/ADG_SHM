@@ -1,0 +1,107 @@
+@model SHM.AppWebHonorarioMedico.Models.PerfilAprobacionUsuarioModalViewModel
+
+@Html.AntiForgeryToken()
+<div class="modal-header bg-secondary">
+    <h5 class="modal-title text-white">
+        <i class="fas fa-user-shield mr-2"></i>Perfiles de Aprobaci&oacute;n
+    </h5>
+    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div class="modal-body">
+    <input type="hidden" id="pa_GuidRegistro" value="@Model.GuidRegistro" />
+    <input type="hidden" id="pa_IdUsuario" value="@Model.IdUsuario" />
+
+    <div class="mb-3">
+        <strong>Usuario:</strong> @Model.NombreCompleto
+    </div>
+
+    <!-- Formulario para agregar -->
+    <div class="card card-outline card-primary mb-3">
+        <div class="card-header py-2">
+            <h6 class="card-title mb-0"><i class="fas fa-plus-circle mr-1"></i>Asignar Perfil</h6>
+        </div>
+        <div class="card-body py-2">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="form-group mb-2">
+                        <label for="pa_IdPerfilAprobacion" class="small">Perfil <span class="text-danger">*</span></label>
+                        <select id="pa_IdPerfilAprobacion" class="form-control form-control-sm">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var perfil in Model.PerfilesDisponibles)
+                            {
+                                <option value="@perfil.Value">@perfil.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="form-group mb-2">
+                        <label for="pa_IdSede" class="small">Sede (opcional)</label>
+                        <select id="pa_IdSede" class="form-control form-control-sm">
+                            <option value="">-- Todas --</option>
+                            @foreach (var sede in Model.SedesDisponibles)
+                            {
+                                <option value="@sede.Value">@sede.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary btn-sm mb-2 w-100" onclick="submitAsignarPerfil()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de perfiles asignados -->
+    <div class="card card-outline card-info">
+        <div class="card-header py-2">
+            <h6 class="card-title mb-0"><i class="fas fa-list mr-1"></i>Perfiles Asignados</h6>
+        </div>
+        <div class="card-body p-0" id="pa_listaAsignaciones">
+            @if (Model.Asignaciones.Any())
+            {
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Perfil</th>
+                            <th>Sede</th>
+                            <th style="width: 80px;" class="text-center">Quitar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var asig in Model.Asignaciones)
+                        {
+                            <tr>
+                                <td>@asig.NombrePerfil</td>
+                                <td>@(asig.NombreSede ?? "Todas")</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-danger btn-xs"
+                                            onclick="submitQuitarPerfil(@asig.IdPerfilAprobacion, @asig.IdUsuario)"
+                                            title="Quitar asignaci&oacute;n">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-info-circle mr-1"></i>No tiene perfiles asignados
+                </div>
+            }
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+        <i class="fas fa-times mr-1"></i>Cerrar
+    </button>
+</div>
