@@ -51,6 +51,7 @@ public class ProduccionResponseDto
     public string? EstadoLiquidacion { get; set; }
     public DateTime? FechaLiquidacion { get; set; }
     public string? DescripcionLiquidacion { get; set; }
+    public string? TipoLiquidacion { get; set; }
 
     public int Activo { get; set; }
     public string? GuidRegistro { get; set; }

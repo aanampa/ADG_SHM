@@ -21,7 +21,11 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
         SELECT
             opa.ID_ORDEN_PAGO_APROBACION as IdOrdenPagoAprobacion,
             opa.ID_ORDEN_PAGO as IdOrdenPago,
-            opa.ID_ROL as IdRol,
+            opa.ID_PERFIL_APROBACION as IdPerfilAprobacion,
+            opa.ESTADO as Estado,
+            opa.ID_USUARIO_APROBADOR as IdUsuarioAprobador,
+            opa.FECHA_APROBACION as FechaAprobacion,
+            opa.ORDEN as Orden,
             opa.GUID_REGISTRO as GuidRegistro,
             opa.ACTIVO as Activo,
             opa.ID_CREADOR as IdCreador,
@@ -29,12 +33,12 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
             opa.ID_MODIFICADOR as IdModificador,
             opa.FECHA_MODIFICACION as FechaModificacion,
             op.NUMERO_ORDEN_PAGO as NumeroOrdenPago,
-            r.NOMBRE as NombreRol,
-            u.NOMBRES || ' ' || u.APELLIDO_PATERNO as NombreAprobador
+            pa.DESCRIPCION as NombrePerfil,
+            ua.NOMBRES || ' ' || ua.APELLIDO_PATERNO as NombreAprobador
         FROM SHM_ORDEN_PAGO_APROBACION opa
         LEFT JOIN SHM_ORDEN_PAGO op ON opa.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
-        LEFT JOIN SHM_SEG_ROL r ON opa.ID_ROL = r.ID_ROL
-        LEFT JOIN SHM_SEG_USUARIO u ON opa.ID_CREADOR = u.ID_USUARIO";
+        LEFT JOIN SHM_PERFIL_APROBACION pa ON opa.ID_PERFIL_APROBACION = pa.ID_PERFIL_APROBACION
+        LEFT JOIN SHM_SEG_USUARIO ua ON opa.ID_USUARIO_APROBADOR = ua.ID_USUARIO";
 
     public OrdenPagoAprobacionRepository(DatabaseConfig databaseConfig)
     {
@@ -106,39 +110,121 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
 
         var sql = $@"{SELECT_BASE}
             WHERE opa.ID_ORDEN_PAGO = :IdOrdenPago AND opa.ACTIVO = 1
-            ORDER BY opa.FECHA_CREACION";
+            ORDER BY opa.ORDEN";
 
         return await connection.QueryAsync<OrdenPagoAprobacion>(sql, new { IdOrdenPago = idOrdenPago });
     }
 
     /// <summary>
-    /// Obtiene todas las aprobaciones de un rol.
+    /// Obtiene todas las aprobaciones de un perfil de aprobacion.
     /// </summary>
-    public async Task<IEnumerable<OrdenPagoAprobacion>> GetByRolIdAsync(int idRol)
+    public async Task<IEnumerable<OrdenPagoAprobacion>> GetByPerfilAprobacionIdAsync(int idPerfilAprobacion)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = $@"{SELECT_BASE}
-            WHERE opa.ID_ROL = :IdRol AND opa.ACTIVO = 1
+            WHERE opa.ID_PERFIL_APROBACION = :IdPerfilAprobacion AND opa.ACTIVO = 1
             ORDER BY opa.FECHA_CREACION DESC";
 
-        return await connection.QueryAsync<OrdenPagoAprobacion>(sql, new { IdRol = idRol });
+        return await connection.QueryAsync<OrdenPagoAprobacion>(sql, new { IdPerfilAprobacion = idPerfilAprobacion });
     }
 
     /// <summary>
-    /// Obtiene una aprobacion especifica por orden de pago y rol.
+    /// Obtiene una aprobacion especifica por orden de pago y perfil de aprobacion.
     /// </summary>
-    public async Task<OrdenPagoAprobacion?> GetByOrdenPagoAndRolAsync(int idOrdenPago, int idRol)
+    public async Task<OrdenPagoAprobacion?> GetByOrdenPagoAndPerfilAprobacionAsync(int idOrdenPago, int idPerfilAprobacion)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = $@"{SELECT_BASE}
             WHERE opa.ID_ORDEN_PAGO = :IdOrdenPago
-              AND opa.ID_ROL = :IdRol
+              AND opa.ID_PERFIL_APROBACION = :IdPerfilAprobacion
               AND opa.ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<OrdenPagoAprobacion>(sql,
-            new { IdOrdenPago = idOrdenPago, IdRol = idRol });
+            new { IdOrdenPago = idOrdenPago, IdPerfilAprobacion = idPerfilAprobacion });
+    }
+
+    /// <summary>
+    /// Obtiene la aprobacion pendiente de una orden de pago que corresponde al usuario.
+    /// Valida perfil del usuario, coincidencia de sede y orden secuencial.
+    /// </summary>
+    public async Task<OrdenPagoAprobacion?> GetPendingByOrdenPagoForUserAsync(int idOrdenPago, int idUsuario)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"{SELECT_BASE}
+            INNER JOIN SHM_PERFIL_APROBACION_USUARIO pau ON opa.ID_PERFIL_APROBACION = pau.ID_PERFIL_APROBACION
+                AND pau.ID_USUARIO = :IdUsuario
+            INNER JOIN SHM_ORDEN_PAGO op2 ON opa.ID_ORDEN_PAGO = op2.ID_ORDEN_PAGO
+            WHERE opa.ID_ORDEN_PAGO = :IdOrdenPago
+              AND opa.ESTADO = 'PENDIENTE'
+              AND opa.ACTIVO = 1
+              AND (pau.ID_SEDE IS NULL OR pau.ID_SEDE = op2.ID_SEDE)
+              AND NOT EXISTS (
+                  SELECT 1 FROM SHM_ORDEN_PAGO_APROBACION opa2
+                  WHERE opa2.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
+                    AND opa2.ACTIVO = 1
+                    AND opa2.ORDEN < opa.ORDEN
+                    AND opa2.ESTADO != 'APROBADO'
+              )";
+
+        return await connection.QueryFirstOrDefaultAsync<OrdenPagoAprobacion>(sql,
+            new { IdOrdenPago = idOrdenPago, IdUsuario = idUsuario });
+    }
+
+    /// <summary>
+    /// Aprueba una aprobacion: registra usuario aprobador y fecha.
+    /// </summary>
+    public async Task<bool> AprobarAsync(int idOrdenPagoAprobacion, int idUsuarioAprobador, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_ORDEN_PAGO_APROBACION
+            SET ESTADO = 'APROBADO',
+                ID_USUARIO_APROBADOR = :IdUsuarioAprobador,
+                FECHA_APROBACION = SYSDATE,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_ORDEN_PAGO_APROBACION = :IdOrdenPagoAprobacion
+              AND ESTADO = 'PENDIENTE'";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdOrdenPagoAprobacion = idOrdenPagoAprobacion,
+            IdUsuarioAprobador = idUsuarioAprobador,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Rechaza una aprobacion: registra usuario y cambia estado.
+    /// </summary>
+    public async Task<bool> RechazarAsync(int idOrdenPagoAprobacion, int idUsuarioAprobador, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_ORDEN_PAGO_APROBACION
+            SET ESTADO = 'RECHAZADO',
+                ID_USUARIO_APROBADOR = :IdUsuarioAprobador,
+                FECHA_APROBACION = SYSDATE,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_ORDEN_PAGO_APROBACION = :IdOrdenPagoAprobacion
+              AND ESTADO = 'PENDIENTE'";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdOrdenPagoAprobacion = idOrdenPagoAprobacion,
+            IdUsuarioAprobador = idUsuarioAprobador,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
     }
 
     /// <summary>
@@ -152,7 +238,9 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
             INSERT INTO SHM_ORDEN_PAGO_APROBACION (
                 ID_ORDEN_PAGO_APROBACION,
                 ID_ORDEN_PAGO,
-                ID_ROL,
+                ID_PERFIL_APROBACION,
+                ESTADO,
+                ORDEN,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -160,7 +248,9 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
             ) VALUES (
                 SHM_ORDEN_PAGO_APROBACION_SEQ.NEXTVAL,
                 :IdOrdenPago,
-                :IdRol,
+                :IdPerfilAprobacion,
+                :Estado,
+                :Orden,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -170,7 +260,9 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
 
         var parameters = new DynamicParameters();
         parameters.Add("IdOrdenPago", ordenPagoAprobacion.IdOrdenPago);
-        parameters.Add("IdRol", ordenPagoAprobacion.IdRol);
+        parameters.Add("IdPerfilAprobacion", ordenPagoAprobacion.IdPerfilAprobacion);
+        parameters.Add("Orden", ordenPagoAprobacion.Orden);
+        parameters.Add("Estado", ordenPagoAprobacion.Estado);
         parameters.Add("IdCreador", ordenPagoAprobacion.IdCreador);
         parameters.Add("IdOrdenPagoAprobacion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -190,7 +282,11 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
             UPDATE SHM_ORDEN_PAGO_APROBACION
             SET
                 ID_ORDEN_PAGO = :IdOrdenPago,
-                ID_ROL = :IdRol,
+                ID_PERFIL_APROBACION = :IdPerfilAprobacion,
+                ESTADO = :Estado,
+                ID_USUARIO_APROBADOR = :IdUsuarioAprobador,
+                FECHA_APROBACION = :FechaAprobacion,
+                ORDEN = :Orden,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_ORDEN_PAGO_APROBACION = :IdOrdenPagoAprobacion";
@@ -199,7 +295,11 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
         {
             ordenPagoAprobacion.IdOrdenPagoAprobacion,
             ordenPagoAprobacion.IdOrdenPago,
-            ordenPagoAprobacion.IdRol,
+            ordenPagoAprobacion.IdPerfilAprobacion,
+            ordenPagoAprobacion.Estado,
+            ordenPagoAprobacion.IdUsuarioAprobador,
+            ordenPagoAprobacion.FechaAprobacion,
+            ordenPagoAprobacion.Orden,
             ordenPagoAprobacion.IdModificador
         });
 

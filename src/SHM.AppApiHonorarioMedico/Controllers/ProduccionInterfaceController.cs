@@ -11,6 +11,7 @@ namespace SHM.AppApiHonorarioMedico.Controllers;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado metodo UpdateLiquidaciones</modified>
+/// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro en respuesta, log de errores</modified>
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -48,7 +49,9 @@ public class ProduccionInterfaceController : ControllerBase
     /// Crea multiples producciones a partir de una coleccion de datos.
     /// Resuelve automaticamente los codigos de sede y entidad medica a sus respectivos IDs.
     /// Valida duplicados por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion).
-    /// Si ya existe, lo omite. Si hay error, aborta toda la operacion.
+    /// Si ya existe, lo omite. Retorna el detalle de estado de cada registro procesado.
+    ///
+    /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro en respuesta</modified>
     /// </summary>
     [HttpPost("producciones")]
     [ProducesResponseType(typeof(ApiResponseDto<InterfaceProduccionResultDto>), StatusCodes.Status201Created)]
@@ -75,17 +78,13 @@ public class ProduccionInterfaceController : ControllerBase
             var resultado = await _produccionInterfaceService.CreateProduccionesAsync(createDtos, idCreador);
 
             _logger.LogInformation(
-                "Producciones procesadas: {TotalProcesados}, Creados: {CantidadCreados}, Obviados: {CantidadObviados}",
+                "Producciones procesadas: {TotalProcesados}, Creados: {CantidadCreados}, Obviados: {CantidadObviados}, Errores: {CantidadErrores}",
                 resultado.TotalProcesados,
                 resultado.CantidadCreados,
-                resultado.CantidadObviados);
+                resultado.CantidadObviados,
+                resultado.CantidadErrores);
 
             return StatusCode(StatusCodes.Status201Created, ApiResponseDto<InterfaceProduccionResultDto>.Success(resultado, "Correcto."));
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "Error de validacion al crear producciones");
-            return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", ex.Message));
         }
         catch (Exception ex)
         {
@@ -97,10 +96,11 @@ public class ProduccionInterfaceController : ControllerBase
     /// <summary>
     /// Actualiza los datos de liquidacion de multiples producciones.
     /// Busca por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
-    /// Si no existe la produccion, la omite. Si hay error, aborta toda la operacion.
+    /// Si no existe la produccion, la omite. Retorna el detalle de estado de cada registro procesado.
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-31</created>
+    /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro en respuesta</modified>
     /// </summary>
     [HttpPost("liquidaciones")]
     [ProducesResponseType(typeof(ApiResponseDto<InterfaceProduccionResultDto>), StatusCodes.Status200OK)]
@@ -127,17 +127,13 @@ public class ProduccionInterfaceController : ControllerBase
             var resultado = await _produccionInterfaceService.UpdateLiquidacionesAsync(updateDtos, idModificador);
 
             _logger.LogInformation(
-                "Liquidaciones procesadas: {TotalProcesados}, Actualizados: {CantidadCreados}, Obviados: {CantidadObviados}",
+                "Liquidaciones procesadas: {TotalProcesados}, Actualizados: {CantidadCreados}, Obviados: {CantidadObviados}, Errores: {CantidadErrores}",
                 resultado.TotalProcesados,
                 resultado.CantidadCreados,
-                resultado.CantidadObviados);
+                resultado.CantidadObviados,
+                resultado.CantidadErrores);
 
             return Ok(ApiResponseDto<InterfaceProduccionResultDto>.Success(resultado, "Correcto."));
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "Error de validacion al actualizar liquidaciones");
-            return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", ex.Message));
         }
         catch (Exception ex)
         {

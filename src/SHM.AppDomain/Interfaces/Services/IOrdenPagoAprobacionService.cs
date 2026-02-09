@@ -15,7 +15,9 @@ public interface IOrdenPagoAprobacionService
     Task<OrdenPagoAprobacionResponseDto?> GetByIdAsync(int id);
     Task<OrdenPagoAprobacionResponseDto?> GetByGuidAsync(string guid);
     Task<IEnumerable<OrdenPagoAprobacionResponseDto>> GetByOrdenPagoIdAsync(int idOrdenPago);
-    Task<IEnumerable<OrdenPagoAprobacionResponseDto>> GetByRolIdAsync(int idRol);
+    Task<IEnumerable<OrdenPagoAprobacionResponseDto>> GetByPerfilAprobacionIdAsync(int idPerfilAprobacion);
+    Task<(bool success, string message)> AprobarAsync(int idOrdenPago, int idUsuario);
+    Task<(bool success, string message)> RechazarAsync(int idOrdenPago, int idUsuario, string? comentario);
     Task<OrdenPagoAprobacionResponseDto> CreateAsync(CreateOrdenPagoAprobacionDto dto, int idCreador);
     Task<OrdenPagoAprobacionResponseDto?> UpdateAsync(UpdateOrdenPagoAprobacionDto dto, int idModificador);
     Task<bool> DeleteAsync(string guid, int idModificador);

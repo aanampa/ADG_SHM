@@ -82,6 +82,10 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
             MtoIgvAcum = dto.MtoIgvAcum,
             MtoTotalAcum = dto.MtoTotalAcum,
             CantComprobantes = dto.CantComprobantes,
+            DescripcionLiquidacion = dto.DescripcionLiquidacion,
+            PeriodoLiquidacion = dto.PeriodoLiquidacion,
+            IdBanco = dto.IdBanco,
+            TipoLiquidacion = dto.TipoLiquidacion,
             Comentarios = dto.Comentarios,
             IdCreador = idCreador,
             Activo = 1
@@ -112,6 +116,10 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
         existing.MtoIgvAcum = dto.MtoIgvAcum;
         existing.MtoTotalAcum = dto.MtoTotalAcum;
         existing.CantComprobantes = dto.CantComprobantes;
+        existing.DescripcionLiquidacion = dto.DescripcionLiquidacion;
+        existing.PeriodoLiquidacion = dto.PeriodoLiquidacion;
+        existing.IdBanco = dto.IdBanco;
+        existing.TipoLiquidacion = dto.TipoLiquidacion;
         existing.Comentarios = dto.Comentarios;
         existing.IdModificador = idModificador;
 
@@ -143,6 +151,14 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
         return await _repository.DeleteByOrdenPagoIdAsync(idOrdenPago, idModificador);
     }
 
+    /// <summary>
+    /// Obtiene el detalle de producciones por liquidacion para una orden de pago.
+    /// </summary>
+    public async Task<IEnumerable<DetalleLiquidacionItemDto>> GetDetalleLiquidacionesByOrdenPagoIdAsync(int idOrdenPago)
+    {
+        return await _repository.GetDetalleLiquidacionesByOrdenPagoIdAsync(idOrdenPago);
+    }
+
     private static OrdenPagoLiquidacionResponseDto MapToResponseDto(OrdenPagoLiquidacion entity)
     {
         return new OrdenPagoLiquidacionResponseDto
@@ -159,6 +175,11 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
             MtoIgvAcum = entity.MtoIgvAcum,
             MtoTotalAcum = entity.MtoTotalAcum,
             CantComprobantes = entity.CantComprobantes,
+            DescripcionLiquidacion = entity.DescripcionLiquidacion,
+            PeriodoLiquidacion = entity.PeriodoLiquidacion,
+            IdBanco = entity.IdBanco,
+            NombreBanco = entity.NombreBanco,
+            TipoLiquidacion = entity.TipoLiquidacion,
             Comentarios = entity.Comentarios,
             GuidRegistro = entity.GuidRegistro,
             Activo = entity.Activo,

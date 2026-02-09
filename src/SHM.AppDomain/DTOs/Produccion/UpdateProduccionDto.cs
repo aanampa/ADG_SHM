@@ -100,5 +100,8 @@ public class UpdateProduccionDto
     [MaxLength(300)]
     public string? DescripcionLiquidacion { get; set; }
 
+    [MaxLength(5)]
+    public string? TipoLiquidacion { get; set; }
+
     public int? Activo { get; set; }
 }

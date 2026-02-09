@@ -183,6 +183,94 @@
                 });
         }
 
+        function openPerfilAprobacionModal(guid) {
+            fetch('@Url.Action("GetPerfilAprobacionModal")?guid=' + encodeURIComponent(guid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                    $('#modalContainer').modal('show');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar el formulario', 'error');
+                });
+        }
+
+        function submitAsignarPerfil() {
+            var idPerfil = document.getElementById('pa_IdPerfilAprobacion').value;
+            if (!idPerfil) {
+                showToast('Debe seleccionar un perfil', 'error');
+                return;
+            }
+
+            var idSede = document.getElementById('pa_IdSede').value;
+
+            var formData = {
+                guidRegistro: document.getElementById('pa_GuidRegistro').value,
+                idPerfilAprobacion: parseInt(idPerfil),
+                idSede: idSede ? parseInt(idSede) : null
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("AsignarPerfil")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Recargar el modal para mostrar la lista actualizada
+                    var guid = document.getElementById('pa_GuidRegistro').value;
+                    openPerfilAprobacionModal(guid);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
+        function submitQuitarPerfil(idPerfilAprobacion, idUsuario) {
+            var formData = {
+                idPerfilAprobacion: idPerfilAprobacion,
+                idUsuario: idUsuario
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("QuitarPerfil")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Recargar el modal para mostrar la lista actualizada
+                    var guid = document.getElementById('pa_GuidRegistro').value;
+                    openPerfilAprobacionModal(guid);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
         function submitCreate() {
             var form = document.getElementById('createForm');
             if (!form.checkValidity()) {

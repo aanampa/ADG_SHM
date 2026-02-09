@@ -9,5 +9,7 @@ namespace SHM.AppDomain.DTOs.OrdenPagoAprobacion;
 public class CreateOrdenPagoAprobacionDto
 {
     public int IdOrdenPago { get; set; }
-    public int IdRol { get; set; }
+    public int IdPerfilAprobacion { get; set; }
+    public int? Orden { get; set; }
+    public string? Estado { get; set; }
 }

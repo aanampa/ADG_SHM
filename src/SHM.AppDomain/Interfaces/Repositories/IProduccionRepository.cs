@@ -154,6 +154,7 @@ public interface IProduccionRepository
         string estadoLiquidacion,
         DateTime fechaLiquidacion,
         string descripcionLiquidacion,
+        string? tipoLiquidacion,
         int idModificador);
 
 }
