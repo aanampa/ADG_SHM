@@ -1,0 +1,99 @@
+@model SHM.AppWebHonorarioMedico.Models.OrdenPagoAprobacionListViewModel
+
+<div class="card-body table-responsive p-0">
+    <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
+        <thead class="bg-secondary">
+            <tr class="text-center">
+                <th style="width: 50px;"></th>
+                <th>N&uacute;mero Orden de Pago</th>
+                <th style="width: 110px;">Fecha Generaci&oacute;n</th>
+                <th>Banco</th>
+                <th style="width: 90px;">Cant. Liquid.</th>
+                <th style="width: 90px;">Cant. Comprob.</th>
+                <th style="width: 110px;">Estado</th>
+                <th style="width: 110px;" class="text-right">Sub Total S/.</th>
+                <th style="width: 100px;" class="text-right">IGV S/.</th>
+                <th style="width: 100px;" class="text-right">Renta S/.</th>
+                <th style="width: 110px;" class="text-right">Total S/.</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Any())
+            {
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-warning btn-xs" onclick="verDetalle('@item.GuidRegistro')"
+                                    title="Ver Detalle / Aprobar">
+                                <i class="fas fa-clipboard-check"></i>
+                            </button>
+                        </td>
+                        <td class="text-center">@(item.NumeroOrdenPago ?? "-")</td>
+                        <td class="text-center">@(item.FechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@(item.NombreBanco ?? "-")</td>
+                        <td class="text-center">@(item.CantLiquidaciones?.ToString() ?? "-")</td>
+                        <td class="text-center">@(item.CantComprobantes?.ToString() ?? "-")</td>
+                        <td class="text-center">
+                            <span class="badge badge-warning text-sm">En Aprobaci&oacute;n</span>
+                        </td>
+                        <td class="text-right">@(item.MtoSubtotalAcum?.ToString("N2") ?? "--")</td>
+                        <td class="text-right">@(item.MtoIgvAcum?.ToString("N2") ?? "--")</td>
+                        <td class="text-right">@(item.MtoRentaAcum?.ToString("N2") ?? "--")</td>
+                        <td class="text-right font-weight-bold">@(item.MtoTotalAcum?.ToString("N2") ?? "--")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="11" class="text-center text-muted py-4">
+                        <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                        <p class="mb-0">No tiene &oacute;rdenes de pago pendientes de aprobaci&oacute;n</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <div class="card-footer clearfix">
+        <div class="float-left">
+            <small class="text-muted">
+                Mostrando @((Model.PageNumber - 1) * Model.PageSize + 1) -
+                @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)) de @Model.TotalCount registros
+            </small>
+        </div>
+        <ul class="pagination pagination-sm m-0 float-right">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" href="javascript:void(0)" onclick="@(Model.PageNumber > 1 ? $"loadList({Model.PageNumber - 1})" : "")">
+                    Anterior
+                </a>
+            </li>
+
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                var pageNum = i;
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@pageNum)">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="javascript:void(0)" onclick="@(Model.PageNumber < Model.TotalPages ? $"loadList({Model.PageNumber + 1})" : "")">
+                    Siguiente
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+else if (Model.TotalCount > 0)
+{
+    <div class="card-footer">
+        <small class="text-muted">
+            Mostrando @Model.TotalCount registro(s)
+        </small>
+    </div>
+}

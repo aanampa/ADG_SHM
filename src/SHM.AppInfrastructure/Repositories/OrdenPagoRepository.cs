@@ -163,6 +163,58 @@ public class OrdenPagoRepository : IOrdenPagoRepository
     }
 
     /// <summary>
+    /// Obtiene las ordenes de pago pendientes de aprobacion para un usuario.
+    /// Filtra por: orden EN_APROBACION, nivel pendiente, perfil del usuario,
+    /// coincidencia de sede y aprobacion secuencial (niveles anteriores aprobados).
+    /// </summary>
+    public async Task<IEnumerable<OrdenPago>> GetPendingForApprovalByUserAsync(int idUsuario)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"{SELECT_BASE}
+            INNER JOIN SHM_ORDEN_PAGO_APROBACION opa ON op.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
+                AND opa.ACTIVO = 1 AND opa.ESTADO = 'PENDIENTE'
+            INNER JOIN SHM_PERFIL_APROBACION_USUARIO pau ON opa.ID_PERFIL_APROBACION = pau.ID_PERFIL_APROBACION
+                AND pau.ID_USUARIO = :IdUsuario
+            WHERE op.ESTADO = 'EN_APROBACION' AND op.ACTIVO = 1
+              AND (pau.ID_SEDE IS NULL OR pau.ID_SEDE = op.ID_SEDE)
+              AND NOT EXISTS (
+                  SELECT 1 FROM SHM_ORDEN_PAGO_APROBACION opa2
+                  WHERE opa2.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+                    AND opa2.ACTIVO = 1
+                    AND opa2.ORDEN < opa.ORDEN
+                    AND opa2.ESTADO != 'APROBADO'
+              )
+            ORDER BY op.FECHA_GENERACION DESC";
+
+        return await connection.QueryAsync<OrdenPago>(sql, new { IdUsuario = idUsuario });
+    }
+
+    /// <summary>
+    /// Actualiza solo el estado de una orden de pago.
+    /// </summary>
+    public async Task<bool> UpdateEstadoAsync(int idOrdenPago, string estado, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_ORDEN_PAGO
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_ORDEN_PAGO = :IdOrdenPago";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdOrdenPago = idOrdenPago,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
     /// Crea una nueva orden de pago.
     /// </summary>
     public async Task<int> CreateAsync(OrdenPago ordenPago)

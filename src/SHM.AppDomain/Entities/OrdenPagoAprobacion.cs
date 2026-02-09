@@ -11,7 +11,11 @@ public class OrdenPagoAprobacion
 {
     public int IdOrdenPagoAprobacion { get; set; }
     public int IdOrdenPago { get; set; }
-    public int IdRol { get; set; }
+    public int IdPerfilAprobacion { get; set; }
+    public string? Estado { get; set; }
+    public int? IdUsuarioAprobador { get; set; }
+    public DateTime? FechaAprobacion { get; set; }
+    public int? Orden { get; set; }
     public string? GuidRegistro { get; set; }
     public int Activo { get; set; }
     public int IdCreador { get; set; }
@@ -21,6 +25,6 @@ public class OrdenPagoAprobacion
 
     // Propiedades de navegacion
     public string? NumeroOrdenPago { get; set; }
-    public string? NombreRol { get; set; }
+    public string? NombrePerfil { get; set; }
     public string? NombreAprobador { get; set; }
 }

@@ -19,4 +19,5 @@ public interface IOrdenPagoLiquidacionService
     Task<OrdenPagoLiquidacionResponseDto?> UpdateAsync(UpdateOrdenPagoLiquidacionDto dto, int idModificador);
     Task<bool> DeleteAsync(string guid, int idModificador);
     Task<bool> DeleteByOrdenPagoIdAsync(int idOrdenPago, int idModificador);
+    Task<IEnumerable<DetalleLiquidacionItemDto>> GetDetalleLiquidacionesByOrdenPagoIdAsync(int idOrdenPago);
 }

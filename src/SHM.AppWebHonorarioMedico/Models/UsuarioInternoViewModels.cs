@@ -148,3 +148,35 @@ public class UsuarioInternoResetClaveViewModel
     public string? Email { get; set; }
     public bool EnviarCorreo { get; set; } = true;
 }
+
+public class PerfilAprobacionUsuarioModalViewModel
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string? NombreCompleto { get; set; }
+    public int IdUsuario { get; set; }
+    public List<PerfilAprobacionUsuarioItemViewModel> Asignaciones { get; set; } = new();
+    public List<SelectListItem> PerfilesDisponibles { get; set; } = new();
+    public List<SelectListItem> SedesDisponibles { get; set; } = new();
+}
+
+public class PerfilAprobacionUsuarioItemViewModel
+{
+    public int IdPerfilAprobacion { get; set; }
+    public int IdUsuario { get; set; }
+    public string? NombrePerfil { get; set; }
+    public int? IdSede { get; set; }
+    public string? NombreSede { get; set; }
+}
+
+public class AsignarPerfilRequest
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public int IdPerfilAprobacion { get; set; }
+    public int? IdSede { get; set; }
+}
+
+public class QuitarPerfilRequest
+{
+    public int IdPerfilAprobacion { get; set; }
+    public int IdUsuario { get; set; }
+}

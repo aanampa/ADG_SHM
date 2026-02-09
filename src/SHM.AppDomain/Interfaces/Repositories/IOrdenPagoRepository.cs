@@ -18,6 +18,8 @@ public interface IOrdenPagoRepository
     Task<IEnumerable<OrdenPago>> GetByBancoAsync(int idBanco);
     Task<IEnumerable<OrdenPago>> GetByEstadoAsync(string estado);
     Task<IEnumerable<OrdenPago>> GetByFechaGeneracionAsync(DateTime fechaInicio, DateTime fechaFin);
+    Task<IEnumerable<OrdenPago>> GetPendingForApprovalByUserAsync(int idUsuario);
+    Task<bool> UpdateEstadoAsync(int idOrdenPago, string estado, int idModificador);
     Task<int> CreateAsync(OrdenPago ordenPago);
     Task<bool> UpdateAsync(OrdenPago ordenPago);
     Task<bool> DeleteAsync(int id, int idModificador);

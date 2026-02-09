@@ -1,0 +1,89 @@
+@{
+    ViewData["Title"] = "Aprobaci\u00f3n de Orden de Pago";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header py-2">
+            <div class="container-fluid">
+                <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
+                    <i class="fas fa-clipboard-check mr-2"></i>Aprobaci&oacute;n de Orden de Pago
+                </h1>
+                <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                    <li class="breadcrumb-item">Corporativo</li>
+                    <li class="breadcrumb-item active">Aprobaci&oacute;n de Orden de Pago</li>
+                </ol>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <span class="text-muted small">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Se muestran las &oacute;rdenes de pago pendientes de su aprobaci&oacute;n.
+                                </span>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="loadList(1)">
+                                    <i class="fas fa-sync-alt mr-1"></i>Actualizar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Contenedor para la lista cargada via AJAX -->
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
+
+        function loadList(pageNumber) {
+            const params = new URLSearchParams({
+                pageNumber: pageNumber || 1,
+                pageSize: 10
+            });
+
+            f_loading();
+            fetch('@Url.Action("GetList")?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function verDetalle(guid) {
+            window.location.href = '@Url.Action("Detalle")/' + guid;
+        }
+    </script>
+}

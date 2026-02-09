@@ -102,4 +102,7 @@ public class CreateProduccionDto
 
     [MaxLength(300)]
     public string? DescripcionLiquidacion { get; set; }
+
+    [MaxLength(5)]
+    public string? TipoLiquidacion { get; set; }
 }

@@ -33,13 +33,13 @@
 | **Modulo** | API Interface de Produccion |
 | **Cliente** | Complejo Hospitalario San Pablo |
 | **Desarrollador** | ADG Systems |
-| **Version** | 2.0 |
+| **Version** | 3.0 |
 
 ---
 
 ## Descripcion General
 
-API para el registro masivo de producciones medicas y actualizacion de liquidaciones a traves de una interfaz de integracion. Permite crear multiples registros de produccion y actualizar datos de liquidacion en una sola llamada, validando duplicados y manejando transacciones de forma segura.
+API para el registro masivo de producciones medicas y actualizacion de liquidaciones a traves de una interfaz de integracion. Permite crear multiples registros de produccion y actualizar datos de liquidacion en una sola llamada, procesando cada registro de forma individual y retornando el detalle de estado por cada registro recibido.
 
 ---
 
@@ -166,10 +166,11 @@ D:\appweb\shmappapi\
 
 **Ejemplo de contenido del log:**
 ```
-2026-01-31 10:30:15.123 |INFO| Inicio de creacion masiva de producciones mediante interface
-2026-01-31 10:30:15.456 |INFO| Producciones procesadas: 10, Creados: 8, Obviados: 2
-2026-01-31 10:35:22.789 |WARN| Error de validacion al crear producciones - Sede con codigo 'XXX' no encontrada
-2026-01-31 10:40:33.012 |ERROR| Error al crear producciones mediante interface - ORA-12541: TNS:no listener
+2026-02-08 10:30:15.123 |INFO| Inicio de creacion masiva de producciones mediante interface
+2026-02-08 10:30:15.456 |INFO| Producciones procesadas: 10, Creados: 7, Obviados: 2, Errores: 1
+2026-02-08 10:35:22.789 |INFO| Inicio de actualizacion masiva de liquidaciones mediante interface
+2026-02-08 10:35:22.890 |INFO| Liquidaciones procesadas: 5, Actualizados: 4, Obviados: 1, Errores: 0
+2026-02-08 10:40:33.012 |ERROR| Error al crear producciones mediante interface - ORA-12541: TNS:no listener
 ```
 
 **Niveles de log:**
@@ -202,17 +203,55 @@ Todos los endpoints devuelven una respuesta con la siguiente estructura:
 {
   "isSuccess": true,
   "message": "Correcto.",
-  "data": { ... },
+  "data": {
+    "cantidadCreados": 0,
+    "cantidadObviados": 0,
+    "cantidadErrores": 0,
+    "totalProcesados": 0,
+    "detalle": [
+      {
+        "codigoSede": "string",
+        "codigoEntidad": "string",
+        "codigoProduccion": "string",
+        "tipoEntidadMedica": "string",
+        "estado": "OK",
+        "mensaje": "string"
+      }
+    ]
+  },
   "errors": []
 }
 ```
+
+### Campos del Envelope
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
 | `isSuccess` | boolean | Indica si la operacion fue exitosa |
 | `message` | string | Mensaje descriptivo del resultado |
-| `data` | object | Datos de la respuesta (segun endpoint) |
+| `data` | object | Datos de la respuesta (ver estructura abajo) |
 | `errors` | array | Lista de errores si los hubiera |
+
+### Campos de `data` (InterfaceProduccionResultDto)
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `cantidadCreados` | int | Cantidad de registros creados/actualizados exitosamente |
+| `cantidadObviados` | int | Cantidad de registros omitidos (duplicados o no encontrados) |
+| `cantidadErrores` | int | Cantidad de registros con error |
+| `totalProcesados` | int | Total de registros procesados (creados + obviados + errores) |
+| `detalle` | array | Lista con el estado de proceso de cada registro recibido |
+
+### Campos de cada elemento en `detalle` (InterfaceProduccionDetalleDto)
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `codigoSede` | string | Codigo de sede del registro procesado |
+| `codigoEntidad` | string | Codigo de entidad del registro procesado |
+| `codigoProduccion` | string | Codigo de produccion del registro procesado |
+| `tipoEntidadMedica` | string/null | Tipo de entidad medica (puede ser null en producciones) |
+| `estado` | string | Estado del proceso: `OK` (Correcto) o `ER` (Error) |
+| `mensaje` | string/null | Mensaje descriptivo. Si hay error, muestra el detalle del error |
 
 ---
 
@@ -322,12 +361,43 @@ Si un registro con esta llave ya existe en la base de datos, sera **omitido** (n
   "message": "Correcto.",
   "data": {
     "cantidadCreados": 8,
-    "cantidadObviados": 2,
-    "totalProcesados": 10
+    "cantidadObviados": 1,
+    "cantidadErrores": 1,
+    "totalProcesados": 10,
+    "detalle": [
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251017",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Creado"
+      },
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251018",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Ya existe, omitido"
+      },
+      {
+        "codigoSede": "XX",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251019",
+        "tipoEntidadMedica": null,
+        "estado": "ER",
+        "mensaje": "Sede con codigo 'XX' no encontrada"
+      }
+    ]
   },
   "errors": []
 }
 ```
+
+> **Nota:** El campo `estado` indica el resultado del proceso por cada registro:
+> - `OK`: Registro creado exitosamente o ya existia (omitido).
+> - `ER`: Error al procesar el registro. El campo `mensaje` contiene el detalle del error.
 
 ### Respuesta de Error - Validacion (HTTP 400 Bad Request)
 
@@ -338,26 +408,6 @@ Si un registro con esta llave ya existe en la base de datos, sera **omitido** (n
   "message": "Error de validacion.",
   "data": null,
   "errors": ["La coleccion de producciones no puede estar vacia"]
-}
-```
-
-**Sede no encontrada:**
-```json
-{
-  "isSuccess": false,
-  "message": "Error de validacion.",
-  "data": null,
-  "errors": ["Sede con codigo 'SEDE001' no encontrada"]
-}
-```
-
-**Entidad medica no encontrada:**
-```json
-{
-  "isSuccess": false,
-  "message": "Error de validacion.",
-  "data": null,
-  "errors": ["Entidad medica con codigo 'ENT001' no encontrada"]
 }
 ```
 
@@ -373,6 +423,8 @@ Si un registro con esta llave ya existe en la base de datos, sera **omitido** (n
   ]
 }
 ```
+
+> **Nota:** Los errores de sede no encontrada, entidad no encontrada o formato de fecha invalido ya no devuelven HTTP 400. Estos errores ahora se reportan por registro dentro del campo `detalle` con `estado: "ER"`.
 
 ### Respuesta de Error - Servidor (HTTP 500 Internal Server Error)
 
@@ -455,9 +507,36 @@ Si la produccion **no existe**, el registro sera **omitido** (cantidadObviados).
   "isSuccess": true,
   "message": "Correcto.",
   "data": {
-    "cantidadCreados": 5,
+    "cantidadCreados": 4,
     "cantidadObviados": 1,
-    "totalProcesados": 6
+    "cantidadErrores": 1,
+    "totalProcesados": 6,
+    "detalle": [
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251017",
+        "tipoEntidadMedica": "1",
+        "estado": "OK",
+        "mensaje": "Actualizado"
+      },
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "NO_EXISTE",
+        "tipoEntidadMedica": "1",
+        "estado": "OK",
+        "mensaje": "Produccion no encontrada, omitido"
+      },
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251020",
+        "tipoEntidadMedica": "1",
+        "estado": "ER",
+        "mensaje": "Formato de fecha invalido para FechaLiquidacion: '2026-01-31'. Use formato dd/MM/yyyy HH:mm:ss"
+      }
+    ]
   },
   "errors": []
 }
@@ -477,31 +556,30 @@ Si la produccion **no existe**, el registro sera **omitido** (cantidadObviados).
 }
 ```
 
-**Formato de fecha invalido:**
-```json
-{
-  "isSuccess": false,
-  "message": "Error de validacion.",
-  "data": null,
-  "errors": ["Formato de fecha invalido para FechaLiquidacion: '2026-01-31'. Use formato dd/MM/yyyy HH:mm:ss"]
-}
-```
+> **Nota:** Los errores de sede no encontrada, produccion no encontrada o formato de fecha invalido ya no devuelven HTTP 400. Estos errores ahora se reportan por registro dentro del campo `detalle` con `estado: "ER"` (o `"OK"` con mensaje "omitido" en caso de produccion no encontrada).
 
 ---
 
-## Comportamiento Transaccional
+## Comportamiento de Procesamiento
 
-Ambos endpoints implementan un comportamiento **transaccional** para garantizar la integridad de los datos:
+Ambos endpoints procesan cada registro de forma **individual**, capturando el resultado de cada operacion:
 
-1. **Fase de Validacion**: Se validan todos los registros antes de crear/actualizar cualquiera.
-   - Se verifica que exista cada `codigoSede`
-   - Se verifica que exista cada `codigoEntidad`
+1. **Procesamiento por registro**: Cada registro se valida y procesa de forma independiente.
+   - Se busca el `IdSede` por `CodigoSede`
+   - Se busca el `IdEntidadMedica` por `CodigoEntidad`
    - Se parsean las fechas con el formato requerido
-   - Se identifican los registros duplicados/inexistentes
+   - Se verifica existencia por llave compuesta
+   - Si un registro falla, **no afecta a los demas registros**
 
-2. **Fase de Ejecucion**: Los registros validos se procesan dentro de una transaccion.
-   - Si ocurre un error durante la operacion, **se revierte toda la operacion**
-   - Ningún registro se guarda si hay un fallo
+2. **Detalle de estado por registro**: Cada registro procesado genera una entrada en el array `detalle` con:
+   - `estado: "OK"` → Registro creado/actualizado exitosamente, o registro omitido (duplicado/no encontrado)
+   - `estado: "ER"` → Error al procesar el registro (sede no encontrada, entidad no encontrada, formato de fecha invalido, etc.)
+
+3. **Contadores de resumen**:
+   - `cantidadCreados`: Registros creados (producciones) o actualizados (liquidaciones) exitosamente
+   - `cantidadObviados`: Registros omitidos (ya existen en producciones, o no encontrados en liquidaciones)
+   - `cantidadErrores`: Registros con error de validacion o procesamiento
+   - `totalProcesados`: Suma total (creados + obviados + errores)
 
 ### Diagrama de Flujo
 
@@ -511,49 +589,46 @@ Ambos endpoints implementan un comportamiento **transaccional** para garantizar 
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│              FASE 1: VALIDACION                             │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │ Para cada registro:                                    │ │
-│  │   • Buscar IdSede por CodigoSede                       │ │
-│  │   • Buscar IdEntidadMedica por CodigoEntidad           │ │
-│  │   • Parsear fechas (formato dd/MM/yyyy HH:mm:ss)       │ │
-│  │   • Verificar existencia por llave compuesta           │ │
-│  │     - Producciones: Si existe → "obviado"              │ │
-│  │     - Liquidaciones: Si NO existe → "obviado"          │ │
-│  └────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
               ┌───────────────┴───────────────┐
-              │ ¿Error en validacion?         │
+              │ ¿Coleccion vacia?             │
               └───────────────┬───────────────┘
                     Si │             │ No
                        ▼             ▼
-              ┌─────────────┐ ┌─────────────────────────────────┐
-              │ HTTP 400    │ │      FASE 2: EJECUCION          │
-              │ Bad Request │ │  ┌─────────────────────────────┐ │
-              └─────────────┘ │  │ BEGIN TRANSACTION           │ │
-                              │  │   Para cada registro valido:│ │
-                              │  │     • Crear/Actualizar en BD│ │
-                              │  │   Si error → ROLLBACK       │ │
-                              │  │   Si OK → COMMIT            │ │
-                              │  └─────────────────────────────┘ │
-                              └─────────────────────────────────┘
+              ┌─────────────┐ ┌─────────────────────────────────────────┐
+              │ HTTP 400    │ │    PROCESAMIENTO POR REGISTRO           │
+              │ Bad Request │ │  ┌─────────────────────────────────────┐ │
+              └─────────────┘ │  │ Para cada registro:                 │ │
+                              │  │   try {                             │ │
+                              │  │     • Buscar IdSede por CodigoSede  │ │
+                              │  │     • Buscar IdEntidad por Codigo   │ │
+                              │  │     • Parsear fechas                │ │
+                              │  │     • Verificar llave compuesta     │ │
+                              │  │       - Existe → OK (omitido)       │ │
+                              │  │       - No existe → Crear/Actualizar│ │
+                              │  │     • Detalle: estado=OK            │ │
+                              │  │   } catch {                         │ │
+                              │  │     • Detalle: estado=ER, mensaje   │ │
+                              │  │   }                                 │ │
+                              │  └─────────────────────────────────────┘ │
+                              └─────────────────────────────────────────┘
                                             │
                                             ▼
-                              ┌─────────────────────────────────┐
-                              │    HTTP 201/200 - Respuesta     │
-                              │  {                              │
-                              │    "isSuccess": true,           │
-                              │    "message": "Correcto.",      │
-                              │    "data": {                    │
-                              │      "cantidadCreados": N,      │
-                              │      "cantidadObviados": M,     │
-                              │      "totalProcesados": N+M     │
-                              │    },                           │
-                              │    "errors": []                 │
-                              │  }                              │
-                              └─────────────────────────────────┘
+                              ┌─────────────────────────────────────────┐
+                              │    HTTP 201/200 - Respuesta             │
+                              │  {                                      │
+                              │    "isSuccess": true,                   │
+                              │    "data": {                            │
+                              │      "cantidadCreados": N,              │
+                              │      "cantidadObviados": M,             │
+                              │      "cantidadErrores": E,              │
+                              │      "totalProcesados": N+M+E,          │
+                              │      "detalle": [                       │
+                              │        { estado: "OK", mensaje: "..." },│
+                              │        { estado: "ER", mensaje: "..." } │
+                              │      ]                                  │
+                              │    }                                    │
+                              │  }                                      │
+                              └─────────────────────────────────────────┘
 ```
 
 ---
@@ -620,7 +695,26 @@ Content-Type: application/json
   "data": {
     "cantidadCreados": 2,
     "cantidadObviados": 0,
-    "totalProcesados": 2
+    "cantidadErrores": 0,
+    "totalProcesados": 2,
+    "detalle": [
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251017",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Creado"
+      },
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0995",
+        "codigoProduccion": "20251055",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Creado"
+      }
+    ]
   },
   "errors": []
 }
@@ -659,7 +753,18 @@ Content-Type: application/json
   "data": {
     "cantidadCreados": 1,
     "cantidadObviados": 0,
-    "totalProcesados": 1
+    "cantidadErrores": 0,
+    "totalProcesados": 1,
+    "detalle": [
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251017",
+        "tipoEntidadMedica": "1",
+        "estado": "OK",
+        "mensaje": "Actualizado"
+      }
+    ]
   },
   "errors": []
 }
@@ -737,33 +842,81 @@ Cuando se envian registros que ya existen en la base de datos:
   "data": {
     "cantidadCreados": 1,
     "cantidadObviados": 2,
-    "totalProcesados": 3
+    "cantidadErrores": 0,
+    "totalProcesados": 3,
+    "detalle": [
+      {
+        "codigoSede": "001",
+        "codigoEntidad": "ENT001",
+        "codigoProduccion": "PROD001",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Ya existe, omitido"
+      },
+      {
+        "codigoSede": "001",
+        "codigoEntidad": "ENT001",
+        "codigoProduccion": "PROD002",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Ya existe, omitido"
+      },
+      {
+        "codigoSede": "001",
+        "codigoEntidad": "ENT001",
+        "codigoProduccion": "PROD003",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Creado"
+      }
+    ]
   },
   "errors": []
 }
 ```
 
-### Ejemplo 6: Error por Sede No Encontrada
+### Ejemplo 6: Producciones con Errores por Registro
+
+Cuando algunos registros tienen sede invalida u otros errores de validacion, se procesan individualmente sin afectar al resto:
 
 **Request:**
 ```json
 [
-  {
-    "codigoSede": "SEDE_INVALIDA",
-    "codigoEntidad": "ENT001",
-    "codigoProduccion": "PROD001",
-    ...
-  }
+  { "codigoSede": "SEDE_INVALIDA", "codigoEntidad": "ENT001", "codigoProduccion": "PROD001", ... },
+  { "codigoSede": "001", "codigoEntidad": "ENT001", "codigoProduccion": "PROD002", ... }
 ]
 ```
 
-**Response (400 Bad Request):**
+**Response (201 Created):**
 ```json
 {
-  "isSuccess": false,
-  "message": "Error de validacion.",
-  "data": null,
-  "errors": ["Sede con codigo 'SEDE_INVALIDA' no encontrada"]
+  "isSuccess": true,
+  "message": "Correcto.",
+  "data": {
+    "cantidadCreados": 1,
+    "cantidadObviados": 0,
+    "cantidadErrores": 1,
+    "totalProcesados": 2,
+    "detalle": [
+      {
+        "codigoSede": "SEDE_INVALIDA",
+        "codigoEntidad": "ENT001",
+        "codigoProduccion": "PROD001",
+        "tipoEntidadMedica": null,
+        "estado": "ER",
+        "mensaje": "Sede con codigo 'SEDE_INVALIDA' no encontrada"
+      },
+      {
+        "codigoSede": "001",
+        "codigoEntidad": "ENT001",
+        "codigoProduccion": "PROD002",
+        "tipoEntidadMedica": null,
+        "estado": "OK",
+        "mensaje": "Creado"
+      }
+    ]
+  },
+  "errors": []
 }
 ```
 
@@ -794,7 +947,18 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
   "data": {
     "cantidadCreados": 0,
     "cantidadObviados": 1,
-    "totalProcesados": 1
+    "cantidadErrores": 0,
+    "totalProcesados": 1,
+    "detalle": [
+      {
+        "codigoSede": "001",
+        "codigoEntidad": "ENT001",
+        "codigoProduccion": "PROD_NO_EXISTE",
+        "tipoEntidadMedica": "MEDICO",
+        "estado": "OK",
+        "mensaje": "Produccion no encontrada, omitido"
+      }
+    ]
   },
   "errors": []
 }
@@ -808,7 +972,7 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |--------|-------------|
 | **200 OK** | Operacion exitosa (liquidaciones). |
 | **201 Created** | Operacion exitosa (producciones). |
-| **400 Bad Request** | Error de validacion: campos faltantes, sede/entidad no encontrada, formato de fecha invalido, o coleccion vacia. |
+| **400 Bad Request** | Error de validacion: campos faltantes o coleccion vacia. Nota: errores de sede/entidad no encontrada o formato de fecha ahora se reportan por registro en `detalle`. |
 | **500 Internal Server Error** | Error interno del servidor. |
 
 ---
@@ -817,13 +981,15 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 
 1. **Idempotencia**: El API de producciones es seguro para reintentos. Si se envia la misma coleccion multiples veces, los registros duplicados seran omitidos automaticamente.
 
-2. **Atomicidad**: Si ocurre un error durante la creacion/actualizacion de cualquier registro, **ningun registro se guarda**. La operacion es todo o nada.
+2. **Procesamiento individual**: Cada registro se procesa de forma independiente. Si un registro falla, los demas continuan procesandose normalmente. El detalle de cada registro se reporta en el array `detalle`.
 
-3. **Validacion previa**: Todos los codigos de sede y entidad medica son validados antes de iniciar la operacion, evitando operaciones parciales.
+3. **Detalle de estado**: La respuesta siempre incluye un array `detalle` con el estado (`OK` o `ER`) de cada registro procesado, junto con un mensaje descriptivo.
 
 4. **Formato de fechas**: Las fechas deben enviarse en formato `dd/MM/yyyy HH:mm:ss` (ej: "31/01/2026 14:30:00").
 
 5. **Rendimiento**: Para grandes volumenes de datos, considere enviar lotes de maximo 1000 registros por llamada.
+
+6. **Errores por registro**: Los errores de validacion (sede no encontrada, entidad no encontrada, formato de fecha invalido) se reportan por registro en el campo `detalle` con `estado: "ER"`, sin afectar al resto de los registros.
 
 ---
 
@@ -833,7 +999,7 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |----------|-------|
 | **Autor** | ADG Antonio |
 | **Fecha de Creacion** | 2026-01-19 |
-| **Version** | 2.0 |
+| **Version** | 3.0 |
 | **Proyecto** | SHM.AppApiHonorarioMedico |
 
 ---
@@ -850,3 +1016,10 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |     |            | - Campos agregados: numeroProduccion, tipoEntidadMedica, fechaProduccion |
 |     |            | - Campos removidos: fechaCreacion, concepto |
 |     |            | - Formato de fecha: dd/MM/yyyy HH:mm:ss |
+| 3.0 | 2026-02-08 | - Nuevo campo `cantidadErrores` en respuesta |
+|     |            | - Nuevo array `detalle` con estado de proceso por cada registro |
+|     |            | - Nuevo DTO `InterfaceProduccionDetalleDto` (codigoSede, codigoEntidad, codigoProduccion, tipoEntidadMedica, estado, mensaje) |
+|     |            | - Procesamiento individual por registro (errores no afectan a otros registros) |
+|     |            | - Errores de sede/entidad/fecha ya no devuelven HTTP 400, se reportan en `detalle` con `estado: "ER"` |
+|     |            | - Eliminado comportamiento transaccional (abort-all), reemplazado por procesamiento por registro |
+|     |            | - Log de errores mejorado con campo CantidadErrores |

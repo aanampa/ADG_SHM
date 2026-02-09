@@ -10,5 +10,9 @@ public class UpdateOrdenPagoAprobacionDto
 {
     public int IdOrdenPagoAprobacion { get; set; }
     public int IdOrdenPago { get; set; }
-    public int IdRol { get; set; }
+    public int IdPerfilAprobacion { get; set; }
+    public int? Orden { get; set; }
+    public string? Estado { get; set; }
+    public DateTime? FechaAprobacion { get; set; }
+    public int? IdUsuarioAprobador { get; set; }
 }

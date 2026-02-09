@@ -44,4 +44,6 @@ public class UpdateInterfaceLiquidacionDto
 
     [Required]
     public string DescripcionLiquidacion { get; set; } = string.Empty;
+
+    public string? TipoLiquidacion { get; set; }
 }

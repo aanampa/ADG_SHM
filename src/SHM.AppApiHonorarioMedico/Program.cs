@@ -53,6 +53,7 @@ try
     // Dependency Injection
     builder.Services.AddSingleton<DatabaseConfig>();
     builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+    builder.Services.AddScoped<IUsuarioSedeRepository, UsuarioSedeRepository>();
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
     builder.Services.AddScoped<ITablaRepository, TablaRepository>();
     builder.Services.AddScoped<ITablaService, TablaService>();
@@ -80,6 +81,10 @@ try
     builder.Services.AddScoped<IOrdenPagoAprobacionService, OrdenPagoAprobacionService>();
     builder.Services.AddScoped<IOrdenPagoLiquidacionRepository, OrdenPagoLiquidacionRepository>();
     builder.Services.AddScoped<IOrdenPagoLiquidacionService, OrdenPagoLiquidacionService>();
+    builder.Services.AddScoped<IPerfilAprobacionRepository, PerfilAprobacionRepository>();
+    builder.Services.AddScoped<IPerfilAprobacionService, PerfilAprobacionService>();
+    builder.Services.AddScoped<IPerfilAprobacionUsuarioRepository, PerfilAprobacionUsuarioRepository>();
+    builder.Services.AddScoped<IPerfilAprobacionUsuarioService, PerfilAprobacionUsuarioService>();
 
     // Configuracion del API externo de San Pablo
     builder.Services.Configure<SanPabloApiSettings>(
