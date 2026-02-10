@@ -26,6 +26,8 @@ public class LiquidacionController : Controller
     private readonly IOrdenPagoRepository _ordenPagoRepository;
     private readonly IOrdenPagoProduccionRepository _ordenPagoProduccionRepository;
     private readonly IOrdenPagoLiquidacionRepository _ordenPagoLiquidacionRepository;
+    private readonly IOrdenPagoAprobacionRepository _ordenPagoAprobacionRepository;
+    private readonly IPerfilAprobacionRepository _perfilAprobacionRepository;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
@@ -33,7 +35,9 @@ public class LiquidacionController : Controller
         IBancoService bancoService,
         IOrdenPagoRepository ordenPagoRepository,
         IOrdenPagoProduccionRepository ordenPagoProduccionRepository,
-        IOrdenPagoLiquidacionRepository ordenPagoLiquidacionRepository)
+        IOrdenPagoLiquidacionRepository ordenPagoLiquidacionRepository,
+        IOrdenPagoAprobacionRepository ordenPagoAprobacionRepository,
+        IPerfilAprobacionRepository perfilAprobacionRepository)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
@@ -41,6 +45,8 @@ public class LiquidacionController : Controller
         _ordenPagoRepository = ordenPagoRepository;
         _ordenPagoProduccionRepository = ordenPagoProduccionRepository;
         _ordenPagoLiquidacionRepository = ordenPagoLiquidacionRepository;
+        _ordenPagoAprobacionRepository = ordenPagoAprobacionRepository;
+        _perfilAprobacionRepository = perfilAprobacionRepository;
     }
 
     /// <summary>
@@ -361,6 +367,22 @@ public class LiquidacionController : Controller
             foreach (var liquidacion in gruposLiquidacion)
             {
                 await _ordenPagoLiquidacionRepository.CreateAsync(liquidacion);
+            }
+
+            // Crear registros de aprobacion basados en SHM_PERFIL_APROBACION
+            var perfilesAprobacion = await _perfilAprobacionRepository.GetByGrupoFlujoTrabajoAsync("FLUJO_APROBACION_ORDEN_PAGO");
+            foreach (var perfil in perfilesAprobacion)
+            {
+                var aprobacion = new OrdenPagoAprobacion
+                {
+                    IdOrdenPago = idOrdenPago,
+                    IdPerfilAprobacion = perfil.IdPerfilAprobacion,
+                    Estado = "APROBACION_PENDIENTE",
+                    Orden = perfil.Orden,
+                    Activo = 1,
+                    IdCreador = idUsuario.Value
+                };
+                await _ordenPagoAprobacionRepository.CreateAsync(aprobacion);
             }
 
             // Actualizar estado de las producciones a FACTURA_ORDEN_PAGO
