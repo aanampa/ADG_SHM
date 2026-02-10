@@ -325,6 +325,7 @@ public class LiquidacionRepository : ILiquidacionRepository
                 p.FECHA_EMISION AS FechaEmision,
                 p.NUMERO_LIQUIDACION AS NumeroLiquidacion,
                 p.CODIGO_LIQUIDACION AS CodigoLiquidacion,
+                p.DESCRIPCION_LIQUIDACION AS DescripcionLiquidacion,
                 p.PERIODO_LIQUIDACION AS PeriodoLiquidacion,
                 p.ESTADO_LIQUIDACION AS EstadoLiquidacion,
                 p.FECHA_LIQUIDACION AS FechaLiquidacion,

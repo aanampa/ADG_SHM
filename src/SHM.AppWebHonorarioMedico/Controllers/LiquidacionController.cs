@@ -351,6 +351,10 @@ public class LiquidacionController : Controller
                     MtoIgvAcum = g.Sum(p => p.MtoIgv ?? 0),
                     MtoTotalAcum = g.Sum(p => p.MtoTotal ?? 0),
                     CantComprobantes = g.Count(),
+                    TipoLiquidacion = g.First().TipoProduccion,
+                    DescripcionLiquidacion = g.First().DescripcionLiquidacion,
+                    PeriodoLiquidacion = g.First().PeriodoLiquidacion,
+                    IdBanco = request.IdBanco.Value,
                     IdCreador = idUsuario.Value
                 }).ToList();
 
