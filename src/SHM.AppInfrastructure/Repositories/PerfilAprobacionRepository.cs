@@ -198,4 +198,18 @@ public class PerfilAprobacionRepository : IPerfilAprobacionRepository
 
         return rowsAffected > 0;
     }
+
+    /// <summary>
+    /// Obtiene los perfiles de aprobacion por grupo de flujo de trabajo.
+    /// </summary>
+    public async Task<IEnumerable<PerfilAprobacion>> GetByGrupoFlujoTrabajoAsync(string grupoFlujoTrabajo)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"{SELECT_BASE}
+            WHERE GRUPO_FLUJO_TRABAJO = :GrupoFlujoTrabajo AND ACTIVO = 1
+            ORDER BY ORDEN";
+
+        return await connection.QueryAsync<PerfilAprobacion>(sql, new { GrupoFlujoTrabajo = grupoFlujoTrabajo });
+    }
 }

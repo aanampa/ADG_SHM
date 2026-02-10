@@ -248,7 +248,11 @@
                             </div>
                         </div>
 
-                        <!-- Bitacora (oculto temporalmente) -->
+                        <!-- Bitacora -->
+                        @{
+                            var bitacoras = ViewBag.Bitacoras as List<SHM.AppDomain.DTOs.Bitacora.BitacoraConUsuarioDto>
+                                ?? new List<SHM.AppDomain.DTOs.Bitacora.BitacoraConUsuarioDto>();
+                        }
                         <div class="card card-compact mb-2">
                             <div class="card-header bg-light">
                                 <h3 class="card-title">
@@ -256,32 +260,39 @@
                                 </h3>
                             </div>
                             <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-striped table-bordered mb-0" style="font-size: 0.8rem;">
-                                        <thead class="thead-light">
-                                            <tr>
-                                                <th style="width: 30px;" class="text-center">#</th>
-                                                <th>Acción</th>
-                                                <th style="width: 100px;">De</th>
-                                                <th style="width: 110px;">Fecha</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="text-center">1</td>
-                                                <td>Se solicito Factura con Fecha Limite 23/01/2026 18:00</td>
-                                                <td>Juan Perez</td>
-                                                <td>15/11/2005 11:00</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="text-center">2</td>
-                                                <td>Se envio Factura</td>
-                                                <td>Maria Robles</td>
-                                                <td>16/11/2005 8:00</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                @if (bitacoras.Any())
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped table-bordered mb-0" style="font-size: 0.8rem;">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th style="width: 30px;" class="text-center">#</th>
+                                                    <th>Descripción</th>
+                                                    <th style="width: 160px;">Usuario</th>
+                                                    <th style="width: 130px;">Fecha</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @{ var index = 1; }
+                                                @foreach (var bit in bitacoras)
+                                                {
+                                                    <tr>
+                                                        <td class="text-center">@(index++)</td>
+                                                        <td>@(bit.Descripcion ?? bit.Accion ?? "-")</td>
+                                                        <td>@bit.NombreCompletoUsuario</td>
+                                                        <td>@(bit.FechaAccion?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                                        <i class="fas fa-info-circle mr-1"></i>No hay registros en la bitácora.
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>

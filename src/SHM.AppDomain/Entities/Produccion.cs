@@ -45,6 +45,9 @@ public class Produccion
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
 
+    // Cuenta Bancaria
+    public int? IdCuentaBanco { get; set; }
+
     // Campos de Liquidacion
     public string? NumeroLiquidacion { get; set; }
     public string? CodigoLiquidacion { get; set; }

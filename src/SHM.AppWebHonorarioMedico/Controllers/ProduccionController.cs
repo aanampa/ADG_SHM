@@ -25,6 +25,7 @@ public class ProduccionController : Controller
     private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IEntidadCuentaBancariaService _entidadCuentaBancariaService;
     private readonly IBancoService _bancoService;
+    private readonly IBitacoraService _bitacoraService;
     private readonly IConfiguration _configuration;
 
     public ProduccionController(
@@ -36,6 +37,7 @@ public class ProduccionController : Controller
         IEntidadMedicaService entidadMedicaService,
         IEntidadCuentaBancariaService entidadCuentaBancariaService,
         IBancoService bancoService,
+        IBitacoraService bitacoraService,
         IConfiguration configuration)
     {
         _logger = logger;
@@ -46,6 +48,7 @@ public class ProduccionController : Controller
         _entidadMedicaService = entidadMedicaService;
         _entidadCuentaBancariaService = entidadCuentaBancariaService;
         _bancoService = bancoService;
+        _bitacoraService = bitacoraService;
         _configuration = configuration;
     }
 
@@ -221,6 +224,10 @@ public class ProduccionController : Controller
             ViewBag.CuentaCci = cuentaCci;
             ViewBag.Moneda = moneda;
 
+            // Cargar bitacora de la produccion
+            var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_PRODUCCION", produccion.IdProduccion);
+            ViewBag.Bitacoras = bitacoras.ToList();
+
             return View(produccion);
         }
         catch (Exception ex)
@@ -256,6 +263,28 @@ public class ProduccionController : Controller
 
             if (resultado)
             {
+                // Registrar en Bitacora
+                var produccion = await _produccionService.GetProduccionByGuidAsync(solicitud.GuidRegistro);
+                if (produccion != null)
+                {
+                    // Formatear fecha limite para la descripcion (DD/MM/YYYY HH:mm)
+                    var fechaFormateada = solicitud.Fecha;
+                    if (DateTime.TryParse($"{solicitud.Fecha} {solicitud.Hora}", out DateTime fechaLimite))
+                    {
+                        fechaFormateada = fechaLimite.ToString("dd/MM/yyyy");
+                    }
+
+                    var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                    {
+                        Entidad = "SHM_PRODUCCION",
+                        IdEntidad = produccion.IdProduccion,
+                        Accion = "FACTURA_SOLICITADA",
+                        Descripcion = $"Factura Solicitada con fecha limite el {fechaFormateada} a las {solicitud.Hora} horas",
+                        FechaAccion = DateTime.Now
+                    };
+                    await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                }
+
                 _logger.LogInformation("Solicitud de factura enviada. GUID: {Guid}, Usuario: {Usuario}",
                     solicitud.GuidRegistro, idUsuario);
                 return Json(new { success = true, message = "Solicitud de factura enviada correctamente" });

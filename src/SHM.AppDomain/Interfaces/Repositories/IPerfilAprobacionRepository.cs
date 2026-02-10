@@ -18,4 +18,5 @@ public interface IPerfilAprobacionRepository
     Task<int> CreateAsync(PerfilAprobacion perfilAprobacion);
     Task<bool> UpdateAsync(PerfilAprobacion perfilAprobacion);
     Task<bool> DeleteAsync(int id, int idModificador);
+    Task<IEnumerable<PerfilAprobacion>> GetByGrupoFlujoTrabajoAsync(string grupoFlujoTrabajo);
 }

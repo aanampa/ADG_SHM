@@ -82,6 +82,7 @@ try
     builder.Services.AddScoped<IPerfilAprobacionRepository, PerfilAprobacionRepository>();
     builder.Services.AddScoped<IPerfilAprobacionUsuarioRepository, PerfilAprobacionUsuarioRepository>();
     builder.Services.AddScoped<ILiquidacionRepository, LiquidacionRepository>();
+    builder.Services.AddScoped<IBitacoraRepository, BitacoraRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -105,6 +106,7 @@ try
     builder.Services.AddScoped<IPerfilAprobacionService, PerfilAprobacionService>();
     builder.Services.AddScoped<IPerfilAprobacionUsuarioService, PerfilAprobacionUsuarioService>();
     builder.Services.AddScoped<ILiquidacionService, LiquidacionService>();
+    builder.Services.AddScoped<IBitacoraService, BitacoraService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));

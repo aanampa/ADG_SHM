@@ -55,17 +55,7 @@ public class LiquidacionRepository : ILiquidacionRepository
             SELECT COUNT(1)
             FROM SHM_PRODUCCION p
             LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-            LEFT JOIN (
-                SELECT ecb.ID_BANCO, ecb.CUENTA_CORRIENTE, ecb.CUENTA_CCI, ecb.MONEDA, ecb.ID_ENTIDAD_MEDICA
-                FROM SHM_ENTIDAD_CUENTA_BANCO ecb
-                WHERE ecb.ACTIVO = 1
-                  AND ecb.ID_CUENTA_BANCO = (
-                      SELECT MIN(ecb2.ID_CUENTA_BANCO)
-                      FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
-                      WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
-                        AND ecb2.ACTIVO = 1
-                  )
-            ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_ENTIDAD_CUENTA_BANCO cb ON cb.ID_CUENTA_BANCO = p.ID_CUENTA_BANCO
             {whereClause}";
 
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { IdBanco = idBanco, IdSede = idSede });
@@ -135,17 +125,7 @@ public class LiquidacionRepository : ILiquidacionRepository
                     FROM SHM_PRODUCCION p
                     LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
                     LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-                    LEFT JOIN (
-                        SELECT ecb.ID_BANCO, ecb.CUENTA_CORRIENTE, ecb.CUENTA_CCI, ecb.MONEDA, ecb.ID_ENTIDAD_MEDICA
-                        FROM SHM_ENTIDAD_CUENTA_BANCO ecb
-                        WHERE ecb.ACTIVO = 1
-                          AND ecb.ID_CUENTA_BANCO = (
-                              SELECT MIN(ecb2.ID_CUENTA_BANCO)
-                              FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
-                              WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
-                                AND ecb2.ACTIVO = 1
-                          )
-                    ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                    LEFT JOIN SHM_ENTIDAD_CUENTA_BANCO cb ON cb.ID_CUENTA_BANCO = p.ID_CUENTA_BANCO
                     LEFT JOIN SHM_BANCO b ON b.ID_BANCO = cb.ID_BANCO
                     LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
                     LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
@@ -238,17 +218,7 @@ public class LiquidacionRepository : ILiquidacionRepository
             FROM SHM_PRODUCCION p
             LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
             LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-            LEFT JOIN (
-                SELECT ecb.ID_BANCO, ecb.CUENTA_CORRIENTE, ecb.CUENTA_CCI, ecb.MONEDA, ecb.ID_ENTIDAD_MEDICA
-                FROM SHM_ENTIDAD_CUENTA_BANCO ecb
-                WHERE ecb.ACTIVO = 1
-                  AND ecb.ID_CUENTA_BANCO = (
-                      SELECT MIN(ecb2.ID_CUENTA_BANCO)
-                      FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
-                      WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
-                        AND ecb2.ACTIVO = 1
-                  )
-            ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_ENTIDAD_CUENTA_BANCO cb ON cb.ID_CUENTA_BANCO = p.ID_CUENTA_BANCO
             LEFT JOIN SHM_BANCO b ON b.ID_BANCO = cb.ID_BANCO
             LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
             LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
@@ -299,17 +269,7 @@ public class LiquidacionRepository : ILiquidacionRepository
             FROM SHM_PRODUCCION p
             LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
             LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-            LEFT JOIN (
-                SELECT ecb.ID_BANCO, ecb.ID_ENTIDAD_MEDICA
-                FROM SHM_ENTIDAD_CUENTA_BANCO ecb
-                WHERE ecb.ACTIVO = 1
-                  AND ecb.ID_CUENTA_BANCO = (
-                      SELECT MIN(ecb2.ID_CUENTA_BANCO)
-                      FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
-                      WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
-                        AND ecb2.ACTIVO = 1
-                  )
-            ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_ENTIDAD_CUENTA_BANCO cb ON cb.ID_CUENTA_BANCO = p.ID_CUENTA_BANCO
             LEFT JOIN SHM_BANCO b ON b.ID_BANCO = cb.ID_BANCO
             LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
             LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
@@ -365,6 +325,7 @@ public class LiquidacionRepository : ILiquidacionRepository
                 p.FECHA_EMISION AS FechaEmision,
                 p.NUMERO_LIQUIDACION AS NumeroLiquidacion,
                 p.CODIGO_LIQUIDACION AS CodigoLiquidacion,
+                p.DESCRIPCION_LIQUIDACION AS DescripcionLiquidacion,
                 p.PERIODO_LIQUIDACION AS PeriodoLiquidacion,
                 p.ESTADO_LIQUIDACION AS EstadoLiquidacion,
                 p.FECHA_LIQUIDACION AS FechaLiquidacion,
@@ -376,17 +337,7 @@ public class LiquidacionRepository : ILiquidacionRepository
                 p.ACTIVO AS Activo
             FROM SHM_PRODUCCION p
             LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-            LEFT JOIN (
-                SELECT ecb.ID_BANCO, ecb.ID_ENTIDAD_MEDICA
-                FROM SHM_ENTIDAD_CUENTA_BANCO ecb
-                WHERE ecb.ACTIVO = 1
-                  AND ecb.ID_CUENTA_BANCO = (
-                      SELECT MIN(ecb2.ID_CUENTA_BANCO)
-                      FROM SHM_ENTIDAD_CUENTA_BANCO ecb2
-                      WHERE ecb2.ID_ENTIDAD_MEDICA = ecb.ID_ENTIDAD_MEDICA
-                        AND ecb2.ACTIVO = 1
-                  )
-            ) cb ON cb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_ENTIDAD_CUENTA_BANCO cb ON cb.ID_CUENTA_BANCO = p.ID_CUENTA_BANCO
             LEFT JOIN SHM_BANCO b ON b.ID_BANCO = cb.ID_BANCO
             LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
             {whereClause}
