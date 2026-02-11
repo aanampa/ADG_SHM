@@ -1,4 +1,5 @@
 @model SHM.AppWebHonorarioMedico.Models.OrdenPagoAprobacionListViewModel
+@using SHM.AppDomain.Constants
 
 <div class="card-body table-responsive p-0">
     <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
@@ -35,7 +36,9 @@
                         <td class="text-center">@(item.CantLiquidaciones?.ToString() ?? "-")</td>
                         <td class="text-center">@(item.CantComprobantes?.ToString() ?? "-")</td>
                         <td class="text-center">
-                            <span class="badge badge-warning text-sm">En Aprobaci&oacute;n</span>
+                            <span class="badge @EstadoDescripcion.OrdenPago.GetBadgeClass(item.Estado) text-sm">
+                                @EstadoDescripcion.OrdenPago.GetDescripcion(item.Estado)
+                            </span>
                         </td>
                         <td class="text-right">@(item.MtoSubtotalAcum?.ToString("N2") ?? "--")</td>
                         <td class="text-right">@(item.MtoIgvAcum?.ToString("N2") ?? "--")</td>
