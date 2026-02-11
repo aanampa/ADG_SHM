@@ -680,6 +680,7 @@ public class ProduccionRepository : IProduccionRepository
         var sql = @"
             UPDATE SHM_PRODUCCION
             SET FECHA_LIMITE = :FechaLimite,
+                FACTURA_FECHA_SOLICITUD = SYSDATE,
                 ESTADO = :Estado,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -709,6 +710,7 @@ public class ProduccionRepository : IProduccionRepository
         var sql = @"
             UPDATE SHM_PRODUCCION
             SET ESTADO = :Estado,
+                FACTURA_FECHA_ACEPTACION = CASE WHEN :Estado = 'FACTURA_ACEPTADA' THEN SYSDATE ELSE FACTURA_FECHA_ACEPTACION END,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE GUID_REGISTRO = :GuidRegistro";

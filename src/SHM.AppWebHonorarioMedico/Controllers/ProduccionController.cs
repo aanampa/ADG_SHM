@@ -322,6 +322,22 @@ public class ProduccionController : Controller
 
             if (resultado)
             {
+                // Registrar en Bitacora
+                var produccion = await _produccionService.GetProduccionByGuidAsync(request.GuidRegistro);
+                if (produccion != null)
+                {
+                    var comprobante = produccion.ComprobanteFactura ?? $"{produccion.Serie}-{produccion.Numero}";
+                    var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                    {
+                        Entidad = "SHM_PRODUCCION",
+                        IdEntidad = produccion.IdProduccion,
+                        Accion = "FACTURA_DEVUELTA",
+                        Descripcion = $"Se devolvio el comprobante de pago electrónico: {comprobante} para su subsanacion",
+                        FechaAccion = DateTime.Now
+                    };
+                    await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                }
+
                 _logger.LogInformation("Factura devuelta. GUID: {Guid}, Usuario: {Usuario}",
                     request.GuidRegistro, idUsuario);
                 return Json(new { success = true, message = "Factura devuelta correctamente" });
@@ -359,6 +375,22 @@ public class ProduccionController : Controller
 
             if (resultado)
             {
+                // Registrar en Bitacora
+                var produccion = await _produccionService.GetProduccionByGuidAsync(request.GuidRegistro);
+                if (produccion != null)
+                {
+                    var comprobante = produccion.ComprobanteFactura ?? $"{produccion.Serie}-{produccion.Numero}";
+                    var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                    {
+                        Entidad = "SHM_PRODUCCION",
+                        IdEntidad = produccion.IdProduccion,
+                        Accion = "FACTURA_ACEPTADA",
+                        Descripcion = $"Se acepto el comprobante de pago electrónico: {comprobante}",
+                        FechaAccion = DateTime.Now
+                    };
+                    await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                }
+
                 _logger.LogInformation("Factura aceptada. GUID: {Guid}, Usuario: {Usuario}",
                     request.GuidRegistro, idUsuario);
                 return Json(new { success = true, message = "Factura aceptada correctamente" });
