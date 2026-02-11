@@ -201,7 +201,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" style="font-weight: 600;">Fecha Emision <span style="color: var(--danger);">*</span></label>
-                        <input type="date" class="form-control" id="fechaEmision" name="fechaEmision" required>
+                        <input type="date" class="form-control" id="fechaEmision" name="fechaEmision" max="@DateTime.Now.ToString("yyyy-MM-dd")" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" style="font-weight: 600;">Serie <span style="color: var(--danger);">*</span></label>
@@ -381,7 +381,14 @@
                 var errores = [];
 
                 if (!document.getElementById('tipoComprobante').value) errores.push('Seleccione el tipo de comprobante');
-                if (!document.getElementById('fechaEmision').value) errores.push('Ingrese la fecha de emision');
+                if (!document.getElementById('fechaEmision').value) {
+                    errores.push('Ingrese la fecha de emision');
+                } else {
+                    var fechaEmision = new Date(document.getElementById('fechaEmision').value + 'T00:00:00');
+                    var hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    if (fechaEmision > hoy) errores.push('La fecha de emision no puede ser una fecha futura');
+                }
                 if (!document.getElementById('serie').value.trim()) errores.push('Ingrese la serie del comprobante');
                 if (!document.getElementById('numero').value.trim()) errores.push('Ingrese el numero del comprobante');
                 if (!pdfInput.files[0]) errores.push('Seleccione el archivo PDF');

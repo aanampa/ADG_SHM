@@ -12,21 +12,72 @@
     int.TryParse(numeroXml, out var numeroXmlInt);
     int.TryParse(Model.Numero, out var numeroFormInt);
 
-    // Validaciones
+    // Datos del XML para comparacion de Tipo
+    var tipoComprobanteXml = Model.DatosXml?.DatosGenerales.CodigoTipoDocumento ?? "";
+    var tipoComprobanteForm = Model.TipoComprobante ?? "";
+    var tipoCoincide = string.Equals(tipoComprobanteForm.Trim(), tipoComprobanteXml.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    // Nombres legibles de tipo comprobante
+    var tipoNombres = new Dictionary<string, string> { {"01", "Factura"}, {"02", "Recibo por Honorarios"}, {"03", "Boleta"} };
+    var tipoFormNombre = tipoNombres.ContainsKey(tipoComprobanteForm) ? tipoNombres[tipoComprobanteForm] : tipoComprobanteForm;
+    var tipoXmlNombre = Model.DatosXml?.DatosGenerales.TipoDocumento ?? tipoComprobanteXml;
+
+    // Datos del XML para comparacion de Fecha Emision
+    var fechaEmisionXmlStr = Model.DatosXml?.DatosGenerales.FechaEmision ?? "";
+    DateTime.TryParse(fechaEmisionXmlStr, out var fechaEmisionXmlDate);
+    var fechaEmisionFormDate = Model.FechaEmision?.Date ?? DateTime.MinValue;
+    var fechaEmisionCoincide = fechaEmisionFormDate == fechaEmisionXmlDate.Date;
+
+    // Validaciones de Serie y Numero
     var serieCoincide = string.Equals(Model.Serie?.Trim(), serieXml?.Trim(), StringComparison.OrdinalIgnoreCase);
     var numeroCoincide = numeroXmlInt == numeroFormInt;
+
+    // Validaciones de RUC Emisor y RUC Receptor
+    var rucEmisorSistema = Model.EmisorRuc ?? "";
+    var rucEmisorXml = Model.DatosXml?.Emisor.Ruc ?? "";
+    var rucEmisorCoincide = string.Equals(rucEmisorSistema.Trim(), rucEmisorXml.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    var rucReceptorSistema = Model.ReceptorRuc ?? "";
+    var rucReceptorXml = Model.DatosXml?.Cliente.NumeroDocumento ?? "";
+    var rucReceptorCoincide = string.Equals(rucReceptorSistema.Trim(), rucReceptorXml.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    // Validaciones de Importe y Concepto (siempre activas)
     var importeXml = Model.DatosXml?.DesgloseTotales.ImporteTotal ?? 0;
     var importeProduccion = Model.MtoTotal ?? 0;
     var importeCoincide = Math.Abs(importeProduccion - importeXml) <= 0.01m;
 
-    // Validacion de concepto (primer item del XML vs concepto de produccion)
     var conceptoXml = Model.DatosXml?.DetalleItems?.FirstOrDefault()?.Descripcion ?? "";
     var conceptoProduccion = Model.Concepto ?? "";
     var conceptoCoincide = string.Equals(conceptoProduccion.Trim(), conceptoXml.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    // Determinar si puede enviar (incluye validacion de concepto)
-    var puedeEnviar = serieCoincide && numeroCoincide && importeCoincide && conceptoCoincide;
-    var totalErrores = (serieCoincide ? 0 : 1) + (numeroCoincide ? 0 : 1) + (importeCoincide ? 0 : 1) + (conceptoCoincide ? 0 : 1);
+    // Determinar si puede enviar (solo valida los campos habilitados por parametro)
+    var puedeEnviar = true;
+    var totalErrores = 0;
+
+    var totalAdvertencias = 0;
+
+    if (Model.ValidaTipo && !tipoCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaTipo && !tipoCoincide) { totalAdvertencias++; }
+
+    if (Model.ValidaFechaEmision && !fechaEmisionCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaFechaEmision && !fechaEmisionCoincide) { totalAdvertencias++; }
+
+    if (Model.ValidaSerie && !serieCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaSerie && !serieCoincide) { totalAdvertencias++; }
+
+    if (Model.ValidaNumero && !numeroCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaNumero && !numeroCoincide) { totalAdvertencias++; }
+
+    if (Model.ValidaRucEmisor && !rucEmisorCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaRucEmisor && !rucEmisorCoincide) { totalAdvertencias++; }
+
+    if (Model.ValidaRucReceptor && !rucReceptorCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaRucReceptor && !rucReceptorCoincide) { totalAdvertencias++; }
+
+    if (Model.ValidaImporte && !importeCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaImporte && !importeCoincide) { totalAdvertencias++; }
+    if (Model.ValidaConcepto && !conceptoCoincide) { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaConcepto && !conceptoCoincide) { totalAdvertencias++; }
 }
 
 <style>
@@ -304,6 +355,10 @@
         background: rgba(220, 53, 69, 0.1);
         color: #dc3545;
     }
+    .validation-status.warning {
+        background: rgba(255, 193, 7, 0.15);
+        color: #e6a000;
+    }
     .error-alert {
         background: rgba(220, 53, 69, 0.1);
         border: 1px solid rgba(220, 53, 69, 0.3);
@@ -386,17 +441,58 @@
             <div class="xml-content">
                 <!-- Seccion de Validaciones -->
                 <div class="validation-section @(puedeEnviar ? "all-valid" : "has-errors")">
-                    <div class="validation-title @(puedeEnviar ? "success" : "error")">
-                        @if (puedeEnviar)
+                    <div class="validation-title @(puedeEnviar ? (totalAdvertencias > 0 ? "success" : "success") : "error")">
+                        @if (puedeEnviar && totalAdvertencias == 0)
                         {
-                            <i class="bi bi-check-circle-fill"></i>
-                            <span>Validaciones Correctas</span>
+                            <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
+                            <span style="color: #28a745;">Validaciones Correctas</span>
+                        }
+                        else if (puedeEnviar && totalAdvertencias > 0)
+                        {
+                            <i class="bi bi-exclamation-triangle-fill" style="color: #e6a000;"></i>
+                            <span style="color: #e6a000;">@totalAdvertencias advertencia(s) - Puede continuar</span>
                         }
                         else
                         {
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            <span>Se encontraron @totalErrores error(es)</span>
+                            <span>Se encontraron @totalErrores error(es)@(totalAdvertencias > 0 ? $" y {totalAdvertencias} advertencia(s)" : "")</span>
                         }
+                    </div>
+
+                    <!-- Tipo Comprobante -->
+                    <div class="validation-row">
+                        <div class="validation-label">Tipo</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Formulario</div>
+                                <div class="validation-col-value">@tipoFormNombre</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value">@tipoXmlNombre</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(tipoCoincide ? "valid" : (Model.ValidaTipo ? "invalid" : "warning"))">
+                            <i class="bi @(tipoCoincide ? "bi-check-lg" : (Model.ValidaTipo ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
+                        </div>
+                    </div>
+
+                    <!-- Fecha Emision -->
+                    <div class="validation-row">
+                        <div class="validation-label">Fecha</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Formulario</div>
+                                <div class="validation-col-value">@(Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value">@(fechaEmisionXmlStr)</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(fechaEmisionCoincide ? "valid" : (Model.ValidaFechaEmision ? "invalid" : "warning"))">
+                            <i class="bi @(fechaEmisionCoincide ? "bi-check-lg" : (Model.ValidaFechaEmision ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
+                        </div>
                     </div>
 
                     <!-- Serie -->
@@ -412,8 +508,8 @@
                                 <div class="validation-col-value">@(serieXml)</div>
                             </div>
                         </div>
-                        <div class="validation-status @(serieCoincide ? "valid" : "invalid")">
-                            <i class="bi @(serieCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        <div class="validation-status @(serieCoincide ? "valid" : (Model.ValidaSerie ? "invalid" : "warning"))">
+                            <i class="bi @(serieCoincide ? "bi-check-lg" : (Model.ValidaSerie ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
                         </div>
                     </div>
 
@@ -430,8 +526,44 @@
                                 <div class="validation-col-value">@(numeroXml)</div>
                             </div>
                         </div>
-                        <div class="validation-status @(numeroCoincide ? "valid" : "invalid")">
-                            <i class="bi @(numeroCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        <div class="validation-status @(numeroCoincide ? "valid" : (Model.ValidaNumero ? "invalid" : "warning"))">
+                            <i class="bi @(numeroCoincide ? "bi-check-lg" : (Model.ValidaNumero ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
+                        </div>
+                    </div>
+
+                    <!-- RUC Emisor -->
+                    <div class="validation-row">
+                        <div class="validation-label">RUC Emisor</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Sistema</div>
+                                <div class="validation-col-value mono">@(string.IsNullOrEmpty(rucEmisorSistema) ? "-" : rucEmisorSistema)</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value mono">@(string.IsNullOrEmpty(rucEmisorXml) ? "-" : rucEmisorXml)</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(rucEmisorCoincide ? "valid" : (Model.ValidaRucEmisor ? "invalid" : "warning"))">
+                            <i class="bi @(rucEmisorCoincide ? "bi-check-lg" : (Model.ValidaRucEmisor ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
+                        </div>
+                    </div>
+
+                    <!-- RUC Receptor -->
+                    <div class="validation-row">
+                        <div class="validation-label">RUC Receptor</div>
+                        <div class="validation-values">
+                            <div class="validation-col">
+                                <div class="validation-col-header">Sistema</div>
+                                <div class="validation-col-value mono">@(string.IsNullOrEmpty(rucReceptorSistema) ? "-" : rucReceptorSistema)</div>
+                            </div>
+                            <div class="validation-col">
+                                <div class="validation-col-header">XML</div>
+                                <div class="validation-col-value mono">@(string.IsNullOrEmpty(rucReceptorXml) ? "-" : rucReceptorXml)</div>
+                            </div>
+                        </div>
+                        <div class="validation-status @(rucReceptorCoincide ? "valid" : (Model.ValidaRucReceptor ? "invalid" : "warning"))">
+                            <i class="bi @(rucReceptorCoincide ? "bi-check-lg" : (Model.ValidaRucReceptor ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
                         </div>
                     </div>
 
@@ -448,8 +580,8 @@
                                 <div class="validation-col-value">S/ @(importeXml.ToString("N2"))</div>
                             </div>
                         </div>
-                        <div class="validation-status @(importeCoincide ? "valid" : "invalid")">
-                            <i class="bi @(importeCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        <div class="validation-status @(importeCoincide ? "valid" : (Model.ValidaImporte ? "invalid" : "warning"))">
+                            <i class="bi @(importeCoincide ? "bi-check-lg" : (Model.ValidaImporte ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
                         </div>
                     </div>
 
@@ -466,8 +598,8 @@
                                 <div style="font-size: 0.8rem; font-weight: 500; word-break: break-word;">@(string.IsNullOrEmpty(conceptoXml) ? "-" : conceptoXml)</div>
                             </div>
                         </div>
-                        <div class="validation-status @(conceptoCoincide ? "valid" : "invalid")">
-                            <i class="bi @(conceptoCoincide ? "bi-check-lg" : "bi-x-lg")"></i>
+                        <div class="validation-status @(conceptoCoincide ? "valid" : (Model.ValidaConcepto ? "invalid" : "warning"))">
+                            <i class="bi @(conceptoCoincide ? "bi-check-lg" : (Model.ValidaConcepto ? "bi-x-lg" : "bi-exclamation-triangle-fill"))"></i>
                         </div>
                     </div>
 
