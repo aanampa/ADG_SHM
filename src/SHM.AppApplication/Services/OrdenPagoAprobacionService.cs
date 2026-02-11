@@ -1,3 +1,4 @@
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.OrdenPagoAprobacion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -97,12 +98,12 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
 
         // Verificar si quedan niveles pendientes
         var aprobaciones = await _repository.GetByOrdenPagoIdAsync(idOrdenPago);
-        var pendientes = aprobaciones.Where(a => a.Estado == "PENDIENTE").Any();
+        var pendientes = aprobaciones.Where(a => a.Estado == EstadoDescripcion.Aprobacion.Pendiente).Any();
 
         if (!pendientes)
         {
             // Todos los niveles aprobados: actualizar estado de la orden
-            await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, "APROBADO", idUsuario);
+            await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, EstadoDescripcion.OrdenPago.Aprobado, idUsuario);
         }
 
         return (true, "Orden de pago aprobada exitosamente.");
@@ -124,11 +125,11 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         if (!rechazado)
             return (false, "No se pudo procesar el rechazo. La orden ya fue procesada por otro usuario.");
 
-        // Actualizar estado de la orden a RECHAZADO
+        // Actualizar estado de la orden a DEVUELTO
         var orden = await _ordenPagoRepository.GetByIdAsync(idOrdenPago);
         if (orden != null)
         {
-            orden.Estado = "RECHAZADO";
+            orden.Estado = EstadoDescripcion.OrdenPago.Devuelto;
             orden.Comentarios = comentario;
             orden.IdModificador = idUsuario;
             await _ordenPagoRepository.UpdateAsync(orden);
@@ -147,7 +148,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
             IdOrdenPago = dto.IdOrdenPago,
             IdPerfilAprobacion = dto.IdPerfilAprobacion,
             Orden = dto.Orden,
-            Estado = dto.Estado ?? "PENDIENTE",
+            Estado = dto.Estado ?? EstadoDescripcion.Aprobacion.Pendiente,
             IdCreador = idCreador,
             Activo = 1
         };

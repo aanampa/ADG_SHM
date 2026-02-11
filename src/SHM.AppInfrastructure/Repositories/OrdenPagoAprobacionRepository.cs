@@ -158,7 +158,7 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
                 AND pau.ID_USUARIO = :IdUsuario
             INNER JOIN SHM_ORDEN_PAGO op2 ON opa.ID_ORDEN_PAGO = op2.ID_ORDEN_PAGO
             WHERE opa.ID_ORDEN_PAGO = :IdOrdenPago
-              AND opa.ESTADO = 'PENDIENTE'
+              AND opa.ESTADO = 'APROBACION_PENDIENTE'
               AND opa.ACTIVO = 1
               AND (pau.ID_SEDE IS NULL OR pau.ID_SEDE = op2.ID_SEDE)
               AND NOT EXISTS (
@@ -188,7 +188,7 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_ORDEN_PAGO_APROBACION = :IdOrdenPagoAprobacion
-              AND ESTADO = 'PENDIENTE'";
+              AND ESTADO = 'APROBACION_PENDIENTE'";
 
         var rowsAffected = await connection.ExecuteAsync(sql, new
         {
@@ -209,13 +209,13 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
 
         var sql = @"
             UPDATE SHM_ORDEN_PAGO_APROBACION
-            SET ESTADO = 'RECHAZADO',
+            SET ESTADO = 'DEVUELTO',
                 ID_USUARIO_APROBADOR = :IdUsuarioAprobador,
                 FECHA_APROBACION = SYSDATE,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_ORDEN_PAGO_APROBACION = :IdOrdenPagoAprobacion
-              AND ESTADO = 'PENDIENTE'";
+              AND ESTADO = 'APROBACION_PENDIENTE'";
 
         var rowsAffected = await connection.ExecuteAsync(sql, new
         {

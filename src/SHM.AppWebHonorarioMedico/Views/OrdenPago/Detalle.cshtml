@@ -1,4 +1,5 @@
 @model SHM.AppDomain.DTOs.OrdenPago.OrdenPagoResponseDto
+@using SHM.AppDomain.Constants
 @{
     ViewData["Title"] = "Detalle de Orden de Pago";
     var liquidaciones = ViewBag.Liquidaciones as List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.OrdenPagoLiquidacionResponseDto>
@@ -7,24 +8,6 @@
         ?? new List<SHM.AppDomain.DTOs.OrdenPagoAprobacion.OrdenPagoAprobacionResponseDto>();
     var detalleLiquidaciones = ViewBag.DetalleLiquidaciones as List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.DetalleLiquidacionItemDto>
         ?? new List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.DetalleLiquidacionItemDto>();
-    var estadoBgClass = Model.Estado switch
-    {
-        "PENDIENTE" => "bg-gradient-secondary",
-        "EN_APROBACION" => "bg-gradient-info",
-        "APROBADO" => "bg-gradient-success",
-        "PAGADO" => "bg-gradient-success",
-        "RECHAZADO" => "bg-gradient-danger",
-        _ => "bg-gradient-secondary"
-    };
-    var estadoDisplay = Model.Estado switch
-    {
-        "PENDIENTE" => "Pendiente",
-        "EN_APROBACION" => "En Aprobaci\u00f3n",
-        "APROBADO" => "Aprobado",
-        "PAGADO" => "Pagado",
-        "RECHAZADO" => "Rechazado",
-        _ => Model.Estado ?? "-"
-    };
 }
 
 @section Styles {
@@ -94,7 +77,7 @@
                         </div>
                         <div class="col-lg-2 col-md-2 col-sm-12">
                             <label class="adg-label">Estado de Aprobaci&oacute;n</label>
-                            <input type="text" class="form-control @estadoBgClass" readonly value="@estadoDisplay" disabled />
+                            <input type="text" class="form-control @EstadoDescripcion.OrdenPago.GetBgClass(Model.Estado)" readonly value="@EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)" disabled />
                         </div>
                     </div>
 
@@ -120,19 +103,13 @@
                 </div>
 
                 <div class="card-footer">
-                    @if (Model.Estado == "EN_APROBACION")
+                    @if (Model.Estado == EstadoDescripcion.OrdenPago.AprobacionPendiente)
                     {
                         <button type="button" class="btn btn-danger" onclick="rechazarOrden()">
                             Devolver
                         </button>
                         <button type="button" class="btn bg-gradient-success border-success ml-1" onclick="aprobarOrden()">
                             Aprobar
-                        </button>
-                    }
-                    @if (Model.Estado == "PENDIENTE")
-                    {
-                        <button type="button" class="btn btn-warning" onclick="enviarAprobacion()">
-                            <i class="fas fa-paper-plane mr-1"></i>Enviar a Aprobaci&oacute;n
                         </button>
                     }
                 </div>
@@ -162,24 +139,12 @@
                             {
                                 @foreach (var aprob in aprobaciones)
                                 {
-                                    var estadoAprob = aprob.Estado switch
-                                    {
-                                        "APROBADO" => "Aprobado",
-                                        "RECHAZADO" => "Rechazado",
-                                        "PENDIENTE" => "Pendiente",
-                                        _ => aprob.Estado ?? "-"
-                                    };
-                                    var estadoClass = aprob.Estado switch
-                                    {
-                                        "APROBADO" => "text-success",
-                                        "RECHAZADO" => "text-danger",
-                                        "PENDIENTE" => "text-warning",
-                                        _ => "text-secondary"
-                                    };
                                     <tr>
                                         <td class="text-center">@(aprob.Orden?.ToString() ?? "-")</td>
                                         <td>@(aprob.NombrePerfil ?? "-")</td>
-                                        <td class="text-center @estadoClass">@estadoAprob</td>
+                                        <td class="text-center @EstadoDescripcion.Aprobacion.GetTextClass(aprob.Estado)">
+                                            @EstadoDescripcion.Aprobacion.GetDescripcion(aprob.Estado)
+                                        </td>
                                         <td>@(aprob.NombreAprobador ?? "-")</td>
                                         <td>@(aprob.FechaAprobacion?.ToString("dd/MM/yyyy hh:mm tt") ?? "-")</td>
                                     </tr>
