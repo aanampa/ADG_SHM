@@ -23,7 +23,7 @@
                         <td>@factura.CodigoProduccion</td>
                         <td>@(factura.Concepto ?? "-")</td>
                         <td><strong>S/ @(factura.MtoTotal?.ToString("N2") ?? "0.00")</strong></td>
-                        <td>@(factura.FechaLimite?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@(factura.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                         <td>
                             @{
                                 var badgeClass = factura.Estado?.ToUpper() switch

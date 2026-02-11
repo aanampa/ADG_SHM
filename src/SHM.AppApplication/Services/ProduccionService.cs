@@ -157,6 +157,9 @@ public class ProduccionService : IProduccionService
         if (updateDto.IdEntidadMedica.HasValue)
             produccionExistente.IdEntidadMedica = updateDto.IdEntidadMedica.Value;
 
+        if (updateDto.IdCuentaBanco.HasValue)
+            produccionExistente.IdCuentaBanco = updateDto.IdCuentaBanco.Value;
+
         if (updateDto.CodigoProduccion != null)
             produccionExistente.CodigoProduccion = updateDto.CodigoProduccion;
 

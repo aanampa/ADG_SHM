@@ -15,6 +15,7 @@ public class UpdateProduccionDto
 {
     public int? IdSede { get; set; }
     public int? IdEntidadMedica { get; set; }
+    public int? IdCuentaBanco { get; set; }
 
     [MaxLength(8)]
     public string? CodigoProduccion { get; set; }
