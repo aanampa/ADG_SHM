@@ -243,7 +243,7 @@ public class FacturasController : BaseController
                 emisorRazonSocial = emisorRazonSocial,
                 receptorRuc = sede?.Ruc ?? "-",
                 receptorNombre = sede?.Nombre ?? "-",
-                fechaLimite = produccion.FechaLimite?.ToString("dd/MM/yyyy") ?? ""
+                fechaLimite = produccion.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? ""
             };
 
             return Json(data);
@@ -759,21 +759,32 @@ public class FacturasController : BaseController
                 return Json(new { success = false, message = "Producción no encontrada" });
             }
 
-            // Validar cuenta bancaria si el parametro lo requiere
-            var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
-            if (validaCuentaBancaria?.ToUpper() == "S")
+            // Obtener primera cuenta bancaria activa de la entidad medica
+            int? idCuentaBanco = null;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
             {
-                if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
-                {
-                    var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
-                    var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
 
+                // Validar cuenta bancaria si el parametro lo requiere
+                var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+                if (validaCuentaBancaria?.ToUpper() == "S")
+                {
                     if (cuentaBancaria == null || (string.IsNullOrEmpty(cuentaBancaria.CuentaCorriente) && string.IsNullOrEmpty(cuentaBancaria.CuentaCci)))
                     {
                         return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada. Por favor contacte al administrador." });
                     }
                 }
-                else
+
+                if (cuentaBancaria != null)
+                {
+                    idCuentaBanco = cuentaBancaria.IdCuentaBancaria;
+                }
+            }
+            else
+            {
+                var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
+                if (validaCuentaBancaria?.ToUpper() == "S")
                 {
                     return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada. Por favor contacte al administrador." });
                 }
@@ -1102,7 +1113,8 @@ public class FacturasController : BaseController
                 EstadoComprobante = "ENVIADO",
                 Glosa = glosaPrimerItem,
                 Estado = "FACTURA_ENVIADA",
-                FacturaFechaEnvio = DateTime.Now
+                FacturaFechaEnvio = DateTime.Now,
+                IdCuentaBanco = idCuentaBanco
             };
 
             var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);

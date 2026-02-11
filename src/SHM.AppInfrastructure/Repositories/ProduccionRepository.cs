@@ -37,6 +37,7 @@ public class ProduccionRepository : IProduccionRepository
         ID_PRODUCCION as IdProduccion,
         ID_SEDE as IdSede,
         ID_ENTIDAD_MEDICA as IdEntidadMedica,
+        ID_CUENTA_BANCO as IdCuentaBanco,
         CODIGO_PRODUCCION as CodigoProduccion,
         NUMERO_PRODUCCION as NumeroProduccion,
         TIPO_PRODUCCION as TipoProduccion,
@@ -322,6 +323,7 @@ public class ProduccionRepository : IProduccionRepository
             SET
                 ID_SEDE = :IdSede,
                 ID_ENTIDAD_MEDICA = :IdEntidadMedica,
+                ID_CUENTA_BANCO = :IdCuentaBanco,
                 CODIGO_PRODUCCION = :CodigoProduccion,
                 NUMERO_PRODUCCION = :NumeroProduccion,
                 TIPO_PRODUCCION = :TipoProduccion,
@@ -368,6 +370,7 @@ public class ProduccionRepository : IProduccionRepository
             IdProduccion = id,
             produccion.IdSede,
             produccion.IdEntidadMedica,
+            produccion.IdCuentaBanco,
             produccion.CodigoProduccion,
             produccion.NumeroProduccion,
             produccion.TipoProduccion,
