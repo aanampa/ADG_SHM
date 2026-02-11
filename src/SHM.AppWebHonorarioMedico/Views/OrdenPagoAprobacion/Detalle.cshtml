@@ -10,19 +10,19 @@
     var estadoBgClass = Model.Estado switch
     {
         "PENDIENTE" => "bg-gradient-secondary",
-        "EN_APROBACION" => "bg-gradient-info",
+        "APROBACION_PENDIENTE" => "bg-gradient-info",
         "APROBADO" => "bg-gradient-success",
         "PAGADO" => "bg-gradient-success",
-        "RECHAZADO" => "bg-gradient-danger",
+        "DEVUELTO" => "bg-gradient-danger",
         _ => "bg-gradient-secondary"
     };
     var estadoDisplay = Model.Estado switch
     {
         "PENDIENTE" => "Pendiente",
-        "EN_APROBACION" => "En Aprobaci\u00f3n",
+        "APROBACION_PENDIENTE" => "En Aprobaci\u00f3n",
         "APROBADO" => "Aprobado",
         "PAGADO" => "Pagado",
-        "RECHAZADO" => "Rechazado",
+        "DEVUELTO" => "Devuelto",
         _ => Model.Estado ?? "-"
     };
 }
@@ -119,7 +119,7 @@
 
                 </div>
 
-                @if (Model.Estado == "EN_APROBACION")
+                @if (Model.Estado == "APROBACION_PENDIENTE")
                 {
                     <div class="card-footer">
                         <button type="button" class="btn btn-danger" onclick="rechazarOrden()">
@@ -159,15 +159,15 @@
                                     var estadoAprob = aprob.Estado switch
                                     {
                                         "APROBADO" => "Aprobado",
-                                        "RECHAZADO" => "Rechazado",
-                                        "PENDIENTE" => "Pendiente",
+                                        "DEVUELTO" => "Devuelto",
+                                        "APROBACION_PENDIENTE" => "Pendiente",
                                         _ => aprob.Estado ?? "-"
                                     };
                                     var estadoClass = aprob.Estado switch
                                     {
                                         "APROBADO" => "text-success",
-                                        "RECHAZADO" => "text-danger",
-                                        "PENDIENTE" => "text-warning",
+                                        "DEVUELTO" => "text-danger",
+                                        "APROBACION_PENDIENTE" => "text-warning",
                                         _ => "text-secondary"
                                     };
                                     <tr>

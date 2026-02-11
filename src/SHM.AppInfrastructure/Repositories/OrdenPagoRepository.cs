@@ -173,10 +173,10 @@ public class OrdenPagoRepository : IOrdenPagoRepository
 
         var sql = $@"{SELECT_BASE}
             INNER JOIN SHM_ORDEN_PAGO_APROBACION opa ON op.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
-                AND opa.ACTIVO = 1 AND opa.ESTADO = 'PENDIENTE'
+                AND opa.ACTIVO = 1 AND opa.ESTADO = 'APROBACION_PENDIENTE'
             INNER JOIN SHM_PERFIL_APROBACION_USUARIO pau ON opa.ID_PERFIL_APROBACION = pau.ID_PERFIL_APROBACION
                 AND pau.ID_USUARIO = :IdUsuario
-            WHERE op.ESTADO = 'EN_APROBACION' AND op.ACTIVO = 1
+            WHERE op.ESTADO = 'APROBACION_PENDIENTE' AND op.ACTIVO = 1
               AND (pau.ID_SEDE IS NULL OR pau.ID_SEDE = op.ID_SEDE)
               AND NOT EXISTS (
                   SELECT 1 FROM SHM_ORDEN_PAGO_APROBACION opa2
