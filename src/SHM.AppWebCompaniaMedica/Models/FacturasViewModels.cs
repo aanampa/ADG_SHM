@@ -187,6 +187,14 @@ public class VistaPreviaFacturaViewModel
     public string? Numero { get; set; }
     public DateTime? FechaEmision { get; set; }
 
+    // Datos del Emisor (Compania Medica)
+    public string? EmisorRuc { get; set; }
+    public string? EmisorRazonSocial { get; set; }
+
+    // Datos del Receptor (Sede)
+    public string? ReceptorRuc { get; set; }
+    public string? ReceptorNombre { get; set; }
+
     // Datos bancarios
     public string? NombreBanco { get; set; }
     public string? CuentaCorriente { get; set; }
@@ -200,4 +208,14 @@ public class VistaPreviaFacturaViewModel
 
     // Datos parseados del XML
     public FacturaXmlData? DatosXml { get; set; }
+
+    // Parametros de validacion configurable (formulario vs XML)
+    public bool ValidaTipo { get; set; } = true;
+    public bool ValidaFechaEmision { get; set; } = true;
+    public bool ValidaSerie { get; set; } = true;
+    public bool ValidaNumero { get; set; } = true;
+    public bool ValidaImporte { get; set; } = true;
+    public bool ValidaConcepto { get; set; } = true;
+    public bool ValidaRucEmisor { get; set; } = true;
+    public bool ValidaRucReceptor { get; set; } = true;
 }

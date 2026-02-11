@@ -1195,6 +1195,13 @@ public class FacturasController : BaseController
                 return RedirectToAction(nameof(Pendientes));
             }
 
+            // Validar fecha de emision no futura
+            if (fechaEmision.Date > DateTime.Now.Date)
+            {
+                TempData["Error"] = "La fecha de emisión no puede ser una fecha futura";
+                return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
+            }
+
             // Obtener parametro de requerimiento de archivo CDR
             var requiereArchivoCdr = await _parametroService.GetValorByCodigoAsync("SHM_REQUIERE_ARCHIVO_CDR");
             var requiereCdr = requiereArchivoCdr?.ToUpper() != "N";
@@ -1356,6 +1363,10 @@ public class FacturasController : BaseController
                 PropertyNameCaseInsensitive = true
             });
 
+            // Obtener datos del Emisor (Compania Medica)
+            string? emisorRuc = null;
+            string? emisorRazonSocial = null;
+
             // Obtener cuenta bancaria
             string? nombreBanco = null;
             string? cuentaCorriente = null;
@@ -1364,6 +1375,13 @@ public class FacturasController : BaseController
 
             if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
             {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                if (entidadMedica != null)
+                {
+                    emisorRuc = entidadMedica.Ruc;
+                    emisorRazonSocial = entidadMedica.RazonSocial;
+                }
+
                 var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
                 var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
 
@@ -1387,6 +1405,16 @@ public class FacturasController : BaseController
                 fechaEmision = fechaEmisionElement.GetDateTime();
             }
 
+            // Obtener parametros de validacion configurable
+            var paramValidaTipo = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_TIPO");
+            var paramValidaFechaEmision = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_FECHA_EMISION");
+            var paramValidaSerie = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_SERIE");
+            var paramValidaNumero = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_NUMERO");
+            var paramValidaImporte = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_IMPORTE");
+            var paramValidaConcepto = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_FACTURA_CONCEPTO");
+            var paramValidaRucEmisor = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_EMISOR");
+            var paramValidaRucReceptor = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_RECEPTOR");
+
             var model = new VistaPreviaFacturaViewModel
             {
                 SessionId = sessionId,
@@ -1400,12 +1428,24 @@ public class FacturasController : BaseController
                 Serie = metadata.GetProperty("Serie").GetString(),
                 Numero = metadata.GetProperty("Numero").GetString(),
                 FechaEmision = fechaEmision,
+                EmisorRuc = emisorRuc,
+                EmisorRazonSocial = emisorRazonSocial,
+                ReceptorRuc = sede?.Ruc,
+                ReceptorNombre = sede?.Nombre,
                 NombreBanco = nombreBanco,
                 CuentaCorriente = cuentaCorriente,
                 CuentaCci = cuentaCci,
                 Moneda = moneda,
                 PdfTempPath = $"/Facturas/ObtenerPdfTemporal?sessionId={sessionId}",
-                DatosXml = datosXml
+                DatosXml = datosXml,
+                ValidaTipo = paramValidaTipo?.ToUpper() != "N",
+                ValidaFechaEmision = paramValidaFechaEmision?.ToUpper() != "N",
+                ValidaSerie = paramValidaSerie?.ToUpper() != "N",
+                ValidaNumero = paramValidaNumero?.ToUpper() != "N",
+                ValidaImporte = paramValidaImporte?.ToUpper() != "N",
+                ValidaConcepto = paramValidaConcepto?.ToUpper() == "S",
+                ValidaRucEmisor = paramValidaRucEmisor?.ToUpper() != "N",
+                ValidaRucReceptor = paramValidaRucReceptor?.ToUpper() != "N"
             };
 
             return View(model);
