@@ -1555,20 +1555,34 @@ public class FacturasController : BaseController
                 return Json(new { success = false, message = "Producción no encontrada" });
             }
 
-            // Validar cuenta bancaria si es requerido
+            // Obtener cuenta bancaria de la entidad medica
             var validaCuentaBancaria = await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_CUENTA_BANCARIA");
-            if (validaCuentaBancaria?.ToUpper() == "S")
-            {
-                if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
-                {
-                    var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
-                    var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+            var esValidaCuentaObligatoria = validaCuentaBancaria?.ToUpper() == "S";
+            int? idCuentaBanco = null;
 
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var cuentasBancarias = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
+                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+
+                if (esValidaCuentaObligatoria)
+                {
+                    // Parametro S: la cuenta es obligatoria
                     if (cuentaBancaria == null || (string.IsNullOrEmpty(cuentaBancaria.CuentaCorriente) && string.IsNullOrEmpty(cuentaBancaria.CuentaCci)))
                     {
                         return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada." });
                     }
                 }
+
+                // Si tiene cuenta, asignarla (aplica para S y N)
+                if (cuentaBancaria != null)
+                {
+                    idCuentaBanco = cuentaBancaria.IdCuentaBancaria;
+                }
+            }
+            else if (esValidaCuentaObligatoria)
+            {
+                return Json(new { success = false, message = "No puede enviar facturas sin tener una cuenta bancaria registrada." });
             }
 
             // Leer datos del XML
@@ -1799,7 +1813,8 @@ public class FacturasController : BaseController
                 EstadoComprobante = "ENVIADO",
                 Estado = "FACTURA_ENVIADA",
                 Glosa = facturaData.DetalleItems[0].Descripcion?.Trim(),
-                FacturaFechaEnvio = DateTime.Now
+                FacturaFechaEnvio = DateTime.Now,
+                IdCuentaBanco = idCuentaBanco
             };
 
             var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
