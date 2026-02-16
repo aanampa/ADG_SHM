@@ -16,6 +16,19 @@ dotnet publish -c Release -o "D:\Fuentes SGD\ADG_HHMM v1\Deploy\shmappapi" --run
 
 ```
 
+## Iconos
+```
+<i class="fas fa-university nav-icon"></i>
+<i class="far fa-circle nav-icon"></i>
+<i class="fas fa-hospital nav-icon"></i>
+<i class="fas fa-building nav-icon"></i>
+<i class="fas fa-user-shield nav-icon"></i>
+<i class="fas fa-users nav-icon"></i>
+<i class="fas fa-cogs nav-icon"></i>
+<i class="fas fa-table nav-icon"></i>
+<i class="fas fa-sitemap nav-icon"></i>
+<i class="fas fa-users-cog nav-icon"></i>
+```
 
 ALTER TABLE SHM_PRODUCCION MODIFY (CODIGO_LIQUIDACION VARCHAR2(20));
 ALTER TABLE SHM_PRODUCCION MODIFY (CODIGO_LIQUIDACION VARCHAR2(20));

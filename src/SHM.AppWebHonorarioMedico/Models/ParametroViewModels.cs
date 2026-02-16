@@ -13,6 +13,7 @@ public class ParametroItemViewModel
     public string? Codigo { get; set; }
     public string? Descripcion { get; set; }
     public string? Valor { get; set; }
+    public string? TipoParametro { get; set; }
     public int Activo { get; set; }
 }
 
@@ -27,6 +28,9 @@ public class ParametroCreateViewModel
 
     [MaxLength(512, ErrorMessage = "El valor no puede exceder 512 caracteres")]
     public string? Valor { get; set; }
+
+    [MaxLength(20)]
+    public string? TipoParametro { get; set; }
 }
 
 public class ParametroEditViewModel
@@ -42,6 +46,9 @@ public class ParametroEditViewModel
 
     [MaxLength(512, ErrorMessage = "El valor no puede exceder 512 caracteres")]
     public string? Valor { get; set; }
+
+    [MaxLength(20)]
+    public string? TipoParametro { get; set; }
 
     public int Activo { get; set; }
 }

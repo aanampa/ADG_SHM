@@ -26,6 +26,7 @@ public class FacturasController : BaseController
     private readonly ILogger<FacturasController> _logger;
     private readonly IConfiguration _configuration;
     private readonly FacturaXmlParserService _facturaXmlParserService;
+    private readonly RheXmlParserService _rheXmlParserService;
 
     public FacturasController(
         IProduccionService produccionService,
@@ -39,7 +40,8 @@ public class FacturasController : BaseController
         IParametroService parametroService,
         ILogger<FacturasController> logger,
         IConfiguration configuration,
-        FacturaXmlParserService facturaXmlParserService)
+        FacturaXmlParserService facturaXmlParserService,
+        RheXmlParserService rheXmlParserService)
     {
         _produccionService = produccionService;
         _sedeService = sedeService;
@@ -53,6 +55,7 @@ public class FacturasController : BaseController
         _logger = logger;
         _configuration = configuration;
         _facturaXmlParserService = facturaXmlParserService;
+        _rheXmlParserService = rheXmlParserService;
     }
 
     // GET: Facturas/Pendientes
@@ -236,8 +239,10 @@ public class FacturasController : BaseController
                 concepto = produccion.Concepto ?? produccion.Descripcion ?? "-",
                 descripcion = produccion.Descripcion ?? "-",
                 tipoComprobante = tipoComprobanteTexto,
+                tipoComprobanteCodigo = produccion.TipoComprobante ?? "",
                 mtoSubtotal = produccion.MtoSubtotal?.ToString("N2") ?? "0.00",
                 mtoIgv = produccion.MtoIgv?.ToString("N2") ?? "0.00",
+                mtoRenta = produccion.MtoRenta?.ToString("N2") ?? "0.00",
                 mtoTotal = produccion.MtoTotal?.ToString("N2") ?? "0.00",
                 emisorRuc = emisorRuc,
                 emisorRazonSocial = emisorRazonSocial,
@@ -485,6 +490,7 @@ public class FacturasController : BaseController
                 Descripcion = produccion.Descripcion,
                 MtoSubtotal = produccion.MtoSubtotal,
                 MtoIgv = produccion.MtoIgv,
+                MtoRenta = produccion.MtoRenta,
                 MtoTotal = produccion.MtoTotal,
                 FechaLimite = produccion.FechaLimite,
                 TipoComprobante = produccion.TipoComprobante,
@@ -649,7 +655,7 @@ public class FacturasController : BaseController
     /// <created>2026-01-25</created>
     /// </summary>
     [HttpPost]
-    public IActionResult ParsearXmlVistaPrevia([FromForm] IFormFile? archivoXml)
+    public IActionResult ParsearXmlVistaPrevia([FromForm] IFormFile? archivoXml, [FromForm] string? tipoComprobante)
     {
         try
         {
@@ -658,23 +664,45 @@ public class FacturasController : BaseController
                 return Json(new { success = false, message = "No se recibio el archivo XML" });
             }
 
-            // Validar que el XML sea una factura electronica valida
-            FacturaXmlValidationResult validationResult;
-            using (var xmlStreamValidation = archivoXml.OpenReadStream())
-            {
-                validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
-            }
-
-            if (!validationResult.IsValid)
-            {
-                return Json(new { success = false, message = $"El XML no es valido: {validationResult.ErrorMessage}" });
-            }
-
-            // Parsear XML para obtener datos
             FacturaXmlData facturaData;
-            using (var xmlStream = archivoXml.OpenReadStream())
+
+            if (tipoComprobante == "02")
             {
-                facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+                // Recibo por Honorarios Electronico
+                RheXmlValidationResult rheValidationResult;
+                using (var xmlStreamValidation = archivoXml.OpenReadStream())
+                {
+                    rheValidationResult = _rheXmlParserService.ValidateRheXml(xmlStreamValidation);
+                }
+
+                if (!rheValidationResult.IsValid)
+                {
+                    return Json(new { success = false, message = $"El XML no es valido: {rheValidationResult.ErrorMessage}" });
+                }
+
+                using (var xmlStream = archivoXml.OpenReadStream())
+                {
+                    facturaData = _rheXmlParserService.ParseRheXml(xmlStream);
+                }
+            }
+            else
+            {
+                // Factura o Boleta
+                FacturaXmlValidationResult validationResult;
+                using (var xmlStreamValidation = archivoXml.OpenReadStream())
+                {
+                    validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
+                }
+
+                if (!validationResult.IsValid)
+                {
+                    return Json(new { success = false, message = $"El XML no es valido: {validationResult.ErrorMessage}" });
+                }
+
+                using (var xmlStream = archivoXml.OpenReadStream())
+                {
+                    facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+                }
             }
 
             return Json(new
@@ -706,6 +734,7 @@ public class FacturasController : BaseController
                     {
                         valorVenta = facturaData.DesgloseTotales.ValorVenta,
                         igv = facturaData.DesgloseTotales.Igv,
+                        retencion = facturaData.DesgloseTotales.Retencion,
                         importeTotal = facturaData.DesgloseTotales.ImporteTotal,
                         descuentos = facturaData.DesgloseTotales.Descuentos
                     },
@@ -1227,24 +1256,48 @@ public class FacturasController : BaseController
                 return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
             }
 
-            // Validar XML
-            FacturaXmlValidationResult validationResult;
-            using (var xmlStreamValidation = archivoXml.OpenReadStream())
-            {
-                validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
-            }
-
-            if (!validationResult.IsValid)
-            {
-                TempData["Error"] = $"El XML no es válido: {validationResult.ErrorMessage}";
-                return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
-            }
-
-            // Parsear XML
+            // Validar y parsear XML segun tipo de comprobante
             FacturaXmlData facturaData;
-            using (var xmlStream = archivoXml.OpenReadStream())
+
+            if (tipoComprobante == "02")
             {
-                facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+                // Recibo por Honorarios Electronico
+                RheXmlValidationResult rheValidationResult;
+                using (var xmlStreamValidation = archivoXml.OpenReadStream())
+                {
+                    rheValidationResult = _rheXmlParserService.ValidateRheXml(xmlStreamValidation);
+                }
+
+                if (!rheValidationResult.IsValid)
+                {
+                    TempData["Error"] = $"El XML no es válido: {rheValidationResult.ErrorMessage}";
+                    return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
+                }
+
+                using (var xmlStream = archivoXml.OpenReadStream())
+                {
+                    facturaData = _rheXmlParserService.ParseRheXml(xmlStream);
+                }
+            }
+            else
+            {
+                // Factura o Boleta
+                FacturaXmlValidationResult validationResult;
+                using (var xmlStreamValidation = archivoXml.OpenReadStream())
+                {
+                    validationResult = _facturaXmlParserService.ValidateFacturaXml(xmlStreamValidation);
+                }
+
+                if (!validationResult.IsValid)
+                {
+                    TempData["Error"] = $"El XML no es válido: {validationResult.ErrorMessage}";
+                    return RedirectToAction(nameof(Subir), new { guid = guidRegistro });
+                }
+
+                using (var xmlStream = archivoXml.OpenReadStream())
+                {
+                    facturaData = _facturaXmlParserService.ParseFacturaXml(xmlStream);
+                }
             }
 
             // Crear session ID unico

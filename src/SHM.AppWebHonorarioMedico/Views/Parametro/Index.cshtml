@@ -111,6 +111,7 @@
                 })
                 .then(html => {
                     document.getElementById('modalContainer').innerHTML = html;
+                    onTipoParametroChange('edit');
                     $('#editModal').modal('show');
                     f_remove_loading();
                 })
@@ -138,20 +139,77 @@
                 });
         }
 
+        // Cambia el campo Valor segun el tipo de parametro seleccionado
+        function onTipoParametroChange(prefix) {
+            var tipo = document.getElementById(prefix + '_TipoParametro').value;
+            var container = document.getElementById(prefix + '_ValorContainer');
+            var currentValue = document.getElementById(prefix + '_Valor') ? document.getElementById(prefix + '_Valor').value : '';
+
+            var html = '<label for="' + prefix + '_Valor">Valor</label>';
+
+            if (tipo === 'LOGICO') {
+                var checkedS = (currentValue.toUpperCase() === 'S') ? 'selected' : '';
+                var checkedN = (currentValue.toUpperCase() === 'N' || currentValue === '') ? 'selected' : '';
+                html += '<select id="' + prefix + '_Valor" class="form-control">' +
+                        '<option value="S" ' + checkedS + '>Si</option>' +
+                        '<option value="N" ' + checkedN + '>No</option>' +
+                        '</select>';
+            } else if (tipo === 'FECHA') {
+                // Convertir DD/MM/YYYY a YYYY-MM-DD para el input date
+                var dateValue = '';
+                if (currentValue && currentValue.indexOf('/') > -1) {
+                    var parts = currentValue.split('/');
+                    if (parts.length === 3) {
+                        dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
+                    }
+                }
+                html += '<input type="date" id="' + prefix + '_Valor" class="form-control" value="' + dateValue + '" />';
+            } else {
+                html += '<input type="text" id="' + prefix + '_Valor" class="form-control" maxlength="512" value="' + currentValue.replace(/"/g, '&quot;') + '" placeholder="Ingrese el valor" />';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Obtiene el valor del campo segun el tipo
+        function getValorByTipo(prefix) {
+            var tipo = document.getElementById(prefix + '_TipoParametro').value;
+            var valorElement = document.getElementById(prefix + '_Valor');
+
+            if (!valorElement) return '';
+
+            if (tipo === 'FECHA' && valorElement.type === 'date' && valorElement.value) {
+                // Convertir YYYY-MM-DD a DD/MM/YYYY
+                var parts = valorElement.value.split('-');
+                if (parts.length === 3) {
+                    return parts[2] + '/' + parts[1] + '/' + parts[0];
+                }
+            }
+
+            return valorElement.value;
+        }
+
         function submitCreate() {
-            const form = document.getElementById('createForm');
+            var form = document.getElementById('createForm');
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
 
-            const data = {
+            var tipoParametro = document.getElementById('create_TipoParametro').value;
+            if (!tipoParametro) {
+                f_alert('w', '', 'Seleccione un tipo de parametro');
+                return;
+            }
+
+            var data = {
                 Codigo: document.getElementById('create_Codigo').value,
                 Descripcion: document.getElementById('create_Descripcion').value,
-                Valor: document.getElementById('create_Valor').value
+                Valor: getValorByTipo('create'),
+                TipoParametro: tipoParametro
             };
 
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
             f_loading();
             fetch('@Url.Action("Create")', {
@@ -180,21 +238,28 @@
         }
 
         function submitEdit() {
-            const form = document.getElementById('editForm');
+            var form = document.getElementById('editForm');
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
 
-            const data = {
+            var tipoParametro = document.getElementById('edit_TipoParametro').value;
+            if (!tipoParametro) {
+                f_alert('w', '', 'Seleccione un tipo de parametro');
+                return;
+            }
+
+            var data = {
                 GuidRegistro: document.getElementById('edit_GuidRegistro').value,
                 Codigo: document.getElementById('edit_Codigo').value,
                 Descripcion: document.getElementById('edit_Descripcion').value,
-                Valor: document.getElementById('edit_Valor').value,
+                Valor: getValorByTipo('edit'),
+                TipoParametro: tipoParametro,
                 Activo: document.getElementById('edit_Activo').checked ? 1 : 0
             };
 
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
             f_loading();
             fetch('@Url.Action("Edit")', {
@@ -223,11 +288,11 @@
         }
 
         function submitDelete() {
-            const data = {
+            var data = {
                 GuidRegistro: document.getElementById('delete_GuidRegistro').value
             };
 
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
             f_loading();
             fetch('@Url.Action("Delete")', {

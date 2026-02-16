@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SHM.AppDomain.Configurations;
@@ -22,15 +23,18 @@ public class EmailService : IEmailService
     private readonly SmtpSettings _smtpSettings;
     private readonly ILogger<EmailService> _logger;
     private readonly IEmailLogRepository _emailLogRepository;
+    private readonly IConfiguration _configuration;
 
     public EmailService(
         IOptions<SmtpSettings> smtpSettings,
         ILogger<EmailService> logger,
-        IEmailLogRepository emailLogRepository)
+        IEmailLogRepository emailLogRepository,
+        IConfiguration configuration)
     {
         _smtpSettings = smtpSettings.Value;
         _logger = logger;
         _emailLogRepository = emailLogRepository;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -235,6 +239,164 @@ public class EmailService : IEmailService
         {
             _logger.LogError(ex, "Error al enviar email de solicitud de factura a: {Email}, Produccion: {Codigo}",
                 email, codigoProduccion);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Envia un correo electronico notificando al usuario que su clave fue restablecida por un administrador.
+    /// </summary>
+    public async Task<bool> EnviarEmailResetClaveAsync(string email, string nombreUsuario, string loginUsuario, string nuevaClave, int? idUsuario)
+    {
+        var subject = "Clave Restablecida - Sistema de Honorarios Medicos";
+        string body;
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("ResetClave.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+            var urlBaseApp = _configuration["AppSettings:UrlBaseApp"] ?? "";
+
+            body = body.Replace("{{NOMBRE_USUARIO}}", nombreUsuario)
+                      .Replace("{{LOGIN_USUARIO}}", loginUsuario)
+                      .Replace("{{NUEVA_CLAVE}}", nuevaClave)
+                      .Replace("{{URL_SISTEMA}}", urlBaseApp)
+                      .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreUsuario,
+                subject: subject,
+                body: body,
+                tipoEmail: "RESET_CLAVE",
+                isHtml: true,
+                idUsuario: idUsuario,
+                idEntidadMedica: null,
+                entidadReferencia: "SHM_SEG_USUARIO",
+                idReferencia: idUsuario);
+
+            _logger.LogInformation("Email de reset de clave enviado a: {Email}, Usuario: {Login}", email, loginUsuario);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de reset de clave a: {Email}, Usuario: {Login}", email, loginUsuario);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Envia un correo electronico de bienvenida al nuevo usuario con sus credenciales de acceso.
+    /// </summary>
+    public async Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario)
+    {
+        var subject = "Credenciales de Acceso - Sistema de Honorarios Medicos";
+        string body;
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("NuevoUsuario.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+            var urlBaseApp = _configuration["AppSettings:UrlBaseApp"] ?? "";
+
+            body = body.Replace("{{NOMBRE_USUARIO}}", nombreUsuario)
+                      .Replace("{{LOGIN_USUARIO}}", loginUsuario)
+                      .Replace("{{CLAVE_USUARIO}}", claveUsuario)
+                      .Replace("{{URL_SISTEMA}}", urlBaseApp)
+                      .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreUsuario,
+                subject: subject,
+                body: body,
+                tipoEmail: "NUEVO_USUARIO",
+                isHtml: true,
+                idUsuario: idUsuario,
+                idEntidadMedica: null,
+                entidadReferencia: "SHM_SEG_USUARIO",
+                idReferencia: idUsuario);
+
+            _logger.LogInformation("Email de nuevo usuario enviado a: {Email}, Usuario: {Login}", email, loginUsuario);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de nuevo usuario a: {Email}, Usuario: {Login}", email, loginUsuario);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Envia un correo electronico notificando al siguiente aprobador que tiene una orden de pago pendiente.
+    /// </summary>
+    public async Task<bool> EnviarEmailNotificacionAprobacionAsync(
+        string email,
+        string nombreAprobador,
+        string numeroOrdenPago,
+        DateTime? fechaGeneracion,
+        decimal? montoTotal,
+        string nombrePerfil,
+        int idOrdenPago)
+    {
+        var subject = $"Orden de Pago {numeroOrdenPago} - Pendiente de Aprobacion";
+        string body;
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("NotificacionAprobacion.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+            var urlBaseApp = _configuration["AppSettings:UrlBaseApp"] ?? "";
+
+            body = body.Replace("{{NOMBRE_USUARIO}}", nombreAprobador)
+                      .Replace("{{NUMERO_ORDEN_PAGO}}", numeroOrdenPago ?? "-")
+                      .Replace("{{FECHA_GENERACION}}", fechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")
+                      .Replace("{{MONTO_TOTAL}}", montoTotal?.ToString("N2") ?? "0.00")
+                      .Replace("{{NOMBRE_PERFIL}}", nombrePerfil ?? "-")
+                      .Replace("{{URL_SISTEMA}}", urlBaseApp)
+                      .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreAprobador,
+                subject: subject,
+                body: body,
+                tipoEmail: "NOTIFICACION_APROBACION",
+                isHtml: true,
+                idUsuario: null,
+                idEntidadMedica: null,
+                entidadReferencia: "SHM_ORDEN_PAGO",
+                idReferencia: idOrdenPago);
+
+            _logger.LogInformation("Email de notificacion de aprobacion enviado a: {Email}, OrdenPago: {NumeroOP}, Perfil: {Perfil}",
+                email, numeroOrdenPago, nombrePerfil);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de notificacion de aprobacion a: {Email}, OrdenPago: {NumeroOP}",
+                email, numeroOrdenPago);
             return false;
         }
     }

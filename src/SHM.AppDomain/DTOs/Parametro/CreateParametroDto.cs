@@ -19,4 +19,7 @@ public class CreateParametroDto
 
     [MaxLength(512)]
     public string? Valor { get; set; }
+
+    [MaxLength(20)]
+    public string? TipoParametro { get; set; }
 }
