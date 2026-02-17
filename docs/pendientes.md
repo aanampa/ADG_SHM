@@ -4,13 +4,18 @@
 - [x] Caso de persona natural, retension
 
 ## Descarga de Archivos
-- [x] Crear controlador comun
+- [x] Crear controlador comun: ArchivoController
+- [ ] VD Usar controlador comun ArchivoController en produccion y liquidacion
 
 ## Orden de Pago
-- [ ] Notificación cuando se envia a aprobar (segun rol jefe sede)
+- [ ] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
+- [ ] AA Mostrar icono de descarga de factura (Crear controlador comun para descarga)
+- [ ] VD Registro en bitacora
+
+## Orden de Pago Aprobacion
 - [x] Notificacion para el segundo aprobador (segun rol jefe corporativo)
-- [ ] Mostrar icono de descarga de factura (Crear controlador comun para descarga)
-- [ ] Registro en bitacora
+- [ ] AA Mostrar icono de descarga de factura (Crear controlador comun para descarga)
+- [ ] AA Registro en bitacora
 
 ## Tesoreria
 - [ ] Crear modulo para tesoreria
@@ -21,7 +26,11 @@
 ## Usuarios Externos
 - [x] Revisar envio de credenciales al crear un nuevo usuario
 - [x] Revisar reseteo de contraseña
-- [ ] Agregar visualizacion de contraseña
+- [ ] AA Asignar clave temporal
+
+## Login
+- [ ] AA Manejo de encriptación de contraseña: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+- [ ] AA Manejo de clave temporal
 
 ## Interfaces
 - [ ] Recepcion de producciones
