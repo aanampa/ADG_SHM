@@ -17,11 +17,13 @@ public class UsuarioService : IUsuarioService
 {
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IUsuarioSedeRepository _usuarioSedeRepository;
+    private readonly IEmailService _emailService;
 
-    public UsuarioService(IUsuarioRepository usuarioRepository, IUsuarioSedeRepository usuarioSedeRepository)
+    public UsuarioService(IUsuarioRepository usuarioRepository, IUsuarioSedeRepository usuarioSedeRepository, IEmailService emailService)
     {
         _usuarioRepository = usuarioRepository;
         _usuarioSedeRepository = usuarioSedeRepository;
+        _emailService = emailService;
     }
 
     /// <summary>
@@ -431,7 +433,17 @@ public class UsuarioService : IUsuarioService
 
         var idUsuario = await _usuarioRepository.CreateAsync(usuario);
 
-        // TODO: Si enviarCorreo es true, enviar email con credenciales
+        // Enviar email con credenciales si se solicito
+        if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
+        {
+            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            await _emailService.EnviarEmailNuevoUsuarioAsync(
+                usuario.Email,
+                nombreCompleto,
+                usuario.Login ?? "",
+                generatedPassword,
+                idUsuario);
+        }
 
         return (true, null, generatedPassword);
     }
@@ -507,7 +519,17 @@ public class UsuarioService : IUsuarioService
         // Commit de la transaccion - si no se llama, se hace rollback automatico
         transactionScope.Complete();
 
-        // TODO: Si enviarCorreo es true, enviar email con credenciales
+        // Enviar email con credenciales si se solicito
+        if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
+        {
+            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            await _emailService.EnviarEmailNuevoUsuarioAsync(
+                usuario.Email,
+                nombreCompleto,
+                usuario.Login ?? "",
+                generatedPassword,
+                idUsuario);
+        }
 
         return (true, null, generatedPassword);
     }
@@ -554,7 +576,17 @@ public class UsuarioService : IUsuarioService
             return (false, "Error al actualizar la clave", null);
         }
 
-        // TODO: Si enviarCorreo es true, enviar email con nueva clave
+        // Enviar email con nueva clave si se solicito
+        if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
+        {
+            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            await _emailService.EnviarEmailResetClaveAsync(
+                usuario.Email,
+                nombreCompleto,
+                usuario.Login ?? "",
+                nuevaClave,
+                idUsuario);
+        }
 
         return (true, null, nuevaClave);
     }

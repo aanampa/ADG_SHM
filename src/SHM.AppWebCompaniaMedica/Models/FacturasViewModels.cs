@@ -62,6 +62,7 @@ public class SubirFacturaViewModel
     public string? Descripcion { get; set; }
     public decimal? MtoSubtotal { get; set; }
     public decimal? MtoIgv { get; set; }
+    public decimal? MtoRenta { get; set; }
     public decimal? MtoTotal { get; set; }
     public DateTime? FechaLimite { get; set; }
 

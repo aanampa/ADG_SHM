@@ -687,8 +687,16 @@
                             <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.ValorVenta.ToString("N2") ?? "0.00")</span>
                         </div>
                         <div class="xml-field">
-                            <span class="xml-label">IGV</span>
-                            <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Igv.ToString("N2") ?? "0.00")</span>
+                            @if (Model.TipoComprobante == "02")
+                            {
+                                <span class="xml-label">Retención</span>
+                                <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Retencion.ToString("N2") ?? "0.00")</span>
+                            }
+                            else
+                            {
+                                <span class="xml-label">IGV</span>
+                                <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Igv.ToString("N2") ?? "0.00")</span>
+                            }
                         </div>
                     </div>
                     <div class="total-highlight">

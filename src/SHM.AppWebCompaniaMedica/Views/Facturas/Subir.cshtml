@@ -151,10 +151,20 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label" style="font-weight: 600;">IGV (18%)</label>
-                    <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
-                        <span style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")</span>
-                    </div>
+                    @if (Model.TipoComprobante == "02")
+                    {
+                        <label class="form-label" style="font-weight: 600;">Retenci&oacute;n</label>
+                        <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+                            <span style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">S/ @(Model.MtoRenta?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <label class="form-label" style="font-weight: 600;">IGV (18%)</label>
+                        <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+                            <span style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                    }
                 </div>
                 <div class="col-md-2">
                     <label class="form-label" style="font-weight: 600;">Importe Total</label>
@@ -170,34 +180,11 @@
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-3">
-                        <label class="form-label" style="font-weight: 600;">Tipo Comprobante <span style="color: var(--danger);">*</span></label>
-                        <select class="form-control" id="tipoComprobante" name="tipoComprobante" required>
-                            <option value="">Seleccione...</option>
-                            @if (Model.TipoComprobante == "01")
-                            {
-                                <option value="01" selected>Factura</option>
-                            }
-                            else
-                            {
-                                <option value="01">Factura</option>
-                            }
-                            @if (Model.TipoComprobante == "03")
-                            {
-                                <option value="03" selected>Boleta</option>
-                            }
-                            else
-                            {
-                                <option value="03">Boleta</option>
-                            }
-                            @if (Model.TipoComprobante == "02")
-                            {
-                                <option value="02" selected>Recibo por Honorarios</option>
-                            }
-                            else
-                            {
-                                <option value="02">Recibo por Honorarios</option>
-                            }
-                        </select>
+                        <label class="form-label" style="font-weight: 600;">Tipo Comprobante</label>
+                        <input type="hidden" id="tipoComprobante" name="tipoComprobante" value="@Model.TipoComprobante" />
+                        <input type="text" class="form-control" readonly
+                               value="@(Model.TipoComprobante switch { "01" => "Factura", "03" => "Boleta", "02" => "Recibo por Honorarios", _ => Model.TipoComprobante ?? "-" })"
+                               style="background-color: var(--bg-main);" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" style="font-weight: 600;">Fecha Emision <span style="color: var(--danger);">*</span></label>

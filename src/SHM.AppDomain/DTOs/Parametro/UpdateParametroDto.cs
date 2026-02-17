@@ -19,5 +19,8 @@ public class UpdateParametroDto
     [MaxLength(512)]
     public string? Valor { get; set; }
 
+    [MaxLength(20)]
+    public string? TipoParametro { get; set; }
+
     public int? Activo { get; set; }
 }

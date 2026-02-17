@@ -278,8 +278,8 @@
                                             <div style="font-weight: 600; font-size: 0.9rem;">S/ ${data.mtoSubtotal || '0.00'}</div>
                                         </div>
                                         <div style="flex: 1;">
-                                            <div style="color: #64748B; font-size: 0.75rem;">IGV (18%)</div>
-                                            <div style="font-weight: 600; font-size: 0.9rem;">S/ ${data.mtoIgv || '0.00'}</div>
+                                            <div style="color: #64748B; font-size: 0.75rem;">${data.tipoComprobanteCodigo === '02' ? 'Retención' : 'IGV (18%)'}</div>
+                                            <div style="font-weight: 600; font-size: 0.9rem;">S/ ${data.tipoComprobanteCodigo === '02' ? (data.mtoRenta || '0.00') : (data.mtoIgv || '0.00')}</div>
                                         </div>
                                         <div class="importe-total" style="flex: 1.5;">
                                             <div style="color: #64748B; font-size: 0.75rem;">Total</div>

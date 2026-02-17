@@ -73,6 +73,8 @@ public class Impuestos
     public decimal TotalExonerado { get; set; }
     public decimal TotalInafecto { get; set; }
     public decimal TotalGratuito { get; set; }
+    public decimal Retencion { get; set; }
+    public decimal PorcentajeRetencion { get; set; }
 }
 
 public class DesgloseTotales
@@ -82,6 +84,7 @@ public class DesgloseTotales
     public decimal ImporteTotal { get; set; }
     public decimal Descuentos { get; set; }
     public decimal OtrosCargos { get; set; }
+    public decimal Retencion { get; set; }
 }
 
 public class DetalleItem

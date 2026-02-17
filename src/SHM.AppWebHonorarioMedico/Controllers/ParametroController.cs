@@ -41,6 +41,7 @@ public class ParametroController : Controller
                     Codigo = p.Codigo,
                     Descripcion = p.Descripcion,
                     Valor = p.Valor,
+                    TipoParametro = p.TipoParametro,
                     Activo = p.Activo
                 }).ToList()
             };
@@ -93,7 +94,8 @@ public class ParametroController : Controller
             {
                 Codigo = model.Codigo!,
                 Descripcion = model.Descripcion,
-                Valor = model.Valor
+                Valor = model.Valor,
+                TipoParametro = model.TipoParametro
             };
 
             await _parametroService.CreateParametroAsync(createDto, idCreador);
@@ -126,6 +128,7 @@ public class ParametroController : Controller
                 Codigo = parametro.Codigo,
                 Descripcion = parametro.Descripcion,
                 Valor = parametro.Valor,
+                TipoParametro = parametro.TipoParametro,
                 Activo = parametro.Activo
             };
 
@@ -177,6 +180,7 @@ public class ParametroController : Controller
                 Codigo = model.Codigo,
                 Descripcion = model.Descripcion,
                 Valor = model.Valor,
+                TipoParametro = model.TipoParametro,
                 Activo = model.Activo
             };
 

@@ -81,6 +81,7 @@ try
 
     // Registrar servicios de la aplicacion web
     builder.Services.AddScoped<FacturaXmlParserService>();
+    builder.Services.AddScoped<RheXmlParserService>();
 
     var app = builder.Build();
 

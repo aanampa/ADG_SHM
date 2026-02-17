@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.OrdenPagoAprobacion;
 using SHM.AppDomain.Entities;
@@ -11,18 +12,31 @@ namespace SHM.AppApplication.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-02-03</created>
+/// <modified>ADG Antonio - 2026-02-15 - Notificacion por email al siguiente aprobador</modified>
 /// </summary>
 public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
 {
     private readonly IOrdenPagoAprobacionRepository _repository;
     private readonly IOrdenPagoRepository _ordenPagoRepository;
+    private readonly IPerfilAprobacionUsuarioRepository _perfilAprobacionUsuarioRepository;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<OrdenPagoAprobacionService> _logger;
 
     public OrdenPagoAprobacionService(
         IOrdenPagoAprobacionRepository repository,
-        IOrdenPagoRepository ordenPagoRepository)
+        IOrdenPagoRepository ordenPagoRepository,
+        IPerfilAprobacionUsuarioRepository perfilAprobacionUsuarioRepository,
+        IUsuarioRepository usuarioRepository,
+        IEmailService emailService,
+        ILogger<OrdenPagoAprobacionService> logger)
     {
         _repository = repository;
         _ordenPagoRepository = ordenPagoRepository;
+        _perfilAprobacionUsuarioRepository = perfilAprobacionUsuarioRepository;
+        _usuarioRepository = usuarioRepository;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -98,15 +112,68 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
 
         // Verificar si quedan niveles pendientes
         var aprobaciones = await _repository.GetByOrdenPagoIdAsync(idOrdenPago);
-        var pendientes = aprobaciones.Where(a => a.Estado == EstadoDescripcion.Aprobacion.Pendiente).Any();
+        var pendientesList = aprobaciones
+            .Where(a => a.Estado == EstadoDescripcion.Aprobacion.Pendiente)
+            .OrderBy(a => a.Orden)
+            .ToList();
 
-        if (!pendientes)
+        if (!pendientesList.Any())
         {
             // Todos los niveles aprobados: actualizar estado de la orden
             await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, EstadoDescripcion.OrdenPago.Aprobado, idUsuario);
+            return (true, "Orden de pago aprobada exitosamente. Todos los niveles han sido completados.");
         }
 
-        return (true, "Orden de pago aprobada exitosamente.");
+        // Notificar al siguiente nivel de aprobacion
+        var siguienteAprobacion = pendientesList.First();
+        await NotificarSiguienteAprobadorAsync(idOrdenPago, siguienteAprobacion);
+
+        return (true, "Nivel aprobado exitosamente. Se notifico al siguiente aprobador.");
+    }
+
+    /// <summary>
+    /// Notifica por email a los usuarios del siguiente perfil de aprobacion.
+    /// Filtra por sede de la orden de pago.
+    /// </summary>
+    private async Task NotificarSiguienteAprobadorAsync(int idOrdenPago, OrdenPagoAprobacion siguienteAprobacion)
+    {
+        try
+        {
+            // Obtener datos de la orden de pago
+            var ordenPago = await _ordenPagoRepository.GetByIdAsync(idOrdenPago);
+            if (ordenPago == null) return;
+
+            // Obtener usuarios asignados al perfil del siguiente nivel
+            var usuariosPerfil = await _perfilAprobacionUsuarioRepository
+                .GetByPerfilAprobacionIdAsync(siguienteAprobacion.IdPerfilAprobacion);
+
+            // Filtrar por sede: usuarios sin sede asignada (aplica a todas) o con la sede de la orden
+            var usuariosFiltrados = usuariosPerfil
+                .Where(up => up.IdSede == null || up.IdSede == ordenPago.IdSede)
+                .ToList();
+
+            foreach (var usuarioPerfil in usuariosFiltrados)
+            {
+                var usuario = await _usuarioRepository.GetByIdAsync(usuarioPerfil.IdUsuario);
+                if (usuario == null || string.IsNullOrEmpty(usuario.Email)) continue;
+
+                var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+
+                await _emailService.EnviarEmailNotificacionAprobacionAsync(
+                    usuario.Email,
+                    nombreCompleto,
+                    ordenPago.NumeroOrdenPago ?? "-",
+                    ordenPago.FechaGeneracion,
+                    ordenPago.MtoTotalAcum,
+                    siguienteAprobacion.NombrePerfil ?? "-",
+                    idOrdenPago);
+            }
+        }
+        catch (Exception ex)
+        {
+            // No fallar la aprobacion si el envio de email falla
+            _logger.LogError(ex, "Error al notificar al siguiente aprobador para la orden de pago {IdOrdenPago}", idOrdenPago);
+        }
     }
 
     /// <summary>

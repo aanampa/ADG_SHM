@@ -33,4 +33,43 @@ public interface IEmailService
         DateTime fechaLimite,
         int? idEntidadMedica,
         int idProduccion);
+
+    /// <summary>
+    /// Envia un correo electronico notificando al usuario que su clave fue restablecida.
+    /// </summary>
+    /// <param name="email">Correo del usuario</param>
+    /// <param name="nombreUsuario">Nombre completo del usuario</param>
+    /// <param name="loginUsuario">Login del usuario</param>
+    /// <param name="nuevaClave">Nueva clave generada</param>
+    /// <param name="idUsuario">ID del usuario (para log)</param>
+    Task<bool> EnviarEmailResetClaveAsync(string email, string nombreUsuario, string loginUsuario, string nuevaClave, int? idUsuario);
+
+    /// <summary>
+    /// Envia un correo electronico de bienvenida al nuevo usuario con sus credenciales de acceso.
+    /// </summary>
+    /// <param name="email">Correo del usuario</param>
+    /// <param name="nombreUsuario">Nombre completo del usuario</param>
+    /// <param name="loginUsuario">Login del usuario</param>
+    /// <param name="claveUsuario">Clave generada</param>
+    /// <param name="idUsuario">ID del usuario (para log)</param>
+    Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario);
+
+    /// <summary>
+    /// Envia un correo electronico notificando al siguiente aprobador que tiene una orden de pago pendiente.
+    /// </summary>
+    /// <param name="email">Correo del aprobador</param>
+    /// <param name="nombreAprobador">Nombre completo del aprobador</param>
+    /// <param name="numeroOrdenPago">Numero de la orden de pago</param>
+    /// <param name="fechaGeneracion">Fecha de generacion de la orden</param>
+    /// <param name="montoTotal">Monto total de la orden</param>
+    /// <param name="nombrePerfil">Nombre del perfil de aprobacion</param>
+    /// <param name="idOrdenPago">ID de la orden de pago (para log)</param>
+    Task<bool> EnviarEmailNotificacionAprobacionAsync(
+        string email,
+        string nombreAprobador,
+        string numeroOrdenPago,
+        DateTime? fechaGeneracion,
+        decimal? montoTotal,
+        string nombrePerfil,
+        int idOrdenPago);
 }

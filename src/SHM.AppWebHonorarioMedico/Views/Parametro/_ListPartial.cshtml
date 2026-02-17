@@ -6,6 +6,7 @@
             <tr>
                 <th style="width: 200px;">Codigo</th>
                 <th>Descripcion</th>
+                <th style="width: 120px;">Tipo</th>
                 <th>Valor</th>
                 <th style="width: 100px;" class="text-center">Estado</th>
                 <th style="width: 120px;" class="text-center">Acciones</th>
@@ -19,7 +20,42 @@
                     <tr>
                         <td>@item.Codigo</td>
                         <td>@item.Descripcion</td>
-                        <td>@item.Valor</td>
+                        <td>
+                            @{
+                                var tipoBadge = item.TipoParametro switch
+                                {
+                                    "FECHA" => "badge-info",
+                                    "LOGICO" => "badge-warning",
+                                    "TEXTO" => "badge-secondary",
+                                    _ => "badge-light"
+                                };
+                                var tipoTexto = item.TipoParametro switch
+                                {
+                                    "FECHA" => "Fecha",
+                                    "LOGICO" => "Logico",
+                                    "TEXTO" => "Texto",
+                                    _ => item.TipoParametro ?? "-"
+                                };
+                            }
+                            <span class="badge @tipoBadge">@tipoTexto</span>
+                        </td>
+                        <td>
+                            @if (item.TipoParametro == "LOGICO")
+                            {
+                                if (item.Valor?.ToUpper() == "S")
+                                {
+                                    <span class="badge badge-success">Si</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">No</span>
+                                }
+                            }
+                            else
+                            {
+                                @item.Valor
+                            }
+                        </td>
                         <td class="text-center">
                             @if (item.Activo == 1)
                             {
@@ -46,7 +82,7 @@
             else
             {
                 <tr>
-                    <td colspan="5" class="text-center py-4">
+                    <td colspan="6" class="text-center py-4">
                         <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
                         <p class="text-muted">No hay parametros registrados</p>
                     </td>

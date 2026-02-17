@@ -38,6 +38,7 @@ public class ParametroRepository : IParametroRepository
                 CODIGO as Codigo,
                 DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -63,6 +64,7 @@ public class ParametroRepository : IParametroRepository
                 CODIGO as Codigo,
                 DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -88,6 +90,7 @@ public class ParametroRepository : IParametroRepository
                 CODIGO as Codigo,
                 DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -113,6 +116,7 @@ public class ParametroRepository : IParametroRepository
                 CODIGO as Codigo,
                 DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -138,6 +142,7 @@ public class ParametroRepository : IParametroRepository
                 CODIGO,
                 DESCRIPCION,
                 VALOR,
+                TIPO_PARAMETRO,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -147,6 +152,7 @@ public class ParametroRepository : IParametroRepository
                 :Codigo,
                 :Descripcion,
                 :Valor,
+                :TipoParametro,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -158,6 +164,7 @@ public class ParametroRepository : IParametroRepository
         parameters.Add("Codigo", parametro.Codigo);
         parameters.Add("Descripcion", parametro.Descripcion);
         parameters.Add("Valor", parametro.Valor);
+        parameters.Add("TipoParametro", parametro.TipoParametro);
         parameters.Add("IdCreador", parametro.IdCreador);
         parameters.Add("IdParametro", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -179,6 +186,7 @@ public class ParametroRepository : IParametroRepository
                 CODIGO = :Codigo,
                 DESCRIPCION = :Descripcion,
                 VALOR = :Valor,
+                TIPO_PARAMETRO = :TipoParametro,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -190,6 +198,7 @@ public class ParametroRepository : IParametroRepository
             parametro.Codigo,
             parametro.Descripcion,
             parametro.Valor,
+            parametro.TipoParametro,
             parametro.Activo,
             parametro.IdModificador
         });
