@@ -12,7 +12,7 @@
                 <th style="width: 120px;">Banco</th>
                 <th style="width: 100px;">Comprobante</th>
                 <th style="width: 100px;" class="text-right">Total S/.</th>
-                @* <th style="width: 60px;" class="text-center">Ver</th> *@
+                <th style="width: 60px;" class="text-center">PDF</th>
             </tr>
         </thead>
         <tbody>
@@ -28,12 +28,19 @@
                         <td>@(item.NombreBanco ?? "-")</td>
                         <td>@(item.ComprobanteFactura ?? "-")</td>
                         <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
-                        @* <td class="text-center">
-                            <a href="@Url.Action("Detalle", "Produccion", new { guid = item.GuidRegistro })"
-                               class="btn btn-info btn-xs" target="_blank" title="Ver Detalle">
-                                <i class="fas fa-external-link-alt"></i>
-                            </a>
-                        </td> *@
+                        <td class="text-center">
+                            @if (!string.IsNullOrEmpty(item.GuidArchivoFactura))
+                            {
+                                <a href="@Url.Action("Descargar", "Archivo", new { guid = item.GuidArchivoFactura })"
+                                   class="btn btn-outline-danger btn-xs" target="_blank" title="Ver Factura PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
                     </tr>
                 }
                 <tr class="table-warning">

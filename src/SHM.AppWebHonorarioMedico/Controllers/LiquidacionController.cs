@@ -28,6 +28,8 @@ public class LiquidacionController : Controller
     private readonly IOrdenPagoLiquidacionRepository _ordenPagoLiquidacionRepository;
     private readonly IOrdenPagoAprobacionRepository _ordenPagoAprobacionRepository;
     private readonly IPerfilAprobacionRepository _perfilAprobacionRepository;
+    private readonly IArchivoComprobanteService _archivoComprobanteService;
+    private readonly IArchivoService _archivoService;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
@@ -37,7 +39,9 @@ public class LiquidacionController : Controller
         IOrdenPagoProduccionRepository ordenPagoProduccionRepository,
         IOrdenPagoLiquidacionRepository ordenPagoLiquidacionRepository,
         IOrdenPagoAprobacionRepository ordenPagoAprobacionRepository,
-        IPerfilAprobacionRepository perfilAprobacionRepository)
+        IPerfilAprobacionRepository perfilAprobacionRepository,
+        IArchivoComprobanteService archivoComprobanteService,
+        IArchivoService archivoService)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
@@ -47,6 +51,8 @@ public class LiquidacionController : Controller
         _ordenPagoLiquidacionRepository = ordenPagoLiquidacionRepository;
         _ordenPagoAprobacionRepository = ordenPagoAprobacionRepository;
         _perfilAprobacionRepository = perfilAprobacionRepository;
+        _archivoComprobanteService = archivoComprobanteService;
+        _archivoService = archivoService;
     }
 
     /// <summary>
@@ -226,6 +232,7 @@ public class LiquidacionController : Controller
 
             var items = producciones.Select(p => new LiquidacionItemViewModel
             {
+                IdProduccion = p.IdProduccion,
                 GuidRegistro = p.GuidRegistro ?? "",
                 CodigoProduccion = p.CodigoProduccion,
                 DesTipoProduccion = p.DesTipoProduccion,
@@ -241,6 +248,24 @@ public class LiquidacionController : Controller
                 Numero = p.Numero,
                 FechaEmision = p.FechaEmision
             }).ToList();
+
+            // Obtener GUID del archivo "Factura PDF" para cada produccion
+            foreach (var item in items)
+            {
+                var archivosComprobante = await _archivoComprobanteService
+                    .GetArchivoComprobantesByProduccionAsync(item.IdProduccion);
+                var facturaPdf = archivosComprobante
+                    .FirstOrDefault(ac => ac.Activo == 1 && ac.Descripcion == "Factura PDF");
+
+                if (facturaPdf?.IdArchivo != null)
+                {
+                    var archivo = await _archivoService.GetArchivoByIdAsync(facturaPdf.IdArchivo.Value);
+                    if (archivo != null && archivo.Activo == 1)
+                    {
+                        item.GuidArchivoFactura = archivo.GuidRegistro;
+                    }
+                }
+            }
 
             return PartialView("_ProduccionesModalPartial", items);
         }
