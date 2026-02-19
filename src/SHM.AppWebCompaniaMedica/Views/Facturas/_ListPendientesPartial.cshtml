@@ -28,14 +28,14 @@
                             @{
                                 var badgeClass = factura.Estado?.ToUpper() switch
                                 {
-                                    "FACTURA_SOLICITADA" => "badge-pending",
-                                    "FACTURA_DEVUELTA" => "badge-rejected",
+                                    EstadoDescripcion.Produccion.FacturaSolicitada => "badge-pending",
+                                    EstadoDescripcion.Produccion.FacturaDevuelta => "badge-rejected",
                                     _ => "badge-pending"
                                 };
                                 var estadoTexto = factura.Estado?.ToUpper() switch
                                 {
-                                    "FACTURA_SOLICITADA" => "Por Enviar",
-                                    "FACTURA_DEVUELTA" => "Devuelta",
+                                    EstadoDescripcion.Produccion.FacturaSolicitada => "Por Enviar",
+                                    EstadoDescripcion.Produccion.FacturaDevuelta => "Devuelta",
                                     _ => "Por Enviar"
                                 };
                             }

@@ -106,17 +106,7 @@ else if (Model.TotalCount > 0)
 @functions {
     string GetBadgeClass(string? estado)
     {
-        return estado switch
-        {
-            "FACTURA_PENDIENTE" => "badge-estado-pendiente",
-            "FACTURA_SOLICITADA" => "badge-estado-solicitada",
-            "FACTURA_ENVIADA" => "badge-estado-enviada",
-            "FACTURA_ACEPTADA" => "badge-estado-aceptada",
-            "FACTURA_LIQUIDADA" => "badge-estado-liquidada",
-            "FACTURA_PAGADA" => "badge-estado-pagada",
-            "FACTURA_DEVUELTA" => "badge-estado-devuelta",
-            _ => "badge-secondary"
-        };
+        return EstadoDescripcion.Produccion.GetBadgeClass(estado);
     }
 
     string FormatPeriodo(string periodo)

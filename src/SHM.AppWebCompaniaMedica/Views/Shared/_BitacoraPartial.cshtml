@@ -44,18 +44,18 @@
                             {
                                 var badgeColor = item.Accion switch
                                 {
-                                    "FACTURA_ENVIADA" => "bg-success",
+                                    EstadoDescripcion.Produccion.FacturaEnviada => "bg-success",
                                     "FACTURA_APROBADA" => "bg-primary",
                                     "FACTURA_RECHAZADA" => "bg-danger",
-                                    "FACTURA_PAGADA" => "bg-info",
+                                    EstadoDescripcion.Produccion.FacturaPagada => "bg-info",
                                     _ => "bg-secondary"
                                 };
                                 var accionTexto = item.Accion switch
                                 {
-                                    "FACTURA_ENVIADA" => "Enviada",
+                                    EstadoDescripcion.Produccion.FacturaEnviada => "Enviada",
                                     "FACTURA_APROBADA" => "Aprobada",
                                     "FACTURA_RECHAZADA" => "Rechazada",
-                                    "FACTURA_PAGADA" => "Pagada",
+                                    EstadoDescripcion.Produccion.FacturaPagada => "Pagada",
                                     _ => item.Accion
                                 };
                                 <span class="badge @badgeColor" style="font-size: 0.75rem;">@accionTexto</span>

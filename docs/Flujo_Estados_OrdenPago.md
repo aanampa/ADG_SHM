@@ -1,8 +1,9 @@
 # Flujo de Estados de Orden de Pago
 ## Sistema de Honorarios Medicos (SHM)
 
-**Version:** 1.0
+**Version:** 1.1
 **Fecha:** 17 de Febrero 2026
+**Actualizado:** 17 de Febrero 2026 - Agregado flujo de notificaciones por email
 **Autor:** ADG Vladimir D
 
 ---
@@ -126,6 +127,7 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 | 3 | `SHM_ORDEN_PAGO_LIQUIDACION` | INSERT | Un registro por cada codigo de liquidacion agrupado, con totales y datos de la liquidacion |
 | 4 | `SHM_ORDEN_PAGO_APROBACION` | INSERT | Un registro por cada perfil de `SHM_PERFIL_APROBACION` donde `GRUPO_FLUJO_TRABAJO = 'FLUJO_APROBACION_ORDEN_PAGO'`, todos con estado `APROBACION_PENDIENTE` |
 | 5 | `SHM_PRODUCCION` | UPDATE | Estado de las producciones cambia de `FACTURA_LIQUIDADA` a `FACTURA_ORDEN_PAGO` |
+| 6 | - | EMAIL | Se notifica por correo a los usuarios del **primer nivel** de aprobacion (ver seccion 11) |
 
 **Formato del numero de orden:** `OP-YYYYMMDD-HHmmss`
 
@@ -154,6 +156,7 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 |---|-------|--------|---------|
 | 1 | `SHM_ORDEN_PAGO_APROBACION` | UPDATE | El registro del aprobador pasa a estado `APROBADO`. Se registra `ID_USUARIO_APROBADOR` y `FECHA_APROBACION` |
 | 2 | `SHM_ORDEN_PAGO` | UPDATE (condicional) | Si **todos** los registros de `SHM_ORDEN_PAGO_APROBACION` para esta orden estan en estado `APROBADO`, entonces el estado de la orden cambia a `APROBADO` |
+| 3 | - | EMAIL (condicional) | Si quedan niveles pendientes, se notifica por correo a los usuarios del **siguiente nivel** de aprobacion (ver seccion 11) |
 
 **Regla de negocio:** La orden solo se aprueba completamente cuando el ultimo nivel pendiente da su aprobacion.
 
@@ -290,6 +293,100 @@ COMENTARIOS               Varchar2(1000)
 5. **Aprobacion completa:** La orden solo pasa a `APROBADO` cuando todos los registros de `SHM_ORDEN_PAGO_APROBACION` estan en estado `APROBADO`
 6. **Regeneracion:** Una orden devuelta requiere generar una nueva orden de pago desde la bandeja de Liquidaciones
 7. **Trazabilidad:** Cada aprobacion/rechazo registra el usuario aprobador y la fecha
+
+---
+
+## 11. Notificaciones por Email
+
+El sistema envia notificaciones por correo electronico a los aprobadores en dos momentos del flujo:
+
+### 11.1 Al Generar la Orden de Pago
+
+- **Evento:** `LiquidacionController.GenerarOrdenPago`
+- **Servicio:** `OrdenPagoAprobacionService.NotificarPrimerAprobadorAsync`
+- **Destinatarios:** Usuarios asignados al **primer nivel** de aprobacion pendiente
+- **Momento:** Despues de crear todos los registros y actualizar el estado de las producciones
+
+### 11.2 Al Aprobar un Nivel
+
+- **Evento:** `OrdenPagoAprobacionService.AprobarAsync`
+- **Servicio:** `OrdenPagoAprobacionService.NotificarSiguienteAprobadorAsync` (privado)
+- **Destinatarios:** Usuarios asignados al **siguiente nivel** de aprobacion pendiente
+- **Momento:** Despues de aprobar el nivel actual, solo si quedan niveles pendientes
+- **No se notifica** si el nivel aprobado es el ultimo (la orden pasa a estado `APROBADO`)
+
+### 11.3 Logica de Seleccion de Destinatarios
+
+```
+1. Obtener el siguiente registro de SHM_ORDEN_PAGO_APROBACION
+   con ESTADO = 'APROBACION_PENDIENTE' ordenado por ORDEN ASC (el primero)
+
+2. Obtener los usuarios de SHM_PERFIL_APROBACION_USUARIO
+   donde ID_PERFIL_APROBACION = perfil del siguiente nivel
+
+3. Filtrar por sede:
+   - Usuarios con ID_SEDE = NULL (aplican a todas las sedes)
+   - Usuarios con ID_SEDE = sede de la orden de pago (SHM_ORDEN_PAGO.ID_SEDE)
+
+4. Para cada usuario filtrado:
+   - Obtener datos de SHM_SEG_USUARIO (nombre, email)
+   - Enviar correo si tiene email configurado
+```
+
+### 11.4 Plantilla de Email
+
+Se utiliza `IEmailService.EnviarEmailNotificacionAprobacionAsync` con los siguientes datos:
+
+| Dato | Origen |
+|------|--------|
+| Email destinatario | `SHM_SEG_USUARIO.EMAIL` |
+| Nombre destinatario | `NOMBRES + APELLIDO_PATERNO + APELLIDO_MATERNO` |
+| Numero de orden | `SHM_ORDEN_PAGO.NUMERO_ORDEN_PAGO` |
+| Fecha de generacion | `SHM_ORDEN_PAGO.FECHA_GENERACION` |
+| Monto total | `SHM_ORDEN_PAGO.MTO_TOTAL_ACUM` |
+| Nombre del perfil | `SHM_PERFIL_APROBACION.DESCRIPCION` (del nivel pendiente) |
+| ID orden de pago | `SHM_ORDEN_PAGO.ID_ORDEN_PAGO` |
+
+### 11.5 Manejo de Errores
+
+- Los errores en el envio de correo **no interrumpen** el flujo principal
+- Los errores se registran en el log con nivel `LogError`
+- La generacion de la orden o la aprobacion se completa exitosamente aunque falle el envio del correo
+
+### 11.6 Diagrama de Notificaciones
+
+```
+  Generar Orden de Pago
+         |
+         v
+  [Crear registros en BD]
+         |
+         v
+  [Notificar primer nivel] --email--> Usuarios NIVEL_1 (sede)
+         |
+         v
+  (Aprobador NIVEL_1 aprueba)
+         |
+         v
+  [Quedan niveles pendientes?]
+         |
+    Si ---+--- No
+    |           |
+    v           v
+  [Notificar   (Orden APROBADA,
+   siguiente    no se notifica)
+   nivel]
+    |
+    v
+  --email--> Usuarios NIVEL_2 (sede)
+         |
+         v
+  (Aprobador NIVEL_2 aprueba)
+         |
+         v
+  [Quedan niveles pendientes?]
+    ...
+```
 
 ---
 

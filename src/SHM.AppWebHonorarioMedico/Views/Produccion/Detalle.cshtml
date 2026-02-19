@@ -3,17 +3,7 @@
     ViewData["Title"] = "Detalle de Produccion";
     var archivos = ViewBag.Archivos as List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>
         ?? new List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>();
-    var badgeClass = Model.Estado switch
-    {
-        "FACTURA_PENDIENTE" => "badge-estado-pendiente",
-        "FACTURA_SOLICITADA" => "badge-estado-solicitada",
-        "FACTURA_ENVIADA" => "badge-estado-enviada",
-        "FACTURA_ACEPTADA" => "badge-estado-aceptada",
-        "FACTURA_LIQUIDADA" => "badge-estado-liquidada",
-        "FACTURA_PAGADA" => "badge-estado-pagada",
-        "FACTURA_DEVUELTA" => "badge-estado-devuelta",
-        _ => "badge-secondary"
-    };
+    var badgeClass = EstadoDescripcion.Produccion.GetBadgeClass(Model.Estado);
     var tipoComprobanteTexto = Model.TipoComprobante switch
     {
         "01" => "Factura",
@@ -361,15 +351,15 @@
                                     </div>
                                 </div>
 
-                                @if (Model.Estado == "FACTURA_PENDIENTE" || Model.Estado == "FACTURA_SOLICITADA")
+                                @if (Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente || Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada)
                                 {
                                     <div class="mt-2">
                                         <button type="button" class="btn btn-success btn-sm" onclick="solicitarFactura()">
-                                            <i class="fas fa-file-invoice-dollar mr-1"></i>@(Model.Estado == "FACTURA_SOLICITADA" ? "Actualizar Fecha Limite" : "Solicitar Factura")
+                                            <i class="fas fa-file-invoice-dollar mr-1"></i>@(Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ? "Actualizar Fecha Limite" : "Solicitar Factura")
                                         </button>
                                     </div>
                                 }
-                                @if (Model.Estado == "FACTURA_ENVIADA")
+                                @if (Model.Estado == EstadoDescripcion.Produccion.FacturaEnviada)
                                 {
                                     <div class="mt-2">
                                         <button type="button" class="btn btn-danger btn-sm mr-2" onclick="devolverFactura()">
@@ -382,7 +372,7 @@
                                 }
 
                                 @* Documentos Adjuntos *@
-                                @if (Model.Estado != "FACTURA_PENDIENTE" && Model.Estado != "FACTURA_SOLICITADA" && archivos.Any())
+                                @if (Model.Estado != EstadoDescripcion.Produccion.FacturaPendiente && Model.Estado != EstadoDescripcion.Produccion.FacturaSolicitada && archivos.Any())
                                 {
                                     <hr class="my-2" />
                                     <div class="section-title">
@@ -454,7 +444,7 @@
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="modalSolicitarFacturaLabel">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i>@(Model.Estado == "FACTURA_SOLICITADA" ? "Actualizar Fecha Limite" : "Solicitar Factura")
+                    <i class="fas fa-file-invoice-dollar mr-2"></i>@(Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ? "Actualizar Fecha Limite" : "Solicitar Factura")
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
@@ -30,6 +31,7 @@ public class LiquidacionController : Controller
     private readonly IPerfilAprobacionRepository _perfilAprobacionRepository;
     private readonly IArchivoComprobanteService _archivoComprobanteService;
     private readonly IArchivoService _archivoService;
+    private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
@@ -41,7 +43,8 @@ public class LiquidacionController : Controller
         IOrdenPagoAprobacionRepository ordenPagoAprobacionRepository,
         IPerfilAprobacionRepository perfilAprobacionRepository,
         IArchivoComprobanteService archivoComprobanteService,
-        IArchivoService archivoService)
+        IArchivoService archivoService,
+        IOrdenPagoAprobacionService ordenPagoAprobacionService)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
@@ -53,6 +56,7 @@ public class LiquidacionController : Controller
         _perfilAprobacionRepository = perfilAprobacionRepository;
         _archivoComprobanteService = archivoComprobanteService;
         _archivoService = archivoService;
+        _ordenPagoAprobacionService = ordenPagoAprobacionService;
     }
 
     /// <summary>
@@ -341,7 +345,7 @@ public class LiquidacionController : Controller
                 IdBanco = request.IdBanco.Value,
                 NumeroOrdenPago = numeroOrdenPago,
                 FechaGeneracion = DateTime.Now,
-                Estado = "APROBACION_PENDIENTE",
+                Estado = EstadoDescripcion.OrdenPago.AprobacionPendiente,
                 MtoConsumoAcum = mtoConsumoAcum,
                 MtoDescuentoAcum = mtoDescuentoAcum,
                 MtoSubtotalAcum = mtoSubtotalAcum,
@@ -402,7 +406,7 @@ public class LiquidacionController : Controller
                 {
                     IdOrdenPago = idOrdenPago,
                     IdPerfilAprobacion = perfil.IdPerfilAprobacion,
-                    Estado = "APROBACION_PENDIENTE",
+                    Estado = EstadoDescripcion.Aprobacion.Pendiente,
                     Orden = perfil.Orden,
                     Activo = 1,
                     IdCreador = idUsuario.Value
@@ -412,7 +416,10 @@ public class LiquidacionController : Controller
 
             // Actualizar estado de las producciones a FACTURA_ORDEN_PAGO
             var idsProduccion = todasLasProducciones.Select(p => p.IdProduccion).ToList();
-            await _liquidacionService.UpdateEstadoProduccionesAsync(idsProduccion, "FACTURA_ORDEN_PAGO", idUsuario.Value);
+            await _liquidacionService.UpdateEstadoProduccionesAsync(idsProduccion, EstadoDescripcion.Produccion.FacturaOrdenPago, idUsuario.Value);
+
+            // Notificar al primer nivel de aprobacion
+            await _ordenPagoAprobacionService.NotificarPrimerAprobadorAsync(idOrdenPago);
 
             _logger.LogInformation("Orden de pago {NumeroOrden} generada. ID: {Id}, Banco: {Banco}, Total: {Total}, Producciones actualizadas: {Count}",
                 numeroOrdenPago, idOrdenPago, request.IdBanco, mtoTotalAcum, idsProduccion.Count);

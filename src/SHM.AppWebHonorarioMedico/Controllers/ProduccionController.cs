@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
@@ -166,7 +167,7 @@ public class ProduccionController : Controller
 
             // Cargar archivos adjuntos para estados diferentes a FACTURA_PENDIENTE y FACTURA_SOLICITADA
             var archivos = new List<ArchivoAdjuntoViewModel>();
-            if (produccion.Estado != "FACTURA_PENDIENTE" && produccion.Estado != "FACTURA_SOLICITADA")
+            if (produccion.Estado != EstadoDescripcion.Produccion.FacturaPendiente && produccion.Estado != EstadoDescripcion.Produccion.FacturaSolicitada)
             {
                 var archivosComprobante = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
                 foreach (var ac in archivosComprobante.Where(a => a.Activo == 1))
@@ -278,7 +279,7 @@ public class ProduccionController : Controller
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
-                        Accion = "FACTURA_SOLICITADA",
+                        Accion = EstadoDescripcion.Produccion.FacturaSolicitada,
                         Descripcion = $"Factura Solicitada con fecha limite el {fechaFormateada} a las {solicitud.Hora} horas",
                         FechaAccion = DateTime.Now
                     };
@@ -331,7 +332,7 @@ public class ProduccionController : Controller
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
-                        Accion = "FACTURA_DEVUELTA",
+                        Accion = EstadoDescripcion.Produccion.FacturaDevuelta,
                         Descripcion = $"Se devolvio el comprobante de pago electrónico: {comprobante} para su subsanacion",
                         FechaAccion = DateTime.Now
                     };
@@ -384,7 +385,7 @@ public class ProduccionController : Controller
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
-                        Accion = "FACTURA_ACEPTADA",
+                        Accion = EstadoDescripcion.Produccion.FacturaAceptada,
                         Descripcion = $"Se acepto el comprobante de pago electrónico: {comprobante}",
                         FechaAccion = DateTime.Now
                     };

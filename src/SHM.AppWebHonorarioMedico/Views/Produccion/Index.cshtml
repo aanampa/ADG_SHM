@@ -298,26 +298,20 @@
             toastr.info('Funcionalidad en desarrollo', 'Exportar');
         }
 
+        // Mapeo de estados a clases CSS (generado desde EstadoDescripcion.Produccion)
+        const estadoBadgeMap = {
+            '@EstadoDescripcion.Produccion.FacturaPendiente': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaPendiente)',
+            '@EstadoDescripcion.Produccion.FacturaSolicitada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaSolicitada)',
+            '@EstadoDescripcion.Produccion.FacturaEnviada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaEnviada)',
+            '@EstadoDescripcion.Produccion.FacturaAceptada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaAceptada)',
+            '@EstadoDescripcion.Produccion.FacturaLiquidada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaLiquidada)',
+            '@EstadoDescripcion.Produccion.FacturaPagada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaPagada)',
+            '@EstadoDescripcion.Produccion.FacturaDevuelta': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaDevuelta)'
+        };
+
         // Funcion para obtener el color del badge segun el estado
         function getEstadoBadgeClass(estado) {
-            switch (estado) {
-                case 'FACTURA_PENDIENTE':
-                    return 'badge-estado-pendiente';
-                case 'FACTURA_SOLICITADA':
-                    return 'badge-estado-solicitada';
-                case 'FACTURA_ENVIADA':
-                    return 'badge-estado-enviada';
-                case 'FACTURA_ACEPTADA':
-                    return 'badge-estado-aceptada';
-                case 'FACTURA_LIQUIDADA':
-                    return 'badge-estado-liquidada';
-                case 'FACTURA_PAGADA':
-                    return 'badge-estado-pagada';
-                case 'FACTURA_DEVUELTA':
-                    return 'badge-estado-devuelta';
-                default:
-                    return 'badge-secondary';
-            }
+            return estadoBadgeMap[estado] || 'badge-secondary';
         }
     </script>
 }
