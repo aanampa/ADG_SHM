@@ -68,12 +68,7 @@ public class UsuarioService : IUsuarioService
             return null;
 
         // Verificar la contraseña con BCrypt
-        // TODO: Descomentar cuando las claves estén cifradas en BD
-        // if (!BCrypt.Net.BCrypt.Verify(password, usuario.Password))
-        //     return null;
-
-        // Validación temporal para desarrollo (clave sin cifrar)
-        if (password != usuario.Password)
+        if (!BCrypt.Net.BCrypt.Verify(password, usuario.Password))
             return null;
 
         return MapToResponseDto(usuario);
@@ -262,9 +257,7 @@ public class UsuarioService : IUsuarioService
         }
 
         // Hashear nueva contraseña
-        // TODO: Descomentar cuando se use BCrypt en producción
-        // var passwordHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword);
-        var passwordHash = nuevaPassword; // Temporal para desarrollo
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword);
 
         // Actualizar contraseña
         var updated = await _usuarioRepository.UpdatePasswordAsync(usuario.IdUsuario, passwordHash);
@@ -330,22 +323,14 @@ public class UsuarioService : IUsuarioService
         }
 
         // Verificar contraseña actual
-        // TODO: Descomentar cuando las claves estén cifradas en BD
-        // if (!BCrypt.Net.BCrypt.Verify(passwordActual, usuario.Password))
-        //     return (false, "La contraseña actual es incorrecta");
-
-        // Validación temporal para desarrollo (clave sin cifrar)
-        if (passwordActual != usuario.Password)
-        {
+        if (!BCrypt.Net.BCrypt.Verify(passwordActual, usuario.Password))
             return (false, "La contraseña actual es incorrecta");
-        }
 
         // Hashear nueva contraseña
-        // TODO: Descomentar cuando se use BCrypt en producción
-        // var passwordHash = BCrypt.Net.BCrypt.HashPassword(passwordNueva);
-        var passwordHash = passwordNueva; // Temporal para desarrollo
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(passwordNueva);
 
-        var updated = await _usuarioRepository.UpdatePasswordAsync(idUsuario, passwordHash);
+        // Usar metodo que limpia FLAG_PASSWORD_TEMPORAL = 0 (cambio por el propio usuario)
+        var updated = await _usuarioRepository.UpdatePasswordCambioUsuarioAsync(idUsuario, passwordHash);
         if (!updated)
         {
             return (false, "Error al actualizar la contraseña");
@@ -416,7 +401,7 @@ public class UsuarioService : IUsuarioService
         {
             TipoUsuario = "E", // Siempre externo
             Login = createDto.Login,
-            Password = generatedPassword, // TODO: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+            Password = BCrypt.Net.BCrypt.HashPassword(generatedPassword),
             Email = createDto.Email,
             NumeroDocumento = createDto.NumeroDocumento,
             Nombres = createDto.Nombres,
@@ -428,7 +413,8 @@ public class UsuarioService : IUsuarioService
             IdEntidadMedica = createDto.IdEntidadMedica,
             IdRol = createDto.IdRol,
             IdCreador = idCreador,
-            Activo = 1
+            Activo = 1,
+            FlagPasswordTemporal = 1
         };
 
         var idUsuario = await _usuarioRepository.CreateAsync(usuario);
@@ -490,7 +476,7 @@ public class UsuarioService : IUsuarioService
         {
             TipoUsuario = "I", // Siempre interno
             Login = createDto.Login,
-            Password = generatedPassword, // TODO: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+            Password = BCrypt.Net.BCrypt.HashPassword(generatedPassword),
             Email = createDto.Email,
             NumeroDocumento = createDto.NumeroDocumento,
             Nombres = createDto.Nombres,
@@ -502,7 +488,8 @@ public class UsuarioService : IUsuarioService
             IdEntidadMedica = null, // Usuario interno no tiene entidad medica
             IdRol = createDto.IdRol,
             IdCreador = idCreador,
-            Activo = 1
+            Activo = 1,
+            FlagPasswordTemporal = 1
         };
 
         // Usar TransactionScope para operaciones en multiples tablas
@@ -568,9 +555,9 @@ public class UsuarioService : IUsuarioService
         // Generar nueva clave
         var nuevaClave = GenerarClaveAleatoria();
 
-        // Actualizar clave
-        // TODO: BCrypt.Net.BCrypt.HashPassword(nuevaClave)
-        var updated = await _usuarioRepository.UpdatePasswordAsync(idUsuario, nuevaClave);
+        // Actualizar clave (hasheada)
+        var claveHasheada = BCrypt.Net.BCrypt.HashPassword(nuevaClave);
+        var updated = await _usuarioRepository.UpdatePasswordAsync(idUsuario, claveHasheada);
         if (!updated)
         {
             return (false, "Error al actualizar la clave", null);
@@ -619,7 +606,8 @@ public class UsuarioService : IUsuarioService
             GuidRegistro = usuario.GuidRegistro,
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion,
-            FechaModificacion = usuario.FechaModificacion
+            FechaModificacion = usuario.FechaModificacion,
+            FlagPasswordTemporal = usuario.FlagPasswordTemporal
         };
     }
 }

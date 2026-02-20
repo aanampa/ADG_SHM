@@ -5,7 +5,7 @@
 
 ## Descarga de Archivos
 - [x] Crear controlador comun: ArchivoController
-- [ ] VD Usar controlador comun ArchivoController en produccion y liquidacion
+- [x] VD Usar controlador comun ArchivoController en produccion y liquidacion
 
 ## Orden de Pago
 - [ ] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
@@ -23,14 +23,14 @@
 ## Parametros
 - [x] Pantalla de configuracion de parametros globales
 
-## Usuarios Externos
+## Usuarios Externos/Internos
 - [x] Revisar envio de credenciales al crear un nuevo usuario
 - [x] Revisar reseteo de contraseña
-- [ ] AA Asignar clave temporal
+- [x] AA Asignar clave temporal
 
 ## Login
-- [ ] AA Manejo de encriptación de contraseña: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
-- [ ] AA Manejo de clave temporal
+- [x] AA Manejo de encriptación de contraseña: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+- [x] AA Manejo de clave temporal
 
 ## Interfaces
 - [ ] Recepcion de producciones

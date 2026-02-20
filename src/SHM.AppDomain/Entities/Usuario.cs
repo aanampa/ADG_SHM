@@ -31,4 +31,5 @@ public class Usuario
     public DateTime? FechaModificacion { get; set; }
     public string? TokenRecuperacion { get; set; }
     public DateTime? FechaExpiracionToken { get; set; }
+    public int? FlagPasswordTemporal { get; set; }
 }

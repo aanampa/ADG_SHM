@@ -54,7 +54,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR as IdCreador,
                 FECHA_CREACION as FechaCreacion,
                 ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
+                FECHA_MODIFICACION as FechaModificacion,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             ORDER BY ID_USUARIO";
 
@@ -89,7 +90,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR as IdCreador,
                 FECHA_CREACION as FechaCreacion,
                 ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
+                FECHA_MODIFICACION as FechaModificacion,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE ID_USUARIO = :Id";
 
@@ -126,7 +128,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion,
                 TOKEN_RECUPERACION as TokenRecuperacion,
-                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken
+                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE UPPER(LOGIN) = UPPER(:Login)";
 
@@ -156,6 +159,7 @@ public class UsuarioRepository : IUsuarioRepository
                 CARGO,
                 ID_ENTIDAD_MEDICA,
                 ID_ROL,
+                FLAG_PASSWORD_TEMPORAL,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -175,6 +179,7 @@ public class UsuarioRepository : IUsuarioRepository
                 :Cargo,
                 :IdEntidadMedica,
                 :IdRol,
+                :FlagPasswordTemporal,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -196,6 +201,7 @@ public class UsuarioRepository : IUsuarioRepository
         parameters.Add("Cargo", usuario.Cargo);
         parameters.Add("IdEntidadMedica", usuario.IdEntidadMedica);
         parameters.Add("IdRol", usuario.IdRol);
+        parameters.Add("FlagPasswordTemporal", usuario.FlagPasswordTemporal);
         parameters.Add("IdCreador", usuario.IdCreador);
         parameters.Add("IdUsuario", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -228,6 +234,7 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_ENTIDAD_MEDICA = :IdEntidadMedica,
                 ID_ROL = :IdRol,
                 ACTIVO = :Activo,
+                FLAG_PASSWORD_TEMPORAL = :FlagPasswordTemporal,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_USUARIO = :IdUsuario";
@@ -249,6 +256,7 @@ public class UsuarioRepository : IUsuarioRepository
             usuario.IdEntidadMedica,
             usuario.IdRol,
             usuario.Activo,
+            usuario.FlagPasswordTemporal,
             usuario.IdModificador
         });
 
@@ -317,7 +325,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion,
                 TOKEN_RECUPERACION as TokenRecuperacion,
-                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken
+                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE UPPER(EMAIL) = UPPER(:Email) AND ACTIVO = 1";
 
@@ -354,7 +363,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion,
                 TOKEN_RECUPERACION as TokenRecuperacion,
-                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken
+                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE TOKEN_RECUPERACION = :Token AND ACTIVO = 1";
 
@@ -394,6 +404,31 @@ public class UsuarioRepository : IUsuarioRepository
         var sql = @"
             UPDATE SHM_SEG_USUARIO
             SET PASSWORD = :Password,
+                FLAG_PASSWORD_TEMPORAL = 1,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_USUARIO = :IdUsuario";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdUsuario = idUsuario,
+            Password = newPasswordHash
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza la contrasena de un usuario y limpia el flag de password temporal.
+    /// Se usa cuando el propio usuario cambia su clave.
+    /// </summary>
+    public async Task<bool> UpdatePasswordCambioUsuarioAsync(int idUsuario, string newPasswordHash)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_SEG_USUARIO
+            SET PASSWORD = :Password,
+                FLAG_PASSWORD_TEMPORAL = 0,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_USUARIO = :IdUsuario";
 
@@ -527,7 +562,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR as IdCreador,
                 FECHA_CREACION as FechaCreacion,
                 ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
+                FECHA_MODIFICACION as FechaModificacion,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE GUID_REGISTRO = :GuidRegistro";
 
@@ -591,7 +627,8 @@ public class UsuarioRepository : IUsuarioRepository
                         u.ID_CREADOR as IdCreador,
                         u.FECHA_CREACION as FechaCreacion,
                         u.ID_MODIFICADOR as IdModificador,
-                        u.FECHA_MODIFICACION as FechaModificacion
+                        u.FECHA_MODIFICACION as FechaModificacion,
+                        u.FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
                     FROM SHM_SEG_USUARIO u
                     LEFT JOIN SHM_ENTIDAD_MEDICA em ON u.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
                     {whereClause}
@@ -661,7 +698,8 @@ public class UsuarioRepository : IUsuarioRepository
                         ID_CREADOR as IdCreador,
                         FECHA_CREACION as FechaCreacion,
                         ID_MODIFICADOR as IdModificador,
-                        FECHA_MODIFICACION as FechaModificacion
+                        FECHA_MODIFICACION as FechaModificacion,
+                        FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
                     FROM SHM_SEG_USUARIO
                     {whereClause}
                     ORDER BY APELLIDO_PATERNO, NOMBRES
