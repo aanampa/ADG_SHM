@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -292,7 +293,7 @@ public class ProduccionService : IProduccionService
             return false;
         }
 
-        const string nuevoEstado = "FACTURA_SOLICITADA";
+        const string nuevoEstado = EstadoDescripcion.Produccion.FacturaSolicitada;
 
         var resultado = await _produccionRepository.UpdateFechaLimiteEstadoAsync(
             solicitudDto.GuidRegistro,
@@ -345,7 +346,7 @@ public class ProduccionService : IProduccionService
     /// </summary>
     public async Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador)
     {
-        const string nuevoEstado = "FACTURA_DEVUELTA";
+        const string nuevoEstado = EstadoDescripcion.Produccion.FacturaDevuelta;
         return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
     }
 
@@ -357,7 +358,7 @@ public class ProduccionService : IProduccionService
     /// </summary>
     public async Task<bool> AceptarFacturaAsync(string guidRegistro, int idModificador)
     {
-        const string nuevoEstado = "FACTURA_ACEPTADA";
+        const string nuevoEstado = EstadoDescripcion.Produccion.FacturaAceptada;
         return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
     }
     /// Obtiene estadisticas del dashboard para una entidad medica.

@@ -141,36 +141,13 @@ public class TestController : BaseController
     }
 
     /// <summary>
-    /// Descarga un archivo de prueba por su GUID.
+    /// Redirige la descarga de archivos al metodo centralizado en FacturasController.
+    ///
+    /// <modified>ADG Vladimir D - 2026-02-17 - Redirige a FacturasController para no duplicar codigo</modified>
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> DescargarArchivo(string guid)
+    public IActionResult DescargarArchivo(string guid)
     {
-        try
-        {
-            if (string.IsNullOrEmpty(guid))
-                return NotFound("GUID no especificado");
-
-            var archivoContenido = await _archivoService.GetArchivoContenidoByGuidAsync(guid);
-            if (archivoContenido == null)
-                return NotFound("Archivo no encontrado");
-
-            // Para PDFs, mostrar inline
-            if (archivoContenido.Extension?.ToLower() == ".pdf")
-            {
-                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivoContenido.NombreArchivo}\"");
-                return File(archivoContenido.Contenido, archivoContenido.ContentType ?? "application/pdf");
-            }
-
-            return File(
-                archivoContenido.Contenido,
-                archivoContenido.ContentType ?? "application/octet-stream",
-                archivoContenido.NombreArchivo);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al descargar archivo de prueba con GUID: {Guid}", guid);
-            return StatusCode(500, "Error al descargar el archivo");
-        }
+        return RedirectToAction("DescargarArchivo", "Facturas", new { guid });
     }
 }

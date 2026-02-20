@@ -177,6 +177,27 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
     }
 
     /// <summary>
+    /// Notifica por email a los usuarios del primer nivel de aprobacion pendiente.
+    /// Se invoca al generar una nueva Orden de Pago.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-02-17</created>
+    /// </summary>
+    public async Task NotificarPrimerAprobadorAsync(int idOrdenPago)
+    {
+        var aprobaciones = await _repository.GetByOrdenPagoIdAsync(idOrdenPago);
+        var primerPendiente = aprobaciones
+            .Where(a => a.Estado == EstadoDescripcion.Aprobacion.Pendiente)
+            .OrderBy(a => a.Orden)
+            .FirstOrDefault();
+
+        if (primerPendiente != null)
+        {
+            await NotificarSiguienteAprobadorAsync(idOrdenPago, primerPendiente);
+        }
+    }
+
+    /// <summary>
     /// Rechaza una orden de pago para el usuario actual.
     /// Cambia el estado de la orden a RECHAZADO y registra el comentario.
     /// </summary>

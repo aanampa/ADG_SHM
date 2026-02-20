@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Archivo;
 using SHM.AppDomain.DTOs.ArchivoComprobante;
 using SHM.AppDomain.DTOs.Bitacora;
@@ -83,8 +84,8 @@ public class FacturasController : BaseController
             // Filtrar solo las pendientes (Estado = "PENDIENTE" o sin comprobante)
             var pendientes = producciones
                 .Where(p => p.Activo == 1 &&
-                            (p.Estado == "FACTURA_SOLICITADA"  ||  
-                             p.Estado == "FACTURA_DEVUELTA"  
+                            (p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada  ||
+                             p.Estado == EstadoDescripcion.Produccion.FacturaDevuelta
                             ))
                 .ToList();
 
@@ -101,7 +102,7 @@ public class FacturasController : BaseController
                 Concepto = p.Concepto ?? p.Descripcion,
                 MtoTotal = p.MtoTotal,
                 FechaLimite = p.FechaLimite,
-                Estado = p.Estado ?? "FACTURA_SOLICITADA",
+                Estado = p.Estado ?? EstadoDescripcion.Produccion.FacturaSolicitada,
                 GuidRegistro = p.GuidRegistro
             }).ToList();
 
@@ -273,7 +274,7 @@ public class FacturasController : BaseController
             var enviadas = producciones
                 .Where(p => p.Activo == 1 &&
                            !string.IsNullOrEmpty(p.EstadoComprobante) &&
-                           p.EstadoComprobante != "FACTURA_SOLICITADA" &&
+                           p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaSolicitada &&
                            p.EstadoComprobante != "PENDIENTE"
                            )
                 .ToList();
@@ -344,8 +345,8 @@ public class FacturasController : BaseController
                 .Where(p => p.Activo == 1 &&
                            !string.IsNullOrEmpty(p.EstadoComprobante) &&
                            p.EstadoComprobante != "PENDIENTE" &
-                           p.EstadoComprobante != "FACTURA_PENDIENTE" &&
-                           p.EstadoComprobante != "FACTURA_SOLICITADA"
+                           p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaPendiente &&
+                           p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaSolicitada
                            )
                 .ToList();
 
@@ -1141,7 +1142,7 @@ public class FacturasController : BaseController
                 FechaEmision = fechaEmisionParaActualizar ?? fechaEmision,
                 EstadoComprobante = "ENVIADO",
                 Glosa = glosaPrimerItem,
-                Estado = "FACTURA_ENVIADA",
+                Estado = EstadoDescripcion.Produccion.FacturaEnviada,
                 FacturaFechaEnvio = DateTime.Now,
                 IdCuentaBanco = idCuentaBanco
             };
@@ -1156,9 +1157,9 @@ public class FacturasController : BaseController
             // Registrar en bitácora
             await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
             {
-                Entidad = "SHM_PRODUCCION", 
+                Entidad = "SHM_PRODUCCION",
                 IdEntidad = produccion.IdProduccion,
-                Accion = "FACTURA_ENVIADA",
+                Accion = EstadoDescripcion.Produccion.FacturaEnviada,
                 Descripcion = $"Envio de comprobante de pago electrónico: {serie}-{numero}",
                 FechaAccion = DateTime.Now
             }, userId);
@@ -1864,7 +1865,7 @@ public class FacturasController : BaseController
                 Numero = numeroXml,
                 FechaEmision = fechaEmisionParaActualizar,
                 EstadoComprobante = "ENVIADO",
-                Estado = "FACTURA_ENVIADA",
+                Estado = EstadoDescripcion.Produccion.FacturaEnviada,
                 Glosa = facturaData.DetalleItems[0].Descripcion?.Trim(),
                 FacturaFechaEnvio = DateTime.Now,
                 IdCuentaBanco = idCuentaBanco
@@ -1882,7 +1883,7 @@ public class FacturasController : BaseController
             {
                 Entidad = "SHM_PRODUCCION",
                 IdEntidad = produccion.IdProduccion,
-                Accion = "FACTURA_ENVIADA",
+                Accion = EstadoDescripcion.Produccion.FacturaEnviada,
                 Descripcion = $"Envio de comprobante de pago electrónico: {serieXml}-{numeroXml}", 
                 FechaAccion = DateTime.Now
             }, userId);

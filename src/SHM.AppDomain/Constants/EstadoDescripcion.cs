@@ -32,16 +32,16 @@ public static class EstadoDescripcion
 
         private static readonly Dictionary<string, EstadoInfo> _estados = new()
         {
-            [FacturaPendiente]   = new("Factura Pendiente",       "badge-secondary",  "bg-gradient-secondary", "text-secondary"),
-            [FacturaSolicitada]  = new("Factura Solicitada",      "badge-warning",    "bg-gradient-warning",   "text-warning"),
-            [FacturaEnviada]     = new("Factura Enviada",         "badge-info",       "bg-gradient-info",      "text-info"),
-            [FacturaAceptada]    = new("Factura Aceptada",        "badge-primary",    "bg-gradient-primary",   "text-primary"),
-            [FacturaEnviadaHhmm] = new("Factura Enviada a HHMM", "badge-info",       "bg-gradient-info",      "text-info"),
-            [FacturaLiquidada]   = new("Factura Liquidada",       "badge-success",    "bg-gradient-success",   "text-success"),
-            [FacturaOrdenPago]   = new("Factura en Orden de Pago","badge-success",    "bg-gradient-success",   "text-success"),
-            [FacturaPagada]      = new("Factura Pagada",          "badge-success",    "bg-gradient-success",   "text-success"),
-            [FacturaDevuelta]    = new("Factura Devuelta",        "badge-danger",     "bg-gradient-danger",    "text-danger"),
-            [FacturaAnulada]     = new("Factura Anulada",         "badge-dark",       "bg-gradient-dark",      "text-dark"),
+            [FacturaPendiente]   = new("Factura Pendiente",       "badge-estado-pendiente",   "bg-gradient-warning",   "text-warning"),
+            [FacturaSolicitada]  = new("Factura Solicitada",      "badge-estado-solicitada",  "bg-gradient-info",      "text-info"),
+            [FacturaEnviada]     = new("Factura Enviada",         "badge-estado-enviada",     "bg-gradient-primary",   "text-primary"),
+            [FacturaAceptada]    = new("Factura Aceptada",        "badge-estado-aceptada",    "bg-gradient-success",   "text-success"),
+            [FacturaEnviadaHhmm] = new("Factura Enviada a HHMM", "badge-estado-enviada",     "bg-gradient-primary",   "text-primary"),
+            [FacturaLiquidada]   = new("Factura Liquidada",       "badge-estado-liquidada",   "bg-gradient-info",      "text-info"),
+            [FacturaOrdenPago]   = new("Factura en Orden de Pago","badge-estado-liquidada",   "bg-gradient-info",      "text-info"),
+            [FacturaPagada]      = new("Factura Pagada",          "badge-estado-pagada",      "bg-gradient-success",   "text-success"),
+            [FacturaDevuelta]    = new("Factura Devuelta",        "badge-estado-devuelta",    "bg-gradient-danger",    "text-danger"),
+            [FacturaAnulada]     = new("Factura Anulada",         "badge-dark",               "bg-gradient-dark",      "text-dark"),
         };
 
         public static string GetDescripcion(string? estado) =>

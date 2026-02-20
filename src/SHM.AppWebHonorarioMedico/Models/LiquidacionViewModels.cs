@@ -29,6 +29,7 @@ public class LiquidacionListViewModel
 public class LiquidacionItemViewModel
 {
     // Produccion
+    public int IdProduccion { get; set; }
     public string GuidRegistro { get; set; } = string.Empty;
     public string? CodigoProduccion { get; set; }
     public string? TipoProduccion { get; set; }
@@ -65,6 +66,9 @@ public class LiquidacionItemViewModel
     public string? Moneda { get; set; }
 
     public int Activo { get; set; }
+
+    // Archivo adjunto - Factura PDF
+    public string? GuidArchivoFactura { get; set; }
 }
 
 /// <summary>

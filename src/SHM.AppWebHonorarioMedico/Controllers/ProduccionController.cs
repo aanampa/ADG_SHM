@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
@@ -166,7 +167,7 @@ public class ProduccionController : Controller
 
             // Cargar archivos adjuntos para estados diferentes a FACTURA_PENDIENTE y FACTURA_SOLICITADA
             var archivos = new List<ArchivoAdjuntoViewModel>();
-            if (produccion.Estado != "FACTURA_PENDIENTE" && produccion.Estado != "FACTURA_SOLICITADA")
+            if (produccion.Estado != EstadoDescripcion.Produccion.FacturaPendiente && produccion.Estado != EstadoDescripcion.Produccion.FacturaSolicitada)
             {
                 var archivosComprobante = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
                 foreach (var ac in archivosComprobante.Where(a => a.Activo == 1))
@@ -278,7 +279,7 @@ public class ProduccionController : Controller
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
-                        Accion = "FACTURA_SOLICITADA",
+                        Accion = EstadoDescripcion.Produccion.FacturaSolicitada,
                         Descripcion = $"Factura Solicitada con fecha limite el {fechaFormateada} a las {solicitud.Hora} horas",
                         FechaAccion = DateTime.Now
                     };
@@ -331,7 +332,7 @@ public class ProduccionController : Controller
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
-                        Accion = "FACTURA_DEVUELTA",
+                        Accion = EstadoDescripcion.Produccion.FacturaDevuelta,
                         Descripcion = $"Se devolvio el comprobante de pago electrónico: {comprobante} para su subsanacion",
                         FechaAccion = DateTime.Now
                     };
@@ -384,7 +385,7 @@ public class ProduccionController : Controller
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
-                        Accion = "FACTURA_ACEPTADA",
+                        Accion = EstadoDescripcion.Produccion.FacturaAceptada,
                         Descripcion = $"Se acepto el comprobante de pago electrónico: {comprobante}",
                         FechaAccion = DateTime.Now
                     };
@@ -407,51 +408,15 @@ public class ProduccionController : Controller
         }
     }
 
-    /// <summary>
-    /// Descarga un archivo adjunto de comprobante.
-    /// Soporta almacenamiento dual: FILE (sistema de archivos) y BLOB (base de datos).
-    ///
-    /// <author>ADG Vladimir D</author>
-    /// <created>2025-01-22</created>
-    /// <modified>ADG Vladimir D - 2025-01-30 - Soporte dual FILE/BLOB</modified>
-    /// </summary>
-    [HttpGet]
-    public async Task<IActionResult> DescargarArchivo(string guid)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(guid))
-            {
-                return NotFound("Archivo no encontrado");
-            }
-
-            // Usar GetArchivoContenidoByGuidAsync que maneja tanto FILE como BLOB
-            var archivoContenido = await _archivoService.GetArchivoContenidoByGuidAsync(guid);
-            if (archivoContenido == null)
-            {
-                _logger.LogWarning("Archivo no encontrado o sin contenido: {Guid}", guid);
-                return NotFound("Archivo no encontrado");
-            }
-
-            // Para PDFs, mostrar inline en el navegador (visor embebido)
-            // Para otros archivos, forzar descarga
-            if (archivoContenido.Extension?.ToLower() == ".pdf")
-            {
-                Response.Headers.Append("Content-Disposition", $"inline; filename=\"{archivoContenido.NombreArchivo}\"");
-                return File(archivoContenido.Contenido, archivoContenido.ContentType ?? "application/pdf");
-            }
-
-            return File(
-                archivoContenido.Contenido,
-                archivoContenido.ContentType ?? "application/octet-stream",
-                archivoContenido.NombreArchivo);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al descargar archivo con GUID: {Guid}", guid);
-            return StatusCode(500, "Error al descargar el archivo");
-        }
-    }
+    // /// <summary>
+    // /// Redirige la descarga de archivos al controlador centralizado ArchivoController.
+    // /// Las vistas ahora invocan directamente a Archivo/Descargar.
+    // /// </summary>
+    // [HttpGet]
+    // public IActionResult DescargarArchivo(string guid)
+    // {
+    //     return RedirectToAction("Descargar", "Archivo", new { guid });
+    // }
 
     private int GetCurrentUserId()
     {
