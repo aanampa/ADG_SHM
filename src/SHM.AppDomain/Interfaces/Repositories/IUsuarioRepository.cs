@@ -62,9 +62,15 @@ public interface IUsuarioRepository
     Task<bool> UpdateTokenRecuperacionAsync(int idUsuario, string token, DateTime fechaExpiracion);
 
     /// <summary>
-    /// Actualiza la contrasena de un usuario.
+    /// Actualiza la contrasena de un usuario (reset por admin, marca como temporal).
     /// </summary>
     Task<bool> UpdatePasswordAsync(int idUsuario, string newPasswordHash);
+
+    /// <summary>
+    /// Actualiza la contrasena de un usuario y limpia el flag de password temporal.
+    /// Se usa cuando el propio usuario cambia su clave.
+    /// </summary>
+    Task<bool> UpdatePasswordCambioUsuarioAsync(int idUsuario, string newPasswordHash);
 
     /// <summary>
     /// Limpia el token de recuperacion de un usuario despues de su uso.

@@ -100,6 +100,32 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
+    // Middleware: Forzar cambio de clave si el password es temporal
+    app.Use(async (context, next) =>
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            var passwordTemporal = context.User.FindFirst("PasswordTemporal")?.Value;
+            if (passwordTemporal == "1")
+            {
+                var path = context.Request.Path.Value?.ToLower() ?? "";
+                // Permitir solo CambiarClave, Logout y archivos estaticos
+                if (!path.Contains("/auth/cambiarclave") &&
+                    !path.Contains("/auth/logout") &&
+                    !path.StartsWith("/vendor/") &&
+                    !path.StartsWith("/css/") &&
+                    !path.StartsWith("/js/") &&
+                    !path.StartsWith("/images/") &&
+                    !path.StartsWith("/lib/"))
+                {
+                    context.Response.Redirect("/Auth/CambiarClave");
+                    return;
+                }
+            }
+        }
+        await next();
+    });
+
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Auth}/{action=Login}/{id?}");

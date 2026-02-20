@@ -23,14 +23,14 @@
 ## Parametros
 - [x] Pantalla de configuracion de parametros globales
 
-## Usuarios Externos
+## Usuarios Externos/Internos
 - [x] Revisar envio de credenciales al crear un nuevo usuario
 - [x] Revisar reseteo de contraseña
 - [x] AA Asignar clave temporal
 
 ## Login
-- [ ] AA Manejo de encriptación de contraseña: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
-- [ ] AA Manejo de clave temporal
+- [x] AA Manejo de encriptación de contraseña: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+- [x] AA Manejo de clave temporal
 
 ## Interfaces
 - [ ] Recepcion de producciones
