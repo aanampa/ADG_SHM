@@ -194,7 +194,7 @@ public class LiquidacionController : Controller
                     NombreBanco = g.NombreBanco,
                     DesTipoProduccion = g.DesTipoProduccion,
                     Descripcion = g.Descripcion,
-                    Periodo = g.Periodo,
+                    PeriodoLiquidacion = g.PeriodoLiquidacion,
                     MtoTotal = g.MtoTotal,
                     CantidadFacturas = g.CantidadFacturas
                 }).ToList(),

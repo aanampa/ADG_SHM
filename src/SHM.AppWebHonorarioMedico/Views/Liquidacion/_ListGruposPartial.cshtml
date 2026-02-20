@@ -18,7 +18,7 @@
         <tbody>
             @if (Model.Items.Any())
             {
-                @foreach (var item in Model.Items)
+                @foreach (LiquidacionGrupoItemViewModel item in Model.Items)
                 {
                     <tr>
                         <td class="text-center">
@@ -31,7 +31,7 @@
                         <td>@(item.CodigoLiquidacion ?? "-")</td>
                         <td>@(item.Descripcion ?? "-")</td>
                         <td>@(item.DesTipoProduccion ?? "-")</td>
-                        <td>@(item.Periodo ?? "-")</td>
+                        <td>@(item.PeriodoLiquidacion ?? "-")</td>
                         <td>@(item.NombreBanco ?? "-")</td>
                         <td class="text-center">
                             <span class="badge badge-info">@item.CantidadFacturas</span>

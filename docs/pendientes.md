@@ -5,10 +5,10 @@
 
 ## Descarga de Archivos
 - [x] Crear controlador comun: ArchivoController
-- [ ] VD Usar controlador comun ArchivoController en produccion y liquidacion
+- [x] VD Usar controlador comun ArchivoController en produccion y liquidacion
 
 ## Orden de Pago
-- [ ] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
+- [x] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
 - [ ] AA Mostrar icono de descarga de factura (Crear controlador comun para descarga)
 - [ ] VD Registro en bitacora
 
@@ -18,7 +18,7 @@
 - [ ] AA Registro en bitacora
 
 ## Tesoreria
-- [ ] Crear modulo para tesoreria
+- [ ] VD Crear modulo para tesoreria
 
 ## Parametros
 - [x] Pantalla de configuracion de parametros globales
@@ -26,7 +26,7 @@
 ## Usuarios Externos
 - [x] Revisar envio de credenciales al crear un nuevo usuario
 - [x] Revisar reseteo de contraseña
-- [ ] AA Asignar clave temporal
+- [x] AA Asignar clave temporal
 
 ## Login
 - [ ] AA Manejo de encriptación de contraseña: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
