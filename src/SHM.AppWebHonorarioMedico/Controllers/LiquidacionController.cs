@@ -32,6 +32,7 @@ public class LiquidacionController : Controller
     private readonly IArchivoComprobanteService _archivoComprobanteService;
     private readonly IArchivoService _archivoService;
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
+    private readonly IBitacoraService _bitacoraService;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
@@ -44,7 +45,8 @@ public class LiquidacionController : Controller
         IPerfilAprobacionRepository perfilAprobacionRepository,
         IArchivoComprobanteService archivoComprobanteService,
         IArchivoService archivoService,
-        IOrdenPagoAprobacionService ordenPagoAprobacionService)
+        IOrdenPagoAprobacionService ordenPagoAprobacionService,
+        IBitacoraService bitacoraService)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
@@ -57,6 +59,7 @@ public class LiquidacionController : Controller
         _archivoComprobanteService = archivoComprobanteService;
         _archivoService = archivoService;
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
+        _bitacoraService = bitacoraService;
     }
 
     /// <summary>
@@ -194,7 +197,7 @@ public class LiquidacionController : Controller
                     NombreBanco = g.NombreBanco,
                     DesTipoProduccion = g.DesTipoProduccion,
                     Descripcion = g.Descripcion,
-                    Periodo = g.Periodo,
+                    PeriodoLiquidacion = g.PeriodoLiquidacion,
                     MtoTotal = g.MtoTotal,
                     CantidadFacturas = g.CantidadFacturas
                 }).ToList(),
@@ -420,6 +423,17 @@ public class LiquidacionController : Controller
 
             // Notificar al primer nivel de aprobacion
             await _ordenPagoAprobacionService.NotificarPrimerAprobadorAsync(idOrdenPago);
+
+            // Registrar en Bitacora
+            var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+            {
+                Entidad = "SHM_ORDEN_PAGO",
+                IdEntidad = idOrdenPago,
+                Accion = "APROBACION_PENDIENTE",
+                Descripcion = $"Se generó Orden de Pago: {numeroOrdenPago}",
+                FechaAccion = DateTime.Now
+            };
+            await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario.Value);
 
             _logger.LogInformation("Orden de pago {NumeroOrden} generada. ID: {Id}, Banco: {Banco}, Total: {Total}, Producciones actualizadas: {Count}",
                 numeroOrdenPago, idOrdenPago, request.IdBanco, mtoTotalAcum, idsProduccion.Count);

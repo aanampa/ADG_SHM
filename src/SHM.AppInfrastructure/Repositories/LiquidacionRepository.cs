@@ -263,7 +263,7 @@ public class LiquidacionRepository : ILiquidacionRepository
                 MAX(p.TIPO_RUBRO) AS TipoRubro,
                 MAX(tr.DESCRIPCION) AS DesTipoRubro,
                 MAX(p.DESCRIPCION_LIQUIDACION) AS Descripcion,
-                MAX(p.PERIODO) AS Periodo,
+                MAX(p.PERIODO_LIQUIDACION) AS PeriodoLiquidacion,
                 SUM(p.MTO_TOTAL) AS MtoTotal,
                 COUNT(p.ID_PRODUCCION) AS CantidadFacturas
             FROM SHM_PRODUCCION p

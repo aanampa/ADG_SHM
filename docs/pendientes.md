@@ -8,9 +8,9 @@
 - [x] VD Usar controlador comun ArchivoController en produccion y liquidacion
 
 ## Orden de Pago
-- [ ] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
+- [x] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
 - [ ] AA Mostrar icono de descarga de factura (Crear controlador comun para descarga)
-- [ ] VD Registro en bitacora
+- [x] VD Registro en bitacora
 
 ## Orden de Pago Aprobacion
 - [x] Notificacion para el segundo aprobador (segun rol jefe corporativo)
@@ -18,7 +18,7 @@
 - [ ] AA Registro en bitacora
 
 ## Tesoreria
-- [ ] Crear modulo para tesoreria
+- [ ] VD Crear modulo para tesoreria
 
 ## Parametros
 - [x] Pantalla de configuracion de parametros globales

@@ -20,19 +20,22 @@ public class OrdenPagoController : Controller
     private readonly IOrdenPagoLiquidacionService _ordenPagoLiquidacionService;
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
     private readonly IBancoService _bancoService;
+    private readonly IBitacoraService _bitacoraService;
 
     public OrdenPagoController(
        ILogger<OrdenPagoController> logger,
        IOrdenPagoService ordenPagoService,
        IOrdenPagoLiquidacionService ordenPagoLiquidacionService,
        IOrdenPagoAprobacionService ordenPagoAprobacionService,
-       IBancoService bancoService)
+       IBancoService bancoService,
+       IBitacoraService bitacoraService)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
         _ordenPagoLiquidacionService = ordenPagoLiquidacionService;
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
         _bancoService = bancoService;
+        _bitacoraService = bitacoraService;
     }
 
     /// <summary>
@@ -156,6 +159,10 @@ public class OrdenPagoController : Controller
             // Cargar detalle de liquidaciones (producciones por liquidacion)
             var detalleLiquidaciones = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
             ViewBag.DetalleLiquidaciones = detalleLiquidaciones.ToList();
+
+            // Cargar bitacora de la orden de pago
+            var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_ORDEN_PAGO", ordenPago.IdOrdenPago);
+            ViewBag.Bitacoras = bitacoras.ToList();
 
             return View(ordenPago);
         }

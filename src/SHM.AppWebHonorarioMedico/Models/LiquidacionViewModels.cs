@@ -99,7 +99,7 @@ public class LiquidacionGrupoItemViewModel
     public string? NombreBanco { get; set; }
     public string? DesTipoProduccion { get; set; }
     public string? Descripcion { get; set; }
-    public string? Periodo { get; set; }
+    public string? PeriodoLiquidacion { get; set; }
     public decimal? MtoTotal { get; set; }
     public int CantidadFacturas { get; set; }
 }

@@ -14,6 +14,8 @@ dotnet publish -c Release -o "C:\appweb\shmappapi" --runtime win-x64 --self-cont
 
 dotnet publish -c Release -o "D:\Fuentes SGD\ADG_HHMM v1\Deploy\shmappapi" --runtime win-x64 --self-contained false
 
+dotnet publish -c Release -o "D:\Fuentes SGD\ADG_HHMM v1\Deploy\hhmm_interno" --runtime win-x64 --self-contained false
+
 ```
 
 ## Iconos

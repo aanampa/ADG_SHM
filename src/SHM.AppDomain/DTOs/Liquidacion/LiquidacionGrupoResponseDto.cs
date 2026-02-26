@@ -28,7 +28,7 @@ public class LiquidacionGrupoResponseDto
 
     // ===== Descripcion y periodo =====
     public string? Descripcion { get; set; }
-    public string? Periodo { get; set; }
+    public string? PeriodoLiquidacion { get; set; }
 
     // ===== Totales agregados =====
     public decimal? MtoTotal { get; set; }
