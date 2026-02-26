@@ -10,7 +10,7 @@
 ## Orden de Pago
 - [x] VD Notificación cuando se envia a aprobar (segun rol jefe sede)
 - [ ] AA Mostrar icono de descarga de factura (Crear controlador comun para descarga)
-- [ ] VD Registro en bitacora
+- [x] VD Registro en bitacora
 
 ## Orden de Pago Aprobacion
 - [x] Notificacion para el segundo aprobador (segun rol jefe corporativo)
