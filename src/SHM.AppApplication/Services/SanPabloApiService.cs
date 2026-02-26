@@ -78,7 +78,7 @@ public class SanPabloApiService : ISanPabloApiService
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.PostAsync("/api/Usuario/Login", content);
+            var response = await _httpClient.PostAsync(_settings.EndpointLogin, content);
 
             _logger.LogInformation("- paso 2");
 
@@ -147,7 +147,7 @@ public class SanPabloApiService : ISanPabloApiService
                 codigoSede, tipoEntidad, codigoEntidad);
 
             // Construir URL con parametros
-            var url = $"/api/HHMM/v1/ObtenerEntidad?Codigo={Uri.EscapeDataString(codigoSede)}&flgCIAMedica={Uri.EscapeDataString(tipoEntidad)}&codigoEntidad={Uri.EscapeDataString(codigoEntidad)}";
+            var url = $"{_settings.EndpointObtenerEntidad}?Codigo={Uri.EscapeDataString(codigoSede)}&flgCIAMedica={Uri.EscapeDataString(tipoEntidad)}&codigoEntidad={Uri.EscapeDataString(codigoEntidad)}";
 
             _logger.LogDebug("GetEntidadMedicaAsync url: {url}", url);
 
@@ -219,6 +219,244 @@ public class SanPabloApiService : ISanPabloApiService
         {
             _logger.LogError(ex, "Error inesperado al consultar entidad medica en San Pablo");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene todas las sedes desde el API de San Pablo usando Codigo=X.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    public async Task<List<SanPabloSedeDto>> GetAllSedesAsync()
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("No se pudo obtener token para consultar todas las sedes");
+                return new List<SanPabloSedeDto>();
+            }
+
+            _logger.LogInformation("Consultando todas las sedes en San Pablo (Codigo=X)");
+
+            var url = $"{_settings.EndpointObtenerSede}?Codigo=X";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Error al consultar todas las sedes en San Pablo. StatusCode: {StatusCode}", response.StatusCode);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _cachedToken = null;
+                    _tokenExpiration = DateTime.MinValue;
+                }
+
+                return new List<SanPabloSedeDto>();
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Respuesta de todas las sedes: {Response}", responseContent);
+
+            var sedeResponse = JsonSerializer.Deserialize<SanPabloSedeResponseDto>(responseContent, _jsonOptions);
+
+            if (sedeResponse?.IsSuccess == true && sedeResponse.Data != null)
+            {
+                _logger.LogInformation("Se obtuvieron {Count} sedes desde API San Pablo", sedeResponse.Data.Count);
+                return sedeResponse.Data;
+            }
+
+            _logger.LogWarning("No se obtuvieron sedes desde API San Pablo. Message: {Message}", sedeResponse?.Message);
+            return new List<SanPabloSedeDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error de conexion al consultar todas las sedes en San Pablo");
+            return new List<SanPabloSedeDto>();
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout al consultar todas las sedes en San Pablo");
+            return new List<SanPabloSedeDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al consultar todas las sedes en San Pablo");
+            return new List<SanPabloSedeDto>();
+        }
+    }
+
+    /// <summary>
+    /// Obtiene los datos de una sede desde el API de San Pablo.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    public async Task<SanPabloSedeDto?> GetSedeAsync(string codigo)
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("No se pudo obtener token para consultar sede");
+                return null;
+            }
+
+            _logger.LogInformation("Consultando sede en San Pablo. Codigo: {Codigo}", codigo);
+
+            var url = $"{_settings.EndpointObtenerSede}?Codigo={Uri.EscapeDataString(codigo)}";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Error al consultar sede en San Pablo. StatusCode: {StatusCode}", response.StatusCode);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _cachedToken = null;
+                    _tokenExpiration = DateTime.MinValue;
+                }
+
+                return null;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Respuesta de sede: {Response}", responseContent);
+
+            var sedeResponse = JsonSerializer.Deserialize<SanPabloSedeResponseDto>(responseContent, _jsonOptions);
+
+            if (sedeResponse?.IsSuccess == true && sedeResponse.Data != null && sedeResponse.Data.Count > 0)
+            {
+                var sede = sedeResponse.Data.FirstOrDefault(s =>
+                    s.CODIGO?.Equals(codigo, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (sede != null)
+                {
+                    _logger.LogInformation("Sede encontrada en San Pablo. Codigo: {Codigo}, Descripcion: {Descripcion}",
+                        sede.CODIGO, sede.DESCRIPCION);
+                    return sede;
+                }
+
+                sede = sedeResponse.Data.First();
+                _logger.LogInformation("Sede encontrada en San Pablo (primer resultado). Codigo: {Codigo}, Descripcion: {Descripcion}",
+                    sede.CODIGO, sede.DESCRIPCION);
+                return sede;
+            }
+
+            _logger.LogWarning("Sede no encontrada en San Pablo. Codigo: {Codigo}, Message: {Message}",
+                codigo, sedeResponse?.Message);
+            return null;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error de conexion al consultar sede en San Pablo");
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout al consultar sede en San Pablo");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al consultar sede en San Pablo");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Registra un comprobante en el API de San Pablo.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    public async Task<SanPabloComprobanteResponseDto> RegistrarComprobanteAsync(SanPabloComprobanteRequestDto request)
+    {
+        var errorResponse = new SanPabloComprobanteResponseDto { IsSuccess = false };
+
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("No se pudo obtener token para registrar comprobante");
+                errorResponse.Message = "No se pudo obtener token de autenticacion";
+                return errorResponse;
+            }
+
+            _logger.LogInformation(
+                "Registrando comprobante en San Pablo. Sede: {Sede}, Entidad: {Entidad}, Produccion: {Produccion}, Serie: {Serie}, Numero: {Numero}",
+                request.COD_SEDE, request.COD_ENTIDAD, request.COD_PROD, request.CPM_SERIE, request.CPM_NUMERO);
+
+            var jsonContent = new StringContent(
+                JsonSerializer.Serialize(request, _jsonOptions),
+                Encoding.UTF8,
+                "application/json");
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _settings.EndpointRegistrarComprobante);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            httpRequest.Content = jsonContent;
+
+            var response = await _httpClient.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Error al registrar comprobante en San Pablo. StatusCode: {StatusCode}", response.StatusCode);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _cachedToken = null;
+                    _tokenExpiration = DateTime.MinValue;
+                }
+
+                errorResponse.Message = $"Error HTTP {(int)response.StatusCode}: {response.StatusCode}";
+                return errorResponse;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Respuesta de registrar comprobante: {Response}", responseContent);
+
+            var comprobanteResponse = JsonSerializer.Deserialize<SanPabloComprobanteResponseDto>(responseContent, _jsonOptions);
+
+            if (comprobanteResponse != null)
+            {
+                _logger.LogInformation(
+                    "Respuesta de registrar comprobante. IsSuccess: {IsSuccess}, Title: {Title}, Message: {Message}",
+                    comprobanteResponse.IsSuccess, comprobanteResponse.Title, comprobanteResponse.Message);
+                return comprobanteResponse;
+            }
+
+            errorResponse.Message = "No se pudo deserializar la respuesta del API";
+            return errorResponse;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error de conexion al registrar comprobante en San Pablo");
+            errorResponse.Message = $"Error de conexion: {ex.Message}";
+            return errorResponse;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout al registrar comprobante en San Pablo");
+            errorResponse.Message = "Timeout al conectar con API San Pablo";
+            return errorResponse;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al registrar comprobante en San Pablo");
+            errorResponse.Message = $"Error inesperado: {ex.Message}";
+            return errorResponse;
         }
     }
 }

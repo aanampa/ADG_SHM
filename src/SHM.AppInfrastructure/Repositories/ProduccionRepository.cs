@@ -879,4 +879,103 @@ public class ProduccionRepository : IProduccionRepository
 
         return rowsAffected > 0;
     }
+
+    /// <summary>
+    /// Actualiza el estado de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_SEDE = :IdSede
+            AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND CODIGO_PRODUCCION = :CodigoProduccion
+            AND ((:NumeroProduccion IS NULL AND NUMERO_PRODUCCION IS NULL) OR NUMERO_PRODUCCION = :NumeroProduccion)
+            AND ((:TipoEntidadMedica IS NULL AND TIPO_ENTIDAD_MEDICA IS NULL) OR TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica)";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdSede = idSede,
+            IdEntidadMedica = idEntidadMedica,
+            CodigoProduccion = codigoProduccion,
+            NumeroProduccion = numeroProduccion,
+            TipoEntidadMedica = tipoEntidadMedica,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Anula el comprobante de una produccion por llave compuesta.
+    /// Limpia campos de comprobante y asigna el estado indicado.
+    /// Retorna el IdProduccion si se actualizo, null si no se encontro.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    public async Task<int?> AnularComprobanteByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET SERIE = NULL,
+                NUMERO = NULL,
+                FECHA_EMISION = NULL,
+                GLOSA = NULL,
+                ESTADO_COMPROBANTE = NULL,
+                FACTURA_FECHA_SOLICITUD = NULL,
+                FACTURA_FECHA_ENVIO = NULL,
+                FACTURA_FECHA_ACEPTACION = NULL,
+                ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_SEDE = :IdSede
+            AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND CODIGO_PRODUCCION = :CodigoProduccion
+            AND ((:NumeroProduccion IS NULL AND NUMERO_PRODUCCION IS NULL) OR NUMERO_PRODUCCION = :NumeroProduccion)
+            AND ((:TipoEntidadMedica IS NULL AND TIPO_ENTIDAD_MEDICA IS NULL) OR TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica)
+            RETURNING ID_PRODUCCION INTO :IdProduccion";
+
+        var param = new DynamicParameters();
+        param.Add("IdSede", idSede);
+        param.Add("IdEntidadMedica", idEntidadMedica);
+        param.Add("CodigoProduccion", codigoProduccion);
+        param.Add("NumeroProduccion", numeroProduccion);
+        param.Add("TipoEntidadMedica", tipoEntidadMedica);
+        param.Add("Estado", estado);
+        param.Add("IdModificador", idModificador);
+        param.Add("IdProduccion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
+
+        var rowsAffected = await connection.ExecuteAsync(sql, param);
+
+        if (rowsAffected > 0)
+            return param.Get<int>("IdProduccion");
+
+        return null;
+    }
 }

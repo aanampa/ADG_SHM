@@ -29,6 +29,7 @@ public static class EstadoDescripcion
         public const string FacturaPagada      = "FACTURA_PAGADA";
         public const string FacturaDevuelta    = "FACTURA_DEVUELTA";
         public const string FacturaAnulada     = "FACTURA_ANULADA";
+        public const string ProduccionAnulada     = "PRODUCCION_ANULADA";
 
         private static readonly Dictionary<string, EstadoInfo> _estados = new()
         {
@@ -42,6 +43,7 @@ public static class EstadoDescripcion
             [FacturaPagada]      = new("Factura Pagada",          "badge-estado-pagada",      "bg-gradient-success",   "text-success"),
             [FacturaDevuelta]    = new("Factura Devuelta",        "badge-estado-devuelta",    "bg-gradient-danger",    "text-danger"),
             [FacturaAnulada]     = new("Factura Anulada",         "badge-dark",               "bg-gradient-dark",      "text-dark"),
+            [ProduccionAnulada]  = new("Producción Anulada",      "badge-dark",               "bg-gradient-dark",      "text-dark"),
         };
 
         public static string GetDescripcion(string? estado) =>
