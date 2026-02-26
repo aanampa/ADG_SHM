@@ -8,6 +8,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado metodo UpdateLiquidacionesAsync</modified>
+/// <modified>ADG Antonio - 2026-02-25 - Agregado metodo SyncSedesFromApiAsync</modified>
 /// </summary>
 public interface IProduccionInterfaceService
 {
@@ -24,4 +25,14 @@ public interface IProduccionInterfaceService
     /// Busca por llave compuesta (CodigoSede, CodigoEntidad, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
     /// </summary>
     Task<InterfaceProduccionResultDto> UpdateLiquidacionesAsync(IEnumerable<UpdateInterfaceLiquidacionDto> updateDtos, int idModificador);
+
+    /// <summary>
+    /// Sincroniza todas las sedes desde el API de San Pablo.
+    /// Consulta con Codigo=X y registra las que no existan localmente.
+    /// Retorna la cantidad de sedes nuevas registradas.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    Task<int> SyncSedesFromApiAsync(int idCreador);
 }

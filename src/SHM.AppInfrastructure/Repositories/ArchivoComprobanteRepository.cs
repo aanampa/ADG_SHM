@@ -240,4 +240,25 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
 
         return count > 0;
     }
+
+    /// <summary>
+    /// Desactiva todos los archivos comprobantes asociados a una produccion.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    public async Task<int> DeactivateByProduccionIdAsync(int idProduccion, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_ARCHIVO_COMPROBANTE
+            SET ACTIVO = 0,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_PRODUCCION = :IdProduccion
+            AND ACTIVO = 1";
+
+        return await connection.ExecuteAsync(sql, new { IdProduccion = idProduccion, IdModificador = idModificador });
+    }
 }

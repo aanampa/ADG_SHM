@@ -157,4 +157,37 @@ public interface IProduccionRepository
         string? tipoLiquidacion,
         int idModificador);
 
+    /// <summary>
+    /// Actualiza el estado de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    Task<bool> UpdateEstadoByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador);
+
+    /// <summary>
+    /// Anula el comprobante de una produccion por llave compuesta.
+    /// Limpia Serie, Numero, FechaEmision, Glosa, EstadoComprobante,
+    /// FacturaFechaSolicitud, FacturaFechaEnvio, FacturaFechaAceptacion
+    /// y asigna el estado indicado.
+    /// Retorna el IdProduccion si se actualizo, null si no se encontro.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    Task<int?> AnularComprobanteByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador);
 }

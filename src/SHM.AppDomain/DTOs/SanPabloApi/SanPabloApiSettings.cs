@@ -13,4 +13,8 @@ public class SanPabloApiSettings
     public string Usuario { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public int TimeoutSeconds { get; set; } = 30;
+    public string EndpointLogin { get; set; } = "/api/Usuario/Login";
+    public string EndpointObtenerEntidad { get; set; } = "/api/HHMM/v1/ObtenerEntidad";
+    public string EndpointObtenerSede { get; set; } = "/api/HHMM/v1/ObtenerSede";
+    public string EndpointRegistrarComprobante { get; set; } = "/api/HHMM/v1/RegistrarComprobante";
 }

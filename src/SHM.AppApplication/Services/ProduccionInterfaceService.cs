@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Transactions;
 using Microsoft.Extensions.Logging;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.EntidadMedica;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
@@ -20,6 +21,8 @@ namespace SHM.AppApplication.Services;
 /// <modified>ADG Antonio - 2026-01-31 - Nueva llave compuesta, quitado Concepto y liquidacion, formato fecha dd/MM/yyyy HH:mm:ss</modified>
 /// <modified>ADG Antonio - 2026-02-02 - Auto-registro de entidades medicas desde API San Pablo</modified>
 /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro, sin abortar ante errores individuales</modified>
+/// <modified>ADG Antonio - 2026-02-24 - Auto-registro de sedes desde API San Pablo</modified>
+/// <modified>ADG Antonio - 2026-02-25 - Anulacion de comprobante (EstadoProduccion=9)</modified>
 /// </summary>
 public class ProduccionInterfaceService : IProduccionInterfaceService
 {
@@ -27,6 +30,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     private readonly ISedeRepository _sedeRepository;
     private readonly IEntidadMedicaRepository _entidadMedicaRepository;
     private readonly IEntidadMedicaService _entidadMedicaService;
+    private readonly IArchivoComprobanteRepository _archivoComprobanteRepository;
     private readonly ISanPabloApiService _sanPabloApiService;
     private readonly ILogger<ProduccionInterfaceService> _logger;
 
@@ -35,6 +39,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         ISedeRepository sedeRepository,
         IEntidadMedicaRepository entidadMedicaRepository,
         IEntidadMedicaService entidadMedicaService,
+        IArchivoComprobanteRepository archivoComprobanteRepository,
         ISanPabloApiService sanPabloApiService,
         ILogger<ProduccionInterfaceService> logger)
     {
@@ -42,6 +47,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         _sedeRepository = sedeRepository;
         _entidadMedicaRepository = entidadMedicaRepository;
         _entidadMedicaService = entidadMedicaService;
+        _archivoComprobanteRepository = archivoComprobanteRepository;
         _sanPabloApiService = sanPabloApiService;
         _logger = logger;
     }
@@ -58,8 +64,13 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         var result = new InterfaceProduccionResultDto();
         var dtosList = createDtos.ToList();
 
+        // Sincronizar sedes desde API San Pablo antes de procesar
+        await SyncSedesFromApiAsync(idCreador);
+
+
         foreach (var createDto in dtosList)
         {
+
             var detalle = new InterfaceProduccionDetalleDto
             {
                 CodigoSede = createDto.CodigoSede,
@@ -70,15 +81,36 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
 
             try
             {
-                // Obtener IdSede a partir del CodigoSede
-                var sede = await _sedeRepository.GetByCodigoAsync(createDto.CodigoSede);
-                if (sede == null)
+                // Solo se aceptan producciones con EstadoProduccion 0 (anular produccion), 2 (crear) o 9 (anular comprobante)
+                if (createDto.EstadoProduccion != "0" && createDto.EstadoProduccion != "2" && createDto.EstadoProduccion != "9")
                 {
                     detalle.Estado = "ER";
-                    detalle.Mensaje = $"Sede con codigo '{createDto.CodigoSede}' no encontrada";
+                    detalle.Mensaje = $"EstadoProduccion '{createDto.EstadoProduccion}' no valido. Solo se acepta 0 (anular produccion), 2 (crear) o 9 (anular comprobante)";
                     result.CantidadErrores++;
                     result.Detalle.Add(detalle);
                     continue;
+                }
+
+                // Obtener IdSede a partir del CodigoSede
+                var sede = await _sedeRepository.GetByCodigoAsync(createDto.CodigoSede);
+
+                // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
+                if (sede == null)
+                {
+                    _logger.LogInformation(
+                        "Sede '{CodigoSede}' no encontrada localmente. Consultando API San Pablo...",
+                        createDto.CodigoSede);
+
+                    sede = await GetOrCreateSedeFromApiAsync(createDto.CodigoSede, idCreador);
+
+                    if (sede == null)
+                    {
+                        detalle.Estado = "ER";
+                        detalle.Mensaje = $"Sede con codigo '{createDto.CodigoSede}' no encontrada localmente ni en el API de San Pablo";
+                        result.CantidadErrores++;
+                        result.Detalle.Add(detalle);
+                        continue;
+                    }
                 }
 
                 // Obtener IdEntidadMedica a partir del CodigoEntidad
@@ -105,6 +137,78 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                         result.Detalle.Add(detalle);
                         continue;
                     }
+                }
+
+                // Si EstadoProduccion = 0, anular la produccion existente
+                if (createDto.EstadoProduccion == "0")
+                {
+                    var existeParaAnular = await _produccionRepository.ExistsByKeyAsync(
+                        sede.IdSede,
+                        entidadMedica.IdEntidadMedica,
+                        createDto.CodigoProduccion,
+                        createDto.NumeroProduccion,
+                        createDto.TipoEntidadMedica);
+
+                    if (existeParaAnular)
+                    {
+                        var anulado = await _produccionRepository.UpdateEstadoByKeyAsync(
+                            sede.IdSede,
+                            entidadMedica.IdEntidadMedica,
+                            createDto.CodigoProduccion,
+                            createDto.NumeroProduccion,
+                            createDto.TipoEntidadMedica,
+                            EstadoDescripcion.Produccion.ProduccionAnulada,
+                            idCreador);
+
+                        detalle.Estado = anulado ? "OK" : "ER";
+                        detalle.Mensaje = anulado ? "Produccion anulada exitosamente" : "No se pudo anular la produccion";
+                        if (anulado)
+                            result.CantidadCreados++;
+                        else
+                            result.CantidadErrores++;
+                    }
+                    else
+                    {
+                        detalle.Estado = "OK";
+                        detalle.Mensaje = "Produccion a anular no encontrada, obviado";
+                        result.CantidadObviados++;
+                    }
+
+                    result.Detalle.Add(detalle);
+                    continue;
+                }
+
+                // Si EstadoProduccion = 9, anular comprobante de la produccion existente
+                if (createDto.EstadoProduccion == "9")
+                {
+                    var idProduccion = await _produccionRepository.AnularComprobanteByKeyAsync(
+                        sede.IdSede,
+                        entidadMedica.IdEntidadMedica,
+                        createDto.CodigoProduccion,
+                        createDto.NumeroProduccion,
+                        createDto.TipoEntidadMedica,
+                        EstadoDescripcion.Produccion.FacturaPendiente,
+                        idCreador);
+
+                    if (idProduccion.HasValue)
+                    {
+                        // Desactivar archivos comprobantes asociados
+                        var archivosDesactivados = await _archivoComprobanteRepository.DeactivateByProduccionIdAsync(
+                            idProduccion.Value, idCreador);
+
+                        detalle.Estado = "OK";
+                        detalle.Mensaje = $"Comprobante anulado exitosamente. {archivosDesactivados} archivo(s) desactivado(s)";
+                        result.CantidadCreados++;
+                    }
+                    else
+                    {
+                        detalle.Estado = "OK";
+                        detalle.Mensaje = "Produccion para anular comprobante no encontrada, obviado";
+                        result.CantidadObviados++;
+                    }
+
+                    result.Detalle.Add(detalle);
+                    continue;
                 }
 
                 // Verificar si ya existe por llave compuesta
@@ -152,6 +256,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     Periodo = createDto.Periodo,
                     FechaProduccion = fechaProduccion,
                     EstadoProduccion = createDto.EstadoProduccion,
+                    Estado = EstadoDescripcion.Produccion.FacturaPendiente,
                     MtoConsumo = createDto.MtoConsumo,
                     MtoDescuento = createDto.MtoDescuento,
                     MtoSubtotal = createDto.MtoSubtotal,
@@ -306,6 +411,129 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Sincroniza todas las sedes desde el API de San Pablo.
+    /// Consulta con Codigo=X para obtener las 32 sedes y registra las que no existan localmente.
+    /// Retorna la cantidad de sedes nuevas registradas.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// <modified>ADG Antonio - 2026-02-25 - Cambiado a publico para uso desde SedeInterfaceController</modified>
+    /// </summary>
+    public async Task<int> SyncSedesFromApiAsync(int idCreador)
+    {
+        try
+        {
+            var sedesApi = await _sanPabloApiService.GetAllSedesAsync();
+
+            if (sedesApi.Count == 0)
+            {
+                _logger.LogWarning("No se obtuvieron sedes desde API San Pablo para sincronizar");
+                return 0;
+            }
+
+            _logger.LogInformation("Sincronizando {Count} sedes desde API San Pablo", sedesApi.Count);
+
+            int sedesCreadas = 0;
+            foreach (var sedeApi in sedesApi)
+            {
+                if (string.IsNullOrEmpty(sedeApi.CODIGO))
+                    continue;
+
+                // Verificar si ya existe localmente
+                var sedeLocal = await _sedeRepository.GetByCodigoAsync(sedeApi.CODIGO);
+                if (sedeLocal != null)
+                    continue;
+
+                // Registrar sede nueva
+                var sede = new Sede
+                {
+                    Codigo = sedeApi.CODIGO,
+                    Nombre = sedeApi.DESCRIPCION,
+                    Activo = 1,
+                    IdCreador = idCreador
+                };
+
+                var idSede = await _sedeRepository.CreateAsync(sede);
+                if (idSede > 0)
+                {
+                    sedesCreadas++;
+                    _logger.LogInformation("Sede sincronizada. ID: {Id}, Codigo: {Codigo}, Nombre: {Nombre}",
+                        idSede, sedeApi.CODIGO, sedeApi.DESCRIPCION);
+                }
+            }
+
+            if (sedesCreadas > 0)
+                _logger.LogInformation("Sincronizacion de sedes completada. {Count} sedes nuevas registradas", sedesCreadas);
+            else
+                _logger.LogDebug("Sincronizacion de sedes completada. Todas las sedes ya existian localmente");
+
+            return sedesCreadas;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al sincronizar sedes desde API San Pablo");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene una sede del API de San Pablo y la registra localmente si no existe.
+    ///
+    /// Mapeo de campos API San Pablo -> SHM:
+    /// - CODIGO -> CODIGO (Codigo)
+    /// - DESCRIPCION -> NOMBRE (Nombre)
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    private async Task<Sede?> GetOrCreateSedeFromApiAsync(string codigoSede, int idCreador)
+    {
+        try
+        {
+            var sedeApi = await _sanPabloApiService.GetSedeAsync(codigoSede);
+
+            if (sedeApi == null)
+            {
+                _logger.LogWarning("Sede '{CodigoSede}' no encontrada en API San Pablo", codigoSede);
+                return null;
+            }
+
+            _logger.LogInformation(
+                "Registrando nueva sede desde API San Pablo. Codigo: {Codigo}, Descripcion: {Descripcion}",
+                sedeApi.CODIGO, sedeApi.DESCRIPCION);
+
+            var sede = new Sede
+            {
+                Codigo = sedeApi.CODIGO ?? codigoSede,
+                Nombre = sedeApi.DESCRIPCION,
+                Activo = 1,
+                IdCreador = idCreador
+            };
+
+            var idSede = await _sedeRepository.CreateAsync(sede);
+
+            if (idSede <= 0)
+            {
+                _logger.LogError("Error al crear sede localmente. Codigo: {Codigo}", codigoSede);
+                return null;
+            }
+
+            _logger.LogInformation(
+                "Sede registrada exitosamente. ID: {Id}, Codigo: {Codigo}",
+                idSede, sede.Codigo);
+
+            return await _sedeRepository.GetByIdAsync(idSede);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error al obtener/crear sede desde API San Pablo. Codigo: {CodigoSede}",
+                codigoSede);
+            return null;
+        }
     }
 
     /// <summary>
