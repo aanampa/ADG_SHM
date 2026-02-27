@@ -1,5 +1,3 @@
-using System.Text.Json;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NLog;
 using NLog.Web;
 using SHM.AppApplication.Services;
@@ -9,6 +7,7 @@ using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
 using SHM.AppInfrastructure.HealthChecks;
 using SHM.AppInfrastructure.Repositories;
+using System.Text.Json;
 
 // Configurar NLog temprano para capturar todos los errores de inicio
 //var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
@@ -85,6 +84,11 @@ try
     builder.Services.AddScoped<IPerfilAprobacionService, PerfilAprobacionService>();
     builder.Services.AddScoped<IPerfilAprobacionUsuarioRepository, PerfilAprobacionUsuarioRepository>();
     builder.Services.AddScoped<IPerfilAprobacionUsuarioService, PerfilAprobacionUsuarioService>();
+
+    builder.Services.AddScoped<IEmailService, EmailService>();
+    builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
+    builder.Services.AddScoped<IArchivoComprobanteRepository, ArchivoComprobanteRepository>();
+    
 
     // Configuracion del API externo de San Pablo
     builder.Services.Configure<SanPabloApiSettings>(
