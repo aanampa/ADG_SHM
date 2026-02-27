@@ -7,6 +7,7 @@ using SHM.AppDomain.DTOs.Archivo;
 using SHM.AppDomain.DTOs.ArchivoComprobante;
 using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.DTOs.Produccion;
+using SHM.AppDomain.DTOs.SanPabloApi;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebCompaniaMedica.Models;
 using SHM.AppWebCompaniaMedica.Services;
@@ -28,6 +29,7 @@ public class FacturasController : BaseController
     private readonly IConfiguration _configuration;
     private readonly FacturaXmlParserService _facturaXmlParserService;
     private readonly RheXmlParserService _rheXmlParserService;
+    private readonly ISanPabloApiService _sanPabloApiService;
 
     public FacturasController(
         IProduccionService produccionService,
@@ -42,7 +44,8 @@ public class FacturasController : BaseController
         ILogger<FacturasController> logger,
         IConfiguration configuration,
         FacturaXmlParserService facturaXmlParserService,
-        RheXmlParserService rheXmlParserService)
+        RheXmlParserService rheXmlParserService,
+        ISanPabloApiService sanPabloApiService)
     {
         _produccionService = produccionService;
         _sedeService = sedeService;
@@ -57,6 +60,7 @@ public class FacturasController : BaseController
         _configuration = configuration;
         _facturaXmlParserService = facturaXmlParserService;
         _rheXmlParserService = rheXmlParserService;
+        _sanPabloApiService = sanPabloApiService;
     }
 
     // GET: Facturas/Pendientes
@@ -866,14 +870,14 @@ public class FacturasController : BaseController
             }
 
             var partes = numeroFactura.Split('-');
-            var serieXml = partes[0];
-            var numeroXml = partes[1];
+            var serieUsuario = partes[0];
+            var numeroFormateado = partes[1];
 
             // Formatear numero a 8 digitos con ceros a la izquierda
-            var numeroXmlOriginal = numeroXml;
-            if (int.TryParse(numeroXml, out var numeroInt))
+            var numeroFormateadoOriginal = numeroFormateado;
+            if (int.TryParse(numeroFormateado, out var numeroInt))
             {
-                numeroXml = numeroInt.ToString("D8");
+                numeroFormateado = numeroInt.ToString("D8");
             }
 
             // // Validar que los datos del formulario coincidan con los del XML
@@ -900,22 +904,22 @@ public class FacturasController : BaseController
             // }
 
             // // Validar serie
-            // if (!string.Equals(serie?.Trim(), serieXml?.Trim(), StringComparison.OrdinalIgnoreCase))
+            // if (!string.Equals(serie?.Trim(), serieUsuario?.Trim(), StringComparison.OrdinalIgnoreCase))
             // {
-            //     erroresCoincidencia.Add($"Serie: formulario='{serie}', XML='{serieXml}'");
+            //     erroresCoincidencia.Add($"Serie: formulario='{serie}', XML='{serieUsuario}'");
             // }
 
             // // Validar numero (comparar valores numericos para evitar problemas con ceros)
-            // if (int.TryParse(numero, out var numeroFormulario) && int.TryParse(numeroXmlOriginal, out var numeroXmlInt))
+            // if (int.TryParse(numero, out var numeroFormulario) && int.TryParse(numeroFormateadoOriginal, out var numeroFormateadoInt))
             // {
-            //     if (numeroFormulario != numeroXmlInt)
+            //     if (numeroFormulario != numeroFormateadoInt)
             //     {
-            //         erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
+            //         erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroFormateadoOriginal}'");
             //     }
             // }
-            // else if (numero?.Trim() != numeroXmlOriginal?.Trim())
+            // else if (numero?.Trim() != numeroFormateadoOriginal?.Trim())
             // {
-            //     erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroXmlOriginal}'");
+            //     erroresCoincidencia.Add($"Numero: formulario='{numero}', XML='{numeroFormateadoOriginal}'");
             // }
 
             // Validar concepto contra descripcion del primer item del XML (si el parametro lo requiere)
@@ -948,10 +952,10 @@ public class FacturasController : BaseController
             var usarBlobStorage = tipoAlmacenamientoParam?.ToUpper() == "BLOB";
 
             // Preparar nombres de archivos usando serie y numero del XML
-            var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
-            var xmlFileName = $"{serieXml}-{numeroXml}.xml";
+            var pdfFileName = $"{serieUsuario}-{numeroFormateado}.pdf";
+            var xmlFileName = $"{serieUsuario}-{numeroFormateado}.xml";
             var cdrExtension = archivoCdr != null ? Path.GetExtension(archivoCdr.FileName) : "";
-            var cdrFileName = archivoCdr != null ? $"{serieXml}-{numeroXml}-cdr{cdrExtension}" : null;
+            var cdrFileName = archivoCdr != null ? $"{serieUsuario}-{numeroFormateado}-cdr{cdrExtension}" : null;
 
             // Variables para contenido BLOB (solo se usan si usarBlobStorage = true)
             byte[]? pdfContent = null;
@@ -1023,7 +1027,7 @@ public class FacturasController : BaseController
                 }
 
                 // Guardar datos del XML parseado en archivo JSON (solo en modo FILE)
-                var jsonFileName = $"{serieXml}-{numeroXml}.json";
+                var jsonFileName = $"{serieUsuario}-{numeroFormateado}.json";
                 var jsonPath = Path.Combine(uploadPath, jsonFileName);
                 var jsonOptions = new JsonSerializerOptions
                 {
@@ -1126,22 +1130,22 @@ public class FacturasController : BaseController
                 }, userId);
             }
 
-            // Actualizar producción con datos del XML
-            DateTime? fechaEmisionParaActualizar = null;
-            if (DateTime.TryParse(facturaData.DatosGenerales.FechaEmision, out var fechaParsedUpdate))
+            // Formatear numero del usuario a 8 digitos
+            var numeroUsuarioFormateado = numero;
+            if (int.TryParse(numero, out var numUsuarioInt))
             {
-                fechaEmisionParaActualizar = fechaParsedUpdate;
+                numeroUsuarioFormateado = numUsuarioInt.ToString("D8");
             }
 
-            var glosaPrimerItem = facturaData.DetalleItems[0].Descripcion?.Trim();
+            // Actualizar produccion con datos del formulario (ingresados por el usuario)
             var updateDto = new UpdateProduccionDto
             {
-                TipoComprobante = facturaData.DatosGenerales.CodigoTipoDocumento,
-                Serie = serieXml,
-                Numero = numeroXml,
-                FechaEmision = fechaEmisionParaActualizar ?? fechaEmision,
+                TipoComprobante = tipoComprobante,
+                Serie = serie,
+                Numero = numeroUsuarioFormateado,
+                FechaEmision = fechaEmision,
                 EstadoComprobante = "ENVIADO",
-                Glosa = glosaPrimerItem,
+                Glosa = produccion.Concepto,
                 Estado = EstadoDescripcion.Produccion.FacturaEnviada,
                 FacturaFechaEnvio = DateTime.Now,
                 IdCuentaBanco = idCuentaBanco
@@ -1154,7 +1158,7 @@ public class FacturasController : BaseController
                 throw new InvalidOperationException("Error al actualizar la producción");
             }
 
-            // Registrar en bitácora
+            // Registrar en bitacora
             await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
             {
                 Entidad = "SHM_PRODUCCION",
@@ -1164,8 +1168,15 @@ public class FacturasController : BaseController
                 FechaAccion = DateTime.Now
             }, userId);
 
-            // Confirmar transacción
+            // Confirmar transaccion
             transactionScope.Complete();
+
+            // Informar al sistema externo (San Pablo) si el parametro lo indica
+            var enviaHhmm = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_ENVIA_HHMM");
+            if (enviaHhmm?.ToUpper() == "S")
+            {
+                await RegistrarComprobanteEnSanPabloAsync(produccion, serie, numeroUsuarioFormateado, tipoComprobante, fechaEmision, produccion.Concepto);
+            }
 
             return Json(new { success = true, message = "Factura enviada exitosamente" });
         }
@@ -1599,8 +1610,28 @@ public class FacturasController : BaseController
             var metadata = metadataDoc.RootElement;
 
             var guidRegistro = metadata.GetProperty("GuidRegistro").GetString() ?? "";
+            var tipoComprobanteUsuario = metadata.GetProperty("TipoComprobante").GetString() ?? "";
+            var serieUsuario = metadata.GetProperty("Serie").GetString() ?? "";
+            var numeroUsuario = metadata.GetProperty("Numero").GetString() ?? "";
             var cdrExtension = metadata.TryGetProperty("CdrExtension", out var cdrExtProp) ? cdrExtProp.GetString() ?? ".zip" : ".zip";
             var tieneCdr = metadata.TryGetProperty("TieneCdr", out var tieneCdrProp) && tieneCdrProp.GetBoolean();
+
+            // Leer fecha de emision del formulario (datos del usuario)
+            DateTime? fechaEmisionUsuario = null;
+            if (metadata.TryGetProperty("FechaEmision", out var fechaEmisionMeta))
+            {
+                if (DateTime.TryParse(fechaEmisionMeta.GetString(), out var fechaParsedMeta))
+                {
+                    fechaEmisionUsuario = fechaParsedMeta;
+                }
+            }
+
+            // Formatear numero a 8 digitos
+            var numeroFormateado = numeroUsuario;
+            if (int.TryParse(numeroUsuario, out var numInt))
+            {
+                numeroFormateado = numInt.ToString("D8");
+            }
 
             // Obtener produccion
             var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
@@ -1677,31 +1708,14 @@ public class FacturasController : BaseController
                 }
             }
 
-            // Extraer serie y numero del XML
-            var numeroFactura = facturaData.DatosGenerales.NumeroFactura;
-            if (string.IsNullOrEmpty(numeroFactura) || !numeroFactura.Contains('-'))
-            {
-                return Json(new { success = false, message = "El XML no contiene un número de factura válido" });
-            }
-
-            var partes = numeroFactura.Split('-');
-            var serieXml = partes[0];
-            var numeroXml = partes[1];
-
-            // Formatear numero a 8 digitos
-            if (int.TryParse(numeroXml, out var numeroInt))
-            {
-                numeroXml = numeroInt.ToString("D8");
-            }
-
             // Determinar tipo de almacenamiento configurado (FILE o BLOB)
             var tipoAlmacenamientoParam = await _parametroService.GetValorByCodigoAsync("SHM_TIPO_ALMACENAMIENTO_ARCHIVO");
             var usarBlobStorage = tipoAlmacenamientoParam?.ToUpper() == "BLOB";
 
             // Preparar nombres de archivos
-            var pdfFileName = $"{serieXml}-{numeroXml}.pdf";
-            var xmlFileName = $"{serieXml}-{numeroXml}.xml";
-            var cdrFileName = tieneCdr ? $"{serieXml}-{numeroXml}-cdr{cdrExtension}" : null;
+            var pdfFileName = $"{serieUsuario}-{numeroFormateado}.pdf";
+            var xmlFileName = $"{serieUsuario}-{numeroFormateado}.xml";
+            var cdrFileName = tieneCdr ? $"{serieUsuario}-{numeroFormateado}-cdr{cdrExtension}" : null;
 
             // Rutas de archivos temporales
             var pdfTempPath = Path.Combine(tempPath, "factura.pdf");
@@ -1756,7 +1770,7 @@ public class FacturasController : BaseController
                 }
 
                 // Guardar JSON con datos del XML (solo en modo FILE)
-                var jsonFinalPath = Path.Combine(uploadPath, $"{serieXml}-{numeroXml}.json");
+                var jsonFinalPath = Path.Combine(uploadPath, $"{serieUsuario}-{numeroFormateado}.json");
                 System.IO.File.Copy(jsonPath, jsonFinalPath, true);
                 archivosGuardados.Add(jsonFinalPath);
             }
@@ -1851,22 +1865,16 @@ public class FacturasController : BaseController
                 }, userId);
             }
 
-            // Actualizar produccion
-            DateTime? fechaEmisionParaActualizar = null;
-            if (DateTime.TryParse(facturaData.DatosGenerales.FechaEmision, out var fechaParsed))
-            {
-                fechaEmisionParaActualizar = fechaParsed;
-            }
-
+            // Actualizar produccion con datos del formulario (ingresados por el usuario)
             var updateDto = new UpdateProduccionDto
             {
-                TipoComprobante = facturaData.DatosGenerales.CodigoTipoDocumento,
-                Serie = serieXml,
-                Numero = numeroXml,
-                FechaEmision = fechaEmisionParaActualizar,
+                TipoComprobante = tipoComprobanteUsuario,
+                Serie = serieUsuario,
+                Numero = numeroFormateado,
+                FechaEmision = fechaEmisionUsuario,
                 EstadoComprobante = "ENVIADO",
                 Estado = EstadoDescripcion.Produccion.FacturaEnviada,
-                Glosa = facturaData.DetalleItems[0].Descripcion?.Trim(),
+                Glosa = produccion.Concepto,
                 FacturaFechaEnvio = DateTime.Now,
                 IdCuentaBanco = idCuentaBanco
             };
@@ -1884,7 +1892,7 @@ public class FacturasController : BaseController
                 Entidad = "SHM_PRODUCCION",
                 IdEntidad = produccion.IdProduccion,
                 Accion = EstadoDescripcion.Produccion.FacturaEnviada,
-                Descripcion = $"Envio de comprobante de pago electrónico: {serieXml}-{numeroXml}", 
+                Descripcion = $"Envio de comprobante de pago electrónico: {serieUsuario}-{numeroFormateado}", 
                 FechaAccion = DateTime.Now
             }, userId);
 
@@ -1901,6 +1909,13 @@ public class FacturasController : BaseController
             catch (Exception cleanEx)
             {
                 _logger.LogWarning(cleanEx, "No se pudo eliminar directorio temporal: {Path}", tempPath);
+            }
+
+            // Informar al sistema externo (San Pablo) si el parametro lo indica
+            var enviaHhmm = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_ENVIA_HHMM");
+            if (enviaHhmm?.ToUpper() == "S")
+            {
+                await RegistrarComprobanteEnSanPabloAsync(produccion, serieUsuario, numeroFormateado, tipoComprobanteUsuario, fechaEmisionUsuario, produccion.Concepto);
             }
 
             _logger.LogInformation("Factura enviada exitosamente desde vista previa. SessionId: {SessionId}", sessionId);
@@ -2002,6 +2017,86 @@ public class FacturasController : BaseController
         {
             _logger.LogError(ex, "Error al descargar archivo con GUID: {Guid}", guid);
             return StatusCode(500, "Error al descargar el archivo");
+        }
+    }
+
+    /// <summary>
+    /// Registra el comprobante en el sistema externo de San Pablo.
+    /// Se ejecuta despues de confirmar la transaccion local.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-26</created>
+    private async Task RegistrarComprobanteEnSanPabloAsync(
+        ProduccionListaResponseDto produccion,
+        string serie,
+        string numero,
+        string tipoComprobante,
+        DateTime? fechaEmision,
+        string? glosa)
+    {
+        try
+        {
+            // Obtener codigo de entidad medica
+            string? codigoEntidad = null;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                codigoEntidad = entidadMedica?.CodigoEntidad;
+            }
+
+            // Mapear tipo de comprobante: 02=RHE -> 22, 01=Factura -> 1, 03=Boleta -> 3
+            var cpmTipo = tipoComprobante switch
+            {
+                "02" => "22",
+                "01" => "1",
+                "03" => "3",
+                _ => tipoComprobante
+            };
+
+            // FLG_CIAMEDICA: 0=MEDICO, 1=CIA MEDICA
+            var flgCiaMedica = produccion.TipoEntidadMedica == "1" ? "1" : "0";
+
+            // Formatear numero a 7 digitos
+            var numeroFormateado7 = numero;
+            if (int.TryParse(numero, out var numInt))
+            {
+                numeroFormateado7 = numInt.ToString("D7");
+            }
+
+            var request = new SanPabloComprobanteRequestDto
+            {
+                COD_SEDE = produccion.CodigoSede,
+                FLG_CIAMEDICA = flgCiaMedica,
+                COD_ENTIDAD = codigoEntidad,
+                COD_PROD = produccion.CodigoProduccion,
+                FLG_PORTAL = "FA",
+                CPM_TIPO = cpmTipo,
+                CPM_SERIE = serie,
+                CPM_NUMERO = numeroFormateado7,
+                CPM_FECEMI = fechaEmision?.ToString("dd/MM/yyyy"),
+                CPM_GLOSA = glosa,
+                CPM_MTOTAL = produccion.MtoTotal?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                CPM_FECREG = DateTime.Now.ToString("dd/MM/yyyy")
+            };
+
+            var response = await _sanPabloApiService.RegistrarComprobanteAsync(request);
+
+            if (response.IsSuccess)
+            {
+                _logger.LogInformation("Comprobante registrado en San Pablo exitosamente. CodigoProduccion: {CodigoProd}, Serie: {Serie}, Numero: {Numero}",
+                    produccion.CodigoProduccion, serie, numero);
+            }
+            else
+            {
+                _logger.LogWarning("Error al registrar comprobante en San Pablo. CodigoProduccion: {CodigoProd}, Mensaje: {Mensaje}",
+                    produccion.CodigoProduccion, response.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            // No lanzar excepcion para no afectar el flujo principal
+            _logger.LogError(ex, "Error al comunicar comprobante a San Pablo. CodigoProduccion: {CodigoProd}",
+                produccion.CodigoProduccion);
         }
     }
 }

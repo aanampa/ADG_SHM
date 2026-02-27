@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Transactions;
 using Microsoft.Extensions.Logging;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.EntidadMedica;
@@ -7,6 +5,7 @@ using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
+using System.Globalization;
 
 namespace SHM.AppApplication.Services;
 
