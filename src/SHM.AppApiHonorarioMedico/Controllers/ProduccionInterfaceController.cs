@@ -5,6 +5,7 @@ using SHM.AppDomain.Interfaces.Services;
 
 namespace SHM.AppApiHonorarioMedico.Controllers;
 
+
 /// <summary>
 /// Controlador para la creacion masiva de producciones a traves de interface.
 ///
