@@ -70,6 +70,7 @@ public class EntidadMedicaCreateViewModel
 public class EntidadMedicaEditViewModel
 {
     public string GuidRegistro { get; set; } = string.Empty;
+    public int IdEntidadMedica { get; set; }
 
     [Required(ErrorMessage = "El codigo de entidad es requerido")]
     [StringLength(20, ErrorMessage = "El codigo no puede exceder 20 caracteres")]
