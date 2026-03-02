@@ -62,6 +62,14 @@ public interface IProduccionService
     Task<bool> DeleteProduccionAsync(int id, int idModificador);
 
     /// <summary>
+    /// Revierte los datos de comprobante de una produccion al estado indicado.
+    /// Limpia Serie, Numero, FechaEmision, Glosa, EstadoComprobante, FacturaFechaEnvio.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    Task<bool> RevertComprobanteAsync(int idProduccion, string estado, int idModificador);
+
+    /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     /// </summary>
     /// <param name="produccion">Filtro por codigo de produccion (opcional)</param>

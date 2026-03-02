@@ -151,7 +151,7 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    @if (Model.TipoComprobante == "02")
+                    @if (Model.TipoComprobante == "22")
                     {
                         <label class="form-label" style="font-weight: 600;">Retenci&oacute;n</label>
                         <div style="padding: 0.5rem 1rem; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
@@ -183,7 +183,7 @@
                         <label class="form-label" style="font-weight: 600;">Tipo Comprobante</label>
                         <input type="hidden" id="tipoComprobante" name="tipoComprobante" value="@Model.TipoComprobante" />
                         <input type="text" class="form-control" readonly
-                               value="@(Model.TipoComprobante switch { "01" => "Factura", "03" => "Boleta", "02" => "Recibo por Honorarios", _ => Model.TipoComprobante ?? "-" })"
+                               value="@(Model.TipoComprobante switch { "1" => "Factura", "22" => "Recibo por Honorarios", _ => Model.TipoComprobante ?? "-" })"
                                style="background-color: var(--bg-main);" />
                     </div>
                     <div class="col-md-3">
@@ -395,11 +395,15 @@
                     return;
                 }
 
-                // Mostrar loading
-                if (btnVistaPrevia) {
-                    btnVistaPrevia.disabled = true;
-                    btnVistaPrevia.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
-                }
+                // Bloquear pantalla con spinner
+                Swal.fire({
+                    title: 'Procesando...',
+                    text: 'Validando archivos, por favor espere.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: function() { Swal.showLoading(); }
+                });
             });
         });
     </script>

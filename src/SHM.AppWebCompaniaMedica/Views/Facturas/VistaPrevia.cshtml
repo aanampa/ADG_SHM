@@ -18,7 +18,7 @@
     var tipoCoincide = string.Equals(tipoComprobanteForm.Trim(), tipoComprobanteXml.Trim(), StringComparison.OrdinalIgnoreCase);
 
     // Nombres legibles de tipo comprobante
-    var tipoNombres = new Dictionary<string, string> { {"01", "Factura"}, {"02", "Recibo por Honorarios"}, {"03", "Boleta"} };
+    var tipoNombres = new Dictionary<string, string> { {"1", "Factura"}, {"22", "Recibo por Honorarios"} };
     var tipoFormNombre = tipoNombres.ContainsKey(tipoComprobanteForm) ? tipoNombres[tipoComprobanteForm] : tipoComprobanteForm;
     var tipoXmlNombre = Model.DatosXml?.DatosGenerales.TipoDocumento ?? tipoComprobanteXml;
 
@@ -687,7 +687,7 @@
                             <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.ValorVenta.ToString("N2") ?? "0.00")</span>
                         </div>
                         <div class="xml-field">
-                            @if (Model.TipoComprobante == "02")
+                            @if (Model.TipoComprobante == "22")
                             {
                                 <span class="xml-label">Retención</span>
                                 <span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Retencion.ToString("N2") ?? "0.00")</span>
@@ -779,7 +779,16 @@
                     }).then(function(result) {
                         if (result.isConfirmed) {
                             btnConfirmar.disabled = true;
-                            btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+
+                            // Bloquear pantalla con spinner
+                            Swal.fire({
+                                title: 'Enviando comprobante...',
+                                text: 'Registrando datos, por favor espere.',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                showConfirmButton: false,
+                                didOpen: function() { Swal.showLoading(); }
+                            });
 
                             var formData = new FormData();
                             formData.append('sessionId', sessionId);

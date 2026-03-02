@@ -185,6 +185,35 @@ public class TablaDetalleRepository : ITablaDetalleRepository
     }
 
     /// <summary>
+    /// Obtiene un detalle de tabla maestra por su codigo dentro de una tabla.
+    /// </summary>
+    public async Task<TablaDetalle?> GetByCodigoAsync(string codigoTabla, string codigo)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                t1.ID_TABLA_DETALLE as IdTablaDetalle,
+                t1.ID_TABLA as IdTabla,
+                t1.CODIGO as Codigo,
+                t1.DESCRIPCION as Descripcion,
+                t1.ORDEN as Orden,
+                t1.ACTIVO as Activo,
+                t1.GUID_REGISTRO as GuidRegistro,
+                t1.ID_CREADOR as IdCreador,
+                t1.FECHA_CREACION as FechaCreacion,
+                t1.ID_MODIFICADOR as IdModificador,
+                t1.FECHA_MODIFICACION as FechaModificacion
+            FROM SHM_TABLA_DETALLE t1, SHM_TABLA t2
+            WHERE t1.ID_TABLA = t2.ID_TABLA 
+            AND t2.CODIGO = :CodigoTabla
+            AND t1.CODIGO = :Codigo";
+
+        return await connection.QueryFirstOrDefaultAsync<TablaDetalle>(sql, new { CodigoTabla = codigoTabla, Codigo = codigo });
+    }
+
+
+    /// <summary>
     /// Crea un nuevo detalle de tabla maestra en el sistema.
     /// </summary>
     public async Task<int> CreateAsync(TablaDetalle tablaDetalle)

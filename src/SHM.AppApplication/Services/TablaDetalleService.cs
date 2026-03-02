@@ -86,6 +86,15 @@ public class TablaDetalleService : ITablaDetalleService
     }
 
     /// <summary>
+    /// Obtiene un detalle de tabla por su codigo dentro de una tabla especifica
+    /// </summary>
+    public async Task<TablaDetalleResponseDto?> GetTablaDetalleByCodigoAsync(string codigoTabla, string codigo)
+    {
+        var tablaDetalle = await _tablaDetalleRepository.GetByCodigoAsync(codigoTabla, codigo);
+        return tablaDetalle != null ? MapToResponseDto(tablaDetalle) : null;
+    }
+
+    /// <summary>
     /// Crea un nuevo detalle de tabla en el sistema
     /// </summary>
     public async Task<TablaDetalleResponseDto> CreateTablaDetalleAsync(CreateTablaDetalleDto createDto, int idCreador)

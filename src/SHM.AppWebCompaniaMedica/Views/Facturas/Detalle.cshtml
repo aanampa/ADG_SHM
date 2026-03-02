@@ -86,8 +86,8 @@
                         @{
                             var tipoComprobanteTexto = Model.TipoComprobante switch
                             {
-                                "01" => "Factura",
-                                "03" => "Boleta",
+                                "1" => "Factura",
+                                "22" => "Recibo por Honorarios",
                                 _ => Model.TipoComprobante ?? "-"
                             };
                         }

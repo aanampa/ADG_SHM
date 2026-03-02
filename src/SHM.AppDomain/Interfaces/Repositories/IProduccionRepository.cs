@@ -190,4 +190,13 @@ public interface IProduccionRepository
         string? tipoEntidadMedica,
         string estado,
         int idModificador);
+
+    /// <summary>
+    /// Revierte los datos de comprobante de una produccion por su ID.
+    /// Limpia Serie, Numero, FechaEmision, Glosa, EstadoComprobante, FacturaFechaEnvio
+    /// y asigna el estado indicado.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    Task<bool> RevertComprobanteByIdAsync(int idProduccion, string estado, int idModificador);
 }

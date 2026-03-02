@@ -399,7 +399,13 @@ public class SanPabloApiService : ISanPabloApiService
                 "Registrando comprobante en San Pablo. Sede: {Sede}, Entidad: {Entidad}, Produccion: {Produccion}, Serie: {Serie}, Numero: {Numero}",
                 request.COD_SEDE, request.COD_ENTIDAD, request.COD_PROD, request.CPM_SERIE, request.CPM_NUMERO);
 
-            var jsonContent = new StringContent(
+
+            string json = JsonSerializer.Serialize(request, _jsonOptions);
+            
+            _logger.LogInformation(json);
+
+
+           var jsonContent = new StringContent(
                 JsonSerializer.Serialize(request, _jsonOptions),
                 Encoding.UTF8,
                 "application/json");
@@ -412,7 +418,9 @@ public class SanPabloApiService : ISanPabloApiService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Error al registrar comprobante en San Pablo. StatusCode: {StatusCode}", response.StatusCode);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Error al registrar comprobante en San Pablo. StatusCode: {StatusCode}, Response: {Response}",
+                    response.StatusCode, errorContent);
 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
@@ -420,7 +428,7 @@ public class SanPabloApiService : ISanPabloApiService
                     _tokenExpiration = DateTime.MinValue;
                 }
 
-                errorResponse.Message = $"Error HTTP {(int)response.StatusCode}: {response.StatusCode}";
+                errorResponse.Message = $"Error HTTP {(int)response.StatusCode}: {errorContent}";
                 return errorResponse;
             }
 
