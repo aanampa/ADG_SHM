@@ -31,6 +31,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IArchivoComprobanteRepository _archivoComprobanteRepository;
     private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly ITablaDetalleRepository _tablaDetalleRepository;
     private readonly ILogger<ProduccionInterfaceService> _logger;
 
     public ProduccionInterfaceService(
@@ -40,6 +41,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         IEntidadMedicaService entidadMedicaService,
         IArchivoComprobanteRepository archivoComprobanteRepository,
         ISanPabloApiService sanPabloApiService,
+        ITablaDetalleRepository tablaDetalleRepository,
         ILogger<ProduccionInterfaceService> logger)
     {
         _produccionRepository = produccionRepository;
@@ -48,6 +50,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         _entidadMedicaService = entidadMedicaService;
         _archivoComprobanteRepository = archivoComprobanteRepository;
         _sanPabloApiService = sanPabloApiService;
+        _tablaDetalleRepository = tablaDetalleRepository;
         _logger = logger;
     }
 
@@ -241,6 +244,14 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     }
                 }
 
+                // Calcular TipoComprobante segun TipoEntidadMedica: 1=Factura(1), 0=RHE(22)
+                var tipoComprobante = createDto.TipoEntidadMedica == "1" ? "1" : "22";
+
+                // Calcular Concepto: "PRODUCCION {CodigoProduccion} - {descripcionTipoProduccion}"
+                var detalleTipoProd = await _tablaDetalleRepository.GetByCodigoAsync("TIPO_PRODUCCION", createDto.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? createDto.TipoProduccion ?? "";
+                var concepto = $"PRODUCCION {createDto.CodigoProduccion} - {descripcionTipoProd}";
+
                 var produccion = new Produccion
                 {
                     IdSede = sede.IdSede,
@@ -256,6 +267,8 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     FechaProduccion = fechaProduccion,
                     EstadoProduccion = createDto.EstadoProduccion,
                     Estado = EstadoDescripcion.Produccion.FacturaPendiente,
+                    TipoComprobante = tipoComprobante,
+                    Concepto = concepto,
                     MtoConsumo = createDto.MtoConsumo,
                     MtoDescuento = createDto.MtoDescuento,
                     MtoSubtotal = createDto.MtoSubtotal,
@@ -436,6 +449,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
             _logger.LogInformation("Sincronizando {Count} sedes desde API San Pablo", sedesApi.Count);
 
             int sedesCreadas = 0;
+            int sedesActualizadas = 0;
             foreach (var sedeApi in sedesApi)
             {
                 if (string.IsNullOrEmpty(sedeApi.CODIGO))
@@ -444,7 +458,19 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 // Verificar si ya existe localmente
                 var sedeLocal = await _sedeRepository.GetByCodigoAsync(sedeApi.CODIGO);
                 if (sedeLocal != null)
+                {
+                    // Actualizar nombre si cambió
+                    if (sedeLocal.Nombre != sedeApi.DESCRIPCION)
+                    {
+                        sedeLocal.Nombre = sedeApi.DESCRIPCION;
+                        sedeLocal.IdModificador = idCreador;
+                        await _sedeRepository.UpdateAsync(sedeLocal.IdSede, sedeLocal);
+                        sedesActualizadas++;
+                        _logger.LogInformation("Sede actualizada. ID: {Id}, Codigo: {Codigo}, Nombre: {Nombre}",
+                            sedeLocal.IdSede, sedeApi.CODIGO, sedeApi.DESCRIPCION);
+                    }
                     continue;
+                }
 
                 // Registrar sede nueva
                 var sede = new Sede
@@ -464,10 +490,8 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 }
             }
 
-            if (sedesCreadas > 0)
-                _logger.LogInformation("Sincronizacion de sedes completada. {Count} sedes nuevas registradas", sedesCreadas);
-            else
-                _logger.LogDebug("Sincronizacion de sedes completada. Todas las sedes ya existian localmente");
+            _logger.LogInformation("Sincronizacion de sedes completada. {Creadas} nuevas, {Actualizadas} actualizadas",
+                sedesCreadas, sedesActualizadas);
 
             return sedesCreadas;
         }

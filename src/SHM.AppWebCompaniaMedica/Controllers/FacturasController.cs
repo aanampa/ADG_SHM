@@ -30,6 +30,7 @@ public class FacturasController : BaseController
     private readonly FacturaXmlParserService _facturaXmlParserService;
     private readonly RheXmlParserService _rheXmlParserService;
     private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly ITablaDetalleService _tablaDetalleService;
 
     public FacturasController(
         IProduccionService produccionService,
@@ -45,7 +46,8 @@ public class FacturasController : BaseController
         IConfiguration configuration,
         FacturaXmlParserService facturaXmlParserService,
         RheXmlParserService rheXmlParserService,
-        ISanPabloApiService sanPabloApiService)
+        ISanPabloApiService sanPabloApiService,
+        ITablaDetalleService tablaDetalleService)
     {
         _produccionService = produccionService;
         _sedeService = sedeService;
@@ -61,6 +63,7 @@ public class FacturasController : BaseController
         _facturaXmlParserService = facturaXmlParserService;
         _rheXmlParserService = rheXmlParserService;
         _sanPabloApiService = sanPabloApiService;
+        _tablaDetalleService = tablaDetalleService;
     }
 
     // GET: Facturas/Pendientes
@@ -97,13 +100,18 @@ public class FacturasController : BaseController
             var sedes = await _sedeService.GetAllSedesAsync();
             var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
 
+            // Obtener tipos de produccion para calcular concepto cuando esta vacio
+            var tiposProduccion = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_PRODUCCION");
+            var tiposProdDict = tiposProduccion.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "");
+
             // Mapear a ViewModel
             var facturas = pendientes.Select(p => new FacturaPendienteViewModel
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
-                Concepto = p.Concepto ?? p.Descripcion,
+                Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
+                    : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
                 MtoTotal = p.MtoTotal,
                 FechaLimite = p.FechaLimite,
                 Estado = p.Estado ?? EstadoDescripcion.Produccion.FacturaSolicitada,
@@ -155,12 +163,17 @@ public class FacturasController : BaseController
             var sedes = await _sedeService.GetAllSedesAsync();
             var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
 
+            // Obtener tipos de produccion para calcular concepto cuando esta vacio
+            var tiposProduccion = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_PRODUCCION");
+            var tiposProdDict = tiposProduccion.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "");
+
             var facturas = pendientes.Select(p => new FacturaPendienteViewModel
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
-                Concepto = p.Concepto ?? p.Descripcion,
+                Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
+                    : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
                 MtoTotal = p.MtoTotal,
                 FechaLimite = p.FechaLimite,
                 Estado = p.Estado ?? "PENDIENTE",
@@ -228,23 +241,38 @@ public class FacturasController : BaseController
                 ? await _sedeService.GetSedeByIdAsync(produccion.IdSede.Value)
                 : null;
 
-            // Convertir tipo de comprobante
-            string tipoComprobanteTexto = produccion.TipoComprobante switch
+            // Si TipoComprobante es nulo o vacio, derivar de TipoEntidadMedica
+            var tipoComprobanteCodigo = produccion.TipoComprobante;
+            if (string.IsNullOrEmpty(tipoComprobanteCodigo))
             {
-                "01" => "Factura",
-                "03" => "Boleta",
-                "02" => "Recibo por Honorarios",
-                _ => produccion.TipoComprobante ?? "-"
+                tipoComprobanteCodigo = produccion.TipoEntidadMedica == "1" ? "1" : "22";
+            }
+
+            // Convertir tipo de comprobante
+            string tipoComprobanteTexto = tipoComprobanteCodigo switch
+            {
+                "1" => "Factura",
+                "22" => "Recibo por Honorarios",
+                _ => tipoComprobanteCodigo ?? "-"
             };
+
+            // Si Concepto es nulo o vacio, construir desde tipo de produccion
+            var concepto = produccion.Concepto;
+            if (string.IsNullOrEmpty(concepto))
+            {
+                var detalleTipoProd = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "";
+                concepto = $"PRODUCCION {produccion.CodigoProduccion} - {descripcionTipoProd}";
+            }
 
             var data = new
             {
                 success = true,
                 codigoProduccion = produccion.CodigoProduccion,
-                concepto = produccion.Concepto ?? produccion.Descripcion ?? "-",
+                concepto = concepto,
                 descripcion = produccion.Descripcion ?? "-",
                 tipoComprobante = tipoComprobanteTexto,
-                tipoComprobanteCodigo = produccion.TipoComprobante ?? "",
+                tipoComprobanteCodigo = tipoComprobanteCodigo,
                 mtoSubtotal = produccion.MtoSubtotal?.ToString("N2") ?? "0.00",
                 mtoIgv = produccion.MtoIgv?.ToString("N2") ?? "0.00",
                 mtoRenta = produccion.MtoRenta?.ToString("N2") ?? "0.00",
@@ -286,12 +314,17 @@ public class FacturasController : BaseController
             var sedes = await _sedeService.GetAllSedesAsync();
             var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
 
+            // Obtener tipos de produccion para calcular concepto cuando esta vacio
+            var tiposProduccion = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_PRODUCCION");
+            var tiposProdDict = tiposProduccion.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "");
+
             var facturas = enviadas.Select(p => new FacturaEnviadaViewModel
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
-                Concepto = p.Concepto ?? p.Descripcion,
+                Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
+                    : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
                 MtoTotal = p.MtoTotal,
                 FechaEmision = p.FechaEmision,
                 Serie = p.Serie,
@@ -357,12 +390,17 @@ public class FacturasController : BaseController
             var sedes = await _sedeService.GetAllSedesAsync();
             var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
 
+            // Obtener tipos de produccion para calcular concepto cuando esta vacio
+            var tiposProduccion = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_PRODUCCION");
+            var tiposProdDict = tiposProduccion.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "");
+
             var facturas = enviadas.Select(p => new FacturaEnviadaViewModel
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
-                Concepto = p.Concepto ?? p.Descripcion,
+                Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
+                    : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
                 MtoTotal = p.MtoTotal,
                 FechaEmision = p.FechaEmision,
                 Serie = p.Serie,
@@ -485,20 +523,36 @@ public class FacturasController : BaseController
                 Accion = b.Accion
             }).ToList();
 
+            // Si TipoComprobante es nulo o vacio, derivar de TipoEntidadMedica
+            var tipoComprobante = produccion.TipoComprobante;
+            if (string.IsNullOrEmpty(tipoComprobante))
+            {
+                tipoComprobante = produccion.TipoEntidadMedica == "1" ? "1" : "22";
+            }
+
+            // Si Concepto es nulo o vacio, construir desde tipo de produccion
+            var concepto = produccion.Concepto;
+            if (string.IsNullOrEmpty(concepto))
+            {
+                var detalleTipoProd = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "";
+                concepto = $"PRODUCCION {produccion.CodigoProduccion} - {descripcionTipoProd}";
+            }
+
             var model = new SubirFacturaViewModel
             {
                 IdProduccion = produccion.IdProduccion,
                 GuidRegistro = produccion.GuidRegistro,
                 CodigoProduccion = produccion.CodigoProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
-                Concepto = produccion.Concepto ?? produccion.Descripcion,
+                Concepto = concepto,
                 Descripcion = produccion.Descripcion,
                 MtoSubtotal = produccion.MtoSubtotal,
                 MtoIgv = produccion.MtoIgv,
                 MtoRenta = produccion.MtoRenta,
                 MtoTotal = produccion.MtoTotal,
                 FechaLimite = produccion.FechaLimite,
-                TipoComprobante = produccion.TipoComprobante,
+                TipoComprobante = tipoComprobante,
                 // Datos del Emisor (Compañia Medica)
                 EmisorRuc = emisorRuc,
                 EmisorRazonSocial = emisorRazonSocial,
@@ -1040,11 +1094,19 @@ public class FacturasController : BaseController
                 _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
             }
 
-            // Iniciar transacción para operaciones de base de datos
-            using var transactionScope = new TransactionScope(
+            // Formatear numero del usuario a 8 digitos
+            var numeroUsuarioFormateado = numero;
+            if (int.TryParse(numero, out var numUsuarioInt))
+            {
+                numeroUsuarioFormateado = numUsuarioInt.ToString("D8");
+            }
+
+            // Iniciar transaccion para operaciones de base de datos
+            using (var transactionScope = new TransactionScope(
                 TransactionScopeOption.Required,
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-                TransactionScopeAsyncFlowOption.Enabled);
+                TransactionScopeAsyncFlowOption.Enabled))
+            {
 
             // Inactivar archivos anteriores de esta produccion (si existen)
             var archivosAnteriores = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
@@ -1130,13 +1192,6 @@ public class FacturasController : BaseController
                 }, userId);
             }
 
-            // Formatear numero del usuario a 8 digitos
-            var numeroUsuarioFormateado = numero;
-            if (int.TryParse(numero, out var numUsuarioInt))
-            {
-                numeroUsuarioFormateado = numUsuarioInt.ToString("D8");
-            }
-
             // Actualizar produccion con datos del formulario (ingresados por el usuario)
             var updateDto = new UpdateProduccionDto
             {
@@ -1170,12 +1225,17 @@ public class FacturasController : BaseController
 
             // Confirmar transaccion
             transactionScope.Complete();
+            } // Fin del TransactionScope
 
             // Informar al sistema externo (San Pablo) si el parametro lo indica
             var enviaHhmm = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_ENVIA_HHMM");
             if (enviaHhmm?.ToUpper() == "S")
             {
-                await RegistrarComprobanteEnSanPabloAsync(produccion, serie, numeroUsuarioFormateado, tipoComprobante, fechaEmision, produccion.Concepto);
+                var errorHhmm = await RegistrarComprobanteEnSanPabloAsync(produccion, serie, numeroUsuarioFormateado, tipoComprobante, fechaEmision, produccion.Concepto, userId);
+                if (errorHhmm != null)
+                {
+                    return Json(new { success = false, message = $"El comprobante se registro localmente pero no se pudo enviar a San Pablo: {errorHhmm}" });
+                }
             }
 
             return Json(new { success = true, message = "Factura enviada exitosamente" });
@@ -1492,13 +1552,22 @@ public class FacturasController : BaseController
             var paramValidaRucEmisor = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_EMISOR");
             var paramValidaRucReceptor = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_RECEPTOR");
 
+            // Si Concepto es nulo o vacio, construir desde tipo de produccion
+            var conceptoVistaPrevia = produccion.Concepto;
+            if (string.IsNullOrEmpty(conceptoVistaPrevia))
+            {
+                var detalleTipoProd = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "";
+                conceptoVistaPrevia = $"PRODUCCION {produccion.CodigoProduccion} - {descripcionTipoProd}";
+            }
+
             var model = new VistaPreviaFacturaViewModel
             {
                 SessionId = sessionId,
                 GuidRegistro = guidRegistro,
                 CodigoProduccion = produccion.CodigoProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
-                Concepto = produccion.Concepto ?? produccion.Descripcion,
+                Concepto = conceptoVistaPrevia,
                 MtoTotal = produccion.MtoTotal,
                 FechaLimite = produccion.FechaLimite,
                 TipoComprobante = metadata.GetProperty("TipoComprobante").GetString(),
@@ -1776,127 +1845,130 @@ public class FacturasController : BaseController
             }
 
             // Iniciar transaccion
-            using var transactionScope = new TransactionScope(
+            using (var transactionScope = new TransactionScope(
                 TransactionScopeOption.Required,
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-                TransactionScopeAsyncFlowOption.Enabled);
-
-            // Inactivar archivos anteriores de esta produccion (si existen)
-            var archivosAnteriores = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
-            foreach (var archivoAnterior in archivosAnteriores.Where(a => a.Activo == 1))
+                TransactionScopeAsyncFlowOption.Enabled))
             {
-                // Inactivar el registro ArchivoComprobante
-                await _archivoComprobanteService.DeleteArchivoComprobanteAsync(archivoAnterior.IdArchivoComprobante, userId);
 
-                // Inactivar el archivo asociado
-                if (archivoAnterior.IdArchivo.HasValue)
+                // Inactivar archivos anteriores de esta produccion (si existen)
+                var archivosAnteriores = await _archivoComprobanteService.GetArchivoComprobantesByProduccionAsync(produccion.IdProduccion);
+                foreach (var archivoAnterior in archivosAnteriores.Where(a => a.Activo == 1))
                 {
-                    await _archivoService.DeleteArchivoAsync(archivoAnterior.IdArchivo.Value, userId);
+                    // Inactivar el registro ArchivoComprobante
+                    await _archivoComprobanteService.DeleteArchivoComprobanteAsync(archivoAnterior.IdArchivoComprobante, userId);
+
+                    // Inactivar el archivo asociado
+                    if (archivoAnterior.IdArchivo.HasValue)
+                    {
+                        await _archivoService.DeleteArchivoAsync(archivoAnterior.IdArchivo.Value, userId);
+                    }
+
+                    _logger.LogInformation("ConfirmarEnvio: Archivo anterior inactivado. IdArchivoComprobante: {IdAC}, IdArchivo: {IdA}",
+                        archivoAnterior.IdArchivoComprobante, archivoAnterior.IdArchivo);
                 }
 
-                _logger.LogInformation("ConfirmarEnvio: Archivo anterior inactivado. IdArchivoComprobante: {IdAC}, IdArchivo: {IdA}",
-                    archivoAnterior.IdArchivoComprobante, archivoAnterior.IdArchivo);
-            }
-
-            // Registrar archivo PDF en BD
-            var archivoPdfDto = new CreateArchivoDto
-            {
-                TipoArchivo = "PDF",
-                NombreOriginal = "factura.pdf",
-                NombreArchivo = pdfFileName,
-                Extension = ".pdf",
-                Tamano = pdfSize,
-                Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, pdfFileName),
-                ContenidoArchivo = pdfContent
-            };
-            var archivoPdfCreado = await _archivoService.CreateArchivoAsync(archivoPdfDto, userId);
-
-            // Registrar archivo XML en BD
-            var archivoXmlDto = new CreateArchivoDto
-            {
-                TipoArchivo = "XML",
-                NombreOriginal = "factura.xml",
-                NombreArchivo = xmlFileName,
-                Extension = ".xml",
-                Tamano = xmlSize,
-                Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, xmlFileName),
-                ContenidoArchivo = xmlContent
-            };
-            var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
-
-            // Crear registros en ArchivoComprobante vinculando archivos con producción
-            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
-            {
-                IdProduccion = produccion.IdProduccion,
-                IdArchivo = archivoPdfCreado.IdArchivo,
-                TipoArchivo = "PDF",
-                Descripcion = "Factura PDF"
-            }, userId);
-
-            await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
-            {
-                IdProduccion = produccion.IdProduccion,
-                IdArchivo = archivoXmlCreado.IdArchivo,
-                TipoArchivo = "XML",
-                Descripcion = "Factura XML"
-            }, userId);
-
-            // Registrar archivo CDR en BD solo si existe
-            if (tieneCdr && cdrFileName != null)
-            {
-                var archivoCdrDto = new CreateArchivoDto
+                // Registrar archivo PDF en BD
+                var archivoPdfDto = new CreateArchivoDto
                 {
-                    TipoArchivo = "CDR",
-                    NombreOriginal = $"cdr{cdrExtension}",
-                    NombreArchivo = cdrFileName,
-                    Extension = cdrExtension,
-                    Tamano = cdrSize,
-                    Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, cdrFileName),
-                    ContenidoArchivo = cdrContent
+                    TipoArchivo = "PDF",
+                    NombreOriginal = "factura.pdf",
+                    NombreArchivo = pdfFileName,
+                    Extension = ".pdf",
+                    Tamano = pdfSize,
+                    Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, pdfFileName),
+                    ContenidoArchivo = pdfContent
                 };
-                var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
+                var archivoPdfCreado = await _archivoService.CreateArchivoAsync(archivoPdfDto, userId);
+
+                // Registrar archivo XML en BD
+                var archivoXmlDto = new CreateArchivoDto
+                {
+                    TipoArchivo = "XML",
+                    NombreOriginal = "factura.xml",
+                    NombreArchivo = xmlFileName,
+                    Extension = ".xml",
+                    Tamano = xmlSize,
+                    Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, xmlFileName),
+                    ContenidoArchivo = xmlContent
+                };
+                var archivoXmlCreado = await _archivoService.CreateArchivoAsync(archivoXmlDto, userId);
+
+                // Crear registros en ArchivoComprobante vinculando archivos con producción
+                await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+                {
+                    IdProduccion = produccion.IdProduccion,
+                    IdArchivo = archivoPdfCreado.IdArchivo,
+                    TipoArchivo = "PDF",
+                    Descripcion = "Factura PDF"
+                }, userId);
 
                 await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
                 {
                     IdProduccion = produccion.IdProduccion,
-                    IdArchivo = archivoCdrCreado.IdArchivo,
-                    TipoArchivo = "CDR",
-                    Descripcion = "Constancia CDR"
+                    IdArchivo = archivoXmlCreado.IdArchivo,
+                    TipoArchivo = "XML",
+                    Descripcion = "Factura XML"
                 }, userId);
-            }
 
-            // Actualizar produccion con datos del formulario (ingresados por el usuario)
-            var updateDto = new UpdateProduccionDto
-            {
-                TipoComprobante = tipoComprobanteUsuario,
-                Serie = serieUsuario,
-                Numero = numeroFormateado,
-                FechaEmision = fechaEmisionUsuario,
-                EstadoComprobante = "ENVIADO",
-                Estado = EstadoDescripcion.Produccion.FacturaEnviada,
-                Glosa = produccion.Concepto,
-                FacturaFechaEnvio = DateTime.Now,
-                IdCuentaBanco = idCuentaBanco
-            };
+                // Registrar archivo CDR en BD solo si existe
+                if (tieneCdr && cdrFileName != null)
+                {
+                    var archivoCdrDto = new CreateArchivoDto
+                    {
+                        TipoArchivo = "CDR",
+                        NombreOriginal = $"cdr{cdrExtension}",
+                        NombreArchivo = cdrFileName,
+                        Extension = cdrExtension,
+                        Tamano = cdrSize,
+                        Ruta = usarBlobStorage ? null : Path.Combine("facturas", guidRegistro, cdrFileName),
+                        ContenidoArchivo = cdrContent
+                    };
+                    var archivoCdrCreado = await _archivoService.CreateArchivoAsync(archivoCdrDto, userId);
 
-            var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
+                    await _archivoComprobanteService.CreateArchivoComprobanteAsync(new CreateArchivoComprobanteDto
+                    {
+                        IdProduccion = produccion.IdProduccion,
+                        IdArchivo = archivoCdrCreado.IdArchivo,
+                        TipoArchivo = "CDR",
+                        Descripcion = "Constancia CDR"
+                    }, userId);
+                }
 
-            if (!result)
-            {
-                throw new InvalidOperationException("Error al actualizar la producción");
-            }
+                // Actualizar produccion con datos del formulario (ingresados por el usuario)
+                var updateDto = new UpdateProduccionDto
+                {
+                    TipoComprobante = tipoComprobanteUsuario,
+                    Serie = serieUsuario,
+                    Numero = numeroFormateado,
+                    FechaEmision = fechaEmisionUsuario,
+                    EstadoComprobante = "ENVIADO",
+                    Estado = EstadoDescripcion.Produccion.FacturaEnviada,
+                    Glosa = produccion.Concepto,
+                    FacturaFechaEnvio = DateTime.Now,
+                    IdCuentaBanco = idCuentaBanco
+                };
 
-            // Registrar en bitacora
-            await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
-            {
-                Entidad = "SHM_PRODUCCION",
-                IdEntidad = produccion.IdProduccion,
-                Accion = EstadoDescripcion.Produccion.FacturaEnviada,
-                Descripcion = $"Envio de comprobante de pago electrónico: {serieUsuario}-{numeroFormateado}", 
-                FechaAccion = DateTime.Now
-            }, userId);
+                var result = await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateDto, userId);
 
-            transactionScope.Complete();
+                if (!result)
+                {
+                    throw new InvalidOperationException("Error al actualizar la producción");
+                }
+
+                // Registrar en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = EstadoDescripcion.Produccion.FacturaEnviada,
+                    Descripcion = $"Envio de comprobante de pago electrónico: {serieUsuario}-{numeroFormateado}", 
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                transactionScope.Complete();
+
+            } // Fin del TransactionScope
 
             // Limpiar archivos temporales
             try
@@ -1913,9 +1985,14 @@ public class FacturasController : BaseController
 
             // Informar al sistema externo (San Pablo) si el parametro lo indica
             var enviaHhmm = await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_ENVIA_HHMM");
+
             if (enviaHhmm?.ToUpper() == "S")
             {
-                await RegistrarComprobanteEnSanPabloAsync(produccion, serieUsuario, numeroFormateado, tipoComprobanteUsuario, fechaEmisionUsuario, produccion.Concepto);
+                var errorHhmm = await RegistrarComprobanteEnSanPabloAsync(produccion, serieUsuario, numeroFormateado, tipoComprobanteUsuario, fechaEmisionUsuario, produccion.Concepto, userId);
+                if (errorHhmm != null)
+                {
+                    return Json(new { success = false, message = $"El comprobante se registro localmente pero no se pudo enviar a San Pablo: {errorHhmm}" });
+                }
             }
 
             _logger.LogInformation("Factura enviada exitosamente desde vista previa. SessionId: {SessionId}", sessionId);
@@ -2023,16 +2100,18 @@ public class FacturasController : BaseController
     /// <summary>
     /// Registra el comprobante en el sistema externo de San Pablo.
     /// Se ejecuta despues de confirmar la transaccion local.
+    /// Retorna null si fue exitoso, o el mensaje de error si fallo.
     /// </summary>
     /// <author>ADG Antonio</author>
     /// <created>2026-02-26</created>
-    private async Task RegistrarComprobanteEnSanPabloAsync(
+    private async Task<string?> RegistrarComprobanteEnSanPabloAsync(
         ProduccionListaResponseDto produccion,
         string serie,
         string numero,
         string tipoComprobante,
         DateTime? fechaEmision,
-        string? glosa)
+        string? glosa,
+        int userId)
     {
         try
         {
@@ -2044,14 +2123,36 @@ public class FacturasController : BaseController
                 codigoEntidad = entidadMedica?.CodigoEntidad;
             }
 
-            // Mapear tipo de comprobante: 02=RHE -> 22, 01=Factura -> 1, 03=Boleta -> 3
-            var cpmTipo = tipoComprobante switch
+            // Si TipoComprobante es nulo o vacio, derivar de TipoEntidadMedica
+            var tipoComprobanteCalculado = false;
+            if (string.IsNullOrEmpty(tipoComprobante))
             {
-                "02" => "22",
-                "01" => "1",
-                "03" => "3",
-                _ => tipoComprobante
-            };
+                tipoComprobante = produccion.TipoEntidadMedica == "1" ? "1" : "22";
+                tipoComprobanteCalculado = true;
+            }
+
+            // Si concepto (glosa) es nulo o vacio, construir desde tipo de produccion
+            var conceptoCalculado = false;
+            if (string.IsNullOrEmpty(glosa))
+            {
+                var detalleTipoProd = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "";
+                glosa = $"PRODUCCION {produccion.CodigoProduccion} - {descripcionTipoProd}";
+                conceptoCalculado = true;
+            }
+
+            // Persistir valores calculados en la produccion
+            if (tipoComprobanteCalculado || conceptoCalculado)
+            {
+                var updateCalculados = new UpdateProduccionDto();
+                if (tipoComprobanteCalculado) updateCalculados.TipoComprobante = tipoComprobante;
+                if (conceptoCalculado) updateCalculados.Concepto = glosa;
+                await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, updateCalculados, userId);
+            }
+
+            // Obtener descripcion del tipo de comprobante desde tabla maestra (01=Factura, 22=RHE)
+            var tablaDetalle = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_COMPROBANTE", tipoComprobante);
+            var descripcionTipo = tablaDetalle?.Descripcion ?? tipoComprobante;
 
             // FLG_CIAMEDICA: 0=MEDICO, 1=CIA MEDICA
             var flgCiaMedica = produccion.TipoEntidadMedica == "1" ? "1" : "0";
@@ -2070,7 +2171,7 @@ public class FacturasController : BaseController
                 COD_ENTIDAD = codigoEntidad,
                 COD_PROD = produccion.CodigoProduccion,
                 FLG_PORTAL = "FA",
-                CPM_TIPO = cpmTipo,
+                CPM_TIPO = tipoComprobante,
                 CPM_SERIE = serie,
                 CPM_NUMERO = numeroFormateado7,
                 CPM_FECEMI = fechaEmision?.ToString("dd/MM/yyyy"),
@@ -2083,13 +2184,46 @@ public class FacturasController : BaseController
 
             if (response.IsSuccess)
             {
-                _logger.LogInformation("Comprobante registrado en San Pablo exitosamente. CodigoProduccion: {CodigoProd}, Serie: {Serie}, Numero: {Numero}",
-                    produccion.CodigoProduccion, serie, numero);
+                _logger.LogInformation("Comprobante registrado en San Pablo exitosamente. CodigoProduccion: {CodigoProd}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}",
+                    produccion.CodigoProduccion, descripcionTipo, serie, numero);
+
+                // Actualizar estado de produccion a FACTURA_ENVIADA_HHMM
+                await _produccionService.UpdateProduccionAsync(produccion.IdProduccion, new UpdateProduccionDto
+                {
+                    Estado = EstadoDescripcion.Produccion.FacturaEnviadaHhmm
+                }, userId);
+
+                // Registrar en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = EstadoDescripcion.Produccion.FacturaEnviadaHhmm,
+                    Descripcion = $"{descripcionTipo} enviada a HHMM: {serie}-{numero}",
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                return null; // Exito
             }
             else
             {
                 _logger.LogWarning("Error al registrar comprobante en San Pablo. CodigoProduccion: {CodigoProd}, Mensaje: {Mensaje}",
                     produccion.CodigoProduccion, response.Message);
+
+                // Revertir estado y datos del comprobante
+                await RevertirProduccionAsync(produccion, userId);
+
+                // Registrar error en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = "ERROR_ENVIO_HHMM",
+                    Descripcion = $"Error al enviar {descripcionTipo} a HHMM: {response.Message}",
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                return response.Message;
             }
         }
         catch (Exception ex)
@@ -2097,6 +2231,45 @@ public class FacturasController : BaseController
             // No lanzar excepcion para no afectar el flujo principal
             _logger.LogError(ex, "Error al comunicar comprobante a San Pablo. CodigoProduccion: {CodigoProd}",
                 produccion.CodigoProduccion);
+
+            try
+            {
+                // Revertir estado y datos del comprobante
+                await RevertirProduccionAsync(produccion, userId);
+
+                // Registrar error en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = "ERROR_ENVIO_HHMM",
+                    Descripcion = $"Error al enviar comprobante a HHMM: {ex.Message}",
+                    FechaAccion = DateTime.Now
+                }, userId);
+            }
+            catch (Exception revertEx)
+            {
+                _logger.LogError(revertEx, "Error al revertir produccion. CodigoProduccion: {CodigoProd}",
+                    produccion.CodigoProduccion);
+            }
+
+            return ex.Message;
         }
+    }
+
+    /// <summary>
+    /// Revierte el estado y datos del comprobante de una produccion al estado FacturaSolicitada.
+    /// Se ejecuta cuando falla el envio al sistema externo de San Pablo.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    private async Task RevertirProduccionAsync(ProduccionListaResponseDto produccion, int userId)
+    {
+        // Limpia: Serie, Numero, FechaEmision, Glosa, EstadoComprobante, FacturaFechaEnvio
+        // y regresa al estado FacturaSolicitada
+        await _produccionService.RevertComprobanteAsync(
+            produccion.IdProduccion,
+            EstadoDescripcion.Produccion.FacturaSolicitada,
+            userId);
     }
 }

@@ -978,4 +978,36 @@ public class ProduccionRepository : IProduccionRepository
 
         return null;
     }
+
+    /// <summary>
+    /// Revierte los datos de comprobante de una produccion por su ID.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    public async Task<bool> RevertComprobanteByIdAsync(int idProduccion, string estado, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET SERIE = NULL,
+                NUMERO = NULL,
+                FECHA_EMISION = NULL,
+                GLOSA = NULL,
+                ESTADO_COMPROBANTE = NULL,
+                FACTURA_FECHA_ENVIO = NULL,
+                ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_PRODUCCION = :IdProduccion";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdProduccion = idProduccion,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
 }

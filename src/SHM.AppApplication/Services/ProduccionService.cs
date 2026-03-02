@@ -263,6 +263,16 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
+    /// Revierte los datos de comprobante de una produccion al estado indicado.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    public async Task<bool> RevertComprobanteAsync(int idProduccion, string estado, int idModificador)
+    {
+        return await _produccionRepository.RevertComprobanteByIdAsync(idProduccion, estado, idModificador);
+    }
+
+    /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     ///
     /// <author>ADG Vladimir D</author>

@@ -40,7 +40,8 @@ public interface ITablaDetalleRepository
     /// Obtiene un detalle de tabla por su codigo dentro de una tabla especifica.
     /// </summary>
     Task<TablaDetalle?> GetByCodigoAsync(int idTabla, string codigo);
-
+    Task<TablaDetalle?> GetByCodigoAsync(string codigoTabla, string codigo);
+    
     /// <summary>
     /// Crea un nuevo detalle de tabla en la base de datos.
     /// </summary>

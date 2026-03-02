@@ -62,6 +62,8 @@ try
     builder.Services.AddScoped<IEntidadCuentaBancariaRepository, EntidadCuentaBancariaRepository>();
     builder.Services.AddScoped<IBancoRepository, BancoRepository>();
     builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
+    builder.Services.AddScoped<ITablaRepository, TablaRepository>();
+    builder.Services.AddScoped<ITablaDetalleRepository, TablaDetalleRepository>();
     builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
 
     // Registrar servicios de aplicacion
@@ -75,6 +77,8 @@ try
     builder.Services.AddScoped<IEntidadCuentaBancariaService, EntidadCuentaBancariaService>();
     builder.Services.AddScoped<IBancoService, BancoService>();
     builder.Services.AddScoped<IParametroService, ParametroService>();
+    builder.Services.AddScoped<ITablaService, TablaService>();
+    builder.Services.AddScoped<ITablaDetalleService, TablaDetalleService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
