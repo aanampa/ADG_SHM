@@ -116,7 +116,7 @@ public class TablaRepository : ITablaRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_TABLA
-            WHERE CODIGO = :Codigo";
+            WHERE CODIGO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Tabla>(sql, new { Codigo = codigo });
     }

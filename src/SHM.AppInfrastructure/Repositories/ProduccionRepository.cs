@@ -112,7 +112,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE CODIGO_PRODUCCION = :Codigo";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE CODIGO_PRODUCCION = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Produccion>(sql, new { Codigo = codigo });
     }

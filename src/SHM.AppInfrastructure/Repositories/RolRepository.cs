@@ -116,7 +116,7 @@ public class RolRepository : IRolRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_SEG_ROL
-            WHERE CODIGO = :Codigo";
+            WHERE CODIGO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Rol>(sql, new { Codigo = codigo });
     }

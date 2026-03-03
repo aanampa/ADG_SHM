@@ -92,7 +92,7 @@ public class BancoRepository : IBancoRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_BANCO
-            WHERE CODIGO_BANCO = :Codigo";
+            WHERE CODIGO_BANCO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Banco>(sql, new { Codigo = codigo });
     }
