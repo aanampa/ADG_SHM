@@ -109,8 +109,11 @@ public class ProduccionController : Controller
                 {
                     GuidRegistro = p.GuidRegistro ?? "",
                     CodigoProduccion = p.CodigoProduccion,
+                    NumeroProduccion = p.NumeroProduccion,
                     TipoProduccion = p.TipoProduccion,
                     DesTipoProduccion = p.DesTipoProduccion,
+                    DesTipoMedico = p.DesTipoMedico,
+                    DesTipoRubro = p.DesTipoRubro,
                     Descripcion = p.Descripcion,
                     Periodo = p.Periodo,
                     Estado = p.Estado,

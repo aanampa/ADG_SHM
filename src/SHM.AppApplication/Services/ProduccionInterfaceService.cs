@@ -67,7 +67,8 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         var dtosList = createDtos.ToList();
 
         // Sincronizar sedes desde API San Pablo antes de procesar
-        await SyncSedesFromApiAsync(idCreador);
+        // Comentado: ya se resuelve individualmente en GetOrCreateSedeFromApiAsync
+        // await SyncSedesFromApiAsync(idCreador);
 
 
         foreach (var createDto in dtosList)

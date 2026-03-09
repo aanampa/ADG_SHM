@@ -4,12 +4,7 @@
     var archivos = ViewBag.Archivos as List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>
         ?? new List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>();
     var badgeClass = EstadoDescripcion.Produccion.GetBadgeClass(Model.Estado);
-    var tipoComprobanteTexto = Model.TipoComprobante switch
-    {
-        "01" => "Factura",
-        "03" => "Boleta",
-        _ => Model.TipoComprobante ?? "-"
-    };
+    var tipoComprobanteTexto = Model.DesTipoComprobante ?? Model.TipoComprobante ?? "-";
 }
 
 <style>
@@ -72,13 +67,13 @@
                                     </div>
                                     <div class="col-4">
                                         <div class="form-group-sm">
-                                            <label>Produccion</label>
+                                            <label>Cod. Producción</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.CodigoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="form-group-sm">
-                                            <label>Tipo</label>
+                                            <label>Tipo de Producción</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoProduccion ?? Model.TipoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
@@ -92,16 +87,16 @@
                                     </div>
                                     <div class="col-4">
                                         <div class="form-group-sm">
-                                            <label>Rubro</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <label>Tipo de Médico</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
                                     <div class="col-4">
                                         <div class="form-group-sm">
-                                            <label>Tipo Medico</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <label>Tipo de Rubro</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
-                                    </div>
+                                    </div>                                    
                                 </div>
                                 <div class="row">
                                     <div class="col-6">
@@ -112,7 +107,7 @@
                                     </div>
                                     <div class="col-6">
                                         <div class="form-group-sm">
-                                            <label>Descripcion</label>
+                                            <label>Descripción</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.Descripcion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
@@ -137,7 +132,7 @@
                                     </div>
                                     <div class="col-8">
                                         <div class="form-group-sm">
-                                            <label>Tipo Entidad</label>
+                                            <label>Tipo de Entidad</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoEntidadMedica ?? Model.TipoEntidadMedica ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
@@ -333,7 +328,7 @@
                                 <div class="row">
                                     <div class="col-3">
                                         <div class="form-group-sm">
-                                            <label>Fecha Limite</label>
+                                            <label>Fecha Límite</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>

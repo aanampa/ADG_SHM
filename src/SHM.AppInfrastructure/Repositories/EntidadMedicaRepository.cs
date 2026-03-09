@@ -114,7 +114,8 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 FECHA_MODIFICACION as FechaModificacion,
                 ID_MODIFICADOR as IdModificador
             FROM SHM_ENTIDAD_MEDICA
-            WHERE CODIGO_ENTIDAD = :Codigo AND ACTIVO = 1";
+            WHERE CODIGO_ENTIDAD = :Codigo
+             AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<EntidadMedica>(sql, new { Codigo = codigo });
     }

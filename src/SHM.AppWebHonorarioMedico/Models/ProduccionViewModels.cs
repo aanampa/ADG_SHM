@@ -29,8 +29,11 @@ public class ProduccionItemViewModel
 {
     public string GuidRegistro { get; set; } = string.Empty;
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? TipoProduccion { get; set; }
     public string? DesTipoProduccion { get; set; }
+    public string? DesTipoMedico { get; set; }
+    public string? DesTipoRubro { get; set; }
     public string? Descripcion { get; set; }
     public string? Periodo { get; set; }
     public string? Estado { get; set; }

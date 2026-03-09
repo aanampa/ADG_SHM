@@ -406,10 +406,10 @@
         }
 
         // Ver producciones de una liquidacion en modal
-        function verProducciones(codigoLiquidacion, idBanco, descripcion, tipo) {
-            // Actualizar titulo del modal: Liquidacion + Tipo
+        function verProducciones(codigoLiquidacion, idBanco, descripcion, tipo, numeroLiquidacion) {
+            // Actualizar titulo del modal con NumeroLiquidacion
             document.getElementById('modalProduccionesLabel').innerHTML =
-                `<i class="fas fa-list mr-2"></i>Liquidacion ${codigoLiquidacion} - ${tipo}`;
+                `<i class="fas fa-list mr-2"></i>Liquidación ${numeroLiquidacion} - Detalle de Comprobantes`;
 
             // Mostrar loading
             document.getElementById('modalProduccionesContent').innerHTML =

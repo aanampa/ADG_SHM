@@ -200,6 +200,12 @@
                         <button type="submit" class="btn adg-btn-secondary btn-block" id="btnCambiarClave" name="btnCambiarClave">Cambiar Contraseña</button>
                     </div>
 
+                    <div class="text-center mt-2">
+                        <a href="@Url.Action("Logout", "Auth")" class="text-muted small">
+                            <i class="fas fa-arrow-left mr-1"></i>Cancelar y volver al inicio de sesión
+                        </a>
+                    </div>
+
                     @if (!string.IsNullOrEmpty(ViewBag.LoginMessage))
                     {
                         <div class="alert alert-default-danger alert-dismissible fade show mt-3" role="alert">

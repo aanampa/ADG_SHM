@@ -151,7 +151,13 @@ public class FacturasController : BaseController
     {
         try
         {
-            var producciones = await _produccionService.GetAllProduccionesAsync();
+            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
+            if (!int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica))
+            {
+                idEntidadMedica = 0;
+            }
+
+            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
 
             var pendientes = producciones
                 .Where(p => p.Activo == 1 &&
@@ -300,7 +306,13 @@ public class FacturasController : BaseController
 
         try
         {
-            var producciones = await _produccionService.GetAllProduccionesAsync();
+            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
+            if (!int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica))
+            {
+                idEntidadMedica = 0;
+            }
+
+            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
 
             // Filtrar solo las que tienen comprobante enviado
             var enviadas = producciones
@@ -375,13 +387,19 @@ public class FacturasController : BaseController
     {
         try
         {
-            var producciones = await _produccionService.GetAllProduccionesAsync();
+            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
+            if (!int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica))
+            {
+                idEntidadMedica = 0;
+            }
+
+            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
 
             // Filtrar solo las que tienen comprobante enviado
             var enviadas = producciones
                 .Where(p => p.Activo == 1 &&
                            !string.IsNullOrEmpty(p.EstadoComprobante) &&
-                           p.EstadoComprobante != "PENDIENTE" &
+                           p.EstadoComprobante != "PENDIENTE" &&
                            p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaPendiente &&
                            p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaSolicitada
                            )
@@ -597,6 +615,17 @@ public class FacturasController : BaseController
             if (produccion == null)
             {
                 return RedirectToAction(nameof(Enviadas));
+            }
+
+            // Validar que la produccion pertenezca a la entidad medica del usuario
+            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
+            if (int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica) && idEntidadMedica > 0)
+            {
+                if (produccion.IdEntidadMedica != idEntidadMedica)
+                {
+                    _logger.LogWarning("Acceso denegado: usuario con IdEntidadMedica {IdEntidadMedica} intento acceder a produccion {Guid} de otra entidad", idEntidadMedica, guid);
+                    return RedirectToAction(nameof(Enviadas));
+                }
             }
 
             var sedes = await _sedeService.GetAllSedesAsync();

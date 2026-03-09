@@ -25,3 +25,14 @@ public class LoginView
     public string Version { get; set; } = string.Empty;
     public string WebRootPath { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// Request para cambiar la sede activa del usuario.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-03-09</created>
+/// </summary>
+public class CambiarSedeRequest
+{
+    public int IdSede { get; set; }
+}

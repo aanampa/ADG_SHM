@@ -40,4 +40,20 @@ public interface IUsuarioSedeRepository
     /// <param name="idUsuario">ID del usuario</param>
     /// <returns>Tupla con IdSede y NombreSede, o null si no tiene sedes asignadas</returns>
     Task<(int IdSede, string NombreSede)?> GetSedeSeleccionadaLoginAsync(int idUsuario);
+
+    /// <summary>
+    /// Actualiza ES_ULTIMA_SEDE para marcar la sede seleccionada al iniciar sesion.
+    /// Pone todas las sedes del usuario en 0 y la seleccionada en 1.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    Task UpdateUltimaSedeAsync(int idUsuario, int idSede);
+
+    /// <summary>
+    /// Obtiene todas las sedes activas asignadas a un usuario con sus nombres.
+    /// Para poblar el dropdown de cambio de sede.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    Task<IEnumerable<(int IdSede, string NombreSede)>> GetSedesActivasByUsuarioAsync(int idUsuario);
 }

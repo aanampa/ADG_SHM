@@ -15,6 +15,7 @@ public class LiquidacionListaResponseDto
     public int? IdSede { get; set; }
     public int? IdEntidadMedica { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
 
     // ===== Produccion - Tipos con descripciones =====
     public string? TipoProduccion { get; set; }
@@ -70,6 +71,7 @@ public class LiquidacionListaResponseDto
     public string? NombreSede { get; set; }
 
     // ===== Entidad Medica =====
+    public string? CodigoEntidad { get; set; }
     public string? Ruc { get; set; }
     public string? RazonSocial { get; set; }
     public string? TipoEntidadMedica { get; set; }

@@ -32,14 +32,19 @@ public class LiquidacionItemViewModel
     public int IdProduccion { get; set; }
     public string GuidRegistro { get; set; } = string.Empty;
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? TipoProduccion { get; set; }
     public string? DesTipoProduccion { get; set; }
     public string? Descripcion { get; set; }
     public string? Periodo { get; set; }
     public string? Estado { get; set; }
     public string? DesEstado { get; set; }
+    public string? CodigoEntidad { get; set; }
     public string? Ruc { get; set; }
     public string? RazonSocial { get; set; }
+    public string? CiaCompuesta => !string.IsNullOrEmpty(CodigoEntidad)
+        ? $"{CodigoEntidad} - {RazonSocial}"
+        : RazonSocial;
     public string? NombreSede { get; set; }
     public decimal? MtoTotal { get; set; }
 
@@ -98,6 +103,8 @@ public class LiquidacionGrupoItemViewModel
     public string? CodigoBanco { get; set; }
     public string? NombreBanco { get; set; }
     public string? DesTipoProduccion { get; set; }
+    public string? DesTipoMedico { get; set; }
+    public string? DesTipoRubro { get; set; }
     public string? Descripcion { get; set; }
     public string? PeriodoLiquidacion { get; set; }
     public decimal? MtoTotal { get; set; }

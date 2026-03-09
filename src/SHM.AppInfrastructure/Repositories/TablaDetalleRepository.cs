@@ -234,7 +234,7 @@ public class TablaDetalleRepository : ITablaDetalleRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SHM_SEG_TABLA_DETALLE_SEQ.NEXTVAL,
+                SHM_TABLA_DETALLE_SEQ.NEXTVAL,
                 :IdTabla,
                 :Codigo,
                 :Descripcion,

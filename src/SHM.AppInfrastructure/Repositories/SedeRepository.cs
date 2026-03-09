@@ -102,7 +102,8 @@ public class SedeRepository : ISedeRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_SEDE
-            WHERE CODIGO = :Codigo AND ACTIVO = 1";
+            WHERE CODIGO = :Codigo
+              AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Sede>(sql, new { Codigo = codigo });
     }

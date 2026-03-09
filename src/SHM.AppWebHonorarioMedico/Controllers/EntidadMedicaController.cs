@@ -167,6 +167,7 @@ public class EntidadMedicaController : Controller
             var model = new EntidadMedicaEditViewModel
             {
                 GuidRegistro = entidad.GuidRegistro ?? "",
+                IdEntidadMedica = entidad.IdEntidadMedica,
                 CodigoEntidad = entidad.CodigoEntidad,
                 RazonSocial = entidad.RazonSocial,
                 Ruc = entidad.Ruc,
