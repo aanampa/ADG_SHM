@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using SHM.AppDomain.DTOs.Common;
 using SHM.AppDomain.DTOs.Produccion;
@@ -110,7 +111,8 @@ public class ProduccionInterfaceController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Inicio de actualizacion masiva de liquidaciones mediante interface");
+            _logger.LogInformation("Inicio de actualizacion masiva de liquidaciones mediante interface. Datos: {DatosJson}",
+                JsonSerializer.Serialize(updateDtos));
 
             if (!ModelState.IsValid)
             {
@@ -133,6 +135,10 @@ public class ProduccionInterfaceController : ControllerBase
                 resultado.CantidadCreados,
                 resultado.CantidadObviados,
                 resultado.CantidadErrores);
+
+
+            _logger.LogInformation("Resultado de actualizacion masiva de liquidaciones mediante interface. Resultado: {resultado}",
+               JsonSerializer.Serialize(resultado));
 
             return Ok(ApiResponseDto<InterfaceProduccionResultDto>.Success(resultado, "Correcto."));
         }

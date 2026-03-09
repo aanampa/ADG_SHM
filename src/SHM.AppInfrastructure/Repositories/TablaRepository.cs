@@ -44,6 +44,7 @@ public class TablaRepository : ITablaRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_TABLA
+            WHERE ACTIVO = 1
             ORDER BY ID_TABLA";
 
         return await connection.QueryAsync<Tabla>(sql);

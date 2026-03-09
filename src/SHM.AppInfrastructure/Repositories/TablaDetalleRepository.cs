@@ -47,6 +47,7 @@ public class TablaDetalleRepository : ITablaDetalleRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_TABLA_DETALLE
+            WHERE ACTIVO = 1
             ORDER BY ID_TABLA, ORDEN, ID_TABLA_DETALLE";
 
         return await connection.QueryAsync<TablaDetalle>(sql);
@@ -73,7 +74,7 @@ public class TablaDetalleRepository : ITablaDetalleRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_TABLA_DETALLE
-            WHERE ID_TABLA = :IdTabla
+            WHERE ID_TABLA = :IdTabla AND ACTIVO = 1
             ORDER BY ORDEN, ID_TABLA_DETALLE";
 
         return await connection.QueryAsync<TablaDetalle>(sql, new { IdTabla = idTabla });
@@ -208,7 +209,7 @@ public class TablaDetalleRepository : ITablaDetalleRepository
             WHERE t1.ID_TABLA = t2.ID_TABLA 
             AND t2.CODIGO = :CodigoTabla
             AND t1.CODIGO = :Codigo
-            AND t1.ACTIVO = 1";
+            AND t1.ACTIVO = 1 AND t2.ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<TablaDetalle>(sql, new { CodigoTabla = codigoTabla, Codigo = codigo });
     }

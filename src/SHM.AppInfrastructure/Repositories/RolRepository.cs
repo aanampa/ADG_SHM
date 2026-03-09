@@ -44,6 +44,7 @@ public class RolRepository : IRolRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_SEG_ROL
+            WHERE ACTIVO = 1
             ORDER BY ID_ROL";
 
         return await connection.QueryAsync<Rol>(sql);

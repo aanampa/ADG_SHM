@@ -47,6 +47,7 @@ public class EntidadCuentaBancariaRepository : IEntidadCuentaBancariaRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ENTIDAD_CUENTA_BANCO
+            WHERE ACTIVO = 1
             ORDER BY ID_CUENTA_BANCO";
 
         return await connection.QueryAsync<EntidadCuentaBancaria>(sql);
@@ -101,7 +102,7 @@ public class EntidadCuentaBancariaRepository : IEntidadCuentaBancariaRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ENTIDAD_CUENTA_BANCO
-            WHERE ID_ENTIDAD_MEDICA = :IdEntidad
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidad AND ACTIVO = 1
             ORDER BY ID_CUENTA_BANCO";
 
         return await connection.QueryAsync<EntidadCuentaBancaria>(sql, new { IdEntidad = idEntidad });

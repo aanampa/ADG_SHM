@@ -329,7 +329,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
             try
             {
                 // Obtener IdSede a partir del CodigoSede
-                var sede = await _sedeRepository.GetByCodigoAsync(updateDto.CodigoSede);
+                var sede = await _sedeRepository.GetByCodigoAsync(updateDto.CodigoSede.Trim());
                 if (sede == null)
                 {
                     detalle.Estado = "ER";
@@ -340,7 +340,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 }
 
                 // Obtener IdEntidadMedica a partir del CodigoEntidad
-                var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(updateDto.CodigoEntidad);
+                var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(updateDto.CodigoEntidad.Trim());
                 if (entidadMedica == null)
                 {
                     detalle.Estado = "ER";
@@ -368,15 +368,15 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 var existe = await _produccionRepository.ExistsByKeyAsync(
                     sede.IdSede,
                     entidadMedica.IdEntidadMedica,
-                    updateDto.CodigoProduccion,
-                    updateDto.NumeroProduccion,
-                    updateDto.TipoEntidadMedica);
+                    updateDto.CodigoProduccion.Trim(),
+                    updateDto.NumeroProduccion.Trim(),
+                    updateDto.TipoEntidadMedica.Trim());
 
                 if (!existe)
                 {
-                    detalle.Estado = "OK";
-                    detalle.Mensaje = "Produccion no encontrada, obviado";
-                    result.CantidadObviados++;
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = "Produccion no encontrada";
+                    result.CantidadErrores++;
                     result.Detalle.Add(detalle);
                     continue;
                 }
@@ -384,16 +384,16 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 var actualizado = await _produccionRepository.UpdateLiquidacionByKeyAsync(
                     sede.IdSede,
                     entidadMedica.IdEntidadMedica,
-                    updateDto.CodigoProduccion,
-                    updateDto.NumeroProduccion,
-                    updateDto.TipoEntidadMedica,
-                    updateDto.NumeroLiquidacion,
-                    updateDto.CodigoLiquidacion,
-                    updateDto.PeriodoLiquidacion,
-                    updateDto.EstadoLiquidacion,
+                    updateDto.CodigoProduccion.Trim(),
+                    updateDto.NumeroProduccion.Trim(),
+                    updateDto.TipoEntidadMedica.Trim(),
+                    updateDto.NumeroLiquidacion.Trim(),
+                    updateDto.CodigoLiquidacion.Trim(),
+                    updateDto.PeriodoLiquidacion.Trim(),
+                    updateDto.EstadoLiquidacion.Trim(),
                     fechaLiquidacion,
-                    updateDto.DescripcionLiquidacion,
-                    updateDto.TipoLiquidacion,
+                    updateDto.DescripcionLiquidacion.Trim(),
+                    updateDto.TipoLiquidacion ?? "".Trim(),
                     idModificador);
 
                 if (actualizado)
@@ -405,7 +405,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 else
                 {
                     detalle.Estado = "ER";
-                    detalle.Mensaje = "No se pudo actualizar la produccion";
+                    detalle.Mensaje = "No se pudo actualizar la produccion. Solo se pueden liquidar producciones en estado FACTURA_ENVIADA_HHMM";
                     result.CantidadErrores++;
                 }
 
@@ -460,15 +460,16 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 var sedeLocal = await _sedeRepository.GetByCodigoAsync(sedeApi.CODIGO);
                 if (sedeLocal != null)
                 {
-                    // Actualizar nombre si cambió
-                    if (sedeLocal.Nombre != sedeApi.DESCRIPCION)
+                    // Actualizar nombre o RUC si cambiaron
+                    if (sedeLocal.Nombre != sedeApi.DESCRIPCION || sedeLocal.Ruc != sedeApi.RUC)
                     {
                         sedeLocal.Nombre = sedeApi.DESCRIPCION;
+                        sedeLocal.Ruc = sedeApi.RUC;
                         sedeLocal.IdModificador = idCreador;
                         await _sedeRepository.UpdateAsync(sedeLocal.IdSede, sedeLocal);
                         sedesActualizadas++;
-                        _logger.LogInformation("Sede actualizada. ID: {Id}, Codigo: {Codigo}, Nombre: {Nombre}",
-                            sedeLocal.IdSede, sedeApi.CODIGO, sedeApi.DESCRIPCION);
+                        _logger.LogInformation("Sede actualizada. ID: {Id}, Codigo: {Codigo}, Nombre: {Nombre}, Ruc: {Ruc}",
+                            sedeLocal.IdSede, sedeApi.CODIGO, sedeApi.DESCRIPCION, sedeApi.RUC);
                     }
                     continue;
                 }
@@ -478,6 +479,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 {
                     Codigo = sedeApi.CODIGO,
                     Nombre = sedeApi.DESCRIPCION,
+                    Ruc = sedeApi.RUC,
                     Activo = 1,
                     IdCreador = idCreador
                 };

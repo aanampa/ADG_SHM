@@ -47,6 +47,7 @@ public class SedeRepository : ISedeRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_SEDE
+            WHERE ACTIVO = 1
             ORDER BY ID_SEDE";
 
         return await connection.QueryAsync<Sede>(sql);
