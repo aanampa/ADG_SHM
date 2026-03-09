@@ -53,6 +53,7 @@ public class ArchivoRepository : IArchivoRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO
+            WHERE ACTIVO = 1
             ORDER BY ID_ARCHIVO";
 
         return await connection.QueryAsync<Archivo>(sql);

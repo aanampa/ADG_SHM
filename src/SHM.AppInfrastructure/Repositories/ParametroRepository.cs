@@ -46,6 +46,7 @@ public class ParametroRepository : IParametroRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_PARAMETRO
+            WHERE ACTIVO = 1
             ORDER BY ID_PARAMETRO";
 
         return await connection.QueryAsync<Parametro>(sql);
@@ -124,7 +125,7 @@ public class ParametroRepository : IParametroRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_PARAMETRO
-            WHERE CODIGO = :Codigo";
+            WHERE CODIGO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Parametro>(sql, new { Codigo = codigo });
     }

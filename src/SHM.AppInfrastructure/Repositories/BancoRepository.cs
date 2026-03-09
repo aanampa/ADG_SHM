@@ -44,6 +44,7 @@ public class BancoRepository : IBancoRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_BANCO
+            WHERE ACTIVO = 1
             ORDER BY ID_BANCO";
 
         return await connection.QueryAsync<Banco>(sql);
@@ -92,7 +93,7 @@ public class BancoRepository : IBancoRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_BANCO
-            WHERE CODIGO_BANCO = :Codigo";
+            WHERE CODIGO_BANCO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Banco>(sql, new { Codigo = codigo });
     }

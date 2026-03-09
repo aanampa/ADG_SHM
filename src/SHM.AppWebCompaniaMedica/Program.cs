@@ -4,6 +4,7 @@ using NLog.Web;
 using SHM.AppApplication.Services;
 using SHM.AppDomain.Configurations;
 using SHM.AppDomain.DTOs.SanPabloApi;
+using SHM.AppDomain.DTOs.SapApi;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
@@ -90,6 +91,17 @@ try
 
     // Registrar HttpClient y servicio para API San Pablo
     builder.Services.AddHttpClient<ISanPabloApiService, SanPabloApiService>()
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+
+    // Configuracion del API de SAP
+    builder.Services.Configure<SapApiSettings>(
+        builder.Configuration.GetSection("SapApi"));
+
+    // Registrar HttpClient y servicio para API SAP
+    builder.Services.AddHttpClient<ISapApiService, SapApiService>()
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator

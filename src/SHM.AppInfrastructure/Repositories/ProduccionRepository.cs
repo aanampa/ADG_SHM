@@ -1,5 +1,6 @@
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -88,7 +89,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql);
     }
@@ -112,7 +113,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE CODIGO_PRODUCCION = :Codigo";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE CODIGO_PRODUCCION = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Produccion>(sql, new { Codigo = codigo });
     }
@@ -136,7 +137,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_SEDE = :IdSede ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_SEDE = :IdSede AND ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql, new { IdSede = idSede });
     }
@@ -148,7 +149,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica AND ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql, new { IdEntidadMedica = idEntidadMedica });
     }
@@ -160,7 +161,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE PERIODO = :Periodo ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE PERIODO = :Periodo AND ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql, new { Periodo = periodo });
     }
@@ -852,13 +853,15 @@ public class ProduccionRepository : IProduccionRepository
                 FECHA_LIQUIDACION = :FechaLiquidacion,
                 DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
                 TIPO_LIQUIDACION = :TipoLiquidacion,
+                ESTADO = :Estado,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_SEDE = :IdSede
             AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
             AND CODIGO_PRODUCCION = :CodigoProduccion
             AND NUMERO_PRODUCCION = :NumeroProduccion
-            AND TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica";
+            AND TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica
+            AND ESTADO = :EstadoRequerido";
 
         var rowsAffected = await connection.ExecuteAsync(sql, new
         {
@@ -874,6 +877,8 @@ public class ProduccionRepository : IProduccionRepository
             FechaLiquidacion = fechaLiquidacion,
             DescripcionLiquidacion = descripcionLiquidacion,
             TipoLiquidacion = tipoLiquidacion,
+            Estado = EstadoDescripcion.Produccion.FacturaLiquidada,
+            EstadoRequerido = EstadoDescripcion.Produccion.FacturaEnviadaHhmm,
             IdModificador = idModificador
         });
 

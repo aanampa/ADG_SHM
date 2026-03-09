@@ -15,6 +15,7 @@ public class SanPabloSedeDto
 {
     public string? CODIGO { get; set; }
     public string? DESCRIPCION { get; set; }
+    public string? RUC { get; set; }
 }
 
 /// <summary>

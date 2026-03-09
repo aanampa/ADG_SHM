@@ -46,6 +46,7 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO_COMPROBANTE
+            WHERE ACTIVO = 1
             ORDER BY ID_ARCHIVO_COMPROBANTE";
 
         return await connection.QueryAsync<ArchivoComprobante>(sql);
@@ -98,7 +99,7 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO_COMPROBANTE
-            WHERE ID_PRODUCCION = :IdProduccion
+            WHERE ID_PRODUCCION = :IdProduccion AND ACTIVO = 1
             ORDER BY ID_ARCHIVO_COMPROBANTE";
 
         return await connection.QueryAsync<ArchivoComprobante>(sql, new { IdProduccion = idProduccion });
@@ -125,7 +126,7 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO_COMPROBANTE
-            WHERE ID_ARCHIVO = :IdArchivo
+            WHERE ID_ARCHIVO = :IdArchivo AND ACTIVO = 1
             ORDER BY ID_ARCHIVO_COMPROBANTE";
 
         return await connection.QueryAsync<ArchivoComprobante>(sql, new { IdArchivo = idArchivo });
