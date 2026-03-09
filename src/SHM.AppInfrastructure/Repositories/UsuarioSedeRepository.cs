@@ -171,4 +171,79 @@ public class UsuarioSedeRepository : IUsuarioSedeRepository
 
         return result;
     }
+
+    /// <summary>
+    /// Actualiza ES_ULTIMA_SEDE para marcar la sede seleccionada al iniciar sesion.
+    /// Pone todas las sedes del usuario en 0 y la seleccionada en 1.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    /// </summary>
+    public async Task UpdateUltimaSedeAsync(int idUsuario, int idSede)
+    {
+        using var connection = new OracleConnection(_connectionString);
+        await connection.OpenAsync();
+
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // 1. Poner todas las sedes del usuario en ES_ULTIMA_SEDE = 0
+            var resetSql = @"
+                UPDATE SHM_SEG_USUARIO_SEDE
+                SET ES_ULTIMA_SEDE = 0
+                WHERE ID_USUARIO = :IdUsuario
+                  AND ACTIVO = 1";
+
+            await connection.ExecuteAsync(resetSql, new { IdUsuario = idUsuario }, transaction);
+
+            // 2. Marcar la sede seleccionada con ES_ULTIMA_SEDE = 1
+            var updateSql = @"
+                UPDATE SHM_SEG_USUARIO_SEDE
+                SET ES_ULTIMA_SEDE = 1
+                WHERE ID_USUARIO = :IdUsuario
+                  AND ID_SEDE = :IdSede
+                  AND ACTIVO = 1";
+
+            await connection.ExecuteAsync(updateSql, new { IdUsuario = idUsuario, IdSede = idSede }, transaction);
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene todas las sedes activas asignadas a un usuario con sus nombres.
+    /// Para poblar el dropdown de cambio de sede.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    /// </summary>
+    public async Task<IEnumerable<(int IdSede, string NombreSede)>> GetSedesActivasByUsuarioAsync(int idUsuario)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                us.ID_SEDE as IdSede,
+                s.NOMBRE as NombreSede
+            FROM SHM_SEG_USUARIO_SEDE us
+            INNER JOIN SHM_SEDE s ON us.ID_SEDE = s.ID_SEDE
+            WHERE us.ID_USUARIO = :IdUsuario
+              AND us.ACTIVO = 1
+              AND s.ACTIVO = 1
+            ORDER BY s.NOMBRE ASC";
+
+        var rows = await connection.QueryAsync(sql, new { IdUsuario = idUsuario });
+        var result = new List<(int IdSede, string NombreSede)>();
+        foreach (var r in rows)
+        {
+            result.Add((Convert.ToInt32(r.IDSEDE), (string)(r.NOMBRESEDE ?? "")));
+        }
+        return result;
+    }
 }

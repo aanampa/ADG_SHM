@@ -1,18 +1,32 @@
 @model SHM.AppWebHonorarioMedico.Models.LiquidacionGrupoListViewModel
 
-<div class="card-body table-responsive p-0">
-    <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
-        <thead>
+<style>
+    thead th {
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+    .tabla-pequena {
+        font-size: 14px;
+    }
+</style>
+
+<div class="card-body table-responsive px-2 py-1">
+    <table class="table table-sm table-bordered tabla-pequena" style="background-color: #FFFFFF; width: 100%;">
+        <thead style="background-color: #6c757d; color: #fff;">
             <tr>
-                <th style="width: 40px;" class="text-center">Sel.</th>
-                <th style="width: 100px;">Liquidacion</th>
-                <th>Descripcion</th>
-                <th style="width: 100px;">Tipo</th>
-                <th style="width: 90px;">Periodo</th>
-                <th style="width: 150px;">Banco</th>
-                <th style="width: 60px;" class="text-center">Fact.</th>
-                <th style="width: 100px;" class="text-right">Total S/.</th>
-                <th style="width: 60px;" class="text-center">Detalle</th>
+                <th class="text-center align-middle" align="center" style="width: 10px;">
+                    Sel.
+                </th>                
+                <th class="align-middle" style="width: 100px;">Cod.<br/>Liquidacion</th>
+                <th class="align-middle" style="width: 120px;">Tipo Médico</th>
+                <th class="align-middle" style="width: 150px;">Tipo Liquidación</th>
+                <th class="align-middle" style="width: 120px;">Tipo Rubro</th>
+                <th class="align-middle" style="width: 90px;">Periodo</th>
+                <th class="align-middle">Descripcion</th>
+                <th class="align-middle" style="width: 250px;">Banco</th>
+                <th class="align-middle" style="width: 60px;">Cant. Fact.</th>
+                <th class="align-middle" style="width: 100px;">Total S/.</th>
+                <th class="align-middle" style="width: 60px;">Detalle</th>
             </tr>
         </thead>
         <tbody>
@@ -23,15 +37,17 @@
                     <tr>
                         <td class="text-center">
                             <input type="checkbox"
-                                   class="form-check-input"
+                                   class="chk-item"
                                    data-codigo="@item.CodigoLiquidacion"
                                    data-banco="@item.IdBanco"
                                    onchange="onCheckboxChange(this, '@item.CodigoLiquidacion', @(item.IdBanco ?? 0), '@(item.NombreBanco?.Replace("'", "\\'") ?? "-")')" />
                         </td>
-                        <td>@(item.CodigoLiquidacion ?? "-")</td>
-                        <td>@(item.Descripcion ?? "-")</td>
+                        <td>@(item.NumeroLiquidacion ?? "-")</td>
+                        <td>@(item.DesTipoMedico ?? "-")</td>
                         <td>@(item.DesTipoProduccion ?? "-")</td>
+                        <td>@(item.DesTipoRubro ?? "-")</td>
                         <td>@(item.PeriodoLiquidacion ?? "-")</td>
+                        <td>@(item.Descripcion ?? "-")</td>
                         <td>@(item.NombreBanco ?? "-")</td>
                         <td class="text-center">
                             <span class="badge badge-info">@item.CantidadFacturas</span>
@@ -39,7 +55,7 @@
                         <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
                         <td class="text-center">
                             <button type="button" class="btn btn-info btn-xs"
-                                    onclick="verProducciones('@item.CodigoLiquidacion', @(item.IdBanco ?? 0), '@(item.Descripcion?.Replace("'", "\\'") ?? "-")', '@(item.DesTipoProduccion?.Replace("'", "\\'") ?? "-")')"
+                                    onclick="verProducciones('@item.CodigoLiquidacion', @(item.IdBanco ?? 0), '@(item.Descripcion?.Replace("'", "\\'") ?? "-")', '@(item.DesTipoProduccion?.Replace("'", "\\'") ?? "-")', '@(item.NumeroLiquidacion?.Replace("'", "\\'") ?? "-")')"
                                     title="Ver Facturas">
                                 <i class="fas fa-list"></i>
                             </button>
@@ -50,7 +66,7 @@
             else
             {
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-4">
+                    <td colspan="11" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No se encontraron liquidaciones</p>
                     </td>

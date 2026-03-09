@@ -495,7 +495,7 @@ public class ProduccionRepository : IProduccionRepository
         var whereClause = "WHERE p.ACTIVO = 1";
         if (!string.IsNullOrEmpty(produccion))
         {
-            whereClause += " AND UPPER(p.CODIGO_PRODUCCION) LIKE '%' || UPPER(:Produccion) || '%'";
+            whereClause += " AND UPPER(p.NUMERO_PRODUCCION) LIKE '%' || UPPER(:Produccion) || '%'";
         }
         if (!string.IsNullOrEmpty(estado))
         {
@@ -532,6 +532,7 @@ public class ProduccionRepository : IProduccionRepository
                         p.ID_SEDE AS IdSede,
                         p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
                         p.CODIGO_PRODUCCION AS CodigoProduccion,
+                        p.NUMERO_PRODUCCION AS NumeroProduccion,
                         p.TIPO_PRODUCCION AS TipoProduccion,
                         tp.DESCRIPCION AS DesTipoProduccion,
                         p.TIPO_MEDICO AS TipoMedico,
@@ -617,6 +618,7 @@ public class ProduccionRepository : IProduccionRepository
                 p.ID_SEDE AS IdSede,
                 p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
                 p.CODIGO_PRODUCCION AS CodigoProduccion,
+                p.NUMERO_PRODUCCION AS NumeroProduccion,
                 p.TIPO_PRODUCCION AS TipoProduccion,
                 tp.DESCRIPCION AS DesTipoProduccion,
                 p.TIPO_MEDICO AS TipoMedico,
@@ -635,6 +637,7 @@ public class ProduccionRepository : IProduccionRepository
                 p.MTO_IGV AS MtoIgv,
                 p.MTO_TOTAL AS MtoTotal,
                 p.TIPO_COMPROBANTE AS TipoComprobante,
+                tc.DESCRIPCION AS DesTipoComprobante,
                 p.CONCEPTO AS Concepto,
                 p.FECHA_LIMITE AS FechaLimite,
                 p.SERIE AS Serie,
@@ -665,6 +668,7 @@ public class ProduccionRepository : IProduccionRepository
             LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
             LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
             LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tc ON tc.CODIGO_TABLA = 'TIPO_COMPROBANTE' AND tc.CODIGO = p.TIPO_COMPROBANTE
             WHERE p.GUID_REGISTRO = :GuidRegistro";
 
         return await connection.QueryFirstOrDefaultAsync<ProduccionListaResponseDto>(sql, new { GuidRegistro = guidRegistro });

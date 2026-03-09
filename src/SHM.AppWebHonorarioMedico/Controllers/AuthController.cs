@@ -135,6 +135,10 @@ public class AuthController : Controller
                 var idSedeDev = sedeDevInfo?.IdSede.ToString() ?? "0";
                 var nombreSedeDev = sedeDevInfo?.NombreSede ?? "";
 
+                // Actualizar ES_ULTIMA_SEDE para la sede seleccionada
+                if (sedeDevInfo.HasValue)
+                    await _usuarioSedeRepository.UpdateUltimaSedeAsync(usuarioDev.IdUsuario, sedeDevInfo.Value.IdSede);
+
                 // Crear Claims con datos reales del usuario
                 var devClaims = new List<Claim>
                 {
@@ -204,6 +208,10 @@ public class AuthController : Controller
             var sedeInfo = await _usuarioSedeRepository.GetSedeSeleccionadaLoginAsync(usuario.IdUsuario);
             var idSede = sedeInfo?.IdSede.ToString() ?? "0";
             var nombreSede = sedeInfo?.NombreSede ?? "";
+
+            // Actualizar ES_ULTIMA_SEDE para la sede seleccionada
+            if (sedeInfo.HasValue)
+                await _usuarioSedeRepository.UpdateUltimaSedeAsync(usuario.IdUsuario, sedeInfo.Value.IdSede);
 
             // Crear Claims para el usuario autenticado
             var userClaims = new List<Claim>
@@ -540,5 +548,98 @@ public class AuthController : Controller
     public IActionResult AccesoDenegado()
     {
         return View();
+    }
+
+    /// <summary>
+    /// Obtiene las sedes disponibles del usuario autenticado (AJAX).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    /// </summary>
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> GetSedesUsuario()
+    {
+        try
+        {
+            var idUsuarioStr = User.FindFirstValue("IdUsuario");
+            if (string.IsNullOrEmpty(idUsuarioStr) || !int.TryParse(idUsuarioStr, out int idUsuario))
+                return Json(new { success = false, message = "Usuario no identificado" });
+
+            var sedes = await _usuarioSedeRepository.GetSedesActivasByUsuarioAsync(idUsuario);
+
+            return Json(new
+            {
+                success = true,
+                data = sedes.Select(s => new { idSede = s.IdSede, nombreSede = s.NombreSede })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener sedes del usuario");
+            return Json(new { success = false, message = "Error al obtener sedes" });
+        }
+    }
+
+    /// <summary>
+    /// Cambia la sede activa del usuario autenticado.
+    /// Re-autentica con los nuevos claims de sede.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    /// </summary>
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> CambiarSede([FromBody] CambiarSedeRequest request)
+    {
+        try
+        {
+            var idUsuarioStr = User.FindFirstValue("IdUsuario");
+            if (string.IsNullOrEmpty(idUsuarioStr) || !int.TryParse(idUsuarioStr, out int idUsuario))
+                return Json(new { success = false, message = "Usuario no identificado" });
+
+            // Validar que el usuario tenga acceso a la sede solicitada
+            var sedes = await _usuarioSedeRepository.GetSedesActivasByUsuarioAsync(idUsuario);
+            var sedeSeleccionada = sedes.FirstOrDefault(s => s.IdSede == request.IdSede);
+
+            if (sedeSeleccionada.NombreSede == null)
+                return Json(new { success = false, message = "No tiene acceso a la sede seleccionada" });
+
+            // Actualizar ES_ULTIMA_SEDE en BD
+            await _usuarioSedeRepository.UpdateUltimaSedeAsync(idUsuario, request.IdSede);
+
+            // Re-crear claims con la nueva sede
+            var claims = User.Claims
+                .Where(c => c.Type != "IdSede" && c.Type != "NombreSede")
+                .ToList();
+
+            claims.Add(new Claim("IdSede", request.IdSede.ToString()));
+            claims.Add(new Claim("NombreSede", sedeSeleccionada.NombreSede));
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                }
+            );
+
+            // Limpiar sesion para invalidar cache de menu
+            HttpContext.Session.Clear();
+
+            _logger.LogInformation("Usuario {UserId} cambió a sede {IdSede} ({NombreSede})",
+                idUsuario, request.IdSede, sedeSeleccionada.NombreSede);
+
+            return Json(new { success = true, nombreSede = sedeSeleccionada.NombreSede });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar sede");
+            return Json(new { success = false, message = "Error al cambiar sede" });
+        }
     }
 }

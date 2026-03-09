@@ -16,6 +16,7 @@ public class ProduccionListaResponseDto
     public int? IdSede { get; set; }
     public int? IdEntidadMedica { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
 
     // Produccion - Tipos con descripciones
     public string? TipoProduccion { get; set; }
@@ -42,6 +43,7 @@ public class ProduccionListaResponseDto
 
     // Produccion - Comprobante
     public string? TipoComprobante { get; set; }
+    public string? DesTipoComprobante { get; set; }
     public string? Concepto { get; set; }
     public DateTime? FechaLimite { get; set; }
     public string? Serie { get; set; }
