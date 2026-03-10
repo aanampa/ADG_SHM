@@ -70,37 +70,54 @@ El siguiente diagrama muestra los servidores fisicos/virtuales que intervienen e
 
 ```mermaid
 graph LR
-    subgraph USR["Usuarios"]
-        USR_INT["Usuarios Internos<br>(Intranet)"]
-        USR_EXT["Companias Medicas<br>(Internet)"]
+    subgraph RED_INTERNA["Intranet Corporativa"]
+        USR_INT["<b>Usuarios Internos</b><br>(Navegador Web)"]
     end
 
-    subgraph SRV_APP["Servidor de Aplicaciones - 192.1.0.173 (IIS)"]
-        API["API REST<br>Puerto 92"]
-        WEB_ADM["Portal Admin<br>Puerto 91"]
-        WEB_CIA["Portal Companias<br>Puerto 93"]
-        FS["D:\SHM<br>PDF / XML"]
+    subgraph RED_EXTERNA["Red Externa / Internet"]
+        USR_EXT["<b>Companias Medicas</b><br>(Navegador Web)"]
     end
 
-    subgraph SRV_EXT["Servicios Externos"]
-        SAP_API["SAP OData API<br>190.12.87.190:8124"]
-        HHMM_API["API HHMM<br>apiintt.sanpablo.com.pe:23021"]
-        SMTP["SMTP Gmail<br>smtp.gmail.com:587"]
+    subgraph SRV_APP["Servidor de Aplicaciones<br>192.1.0.173 (Windows Server / IIS)"]
+        API["<b>SHM API REST</b><br>IIS - Puerto 92<br>D:\appweb\shmappapi"]
+        WEB_ADM["<b>SHM Portal Admin</b><br>IIS - Puerto 91<br>D:\appweb\shmappwebadmin"]
+        WEB_CIA["<b>SHM Portal Companias</b><br>IIS - Puerto 93<br>D:\appweb\shmappwebcompania"]
+        FS[("<b>Carpeta Compartida</b><br>D:\SHM<br>PDF / XML<br>(Comprobantes)")]
     end
 
-    ORA[("Oracle 11g<br>192.1.0.191:1521")]
+    subgraph SRV_BD["Servidor de Base de Datos<br>192.1.0.191 (Oracle)"]
+        ORA["<b>Oracle 11g</b><br>Puerto 1521<br>Service: chspsp<br>Schema: SHM_DEV"]
+    end
 
-    USR_INT -- HTTPS --> WEB_ADM
-    USR_EXT -- HTTPS --> WEB_CIA
+    subgraph SRV_SAP["Servidor SAP<br>190.12.87.190"]
+        SAP_API["<b>SAP OData API</b><br>Puerto 8124 (HTTPS)<br>OAuth2 client_credentials"]
+    end
 
-    SAP_API <-- "Produccion / Bancos" --> API
-    API -- "Sedes / Entidades" --> HHMM_API
-    WEB_CIA -- "Comprobante" --> HHMM_API
+    subgraph SRV_HHMM["Servidor San Pablo API<br>apiintt.sanpablo.com.pe"]
+        HHMM_API["<b>API HHMM</b><br>Puerto 23021 (HTTPS)<br>JWT Authentication"]
+    end
 
-    API & WEB_ADM & WEB_CIA -- "Lectura / Escritura<br>TCP 1521" --> ORA
-    WEB_ADM & WEB_CIA -- "TLS 587" --> SMTP
-    WEB_ADM -- "Lectura" --> FS
-    WEB_CIA -- "Lectura / Escritura" --> FS
+    subgraph SRV_SMTP["Servidor de Correo"]
+        SMTP["<b>SMTP Gmail</b><br>smtp.gmail.com<br>Puerto 587 (TLS)"]
+    end
+
+    USR_INT -- "HTTPS<br>(Intranet)" --> WEB_ADM
+    USR_EXT -- "HTTPS<br>(Internet)" --> WEB_CIA
+
+    SAP_API -- "Produccion /<br>Liquidacion" --> API
+    API -- "Sincronizar<br>Bancos" --> SAP_API
+    API -- "Sedes /<br>Entidades" --> HHMM_API
+    WEB_CIA -- "Registrar<br>Comprobante" --> HHMM_API
+
+    API -- "TCP 1521" --> ORA
+    WEB_ADM -- "TCP 1521" --> ORA
+    WEB_CIA -- "TCP 1521" --> ORA
+
+    WEB_ADM -- "TLS 587" --> SMTP
+    WEB_CIA -- "TLS 587" --> SMTP
+
+    WEB_ADM -- "Lectura<br>PDF / XML" --> FS
+    WEB_CIA -- "Escritura / Lectura<br>PDF / XML" --> FS
 ```
 
 > **Nota:** Los puertos e IPs mostrados son de referencia. Ajustar segun el ambiente de produccion.
@@ -328,34 +345,41 @@ D:\SHM\
 ### Diagrama de Arquitectura de Software
 
 ```mermaid
-graph LR
-    subgraph EXT["Sistemas Externos"]
+graph TB
+    subgraph Sistemas Externos
         SAP[SAP]
-        HHMM[API San Pablo HHMM]
-        SMTP[SMTP Gmail]
+        HHMM[API San Pablo<br>HHMM]
+        SMTP[SMTP<br>Gmail]
     end
 
-    subgraph IIS["Servidor de Aplicaciones - IIS"]
-        API[API REST]
-        ADMIN[Portal Admin]
-        COMPANIA[Portal Companias]
+    subgraph Servidor de Aplicaciones - IIS
+        API[API REST<br>SHM.AppApiHonorarioMedico]
+        ADMIN[Portal Administrativo<br>SHM.AppWebHonorarioMedico]
+        COMPANIA[Portal Companias Medicas<br>SHM.AppWebCompaniaMedica]
     end
 
-    subgraph LIB["Capas Compartidas"]
-        APP[AppApplication<br>Logica de Negocio]
-        INFRA[AppInfrastructure<br>Acceso a Datos]
-        DOMAIN[AppDomain<br>Entidades / DTOs]
+    subgraph Capas Compartidas
+        APP[SHM.AppApplication<br>Logica de Negocio]
+        INFRA[SHM.AppInfrastructure<br>Acceso a Datos - Dapper]
+        DOMAIN[SHM.AppDomain<br>Entidades - DTOs - Interfaces]
     end
 
-    BD[(Oracle 11g)]
+    subgraph Base de Datos
+        BD[(Oracle 11g<br>SHM_DEV)]
+    end
 
-    SAP <-- "Produccion<br>Bancos" --> API
-    HHMM <-- "Sedes<br>Entidades" --> API
-    COMPANIA -- "Comprobante" --> HHMM
-    ADMIN & COMPANIA -- "Correo" --> SMTP
+    SAP -- Produccion / Liquidacion --> API
+    API -- Sincronizar Bancos --> SAP
+    HHMM <-- Sedes / Entidades --> API
+    COMPANIA -- Registrar Comprobante --> HHMM
+    ADMIN -- Notificaciones --> SMTP
+    COMPANIA -- Notificaciones --> SMTP
 
-    API & ADMIN & COMPANIA --> APP
-    APP --> INFRA --> DOMAIN
+    API --> APP
+    ADMIN --> APP
+    COMPANIA --> APP
+    APP --> INFRA
+    INFRA --> DOMAIN
     INFRA --> BD
 ```
 
