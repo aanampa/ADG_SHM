@@ -118,7 +118,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
 
         var sql = $@"{SELECT_BASE}
             WHERE opl.ID_ORDEN_PAGO = :IdOrdenPago AND opl.ACTIVO = 1
-            ORDER BY opl.ID_ORDEN_PAGO_LIQUIDACION";
+            ORDER BY opl.CODIGO_LIQUIDACION";
 
         return await connection.QueryAsync<OrdenPagoLiquidacion>(sql, new { IdOrdenPago = idOrdenPago });
     }
@@ -329,6 +329,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
 
         var sql = @"
             SELECT
+                T1.NUMERO_LIQUIDACION AS NumeroLiquidacion,
                 T1.CODIGO_LIQUIDACION AS CodigoLiquidacion,
                 T1.DESCRIPCION_LIQUIDACION AS DescripcionLiquidacion,
                 T1.TIPO_LIQUIDACION AS TipoLiquidacion,
