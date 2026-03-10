@@ -126,7 +126,7 @@ public class HomeController : Controller
                 model.NumeroDocumento,
                 model.Celular);
 
-            if (!successDatos)
+            if (!successDatos)  
             {
                 _logger.LogWarning("Error al actualizar datos del usuario {IdUsuario}: {Error}", idUsuario, errorDatos);
                 ViewBag.ErrorMessage = errorDatos;
