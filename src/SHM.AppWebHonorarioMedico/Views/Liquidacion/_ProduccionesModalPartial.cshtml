@@ -2,9 +2,10 @@
 
 <div class="p-3">
 <div class="table-responsive">
-    <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
+    <table class="table table-hover table-sm" style="font-size: 0.85rem;">
         <thead class="thead-light">
             <tr>
+                <th style="width: 30px;" class="text-center">#</th>
                 <th>Cia Medica</th>
                 <th style="width: 120px;">Banco</th>
                 <th style="width: 100px;">Comprobante</th>
@@ -15,9 +16,11 @@
         <tbody>
             @if (Model.Any())
             {
+                var idx = 1;
                 @foreach (var item in Model)
                 {
                     <tr>
+                        <td class="text-center">@(idx++)</td>
                         <td>@(item.CiaCompuesta ?? "-")</td>
                         <td>@(item.NombreBanco ?? "-")</td>
                         <td>@(item.ComprobanteFactura ?? "-")</td>
@@ -38,7 +41,7 @@
                     </tr>
                 }
                 <tr class="table-warning">
-                    <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                    <td colspan="4" class="text-right"><strong>Total:</strong></td>
                     <td class="text-right"><strong>S/. @Model.Sum(x => x.MtoTotal ?? 0).ToString("N2")</strong></td>
                     <td></td>
                 </tr>
@@ -46,7 +49,7 @@
             else
             {
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
+                    <td colspan="6" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No se encontraron facturas</p>
                     </td>

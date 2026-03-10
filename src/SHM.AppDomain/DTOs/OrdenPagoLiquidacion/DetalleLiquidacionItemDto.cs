@@ -11,6 +11,7 @@ namespace SHM.AppDomain.DTOs.OrdenPagoLiquidacion;
 public class DetalleLiquidacionItemDto
 {
     // Campos de Liquidacion
+    public string? NumeroLiquidacion { get; set; }
     public string? CodigoLiquidacion { get; set; }
     public string? DescripcionLiquidacion { get; set; }
     public string? TipoLiquidacion { get; set; }

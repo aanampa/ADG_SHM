@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SHM.AppDomain.DTOs.PerfilAprobacionUsuario;
 using SHM.AppDomain.DTOs.Usuario;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -19,6 +20,7 @@ public class UsuarioController : Controller
     private readonly ISedeService _sedeService;
     private readonly IPerfilAprobacionService _perfilAprobacionService;
     private readonly IPerfilAprobacionUsuarioService _perfilAprobacionUsuarioService;
+    private readonly IUsuarioSedeRepository _usuarioSedeRepository;
 
     public UsuarioController(
         ILogger<UsuarioController> logger,
@@ -27,7 +29,8 @@ public class UsuarioController : Controller
         IEntidadMedicaService entidadMedicaService,
         ISedeService sedeService,
         IPerfilAprobacionService perfilAprobacionService,
-        IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService)
+        IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService,
+        IUsuarioSedeRepository usuarioSedeRepository)
     {
         _logger = logger;
         _usuarioService = usuarioService;
@@ -36,6 +39,7 @@ public class UsuarioController : Controller
         _sedeService = sedeService;
         _perfilAprobacionService = perfilAprobacionService;
         _perfilAprobacionUsuarioService = perfilAprobacionUsuarioService;
+        _usuarioSedeRepository = usuarioSedeRepository;
     }
 
     /// <summary>
@@ -473,6 +477,24 @@ public class UsuarioController : Controller
             var roles = await _rolService.GetAllRolesAsync();
             var rolesDict = roles.ToDictionary(r => r.IdRol, r => r.Descripcion ?? "");
 
+            // Obtener sedes por usuario para las columnas Cantidad Sedes y Ultima Sede
+            var itemsList = items.ToList();
+            var sedesInfoDict = new Dictionary<int, (int Cantidad, string UltimaSede)>();
+            foreach (var u in itemsList)
+            {
+                var sedes = await _usuarioSedeRepository.GetByUsuarioIdAsync(u.IdUsuario);
+                var sedesList = sedes.ToList();
+                var ultimaSede = sedesList.FirstOrDefault(s => s.EsUltimaSede == 1);
+                string nombreUltimaSede = "";
+                if (ultimaSede != null)
+                {
+                    var sedesActivas = await _usuarioSedeRepository.GetSedesActivasByUsuarioAsync(u.IdUsuario);
+                    var sedeInfo = sedesActivas.FirstOrDefault(s => s.IdSede == ultimaSede.IdSede);
+                    nombreUltimaSede = sedeInfo.NombreSede ?? "";
+                }
+                sedesInfoDict[u.IdUsuario] = (sedesList.Count, nombreUltimaSede);
+            }
+
             var model = new UsuarioInternoListViewModel
             {
                 Items = new List<UsuarioInternoItemViewModel>(),
@@ -482,8 +504,9 @@ public class UsuarioController : Controller
                 SearchTerm = searchTerm
             };
 
-            foreach (var u in items)
+            foreach (var u in itemsList)
             {
+                sedesInfoDict.TryGetValue(u.IdUsuario, out var sedesInfo);
                 model.Items.Add(new UsuarioInternoItemViewModel
                 {
                     GuidRegistro = u.GuidRegistro ?? "",
@@ -493,6 +516,8 @@ public class UsuarioController : Controller
                     NumeroDocumento = u.NumeroDocumento,
                     Celular = u.Celular,
                     RolDescripcion = u.IdRol.HasValue && rolesDict.TryGetValue(u.IdRol.Value, out var rol) ? rol : "",
+                    CantidadSedes = sedesInfo.Cantidad,
+                    UltimaSede = sedesInfo.UltimaSede,
                     Activo = u.Activo,
                     FechaCreacion = u.FechaCreacion
                 });
