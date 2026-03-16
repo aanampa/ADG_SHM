@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SHM.AppDomain.DTOs.Banco;
 using SHM.AppDomain.DTOs.Common;
+using SHM.AppDomain.DTOs.SapApi;
 using SHM.AppDomain.Interfaces.Services;
 
 namespace SHM.AppApiHonorarioMedico.Controllers;
@@ -132,6 +133,43 @@ public class SapInterfaceController : ControllerBase
         {
             _logger.LogError(ex, "Error al sincronizar bancos desde SAP");
             return StatusCode(500, ApiResponseDto<SincronizarBancosResultDto>.Error(
+                "Error interno del servidor.", ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Obtiene las cuentas bancarias de un acreedor desde SAP (CTA_ACREEDORSet).
+    /// </summary>
+    /// <param name="codAcreedor">Codigo del acreedor en SAP.</param>
+    [HttpGet("cuentas-bancarias-acreedor/{codAcreedor}")]
+    [ProducesResponseType(typeof(ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>>> GetCuentasBancariasByAcreedor(string codAcreedor)
+    {
+        try
+        {
+            _logger.LogInformation("Consultando cuentas bancarias del acreedor {CodAcreedor} en SAP", codAcreedor);
+
+            var cuentas = await _sapApiService.GetCuentasBancariasByAcreedorAsync(codAcreedor);
+
+            if (cuentas == null || cuentas.Count == 0)
+            {
+                _logger.LogWarning("No se encontraron cuentas bancarias para el acreedor {CodAcreedor}", codAcreedor);
+                return NotFound(ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>.Error(
+                    $"No se encontraron cuentas bancarias para el acreedor '{codAcreedor}'."));
+            }
+
+            _logger.LogInformation("Se obtuvieron {Count} cuentas bancarias del acreedor {CodAcreedor}",
+                cuentas.Count, codAcreedor);
+
+            return Ok(ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>.Success(
+                cuentas, $"Se encontraron {cuentas.Count} cuenta(s) bancaria(s)."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al consultar cuentas bancarias del acreedor {CodAcreedor}", codAcreedor);
+            return StatusCode(500, ApiResponseDto<List<SapAcreedorCuentaBancariaDto>>.Error(
                 "Error interno del servidor.", ex.Message));
         }
     }

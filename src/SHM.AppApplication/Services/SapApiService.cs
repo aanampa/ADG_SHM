@@ -187,4 +187,76 @@ public class SapApiService : ISapApiService
             return new List<SapBancoDto>();
         }
     }
+
+    /// <summary>
+    /// Obtiene las cuentas bancarias de un acreedor desde SAP (CTA_ACREEDORSet).
+    /// </summary>
+    /// <param name="codAcreedor">Codigo del acreedor en SAP.</param>
+    public async Task<List<SapAcreedorCuentaBancariaDto>> GetCuentasBancariasByAcreedorAsync(string codAcreedor)
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("No se pudo obtener token para consultar cuentas bancarias de acreedor en SAP");
+                return new List<SapAcreedorCuentaBancariaDto>();
+            }
+
+            _logger.LogInformation("Consultando cuentas bancarias del acreedor {CodAcreedor} en SAP", codAcreedor);
+
+            var url = $"{_settings.EndpointCuentasAcreedor}?$filter=CodAcreedor eq '{codAcreedor}'";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Error al consultar cuentas bancarias en SAP. CodAcreedor: {CodAcreedor}, StatusCode: {StatusCode}, Response: {Response}",
+                    codAcreedor, response.StatusCode, errorContent);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _cachedToken = null;
+                    _tokenExpiration = DateTime.MinValue;
+                }
+
+                return new List<SapAcreedorCuentaBancariaDto>();
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Respuesta de cuentas bancarias SAP: {Response}", responseContent);
+
+            var odataResponse = JsonSerializer.Deserialize<SapODataResponseDto<SapAcreedorCuentaBancariaDto>>(responseContent, _jsonOptions);
+
+            if (odataResponse?.D?.Results != null)
+            {
+                _logger.LogInformation("Se obtuvieron {Count} cuentas bancarias del acreedor {CodAcreedor} desde SAP",
+                    odataResponse.D.Results.Count, codAcreedor);
+                return odataResponse.D.Results;
+            }
+
+            _logger.LogWarning("No se obtuvieron cuentas bancarias del acreedor {CodAcreedor} desde SAP", codAcreedor);
+            return new List<SapAcreedorCuentaBancariaDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error de conexion al consultar cuentas bancarias del acreedor {CodAcreedor} en SAP", codAcreedor);
+            return new List<SapAcreedorCuentaBancariaDto>();
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout al consultar cuentas bancarias del acreedor {CodAcreedor} en SAP", codAcreedor);
+            return new List<SapAcreedorCuentaBancariaDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al consultar cuentas bancarias del acreedor {CodAcreedor} en SAP", codAcreedor);
+            return new List<SapAcreedorCuentaBancariaDto>();
+        }
+    }
 }

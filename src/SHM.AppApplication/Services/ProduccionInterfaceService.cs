@@ -22,6 +22,7 @@ namespace SHM.AppApplication.Services;
 /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro, sin abortar ante errores individuales</modified>
 /// <modified>ADG Antonio - 2026-02-24 - Auto-registro de sedes desde API San Pablo</modified>
 /// <modified>ADG Antonio - 2026-02-25 - Anulacion de comprobante (EstadoProduccion=9)</modified>
+/// <modified>ADG Antonio - 2026-03-15 - Sincronizacion de cuentas bancarias desde SAP al registrar entidad</modified>
 /// </summary>
 public class ProduccionInterfaceService : IProduccionInterfaceService
 {
@@ -32,6 +33,9 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     private readonly IArchivoComprobanteRepository _archivoComprobanteRepository;
     private readonly ISanPabloApiService _sanPabloApiService;
     private readonly ITablaDetalleRepository _tablaDetalleRepository;
+    private readonly ISapApiService _sapApiService;
+    private readonly IEntidadCuentaBancariaRepository _entidadCuentaBancariaRepository;
+    private readonly IBancoRepository _bancoRepository;
     private readonly ILogger<ProduccionInterfaceService> _logger;
 
     public ProduccionInterfaceService(
@@ -42,6 +46,9 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         IArchivoComprobanteRepository archivoComprobanteRepository,
         ISanPabloApiService sanPabloApiService,
         ITablaDetalleRepository tablaDetalleRepository,
+        ISapApiService sapApiService,
+        IEntidadCuentaBancariaRepository entidadCuentaBancariaRepository,
+        IBancoRepository bancoRepository,
         ILogger<ProduccionInterfaceService> logger)
     {
         _produccionRepository = produccionRepository;
@@ -51,6 +58,9 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         _archivoComprobanteRepository = archivoComprobanteRepository;
         _sanPabloApiService = sanPabloApiService;
         _tablaDetalleRepository = tablaDetalleRepository;
+        _sapApiService = sapApiService;
+        _entidadCuentaBancariaRepository = entidadCuentaBancariaRepository;
+        _bancoRepository = bancoRepository;
         _logger = logger;
     }
 
@@ -66,10 +76,13 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         var result = new InterfaceProduccionResultDto();
         var dtosList = createDtos.ToList();
 
-        // Sincronizar sedes desde API San Pablo antes de procesar
-        // Comentado: ya se resuelve individualmente en GetOrCreateSedeFromApiAsync
-        // await SyncSedesFromApiAsync(idCreador);
+        // Sincronizar todas las sedes desde API San Pablo antes de procesar el lote.
+        // Las sedes son estables, por lo que esta llamada es eficiente: 1 sola llamada por lote.
+        await SyncSedesFromApiAsync(idCreador);
 
+        // Cache local de entidades medicas para el lote actual.
+        // Evita consultas repetidas a BD cuando la misma entidad aparece en multiples producciones.
+        var cacheEntidades = new Dictionary<string, EntidadMedica>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var createDto in dtosList)
         {
@@ -94,43 +107,46 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     continue;
                 }
 
-                // Obtener IdSede a partir del CodigoSede
+                // Obtener IdSede a partir del CodigoSede (ya sincronizadas al inicio del lote)
                 var sede = await _sedeRepository.GetByCodigoAsync(createDto.CodigoSede);
 
-                // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
+                // Fallback individual comentado: las sedes son estables y se sincronizan en bloque al inicio.
+                // Descomentar si se requiere registrar sedes nuevas de forma dinamica por registro.
+                //if (sede == null)
+                //{
+                //    _logger.LogInformation(
+                //        "Sede '{CodigoSede}' no encontrada localmente. Consultando API San Pablo...",
+                //        createDto.CodigoSede);
+                //    sede = await GetOrCreateSedeFromApiAsync(createDto.CodigoSede, idCreador);
+                //}
+
                 if (sede == null)
                 {
-                    _logger.LogInformation(
-                        "Sede '{CodigoSede}' no encontrada localmente. Consultando API San Pablo...",
-                        createDto.CodigoSede);
-
-                    sede = await GetOrCreateSedeFromApiAsync(createDto.CodigoSede, idCreador);
-
-                    if (sede == null)
-                    {
-                        detalle.Estado = "ER";
-                        detalle.Mensaje = $"Sede con codigo '{createDto.CodigoSede}' no encontrada localmente ni en el API de San Pablo";
-                        result.CantidadErrores++;
-                        result.Detalle.Add(detalle);
-                        continue;
-                    }
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = $"Sede con codigo '{createDto.CodigoSede}' no encontrada";
+                    result.CantidadErrores++;
+                    result.Detalle.Add(detalle);
+                    continue;
                 }
 
-                // Obtener IdEntidadMedica a partir del CodigoEntidad
-                var entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(createDto.CodigoEntidad);
-
-                // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
-                if (entidadMedica == null)
+                // Obtener IdEntidadMedica a partir del CodigoEntidad (con cache local del lote)
+                if (!cacheEntidades.TryGetValue(createDto.CodigoEntidad, out var entidadMedica))
                 {
-                    _logger.LogInformation(
-                        "Entidad medica '{CodigoEntidad}' no encontrada localmente. Consultando API San Pablo...",
-                        createDto.CodigoEntidad);
+                    entidadMedica = await _entidadMedicaRepository.GetByCodigoAsync(createDto.CodigoEntidad);
 
-                    entidadMedica = await GetOrCreateEntidadMedicaFromApiAsync(
-                        createDto.CodigoSede,
-                        createDto.TipoEntidadMedica,
-                        createDto.CodigoEntidad,
-                        idCreador);
+                    // Si no existe localmente, intentar obtenerla del API de San Pablo y registrarla
+                    if (entidadMedica == null)
+                    {
+                        _logger.LogInformation(
+                            "Entidad medica '{CodigoEntidad}' no encontrada localmente. Consultando API San Pablo...",
+                            createDto.CodigoEntidad);
+
+                        entidadMedica = await GetOrCreateEntidadMedicaFromApiAsync(
+                            createDto.CodigoSede,
+                            createDto.TipoEntidadMedica,
+                            createDto.CodigoEntidad,
+                            idCreador);
+                    }
 
                     if (entidadMedica == null)
                     {
@@ -140,7 +156,12 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                         result.Detalle.Add(detalle);
                         continue;
                     }
+
+                    cacheEntidades[createDto.CodigoEntidad] = entidadMedica;
                 }
+
+                // Sincronizar cuentas bancarias del acreedor desde SAP (best-effort, no aborta el flujo)
+                await SyncCuentasBancariasFromSapAsync(entidadMedica.IdEntidadMedica, entidadMedica.CodigoAcreedor, idCreador);
 
                 // Si EstadoProduccion = 0, anular la produccion existente
                 if (createDto.EstadoProduccion == "0")
@@ -559,6 +580,93 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 "Error al obtener/crear sede desde API San Pablo. Codigo: {CodigoSede}",
                 codigoSede);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Sincroniza las cuentas bancarias de un acreedor desde SAP (CTA_ACREEDORSet)
+    /// y las registra en SHM_ENTIDAD_CUENTA_BANCO si no existen.
+    /// Operacion best-effort: los errores se logean pero no abortan el flujo principal.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-15</created>
+    /// </summary>
+    private async Task SyncCuentasBancariasFromSapAsync(int idEntidadMedica, string? codigoAcreedor, int idCreador)
+    {
+        if (string.IsNullOrWhiteSpace(codigoAcreedor))
+        {
+            _logger.LogDebug("EntidadMedica {IdEntidad} no tiene CodigoAcreedor, se omite sincronizacion de cuentas bancarias", idEntidadMedica);
+            return;
+        }
+
+        try
+        {
+            var cuentasSap = await _sapApiService.GetCuentasBancariasByAcreedorAsync(codigoAcreedor);
+
+            if (cuentasSap == null || cuentasSap.Count == 0)
+            {
+                _logger.LogDebug("SAP no retorno cuentas bancarias para acreedor {CodigoAcreedor}", codigoAcreedor);
+                return;
+            }
+
+            _logger.LogInformation("Sincronizando {Count} cuentas bancarias del acreedor {CodigoAcreedor} para EntidadMedica {IdEntidad}",
+                cuentasSap.Count, codigoAcreedor, idEntidadMedica);
+
+            // Obtener cuentas ya registradas localmente para esta entidad
+            var cuentasLocales = (await _entidadCuentaBancariaRepository.GetByEntidadIdAsync(idEntidadMedica)).ToList();
+
+            int creadas = 0;
+            int omitidas = 0;
+
+            foreach (var cuentaSap in cuentasSap)
+            {
+                // Verificar si ya existe por NroCuenta
+                var yaExiste = cuentasLocales.Any(c =>
+                    string.Equals(c.CuentaCorriente, cuentaSap.NroCuenta, StringComparison.OrdinalIgnoreCase));
+
+                if (yaExiste)
+                {
+                    omitidas++;
+                    continue;
+                }
+
+                // Resolver CodigoBanco -> IdBanco
+                int? idBanco = null;
+                if (!string.IsNullOrWhiteSpace(cuentaSap.CodigoBanco))
+                {
+                    var banco = await _bancoRepository.GetByCodigoAsync(cuentaSap.CodigoBanco);
+                    idBanco = banco?.IdBanco;
+
+                    if (idBanco == null)
+                        _logger.LogWarning("Banco con codigo '{CodigoBanco}' no encontrado localmente para acreedor {CodigoAcreedor}",
+                            cuentaSap.CodigoBanco, codigoAcreedor);
+                }
+
+                var nuevaCuenta = new EntidadCuentaBancaria
+                {
+                    IdEntidad = idEntidadMedica,
+                    IdBanco = idBanco,
+                    CuentaCorriente = cuentaSap.NroCuenta,
+                    CuentaCci = string.IsNullOrWhiteSpace(cuentaSap.NroCtaInterbancaria) ? null : cuentaSap.NroCtaInterbancaria,
+                    Moneda = cuentaSap.Moneda,
+                    Activo = 1,
+                    IdCreador = idCreador
+                };
+
+                await _entidadCuentaBancariaRepository.CreateAsync(nuevaCuenta);
+                creadas++;
+
+                _logger.LogInformation("Cuenta bancaria creada. EntidadMedica: {IdEntidad}, NroCuenta: {NroCuenta}, Banco: {CodigoBanco}",
+                    idEntidadMedica, cuentaSap.NroCuenta, cuentaSap.CodigoBanco);
+            }
+
+            _logger.LogInformation("Sincronizacion de cuentas bancarias completada. Acreedor: {CodigoAcreedor}, Creadas: {Creadas}, Omitidas: {Omitidas}",
+                codigoAcreedor, creadas, omitidas);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al sincronizar cuentas bancarias del acreedor {CodigoAcreedor} para EntidadMedica {IdEntidad}",
+                codigoAcreedor, idEntidadMedica);
         }
     }
 

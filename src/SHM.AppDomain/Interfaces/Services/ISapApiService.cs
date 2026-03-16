@@ -18,4 +18,10 @@ public interface ISapApiService
     /// Obtiene la lista de bancos desde SAP (COD_BANCOSet).
     /// </summary>
     Task<List<SapBancoDto>> GetBancosAsync();
+
+    /// <summary>
+    /// Obtiene las cuentas bancarias de un acreedor desde SAP (CTA_ACREEDORSet).
+    /// </summary>
+    /// <param name="codAcreedor">Codigo del acreedor en SAP.</param>
+    Task<List<SapAcreedorCuentaBancariaDto>> GetCuentasBancariasByAcreedorAsync(string codAcreedor);
 }
