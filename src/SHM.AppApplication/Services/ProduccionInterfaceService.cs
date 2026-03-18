@@ -23,6 +23,7 @@ namespace SHM.AppApplication.Services;
 /// <modified>ADG Antonio - 2026-02-24 - Auto-registro de sedes desde API San Pablo</modified>
 /// <modified>ADG Antonio - 2026-02-25 - Anulacion de comprobante (EstadoProduccion=9)</modified>
 /// <modified>ADG Antonio - 2026-03-15 - Sincronizacion de cuentas bancarias desde SAP al registrar entidad</modified>
+/// <modified>ADG Antonio - 2026-03-17 - Validacion de disponibilidad de servicios externos antes de procesar</modified>
 /// </summary>
 public class ProduccionInterfaceService : IProduccionInterfaceService
 {
@@ -75,6 +76,10 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     {
         var result = new InterfaceProduccionResultDto();
         var dtosList = createDtos.ToList();
+
+        // Sincronizar bancos desde SAP antes de procesar el lote.
+        // Garantiza que los bancos esten actualizados para la resolucion de cuentas bancarias.
+        await SyncBancosFromSapAsync(idCreador);
 
         // Sincronizar todas las sedes desde API San Pablo antes de procesar el lote.
         // Las sedes son estables, por lo que esta llamada es eficiente: 1 sola llamada por lote.
@@ -445,6 +450,106 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Sincroniza los bancos desde SAP (COD_BANCOSet) y registra los que no existan localmente.
+    /// Operacion best-effort: los errores se logean pero no abortan el flujo principal.
+    ///
+    /// Mapeo de campos SAP -> SHM:
+    /// - CodigoBanco -> CODIGO_BANCO
+    /// - DescripcionBanco -> NOMBRE_BANCO
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-17</created>
+    /// </summary>
+    private async Task SyncBancosFromSapAsync(int idCreador)
+    {
+        try
+        {
+            var bancosSap = await _sapApiService.GetBancosAsync();
+
+            if (bancosSap == null || bancosSap.Count == 0)
+            {
+                _logger.LogWarning("No se obtuvieron bancos desde SAP para sincronizar");
+                return;
+            }
+
+            _logger.LogInformation("Sincronizando {Count} bancos desde SAP", bancosSap.Count);
+
+            int bancosCreados = 0;
+            int bancosOmitidos = 0;
+
+            foreach (var bancoSap in bancosSap)
+            {
+                if (string.IsNullOrWhiteSpace(bancoSap.CodigoBanco))
+                    continue;
+
+                var bancoLocal = await _bancoRepository.GetByCodigoAsync(bancoSap.CodigoBanco);
+                if (bancoLocal != null)
+                {
+                    bancosOmitidos++;
+                    continue;
+                }
+
+                var nuevoBanco = new Banco
+                {
+                    CodigoBanco = bancoSap.CodigoBanco,
+                    NombreBanco = bancoSap.DescripcionBanco ?? string.Empty,
+                    GuidRegistro = Guid.NewGuid().ToString(),
+                    Activo = 1,
+                    IdCreador = idCreador
+                };
+
+                var idBanco = await _bancoRepository.CreateAsync(nuevoBanco);
+                if (idBanco > 0)
+                {
+                    bancosCreados++;
+                    _logger.LogInformation("Banco sincronizado. ID: {Id}, Codigo: {Codigo}, Nombre: {Nombre}",
+                        idBanco, bancoSap.CodigoBanco, bancoSap.DescripcionBanco);
+                }
+            }
+
+            _logger.LogInformation("Sincronizacion de bancos completada. {Creados} nuevos, {Omitidos} ya existentes",
+                bancosCreados, bancosOmitidos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al sincronizar bancos desde SAP");
+        }
+    }
+
+    /// <summary>
+    /// Verifica la disponibilidad de los servicios externos (SAP y San Pablo)
+    /// intentando obtener sus tokens de acceso en paralelo.
+    /// Retorna true si ambos servicios estan disponibles, junto con la lista de errores si alguno falla.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-17</created>
+    /// </summary>
+    public async Task<(bool IsAvailable, List<string> Errors)> CheckExternalServicesAsync()
+    {
+        var errors = new List<string>();
+
+        // Verificar ambos servicios en paralelo
+        var taskSap = _sapApiService.GetTokenAsync();
+        var taskSanPablo = _sanPabloApiService.GetTokenAsync();
+
+        await Task.WhenAll(taskSap, taskSanPablo);
+
+        if (string.IsNullOrEmpty(taskSap.Result))
+        {
+            errors.Add("SAP: No se pudo obtener token de acceso. Verifique la conectividad y credenciales.");
+            _logger.LogWarning("Servicio SAP no disponible al verificar token");
+        }
+
+        if (string.IsNullOrEmpty(taskSanPablo.Result))
+        {
+            errors.Add("San Pablo: No se pudo obtener token de acceso. Verifique la conectividad y credenciales.");
+            _logger.LogWarning("Servicio San Pablo no disponible al verificar token");
+        }
+
+        return (errors.Count == 0, errors);
     }
 
     /// <summary>
