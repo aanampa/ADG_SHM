@@ -14,6 +14,7 @@ namespace SHM.AppApiHonorarioMedico.Controllers;
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado metodo UpdateLiquidaciones</modified>
 /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro en respuesta, log de errores</modified>
+/// <modified>ADG Antonio - 2026-03-17 - Validacion de servicios externos antes de procesar producciones</modified>
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -75,6 +76,16 @@ public class ProduccionInterfaceController : ControllerBase
 
             if (createDtos == null || !createDtos.Any())
                 return BadRequest(ApiResponseDto<InterfaceProduccionResultDto>.Error("Error de validacion.", "La coleccion de producciones no puede estar vacia"));
+
+            // Verificar disponibilidad de servicios externos antes de procesar el lote
+            var (serviciosDisponibles, erroresServicios) = await _produccionInterfaceService.CheckExternalServicesAsync();
+            if (!serviciosDisponibles)
+            {
+                _logger.LogWarning("Servicios externos no disponibles. No se procesara el lote. Errores: {Errores}",
+                    string.Join(" | ", erroresServicios));
+                return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                    ApiResponseDto<InterfaceProduccionResultDto>.Error("Servicios externos no disponibles.", erroresServicios));
+            }
 
             const int idCreador = 1;
             var resultado = await _produccionInterfaceService.CreateProduccionesAsync(createDtos, idCreador);

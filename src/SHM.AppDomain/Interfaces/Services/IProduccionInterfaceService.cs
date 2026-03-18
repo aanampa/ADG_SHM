@@ -9,6 +9,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado metodo UpdateLiquidacionesAsync</modified>
 /// <modified>ADG Antonio - 2026-02-25 - Agregado metodo SyncSedesFromApiAsync</modified>
+/// <modified>ADG Antonio - 2026-03-17 - Agregado metodo CheckExternalServicesAsync</modified>
 /// </summary>
 public interface IProduccionInterfaceService
 {
@@ -35,4 +36,11 @@ public interface IProduccionInterfaceService
     /// <created>2026-02-25</created>
     /// </summary>
     Task<int> SyncSedesFromApiAsync(int idCreador);
+
+    /// <summary>
+    /// Verifica la disponibilidad de los servicios externos (SAP y San Pablo)
+    /// intentando obtener sus tokens de acceso en paralelo.
+    /// Retorna true si ambos servicios estan disponibles, false si alguno falla.
+    /// </summary>
+    Task<(bool IsAvailable, List<string> Errors)> CheckExternalServicesAsync();
 }
