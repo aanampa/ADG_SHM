@@ -129,6 +129,26 @@ public class SanPabloApiService : ISanPabloApiService
     }
 
     /// <summary>
+    /// Verifica la conectividad con el API de San Pablo intentando obtener un token de acceso.
+    /// </summary>
+    public async Task<(bool Ok, string Mensaje)> CheckConnectionAsync()
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+                return (true, "Conexion exitosa");
+
+            return (false, "No se pudo obtener token de acceso. Verifique credenciales.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al verificar conexion con API San Pablo");
+            return (false, $"Error de conexion: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Obtiene los datos de una entidad medica desde el API de San Pablo.
     /// </summary>
     public async Task<SanPabloEntidadMedicaDto?> GetEntidadMedicaAsync(string codigoSede, string tipoEntidad, string codigoEntidad)

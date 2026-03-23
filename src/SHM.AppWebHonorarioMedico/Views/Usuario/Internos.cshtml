@@ -300,6 +300,15 @@
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+            Swal.fire({
+                title: 'Guardando...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
             fetch('@Url.Action("CreateInterno")', {
                 method: 'POST',
                 headers: {
@@ -310,6 +319,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     loadList(currentPage);
@@ -324,6 +334,7 @@
                 }
             })
             .catch(error => {
+                Swal.close();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });
@@ -359,6 +370,15 @@
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+            Swal.fire({
+                title: 'Actualizando...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
             fetch('@Url.Action("EditInterno")', {
                 method: 'POST',
                 headers: {
@@ -369,6 +389,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     loadList(currentPage);
@@ -378,6 +399,7 @@
                 }
             })
             .catch(error => {
+                Swal.close();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });

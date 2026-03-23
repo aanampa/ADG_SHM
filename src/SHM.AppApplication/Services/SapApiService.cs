@@ -120,6 +120,26 @@ public class SapApiService : ISapApiService
     }
 
     /// <summary>
+    /// Verifica la conectividad con el API de SAP intentando obtener un token de acceso.
+    /// </summary>
+    public async Task<(bool Ok, string Mensaje)> CheckConnectionAsync()
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+                return (true, "Conexion exitosa");
+
+            return (false, "No se pudo obtener token de acceso. Verifique credenciales.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al verificar conexion con API SAP");
+            return (false, $"Error de conexion: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Obtiene la lista de bancos desde SAP (COD_BANCOSet).
     /// </summary>
     public async Task<List<SapBancoDto>> GetBancosAsync()

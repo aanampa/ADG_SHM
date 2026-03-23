@@ -532,21 +532,21 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         var errors = new List<string>();
 
         // Verificar ambos servicios en paralelo
-        var taskSap = _sapApiService.GetTokenAsync();
-        var taskSanPablo = _sanPabloApiService.GetTokenAsync();
+        var taskSap = _sapApiService.CheckConnectionAsync();
+        var taskSanPablo = _sanPabloApiService.CheckConnectionAsync();
 
         await Task.WhenAll(taskSap, taskSanPablo);
 
-        if (string.IsNullOrEmpty(taskSap.Result))
+        if (!taskSap.Result.Ok)
         {
-            errors.Add("SAP: No se pudo obtener token de acceso. Verifique la conectividad y credenciales.");
-            _logger.LogWarning("Servicio SAP no disponible al verificar token");
+            errors.Add($"SAP: {taskSap.Result.Mensaje}");
+            _logger.LogWarning("Servicio SAP no disponible: {Mensaje}", taskSap.Result.Mensaje);
         }
 
-        if (string.IsNullOrEmpty(taskSanPablo.Result))
+        if (!taskSanPablo.Result.Ok)
         {
-            errors.Add("San Pablo: No se pudo obtener token de acceso. Verifique la conectividad y credenciales.");
-            _logger.LogWarning("Servicio San Pablo no disponible al verificar token");
+            errors.Add($"San Pablo: {taskSanPablo.Result.Mensaje}");
+            _logger.LogWarning("Servicio San Pablo no disponible: {Mensaje}", taskSanPablo.Result.Mensaje);
         }
 
         return (errors.Count == 0, errors);

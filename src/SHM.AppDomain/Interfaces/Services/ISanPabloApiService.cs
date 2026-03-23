@@ -10,6 +10,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 /// <created>2026-02-02</created>
 /// <modified>ADG Antonio - 2026-02-24 - Agregado metodo GetSedeAsync</modified>
 /// <modified>ADG Antonio - 2026-02-25 - Agregado metodo RegistrarComprobanteAsync</modified>
+/// <modified>ADG Antonio - 2026-03-21 - Agregado metodo CheckConnectionAsync</modified>
 /// </summary>
 public interface ISanPabloApiService
 {
@@ -18,6 +19,11 @@ public interface ISanPabloApiService
     /// </summary>
     /// <returns>Token JWT si la autenticacion es exitosa, null en caso contrario.</returns>
     Task<string?> GetTokenAsync();
+
+    /// <summary>
+    /// Verifica la conectividad con el API de San Pablo intentando obtener un token de acceso.
+    /// </summary>
+    Task<(bool Ok, string Mensaje)> CheckConnectionAsync();
 
     /// <summary>
     /// Obtiene los datos de una entidad medica desde el API de San Pablo.

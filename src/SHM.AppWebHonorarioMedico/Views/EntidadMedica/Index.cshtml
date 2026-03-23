@@ -279,9 +279,9 @@
             });
         }
 
-        function submitDelete() {
+        function submitDelete(guidRegistro) {
             const data = {
-                GuidRegistro: document.getElementById('delete_GuidRegistro').value
+                GuidRegistro: guidRegistro
             };
 
             const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
