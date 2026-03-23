@@ -346,7 +346,7 @@ public class EntidadMedicaController : Controller
                 EntidadGuid = guid,
                 EntidadRazonSocial = entidad.RazonSocial ?? "",
                 IdEntidadMedica = entidad.IdEntidadMedica,
-                Items = cuentas.Where(c => c.Activo == 1).Select(c => new CuentaBancariaItemViewModel
+                Items = cuentas.Select(c => new CuentaBancariaItemViewModel
                 {
                     GuidRegistro = c.GuidRegistro,
                     BancoNombre = c.IdBanco.HasValue && bancosDict.TryGetValue(c.IdBanco.Value, out var banco) ? banco : "",
@@ -387,7 +387,7 @@ public class EntidadMedicaController : Controller
                 EntidadGuid = entidadGuid,
                 EntidadRazonSocial = entidad.RazonSocial ?? "",
                 IdEntidadMedica = entidad.IdEntidadMedica,
-                Items = cuentas.Where(c => c.Activo == 1).Select(c => new CuentaBancariaItemViewModel
+                Items = cuentas.Select(c => new CuentaBancariaItemViewModel
                 {
                     GuidRegistro = c.GuidRegistro,
                     BancoNombre = c.IdBanco.HasValue && bancosDict.TryGetValue(c.IdBanco.Value, out var banco) ? banco : "",

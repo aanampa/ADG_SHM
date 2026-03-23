@@ -326,7 +326,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var whereClause = "WHERE ACTIVO = 1";
+        var whereClause = "WHERE 1=1";
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             whereClause += @" AND (
@@ -365,7 +365,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                         ID_MODIFICADOR as IdModificador
                     FROM SHM_ENTIDAD_MEDICA
                     {whereClause}
-                    ORDER BY RAZON_SOCIAL
+                    ORDER BY ACTIVO DESC, RAZON_SOCIAL
                 ) a
                 WHERE ROWNUM <= :MaxRow
             )
