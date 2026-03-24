@@ -44,4 +44,9 @@ public interface IBancoService
     /// Elimina un banco registrando quien realizo la eliminacion.
     /// </summary>
     Task<bool> DeleteBancoAsync(int id, int idModificador);
+
+    /// <summary>
+    /// Obtiene los bancos que tienen al menos una cuenta registrada en SHM_ENTIDAD_CUENTA_BANCO.
+    /// </summary>
+    Task<IEnumerable<BancoResponseDto>> GetBancosConCuentasAsync();
 }

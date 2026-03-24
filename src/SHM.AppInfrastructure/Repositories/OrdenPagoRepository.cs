@@ -355,4 +355,23 @@ public class OrdenPagoRepository : IOrdenPagoRepository
 
         return rowsAffected > 0;
     }
+
+    /// <summary>
+    /// Obtiene el siguiente correlativo de orden de pago para una sede, anio y mes dados.
+    /// Cuenta las ordenes existentes para ese periodo y devuelve el siguiente numero.
+    /// </summary>
+    public async Task<int> GetSiguienteCorrelativoAsync(int idSede, int anio, int mes)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT COUNT(*) + 1
+            FROM SHM_ORDEN_PAGO
+            WHERE ID_SEDE = :IdSede
+              AND EXTRACT(YEAR FROM FECHA_GENERACION) = :Anio
+              AND EXTRACT(MONTH FROM FECHA_GENERACION) = :Mes
+              AND ACTIVO = 1";
+
+        return await connection.ExecuteScalarAsync<int>(sql, new { IdSede = idSede, Anio = anio, Mes = mes });
+    }
 }

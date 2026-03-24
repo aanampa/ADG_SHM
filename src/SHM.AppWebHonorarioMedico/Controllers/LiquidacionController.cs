@@ -33,6 +33,7 @@ public class LiquidacionController : Controller
     private readonly IArchivoService _archivoService;
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
     private readonly IBitacoraService _bitacoraService;
+    private readonly ISedeRepository _sedeRepository;
 
     public LiquidacionController(
         ILogger<LiquidacionController> logger,
@@ -46,7 +47,8 @@ public class LiquidacionController : Controller
         IArchivoComprobanteService archivoComprobanteService,
         IArchivoService archivoService,
         IOrdenPagoAprobacionService ordenPagoAprobacionService,
-        IBitacoraService bitacoraService)
+        IBitacoraService bitacoraService,
+        ISedeRepository sedeRepository)
     {
         _logger = logger;
         _liquidacionService = liquidacionService;
@@ -60,6 +62,7 @@ public class LiquidacionController : Controller
         _archivoService = archivoService;
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
         _bitacoraService = bitacoraService;
+        _sedeRepository = sedeRepository;
     }
 
     /// <summary>
@@ -342,8 +345,12 @@ public class LiquidacionController : Controller
             var mtoIgvAcum = todasLasProducciones.Sum(p => p.MtoIgv ?? 0);
             var mtoTotalAcum = todasLasProducciones.Sum(p => p.MtoTotal ?? 0);
 
-            // Generar numero de orden de pago (formato: OP-YYYYMMDD-XXXX)
-            var numeroOrdenPago = $"OP-{DateTime.Now:yyyyMMdd}-{DateTime.Now:HHmmss}";
+            // Generar numero de orden de pago (formato: OP-SS-YYYYMMXX)
+            var sede = await _sedeRepository.GetByIdAsync(idSede.Value);
+            var codigoSede = sede?.Codigo ?? idSede.Value.ToString("D2");
+            var ahora = DateTime.Now;
+            var correlativo = await _ordenPagoRepository.GetSiguienteCorrelativoAsync(idSede.Value, ahora.Year, ahora.Month);
+            var numeroOrdenPago = $"OP-{codigoSede}-{ahora:yyyy}{ahora:MM}{correlativo:D2}";
 
             // Crear la orden de pago
             var ordenPago = new OrdenPago
