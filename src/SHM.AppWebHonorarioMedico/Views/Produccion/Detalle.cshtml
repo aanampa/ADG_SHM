@@ -68,7 +68,7 @@
                                     <div class="col-4">
                                         <div class="form-group-sm">
                                             <label>Cod. Producción</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.CodigoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.NumeroProduccion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
                                     <div class="col-6">
@@ -506,7 +506,7 @@
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i>Cancelar
                 </button>
-                <button type="button" class="btn btn-success" onclick="enviarSolicitudFactura()">
+                <button type="button" id="btnEnviarSolicitud" class="btn btn-success" onclick="enviarSolicitudFactura()">
                     <i class="fas fa-paper-plane mr-1"></i>Enviar Solicitud
                 </button>
             </div>
@@ -771,6 +771,19 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Deshabilitar boton y mostrar spinner de espera
+                    var btnEnviar = document.getElementById('btnEnviarSolicitud');
+                    btnEnviar.disabled = true;
+
+                    Swal.fire({
+                        title: 'Enviando solicitud...',
+                        text: 'Procesando, por favor espere.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: function () { Swal.showLoading(); }
+                    });
+
                     // Llamar al endpoint del API
                     fetch('@Url.Action("SolicitarFactura", "Produccion")', {
                         method: 'POST',
@@ -797,6 +810,7 @@
                                     location.reload();
                                 });
                             } else {
+                                btnEnviar.disabled = false;
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error',
@@ -807,6 +821,7 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
+                            btnEnviar.disabled = false;
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',

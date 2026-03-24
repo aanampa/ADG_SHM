@@ -99,6 +99,15 @@ public class BancoService : IBancoService
     }
 
     /// <summary>
+    /// Obtiene los bancos que tienen al menos una cuenta registrada en SHM_ENTIDAD_CUENTA_BANCO
+    /// </summary>
+    public async Task<IEnumerable<BancoResponseDto>> GetBancosConCuentasAsync()
+    {
+        var bancos = await _bancoRepository.GetBancosConCuentasAsync();
+        return bancos.Select(MapToResponseDto);
+    }
+
+    /// <summary>
     /// Elimina un banco por su identificador
     /// </summary>
     public async Task<bool> DeleteBancoAsync(int id, int idModificador)

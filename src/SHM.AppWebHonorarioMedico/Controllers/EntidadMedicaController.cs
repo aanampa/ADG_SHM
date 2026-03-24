@@ -411,11 +411,11 @@ public class EntidadMedicaController : Controller
     [HttpGet]
     public async Task<IActionResult> GetCreateCuentaBancariaModal(string entidadGuid)
     {
-        var bancos = await _bancoService.GetAllBancosAsync();
+        var bancos = await _bancoService.GetBancosConCuentasAsync();
         var model = new CuentaBancariaCreateViewModel
         {
             EntidadGuid = entidadGuid,
-            Bancos = bancos.Where(b => b.Activo == 1).Select(b => new SelectListItem
+            Bancos = bancos.Select(b => new SelectListItem
             {
                 Value = b.IdBanco.ToString(),
                 Text = b.NombreBanco
@@ -489,7 +489,7 @@ public class EntidadMedicaController : Controller
                 return NotFound();
             }
 
-            var bancos = await _bancoService.GetAllBancosAsync();
+            var bancos = await _bancoService.GetBancosConCuentasAsync();
             var model = new CuentaBancariaEditViewModel
             {
                 GuidRegistro = cuenta.GuidRegistro,
@@ -499,7 +499,7 @@ public class EntidadMedicaController : Controller
                 CuentaCci = cuenta.CuentaCci,
                 Moneda = cuenta.Moneda,
                 Activo = cuenta.Activo,
-                Bancos = bancos.Where(b => b.Activo == 1).Select(b => new SelectListItem
+                Bancos = bancos.Select(b => new SelectListItem
                 {
                     Value = b.IdBanco.ToString(),
                     Text = b.NombreBanco,

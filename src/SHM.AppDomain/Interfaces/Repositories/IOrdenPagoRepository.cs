@@ -23,4 +23,9 @@ public interface IOrdenPagoRepository
     Task<int> CreateAsync(OrdenPago ordenPago);
     Task<bool> UpdateAsync(OrdenPago ordenPago);
     Task<bool> DeleteAsync(int id, int idModificador);
+
+    /// <summary>
+    /// Obtiene el siguiente correlativo de orden de pago para una sede, anio y mes dados.
+    /// </summary>
+    Task<int> GetSiguienteCorrelativoAsync(int idSede, int anio, int mes);
 }

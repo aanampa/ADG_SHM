@@ -328,7 +328,7 @@ public class ProduccionService : IProduccionService
                             await _emailService.EnviarEmailSolicitudFacturaAsync(
                                 email: usuario.Email,
                                 nombreDestinatario: nombreCompleto,
-                                codigoProduccion: produccion.CodigoProduccion ?? "",
+                                codigoProduccion: produccion.NumeroProduccion ?? "",
                                 razonSocial: produccion.RazonSocial ?? "",
                                 mtoTotal: produccion.MtoTotal,
                                 fechaLimite: fechaLimite,
