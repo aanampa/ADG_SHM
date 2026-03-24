@@ -13,9 +13,11 @@
     int.TryParse(Model.Numero, out var numeroFormInt);
 
     // Datos del XML para comparacion de Tipo
+    // tipoComprobanteForm="1" equivale a "01" en el XML (Factura); "22" equivale a "22" (RHE)
     var tipoComprobanteXml = Model.DatosXml?.DatosGenerales.CodigoTipoDocumento ?? "";
     var tipoComprobanteForm = Model.TipoComprobante ?? "";
-    var tipoCoincide = string.Equals(tipoComprobanteForm.Trim(), tipoComprobanteXml.Trim(), StringComparison.OrdinalIgnoreCase);
+    var tipoComprobanteFormNormalizado = tipoComprobanteForm == "1" ? "01" : tipoComprobanteForm;
+    var tipoCoincide = string.Equals(tipoComprobanteFormNormalizado.Trim(), tipoComprobanteXml.Trim(), StringComparison.OrdinalIgnoreCase);
 
     // Nombres legibles de tipo comprobante
     var tipoNombres = new Dictionary<string, string> { {"1", "Factura"}, {"22", "Recibo por Honorarios"} };
@@ -487,7 +489,7 @@
                             </div>
                             <div class="validation-col">
                                 <div class="validation-col-header">XML</div>
-                                <div class="validation-col-value">@(fechaEmisionXmlStr)</div>
+                                <div class="validation-col-value">@(fechaEmisionXmlDate != DateTime.MinValue ? fechaEmisionXmlDate.ToString("dd/MM/yyyy") : fechaEmisionXmlStr)</div>
                             </div>
                         </div>
                         <div class="validation-status @(fechaEmisionCoincide ? "valid" : (Model.ValidaFechaEmision ? "invalid" : "warning"))">
@@ -632,7 +634,7 @@
                         </div>
                         <div class="xml-field">
                             <span class="xml-label">Fecha Emision</span>
-                            <span class="xml-value">@(Model.DatosXml?.DatosGenerales.FechaEmision ?? "-")</span>
+                            <span class="xml-value">@(fechaEmisionXmlDate != DateTime.MinValue ? fechaEmisionXmlDate.ToString("dd/MM/yyyy") : (Model.DatosXml?.DatosGenerales.FechaEmision ?? "-"))</span>
                         </div>
                         <div class="xml-field">
                             <span class="xml-label">Moneda</span>
