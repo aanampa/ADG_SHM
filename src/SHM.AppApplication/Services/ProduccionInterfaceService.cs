@@ -91,6 +91,19 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
 
         foreach (var createDto in dtosList)
         {
+            // Normalizar campos string: eliminar espacios en blanco al inicio y al final
+            createDto.CodigoSede        = createDto.CodigoSede?.Trim() ?? "";
+            createDto.CodigoEntidad     = createDto.CodigoEntidad?.Trim() ?? "";
+            createDto.CodigoProduccion  = createDto.CodigoProduccion?.Trim() ?? "";
+            createDto.NumeroProduccion  = createDto.NumeroProduccion?.Trim();
+            createDto.TipoProduccion    = createDto.TipoProduccion?.Trim() ?? "";
+            createDto.TipoEntidadMedica = createDto.TipoEntidadMedica?.Trim() ?? "";
+            createDto.TipoMedico        = createDto.TipoMedico?.Trim() ?? "";
+            createDto.TipoRubro         = createDto.TipoRubro?.Trim() ?? "";
+            createDto.Descripcion       = createDto.Descripcion?.Trim() ?? "";
+            createDto.Periodo           = createDto.Periodo?.Trim() ?? "";
+            createDto.FechaProduccion   = createDto.FechaProduccion?.Trim() ?? "";
+            createDto.EstadoProduccion  = createDto.EstadoProduccion?.Trim() ?? "";
 
             var detalle = new InterfaceProduccionDetalleDto
             {
