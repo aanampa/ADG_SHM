@@ -198,6 +198,16 @@
         }
 
         function initSelect2Create() {
+            // Preseleccionar el rol "Compania Medica" por defecto
+            var $rolSelect = $('#IdRol');
+            $rolSelect.find('option').each(function() {
+                if ($(this).text().toUpperCase().indexOf('COMPAN') > -1 ||
+                    $(this).text().toUpperCase().indexOf('COMPA\u00D1') > -1) {
+                    $rolSelect.val($(this).val());
+                    return false; // break
+                }
+            });
+
             $('#IdEntidadMedica').select2({
                 theme: 'bootstrap4',
                 placeholder: 'Buscar entidad medica...',

@@ -754,9 +754,9 @@ public class FacturasController : BaseController
 
             FacturaXmlData facturaData;
 
-            if (tipoComprobante == "02")
+            if (tipoComprobante == "22" || tipoComprobante == "02")
             {
-                // Recibo por Honorarios Electronico
+                // Recibo por Honorarios Electronico (22 = codigo interno del sistema, 02 = codigo SUNAT)
                 RheXmlValidationResult rheValidationResult;
                 using (var xmlStreamValidation = archivoXml.OpenReadStream())
                 {

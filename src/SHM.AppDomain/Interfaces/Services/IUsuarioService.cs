@@ -120,4 +120,9 @@ public interface IUsuarioService
     /// Actualiza las sedes de un usuario interno.
     /// </summary>
     Task<bool> UpdateSedesUsuarioInternoAsync(int idUsuario, List<int>? idsSedesSeleccionadas, int idModificador);
+
+    /// <summary>
+    /// Obtiene los usuarios externos asociados a una entidad medica.
+    /// </summary>
+    Task<IEnumerable<UsuarioResponseDto>> GetUsuariosByEntidadMedicaAsync(int idEntidadMedica);
 }
