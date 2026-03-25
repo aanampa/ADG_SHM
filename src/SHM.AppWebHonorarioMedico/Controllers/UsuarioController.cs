@@ -116,7 +116,7 @@ public class UsuarioController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetCreateModal()
+    public async Task<IActionResult> GetCreateModal(int? idEntidadMedica = null)
     {
         var roles = await _rolService.GetAllRolesAsync();
         var model = new UsuarioExternoCreateViewModel
@@ -127,6 +127,13 @@ public class UsuarioController : Controller
                 Text = r.Descripcion
             }).ToList()
         };
+
+        if (idEntidadMedica.HasValue)
+        {
+            model.IdEntidadMedica = idEntidadMedica;
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByIdAsync(idEntidadMedica.Value);
+            model.EntidadMedicaNombre = entidad?.RazonSocial;
+        }
 
         return PartialView("_CreateModal", model);
     }

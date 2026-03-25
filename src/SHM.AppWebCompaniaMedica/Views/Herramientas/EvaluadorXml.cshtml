@@ -1,0 +1,392 @@
+@{
+    ViewData["Title"] = "Evaluador de XML";
+}
+
+<style>
+    .evaluador-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+    .page-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .page-title i { color: var(--accent); }
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+    .card-panel {
+        background: var(--bg-card, white);
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .card-panel-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--primary, #5a1160);
+        border-bottom: 2px solid var(--accent, #f26522);
+        padding-bottom: 0.6rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        align-items: end;
+    }
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-secondary, #666);
+        margin-bottom: 0.4rem;
+        display: block;
+    }
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 1.5px solid var(--border, #e0e0e0);
+        padding: 0.55rem 0.9rem;
+        font-size: 0.9rem;
+        width: 100%;
+        background: var(--bg-input, white);
+        color: var(--text-primary, #333);
+    }
+    .btn-evaluar {
+        background: linear-gradient(135deg, var(--accent, #f26522), #e05010);
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 0.6rem 1.75rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        transition: opacity 0.2s;
+    }
+    .btn-evaluar:hover { opacity: 0.88; }
+    /* Estado validacion */
+    .estado-valid {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.7rem 1.1rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 1.25rem;
+    }
+    .estado-ok   { background: #d4edda; color: #155724; }
+    .estado-fail { background: #f8d7da; color: #721c24; }
+    /* Seccion de datos */
+    .data-section { margin-bottom: 1.25rem; }
+    .data-section-title {
+        font-weight: 700;
+        color: var(--primary, #5a1160);
+        font-size: 0.88rem;
+        border-bottom: 2px solid var(--accent, #f26522);
+        padding-bottom: 0.4rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .data-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem 1.5rem;
+    }
+    .data-field {
+        display: flex;
+        flex-direction: column;
+    }
+    .data-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #888);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .data-value {
+        font-size: 0.9rem;
+        color: var(--text-primary, #333);
+        font-weight: 500;
+        word-break: break-word;
+    }
+    .data-value.monto { font-weight: 700; color: var(--primary, #5a1160); }
+    /* Tabla items */
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+    .items-table th {
+        background: var(--primary, #5a1160);
+        color: white;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    .items-table td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--border, #eee);
+        vertical-align: top;
+    }
+    .items-table tr:last-child td { border-bottom: none; }
+    .items-table tr:nth-child(even) td { background: rgba(0,0,0,0.02); }
+    .text-right { text-align: right; }
+    #resultadoPanel { display: none; }
+</style>
+
+<div class="evaluador-container">
+    <div class="page-header">
+        <div class="page-title">
+            <i class="bi bi-file-earmark-code-fill"></i>
+            Evaluador de XML
+        </div>
+        <div class="page-subtitle">Cargue un archivo XML para validar su estructura y visualizar los datos extraídos</div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card-panel">
+        <div class="card-panel-title">
+            <i class="bi bi-upload"></i> Cargar XML
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tipo de Comprobante <span class="text-danger">*</span></label>
+                <select id="tipoComprobante" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    <option value="1">Factura</option>
+                    <option value="22">Recibo por Honorarios</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Archivo XML <span class="text-danger">*</span></label>
+                <input type="file" id="archivoXml" class="form-control" accept=".xml" />
+            </div>
+        </div>
+        <button class="btn-evaluar" onclick="evaluar()">
+            <i class="bi bi-search"></i> Evaluar XML
+        </button>
+    </div>
+
+    <!-- Resultado -->
+    <div id="resultadoPanel">
+        <!-- Estado -->
+        <div id="estadoPanel"></div>
+
+        <!-- Datos -->
+        <div id="datosPanel" class="card-panel" style="display:none;">
+            <div class="card-panel-title">
+                <i class="bi bi-list-check"></i> Datos Extraídos
+                <span id="badgeTipo" style="margin-left:auto; font-size:0.78rem; padding:0.25rem 0.7rem; border-radius:20px; background:var(--accent,#f26522); color:white;"></span>
+            </div>
+
+            <!-- Datos Generales -->
+            <div class="data-section">
+                <div class="data-section-title"><i class="bi bi-info-circle"></i> Datos Generales</div>
+                <div class="data-grid">
+                    <div class="data-field"><span class="data-label">Tipo Documento</span><span class="data-value" id="d-tipo"></span></div>
+                    <div class="data-field"><span class="data-label">Número</span><span class="data-value" id="d-numero"></span></div>
+                    <div class="data-field"><span class="data-label">Fecha Emisión</span><span class="data-value" id="d-fecha"></span></div>
+                    <div class="data-field"><span class="data-label">Hora Emisión</span><span class="data-value" id="d-hora"></span></div>
+                    <div class="data-field"><span class="data-label">Moneda</span><span class="data-value" id="d-moneda"></span></div>
+                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Total en Letras</span><span class="data-value" id="d-letras"></span></div>
+                </div>
+            </div>
+
+            <!-- Emisor -->
+            <div class="data-section">
+                <div class="data-section-title"><i class="bi bi-person-badge"></i> Emisor</div>
+                <div class="data-grid">
+                    <div class="data-field"><span class="data-label">RUC</span><span class="data-value" id="d-emisor-ruc"></span></div>
+                    <div class="data-field"><span class="data-label">Razón Social / Nombre</span><span class="data-value" id="d-emisor-nombre"></span></div>
+                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Dirección</span><span class="data-value" id="d-emisor-dir"></span></div>
+                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Ubicación</span><span class="data-value" id="d-emisor-ubic"></span></div>
+                </div>
+            </div>
+
+            <!-- Cliente -->
+            <div class="data-section">
+                <div class="data-section-title"><i class="bi bi-building"></i> Cliente / Receptor</div>
+                <div class="data-grid">
+                    <div class="data-field"><span class="data-label">Tipo Documento</span><span class="data-value" id="d-cli-tipodoc"></span></div>
+                    <div class="data-field"><span class="data-label">Número Documento</span><span class="data-value" id="d-cli-numdoc"></span></div>
+                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Razón Social / Nombre</span><span class="data-value" id="d-cli-nombre"></span></div>
+                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Dirección</span><span class="data-value" id="d-cli-dir"></span></div>
+                </div>
+            </div>
+
+            <!-- Totales -->
+            <div class="data-section">
+                <div class="data-section-title"><i class="bi bi-calculator"></i> Importes</div>
+                <div class="data-grid">
+                    <div class="data-field"><span class="data-label">Valor Venta</span><span class="data-value monto" id="d-valor-venta"></span></div>
+                    <div class="data-field"><span class="data-label">IGV</span><span class="data-value monto" id="d-igv"></span></div>
+                    <div class="data-field" id="row-retencion"><span class="data-label">Retención (4ta Cat.)</span><span class="data-value monto" id="d-retencion"></span></div>
+                    <div class="data-field"><span class="data-label">Importe Total</span><span class="data-value monto" id="d-total"></span></div>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="data-section">
+                <div class="data-section-title"><i class="bi bi-list-ul"></i> Detalle de Ítems</div>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Descripción</th>
+                            <th class="text-right">Cantidad</th>
+                            <th class="text-right">Precio Unit.</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="d-items"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function evaluar() {
+        const tipo = document.getElementById('tipoComprobante').value;
+        const archivo = document.getElementById('archivoXml').files[0];
+
+        if (!tipo) {
+            Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Seleccione el tipo de comprobante.', confirmButtonColor: '#f26522' });
+            return;
+        }
+        if (!archivo) {
+            Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Seleccione un archivo XML.', confirmButtonColor: '#f26522' });
+            return;
+        }
+
+        Swal.fire({ title: 'Evaluando XML...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        const form = new FormData();
+        form.append('tipoComprobante', tipo);
+        form.append('archivoXml', archivo);
+
+        fetch('/Herramientas/EvaluarXml', { method: 'POST', body: form })
+            .then(r => r.json())
+            .then(res => {
+                Swal.close();
+                document.getElementById('resultadoPanel').style.display = 'block';
+
+                if (!res.success) {
+                    document.getElementById('estadoPanel').innerHTML =
+                        `<div class="estado-valid estado-fail mb-3"><i class="bi bi-x-circle-fill" style="font-size:1.4rem"></i>${escHtml(res.message)}</div>`;
+                    document.getElementById('datosPanel').style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('estadoPanel').innerHTML =
+                    `<div class="estado-valid estado-ok mb-3"><i class="bi bi-check-circle-fill" style="font-size:1.4rem"></i>XML válido — estructura correcta</div>`;
+
+                const d = res.datos;
+                document.getElementById('datosPanel').style.display = 'block';
+                document.getElementById('badgeTipo').textContent = res.tipoParser === 'RHE' ? 'Recibo por Honorarios' : 'Factura';
+
+                // Datos generales
+                setText('d-tipo',    d.tipoDocumento);
+                setText('d-numero',  d.numeroDocumento);
+                setText('d-fecha',   formatFecha(d.fechaEmision));
+                setText('d-hora',    d.horaEmision || '-');
+                setText('d-moneda',  d.moneda);
+                setText('d-letras',  d.totalEnLetras || '-');
+
+                // Emisor
+                setText('d-emisor-ruc',    d.emisorRuc);
+                setText('d-emisor-nombre', d.emisorNombre);
+                setText('d-emisor-dir',    d.emisorDireccion || '-');
+                setText('d-emisor-ubic',   d.emisorUbicacion || '-');
+
+                // Cliente
+                const tipoDocDesc = d.clienteTipoDoc === '6' ? 'RUC' : d.clienteTipoDoc === '1' ? 'DNI' : (d.clienteTipoDoc || '-');
+                setText('d-cli-tipodoc',  tipoDocDesc);
+                setText('d-cli-numdoc',   d.clienteNumeroDoc);
+                setText('d-cli-nombre',   d.clienteNombre);
+                setText('d-cli-dir',      d.clienteDireccion || '-');
+
+                // Totales
+                setText('d-valor-venta', formatMonto(d.valorVenta, d.moneda));
+                setText('d-igv',         formatMonto(d.igv, d.moneda));
+                setText('d-total',       formatMonto(d.importeTotal, d.moneda));
+
+                const rowRet = document.getElementById('row-retencion');
+                if (res.tipoParser === 'RHE' && d.retencion > 0) {
+                    rowRet.style.display = '';
+                    setText('d-retencion', formatMonto(d.retencion, d.moneda) + (d.porcentajeRetencion > 0 ? ` (${d.porcentajeRetencion}%)` : ''));
+                } else {
+                    rowRet.style.display = 'none';
+                }
+
+                // Items
+                const tbody = document.getElementById('d-items');
+                tbody.innerHTML = '';
+                if (d.items && d.items.length > 0) {
+                    d.items.forEach(it => {
+                        tbody.innerHTML += `<tr>
+                            <td>${it.numero}</td>
+                            <td>${escHtml(it.descripcion || '-')}</td>
+                            <td class="text-right">${it.cantidad}</td>
+                            <td class="text-right">${formatMonto(it.precio, d.moneda)}</td>
+                            <td class="text-right">${formatMonto(it.total, d.moneda)}</td>
+                        </tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">Sin ítems</td></tr>';
+                }
+
+                document.getElementById('datosPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            })
+            .catch(err => {
+                Swal.close();
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.', confirmButtonColor: '#dc3545' });
+            });
+    }
+
+    function setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val ?? '-';
+    }
+
+    function escHtml(s) {
+        return (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function formatMonto(val, moneda) {
+        if (val == null) return '-';
+        const sym = moneda === 'USD' ? '$' : 'S/';
+        return `${sym} ${parseFloat(val).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+    }
+
+    function formatFecha(f) {
+        if (!f) return '-';
+        // Convierte yyyy-mm-dd a dd/mm/yyyy
+        const parts = f.split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return f;
+    }
+</script>
+}

@@ -17,19 +17,22 @@ public class EntidadMedicaController : Controller
     private readonly ITablaDetalleService _tablaDetalleService;
     private readonly IEntidadCuentaBancariaService _cuentaBancariaService;
     private readonly IBancoService _bancoService;
+    private readonly IUsuarioService _usuarioService;
 
     public EntidadMedicaController(
         ILogger<EntidadMedicaController> logger,
         IEntidadMedicaService entidadMedicaService,
         ITablaDetalleService tablaDetalleService,
         IEntidadCuentaBancariaService cuentaBancariaService,
-        IBancoService bancoService)
+        IBancoService bancoService,
+        IUsuarioService usuarioService)
     {
         _logger = logger;
         _entidadMedicaService = entidadMedicaService;
         _tablaDetalleService = tablaDetalleService;
         _cuentaBancariaService = cuentaBancariaService;
         _bancoService = bancoService;
+        _usuarioService = usuarioService;
     }
 
     public IActionResult Index()
@@ -652,5 +655,79 @@ public class EntidadMedicaController : Controller
             return idUsuario;
         }
         return 0;
+    }
+
+    // ─── Usuarios por Entidad ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Retorna el modal con la lista de usuarios externos de una entidad medica.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetUsuariosEntidadModal(string guid)
+    {
+        try
+        {
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByGuidAsync(guid);
+            if (entidad == null) return NotFound();
+
+            var usuarios = await _usuarioService.GetUsuariosByEntidadMedicaAsync(entidad.IdEntidadMedica);
+
+            var model = new UsuariosEntidadViewModel
+            {
+                EntidadGuid       = guid,
+                IdEntidadMedica   = entidad.IdEntidadMedica,
+                EntidadRazonSocial = entidad.RazonSocial ?? "",
+                Items = usuarios.Select(u => new UsuarioExternoItemViewModel
+                {
+                    GuidRegistro   = u.GuidRegistro ?? "",
+                    Login          = u.Login,
+                    NombreCompleto = $"{u.Nombres} {u.ApellidoPaterno} {u.ApellidoMaterno}".Trim(),
+                    Email          = u.Email,
+                    Celular        = u.Celular,
+                    Activo         = u.Activo,
+                    FechaCreacion  = u.FechaCreacion
+                }).ToList()
+            };
+
+            return PartialView("_UsuariosEntidadModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar usuarios de entidad {Guid}", guid);
+            return StatusCode(500);
+        }
+    }
+
+    /// <summary>
+    /// Retorna solo la lista de usuarios de la entidad (para refrescar sin recargar el modal).
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetListUsuariosEntidad(string entidadGuid)
+    {
+        try
+        {
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByGuidAsync(entidadGuid);
+            if (entidad == null) return NotFound();
+
+            var usuarios = await _usuarioService.GetUsuariosByEntidadMedicaAsync(entidad.IdEntidadMedica);
+
+            var items = usuarios.Select(u => new UsuarioExternoItemViewModel
+            {
+                GuidRegistro   = u.GuidRegistro ?? "",
+                Login          = u.Login,
+                NombreCompleto = $"{u.Nombres} {u.ApellidoPaterno} {u.ApellidoMaterno}".Trim(),
+                Email          = u.Email,
+                Celular        = u.Celular,
+                Activo         = u.Activo,
+                FechaCreacion  = u.FechaCreacion
+            }).ToList();
+
+            return PartialView("_UsuariosEntidadListPartial", items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al listar usuarios de entidad {Guid}", entidadGuid);
+            return StatusCode(500);
+        }
     }
 }

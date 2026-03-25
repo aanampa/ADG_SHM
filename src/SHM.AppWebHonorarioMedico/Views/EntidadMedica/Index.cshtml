@@ -72,6 +72,14 @@
         const pageSize = 10;
         let searchTerm = '';
 
+        // Recargar lista de usuarios cuando se cierra el modal de crear/editar usuario
+        $(document).on('hidden.bs.modal', '#usuarioCreateModal, #usuarioEditModal', function () {
+            $('#usuarioEntidadBodyContainer').remove();
+            if (currentEntidadGuidUsuarios) {
+                loadUsuariosEntidad();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function () {
             // Cargar lista inicial
             loadList(1);
@@ -311,6 +319,230 @@
                 f_alert('e', '', 'Error al procesar la solicitud');
             });
         }
+
+        // Funciones para Usuarios por Entidad
+        let currentEntidadGuidUsuarios = '';
+
+        function openUsuariosEntidadModal(guid) {
+            currentEntidadGuidUsuarios = guid;
+            f_loading();
+            fetch('@Url.Action("GetUsuariosEntidadModal")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    $('#usuariosEntidadModal').modal('show');
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar los usuarios');
+                });
+        }
+
+        function loadUsuariosEntidad() {
+            fetch('@Url.Action("GetListUsuariosEntidad")?entidadGuid=' + encodeURIComponent(currentEntidadGuidUsuarios))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('usuariosEntidadListContainer').innerHTML = html;
+                })
+                .catch(() => {
+                    document.getElementById('usuariosEntidadListContainer').innerHTML =
+                        '<div class="text-center text-danger py-3">Error al cargar usuarios</div>';
+                });
+        }
+
+        function wrapEnModal(id, html) {
+            return '<div class="modal fade" id="' + id + '" tabindex="-1" role="dialog" aria-hidden="true" style="z-index:1060">' +
+                       '<div class="modal-dialog modal-lg" role="document">' +
+                           '<div class="modal-content">' + html + '</div>' +
+                       '</div>' +
+                   '</div>';
+        }
+
+        function openCreateUsuarioEntidad(idEntidadMedica) {
+            fetch('/Usuario/GetCreateModal?idEntidadMedica=' + idEntidadMedica)
+                .then(response => response.text())
+                .then(html => {
+                    $('#usuarioEntidadBodyContainer').remove();
+                    $('body').append('<div id="usuarioEntidadBodyContainer">' + wrapEnModal('usuarioCreateModal', html) + '</div>');
+                    // Preseleccionar rol Compania Medica
+                    var $rol = $('#usuarioCreateModal #IdRol');
+                    $rol.find('option').each(function () {
+                        if ($(this).text().toUpperCase().indexOf('COMPAN') > -1 ||
+                            $(this).text().toUpperCase().indexOf('COMPA\u00D1') > -1) {
+                            $rol.val($(this).val());
+                            return false;
+                        }
+                    });
+                    // Redirigir boton Guardar a funcion correcta
+                    $('#usuarioCreateModal .btn-primary[onclick="submitCreate()"]').attr('onclick', 'submitCreateUsuarioEntidad()');
+                    $('#usuarioCreateModal').modal('show');
+                })
+                .catch(() => f_alert('e', '', 'Error al cargar el formulario'));
+        }
+
+        function openEditUsuarioEntidad(guid) {
+            fetch('/Usuario/GetEditModal?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.text();
+                })
+                .then(html => {
+                    $('#usuarioEntidadBodyContainer').remove();
+                    $('body').append('<div id="usuarioEntidadBodyContainer">' + wrapEnModal('usuarioEditModal', html) + '</div>');
+                    initSelect2EditUsuarioEntidad();
+                    // Redirigir el boton Guardar a la funcion correcta (submitEdit del Index edita entidades)
+                    $('#usuarioEditModal button[onclick="submitEdit()"]').attr('onclick', 'submitEditUsuarioEntidad()');
+                    $('#usuarioEditModal').modal('show');
+                })
+                .catch(err => f_alert('e', '', 'Error al cargar el formulario: ' + err.message));
+        }
+
+        function submitCreateUsuarioEntidad() {
+            var form = document.getElementById('createForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            var token = document.querySelector('#usuarioCreateModal input[name="__RequestVerificationToken"]').value;
+            var formData = {
+                login:           document.getElementById('Login').value,
+                email:           document.getElementById('Email').value,
+                nombres:         document.getElementById('Nombres').value,
+                apellidoPaterno: document.getElementById('ApellidoPaterno').value,
+                apellidoMaterno: document.getElementById('ApellidoMaterno').value,
+                numeroDocumento: document.getElementById('NumeroDocumento').value,
+                celular:         document.getElementById('Celular').value,
+                idEntidadMedica: document.getElementById('IdEntidadMedica').value || null,
+                idRol:           document.getElementById('IdRol') ? document.getElementById('IdRol').value || null : null,
+                enviarCorreo:    document.getElementById('EnviarCorreo').checked
+            };
+
+            f_loading();
+            fetch('/Usuario/Create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify(formData)
+            })
+            .then(r => r.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#usuarioCreateModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                    if (result.generatedPassword) {
+                        toastr.info('Clave generada: ' + result.generatedPassword, 'Clave', { timeOut: 0, extendedTimeOut: 0 });
+                    }
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(() => { f_remove_loading(); f_alert('e', '', 'Error al procesar la solicitud'); });
+        }
+
+        function submitEditUsuarioEntidad() {
+            var form = document.getElementById('editForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            var token = document.querySelector('#usuarioEditModal input[name="__RequestVerificationToken"]').value;
+            var formData = {
+                guidRegistro:    document.getElementById('GuidRegistro').value,
+                login:           document.getElementById('Login').value,
+                email:           document.getElementById('Email').value,
+                nombres:         document.getElementById('Nombres').value,
+                apellidoPaterno: document.getElementById('ApellidoPaterno').value,
+                apellidoMaterno: document.getElementById('ApellidoMaterno').value,
+                numeroDocumento: document.getElementById('NumeroDocumento').value,
+                celular:         document.getElementById('Celular').value,
+                idEntidadMedica: document.getElementById('IdEntidadMedica').value || null,
+                idRol:           document.getElementById('IdRol') ? document.getElementById('IdRol').value || null : null,
+                activo:          parseInt(document.getElementById('Activo').value)
+            };
+
+            f_loading();
+            fetch('/Usuario/Edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify(formData)
+            })
+            .then(r => r.json())
+            .then(result => {
+                f_remove_loading();
+                if (result.success) {
+                    $('#usuarioEditModal').modal('hide');
+                    toastr.success(result.message, 'Exito');
+                } else {
+                    f_alert('e', '', result.message);
+                }
+            })
+            .catch(() => { f_remove_loading(); f_alert('e', '', 'Error al procesar la solicitud'); });
+        }
+
+        function initSelect2EditUsuarioEntidad() {
+            // Reemplazar el select de entidad por un campo readonly (no hay Select2 en esta pagina)
+            var $select = $('#usuarioEditModal #IdEntidadMedica');
+            if ($select.length === 0) return;
+            var currentId   = $select.data('current-id');
+            var currentText = $select.data('current-text') || '';
+            $select.replaceWith(
+                '<input type="hidden" id="IdEntidadMedica" name="IdEntidadMedica" value="' + currentId + '" />' +
+                '<input type="text" class="form-control" value="' + currentText + '" readonly style="background-color:#e9ecef;" />'
+            );
+        }
+
+        function toggleActivoUsuarioEntidad(guid, nuevoActivo) {
+            var msg = nuevoActivo === 1 ? '¿Activar este usuario?' : '¿Desactivar este usuario?';
+            if (!confirm(msg)) return;
+
+            // Obtener datos del usuario via GetEditModal y luego llamar Edit con activo modificado
+            fetch('/Usuario/GetEditModal?guid=' + encodeURIComponent(guid))
+                .then(r => r.text())
+                .then(html => {
+                    // Parsear el HTML para extraer campos y enviar Edit
+                    var tmp = document.createElement('div');
+                    tmp.innerHTML = html;
+                    var getVal = function(id) { var el = tmp.querySelector('#' + id); return el ? el.value : ''; };
+
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    var formData = {
+                        guidRegistro:    getVal('GuidRegistro'),
+                        login:           getVal('Login'),
+                        email:           getVal('Email'),
+                        nombres:         getVal('Nombres'),
+                        apellidoPaterno: getVal('ApellidoPaterno'),
+                        apellidoMaterno: getVal('ApellidoMaterno'),
+                        numeroDocumento: getVal('NumeroDocumento'),
+                        celular:         getVal('Celular'),
+                        idEntidadMedica: getVal('IdEntidadMedica') || null,
+                        idRol:           getVal('IdRol') || null,
+                        activo:          nuevoActivo
+                    };
+
+                    f_loading();
+                    fetch('/Usuario/Edit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        f_remove_loading();
+                        if (result.success) {
+                            toastr.success(result.message, 'Exito');
+                            loadUsuariosEntidad();
+                        } else {
+                            f_alert('e', '', result.message);
+                        }
+                    })
+                    .catch(() => { f_remove_loading(); f_alert('e', '', 'Error al procesar'); });
+                });
+        }
+
+        // Capturar guardado exitoso desde modales de usuario (crear/editar)
+        $(document).on('usuarioEntidadGuardado', function () {
+            loadUsuariosEntidad();
+        });
 
         // Funciones para Cuentas Bancarias
         let currentEntidadGuid = '';

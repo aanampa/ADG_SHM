@@ -610,4 +610,13 @@ public class UsuarioService : IUsuarioService
             FlagPasswordTemporal = usuario.FlagPasswordTemporal
         };
     }
+
+    /// <summary>
+    /// Obtiene los usuarios externos asociados a una entidad medica.
+    /// </summary>
+    public async Task<IEnumerable<UsuarioResponseDto>> GetUsuariosByEntidadMedicaAsync(int idEntidadMedica)
+    {
+        var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(idEntidadMedica);
+        return usuarios.Select(MapToResponseDto);
+    }
 }
