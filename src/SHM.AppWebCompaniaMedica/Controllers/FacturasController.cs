@@ -1263,7 +1263,7 @@ public class FacturasController : BaseController
                 var errorHhmm = await RegistrarComprobanteEnSanPabloAsync(produccion, serie, numeroUsuarioFormateado, tipoComprobante, fechaEmision, produccion.Concepto, userId);
                 if (errorHhmm != null)
                 {
-                    return Json(new { success = false, message = $"El comprobante se registro localmente pero no se pudo enviar a San Pablo: {errorHhmm}" });
+                    return Json(new { success = false, message = $"Error al enviar el comprobante: {errorHhmm}" });
                 }
             }
 
@@ -2020,7 +2020,7 @@ public class FacturasController : BaseController
                 var errorHhmm = await RegistrarComprobanteEnSanPabloAsync(produccion, serieUsuario, numeroFormateado, tipoComprobanteUsuario, fechaEmisionUsuario, produccion.Concepto, userId);
                 if (errorHhmm != null)
                 {
-                    return Json(new { success = false, message = $"El comprobante se registro localmente pero no se pudo enviar a San Pablo: {errorHhmm}" });
+                    return Json(new { success = false, message = $"Error al enviar el comprobante: {errorHhmm}" });
                 }
             }
 
@@ -2252,7 +2252,9 @@ public class FacturasController : BaseController
                     FechaAccion = DateTime.Now
                 }, userId);
 
-                return response.Message;
+                return !string.IsNullOrWhiteSpace(response.Message)
+                    ? response.Message
+                    : "No se pudo enviar el comprobante";
             }
         }
         catch (Exception ex)
