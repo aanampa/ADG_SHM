@@ -1360,9 +1360,9 @@ public class FacturasController : BaseController
             // Validar y parsear XML segun tipo de comprobante
             FacturaXmlData facturaData;
 
-            if (tipoComprobante == "02")
+            if (tipoComprobante == "22" || tipoComprobante == "02")
             {
-                // Recibo por Honorarios Electronico
+                // Recibo por Honorarios Electronico (22 = codigo interno del sistema, 02 = codigo SUNAT)
                 RheXmlValidationResult rheValidationResult;
                 using (var xmlStreamValidation = archivoXml.OpenReadStream())
                 {
@@ -2206,7 +2206,7 @@ public class FacturasController : BaseController
                 CPM_FECEMI = fechaEmision?.ToString("dd/MM/yyyy"),
                 CPM_GLOSA = glosa,
                 CPM_MTOTAL = produccion.MtoTotal?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                CPM_FECREG = DateTime.Now.ToString("dd/MM/yyyy")
+                CPM_FECREG = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
             };
 
             var response = await _sanPabloApiService.RegistrarComprobanteAsync(request);
