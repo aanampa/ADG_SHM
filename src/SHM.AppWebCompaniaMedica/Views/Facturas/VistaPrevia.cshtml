@@ -16,7 +16,10 @@
     // tipoComprobanteForm="1" equivale a "01" en el XML (Factura); "22" equivale a "22" (RHE)
     var tipoComprobanteXml = Model.DatosXml?.DatosGenerales.CodigoTipoDocumento ?? "";
     var tipoComprobanteForm = Model.TipoComprobante ?? "";
-    var tipoComprobanteFormNormalizado = tipoComprobanteForm == "1" ? "01" : tipoComprobanteForm;
+    // "1" = Factura (interno) -> "01" (SUNAT); "22" = RHE (interno) -> "02" (SUNAT/parser)
+    var tipoComprobanteFormNormalizado = tipoComprobanteForm == "1" ? "01"
+        : tipoComprobanteForm == "22" ? "02"
+        : tipoComprobanteForm;
     var tipoCoincide = string.Equals(tipoComprobanteFormNormalizado.Trim(), tipoComprobanteXml.Trim(), StringComparison.OrdinalIgnoreCase);
 
     // Nombres legibles de tipo comprobante
