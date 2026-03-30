@@ -76,10 +76,9 @@ public class LiquidacionController : Controller
     [Route("Liquidacion/Index")]
     public async Task<IActionResult> Index()
     {
-        // Cargar bancos para el filtro Select2
-        var bancos = await _bancoService.GetAllBancosAsync();
+        // Cargar bancos para el filtro Select2 (solo bancos con cuenta bancaria registrada)
+        var bancos = await _bancoService.GetBancosConCuentasAsync();
         ViewBag.Bancos = bancos
-            .Where(b => b.Activo == 1)
             .OrderBy(b => b.NombreBanco)
             .Select(b => new { id = b.IdBanco, text = b.NombreBanco })
             .ToList();

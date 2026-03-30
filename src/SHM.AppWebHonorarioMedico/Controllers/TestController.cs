@@ -123,6 +123,16 @@ public class TestController : Controller
         ViewBag.SapTimeoutSeconds = _configuration["SapApi:TimeoutSeconds"];
         ViewBag.SapEndpointToken = _configuration["SapApi:EndpointToken"];
         ViewBag.SapEndpointBancos = _configuration["SapApi:EndpointBancos"];
+
+        // SanPabloApi
+        ViewBag.SanPabloBaseUrl = _configuration["SanPabloApi:BaseUrl"];
+        ViewBag.SanPabloUsuario = _configuration["SanPabloApi:Usuario"];
+        ViewBag.SanPabloPassword = _configuration["SanPabloApi:Password"];
+        ViewBag.SanPabloTimeoutSeconds = _configuration["SanPabloApi:TimeoutSeconds"];
+        ViewBag.SanPabloEndpointLogin = _configuration["SanPabloApi:EndpointLogin"];
+        ViewBag.SanPabloEndpointObtenerEntidad = _configuration["SanPabloApi:EndpointObtenerEntidad"];
+        ViewBag.SanPabloEndpointObtenerSede = _configuration["SanPabloApi:EndpointObtenerSede"];
+        ViewBag.SanPabloEndpointRegistrarComprobante = _configuration["SanPabloApi:EndpointRegistrarComprobante"];
     }
 
     private static string OcultarPassword(string connectionString)

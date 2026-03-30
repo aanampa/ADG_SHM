@@ -164,7 +164,7 @@
                             timer: 1500,
                             showConfirmButton: false
                         }).then(function () {
-                            location.reload();
+                            window.location.href = '@Url.Action("Index", "Home")';
                         });
                     } else {
                         Swal.fire({

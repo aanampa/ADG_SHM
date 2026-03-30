@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
+using SHM.AppDomain.DTOs.SanPabloApi;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -28,6 +29,7 @@ public class ProduccionController : Controller
     private readonly IBancoService _bancoService;
     private readonly IBitacoraService _bitacoraService;
     private readonly IConfiguration _configuration;
+    private readonly ISanPabloApiService _sanPabloApiService;
 
     public ProduccionController(
         ILogger<ProduccionController> logger,
@@ -39,7 +41,8 @@ public class ProduccionController : Controller
         IEntidadCuentaBancariaService entidadCuentaBancariaService,
         IBancoService bancoService,
         IBitacoraService bitacoraService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ISanPabloApiService sanPabloApiService)
     {
         _logger = logger;
         _produccionService = produccionService;
@@ -51,6 +54,7 @@ public class ProduccionController : Controller
         _bancoService = bancoService;
         _bitacoraService = bitacoraService;
         _configuration = configuration;
+        _sanPabloApiService = sanPabloApiService;
     }
 
     /// <summary>
@@ -395,7 +399,18 @@ public class ProduccionController : Controller
                     await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
                 }
 
-                _logger.LogInformation("Factura aceptada. GUID: {Guid}, Usuario: {Usuario}",
+                // Invocar San Pablo API y transicionar a FACTURA_ENVIADA_HHMM
+                if (produccion != null)
+                {
+                    var errorHhmm = await RegistrarComprobanteEnSanPabloAsync(produccion, idUsuario);
+                    if (errorHhmm != null)
+                    {
+                        _logger.LogWarning("Factura aceptada pero error al enviar a HHMM. GUID: {Guid}, Error: {Error}", request.GuidRegistro, errorHhmm);
+                        return Json(new { success = false, message = $"Error al enviar el comprobante a HHMM: {errorHhmm}" });
+                    }
+                }
+
+                _logger.LogInformation("Factura aceptada y enviada a HHMM. GUID: {Guid}, Usuario: {Usuario}",
                     request.GuidRegistro, idUsuario);
                 return Json(new { success = true, message = "Factura aceptada correctamente" });
             }
@@ -439,5 +454,123 @@ public class ProduccionController : Controller
             return idSede;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Registra el comprobante en el API de San Pablo y transiciona a FACTURA_ENVIADA_HHMM.
+    /// Retorna null si fue exitoso, o el mensaje de error si fallo.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-29</created>
+    /// </summary>
+    private async Task<string?> RegistrarComprobanteEnSanPabloAsync(
+        ProduccionListaResponseDto produccion,
+        int userId)
+    {
+        try
+        {
+            // Obtener codigo de entidad medica
+            string? codigoEntidad = null;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                codigoEntidad = entidadMedica?.CodigoEntidad;
+            }
+
+            // Derivar tipo comprobante si es nulo
+            var tipoComprobante = produccion.TipoComprobante;
+            if (string.IsNullOrEmpty(tipoComprobante))
+                tipoComprobante = produccion.TipoEntidadMedica == "1" ? "1" : "22";
+
+            // Derivar glosa/concepto si es nulo
+            var glosa = produccion.Concepto;
+            if (string.IsNullOrEmpty(glosa))
+            {
+                var detalleTipoProd = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "";
+                glosa = $"PRODUCCION {produccion.CodigoProduccion} - {descripcionTipoProd}";
+            }
+
+            // Obtener descripcion del tipo de comprobante
+            var tablaDetalle = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_COMPROBANTE", tipoComprobante);
+            var descripcionTipo = tablaDetalle?.Descripcion ?? tipoComprobante;
+
+            // FLG_CIAMEDICA: 1=CIA MEDICA, 0=MEDICO
+            var flgCiaMedica = produccion.TipoEntidadMedica == "1" ? "1" : "0";
+
+            // Formatear numero a 7 digitos
+            var numero = produccion.Numero ?? "";
+            if (int.TryParse(numero, out var numInt))
+                numero = numInt.ToString("D7");
+
+            var request = new SanPabloComprobanteRequestDto
+            {
+                COD_SEDE = produccion.CodigoSede,
+                FLG_CIAMEDICA = flgCiaMedica,
+                COD_ENTIDAD = codigoEntidad,
+                COD_PROD = produccion.CodigoProduccion,
+                FLG_PORTAL = "FA",
+                CPM_TIPO = tipoComprobante,
+                CPM_SERIE = produccion.Serie,
+                CPM_NUMERO = numero,
+                CPM_FECEMI = produccion.FechaEmision?.ToString("dd/MM/yyyy"),
+                CPM_GLOSA = glosa,
+                CPM_MTOTAL = produccion.MtoTotal?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                CPM_FECREG = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
+            };
+
+            var response = await _sanPabloApiService.RegistrarComprobanteAsync(request);
+
+            if (response.IsSuccess)
+            {
+                _logger.LogInformation("Comprobante registrado en San Pablo. CodigoProduccion: {Cod}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}",
+                    produccion.CodigoProduccion, descripcionTipo, produccion.Serie, produccion.Numero);
+
+                // Cambiar estado a FACTURA_ENVIADA_HHMM
+                await _produccionService.EnviarAHhmmAsync(produccion.GuidRegistro!, userId);
+
+                // Registrar en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = EstadoDescripcion.Produccion.FacturaEnviadaHhmm,
+                    Descripcion = $"{descripcionTipo} enviada a HHMM: {produccion.Serie}-{produccion.Numero}",
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                return null; // Exito
+            }
+            else
+            {
+                _logger.LogWarning("Error al registrar comprobante en San Pablo. CodigoProduccion: {Cod}, Mensaje: {Msg}",
+                    produccion.CodigoProduccion, response.Message);
+
+                // Revertir estado a FACTURA_ENVIADA (sin limpiar datos del comprobante)
+                await _produccionService.UpdateEstadoAsync(
+                    produccion.GuidRegistro!,
+                    EstadoDescripcion.Produccion.FacturaEnviada,
+                    userId);
+
+                // Registrar error en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = "ERROR_ENVIO_HHMM",
+                    Descripcion = $"Error al enviar {descripcionTipo} a HHMM: {response.Message}. Estado revertido a FACTURA_ENVIADA.",
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                return !string.IsNullOrWhiteSpace(response.Message)
+                    ? response.Message
+                    : "No se pudo enviar el comprobante";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al comunicar comprobante a San Pablo. CodigoProduccion: {Cod}", produccion.CodigoProduccion);
+            return ex.Message;
+        }
     }
 }
