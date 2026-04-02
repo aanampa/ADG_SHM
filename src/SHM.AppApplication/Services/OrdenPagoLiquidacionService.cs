@@ -180,6 +180,7 @@ public class OrdenPagoLiquidacionService : IOrdenPagoLiquidacionService
             IdBanco = entity.IdBanco,
             NombreBanco = entity.NombreBanco,
             TipoLiquidacion = entity.TipoLiquidacion,
+            DesTipoLiquidacion = entity.DesTipoLiquidacion,
             Comentarios = entity.Comentarios,
             GuidRegistro = entity.GuidRegistro,
             Activo = entity.Activo,

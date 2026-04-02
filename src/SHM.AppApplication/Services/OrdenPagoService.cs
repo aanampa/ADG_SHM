@@ -175,11 +175,32 @@ public class OrdenPagoService : IOrdenPagoService
         return await _ordenPagoRepository.DeleteAsync(orden.IdOrdenPago, idModificador);
     }
 
+    /// <summary>
+    /// Obtiene las ordenes de pago que el usuario ya aprobo.
+    /// </summary>
+    public async Task<IEnumerable<OrdenPagoResponseDto>> GetApprovedByUserAsync(int idUsuario)
+    {
+        var ordenes = await _ordenPagoRepository.GetApprovedByUserAsync(idUsuario);
+        return ordenes.Select(MapToResponseDto);
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
+    /// </summary>
+    public async Task<(IEnumerable<OrdenPagoResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        int? idBanco, string? estado, int? idSede, int pageNumber, int pageSize)
+    {
+        var (items, totalCount) = await _ordenPagoRepository.GetPaginatedListAsync(idBanco, estado, idSede, pageNumber, pageSize);
+        return (items.Select(MapToResponseDto), totalCount);
+    }
+
     private static OrdenPagoResponseDto MapToResponseDto(OrdenPago orden)
     {
         return new OrdenPagoResponseDto
         {
             IdOrdenPago = orden.IdOrdenPago,
+            IdSede = orden.IdSede,
+            NombreSede = orden.NombreSede,
             IdBanco = orden.IdBanco,
             NombreBanco = orden.NombreBanco,
             NumeroOrdenPago = orden.NumeroOrdenPago,

@@ -9,6 +9,8 @@ namespace SHM.AppDomain.DTOs.OrdenPago;
 public class OrdenPagoResponseDto
 {
     public int IdOrdenPago { get; set; }
+    public int IdSede { get; set; }
+    public string? NombreSede { get; set; }
     public int IdBanco { get; set; }
     public string? NombreBanco { get; set; }
     public string? NumeroOrdenPago { get; set; }

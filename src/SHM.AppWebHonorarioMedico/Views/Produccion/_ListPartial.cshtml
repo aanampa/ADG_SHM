@@ -46,7 +46,7 @@
                         <td>@(item.DesTipoMedico ?? "-")</td>                        
                         <td>@item.DesTipoProduccion</td>
                         <td>@(item.DesTipoRubro ?? "-")</td>                        
-                        <td>@(item.Periodo != null ? FormatPeriodo(item.Periodo) : "-")</td>
+                        <td>@(item.Periodo ?? "-")</td>
                         <td>@item.Descripcion</td>
                         <td>@item.RazonSocial</td>
                         <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
@@ -124,15 +124,6 @@ else if (Model.TotalCount > 0)
         return EstadoDescripcion.Produccion.GetBadgeClass(estado);
     }
 
-    string FormatPeriodo(string periodo)
-    {
-        // Parsear formato Oracle (DD-MON-YY) y convertir a dd/MM/yyyy
-        if (DateTime.TryParse(periodo, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out DateTime fecha))
-        {
-            return fecha.ToString("dd/MM/yyyy");
-        }
-        return periodo;
-    }
 }
 
 <script>

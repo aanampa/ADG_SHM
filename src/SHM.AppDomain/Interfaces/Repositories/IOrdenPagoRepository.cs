@@ -28,4 +28,15 @@ public interface IOrdenPagoRepository
     /// Obtiene el siguiente correlativo de orden de pago para una sede, anio y mes dados.
     /// </summary>
     Task<int> GetSiguienteCorrelativoAsync(int idSede, int anio, int mes);
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
+    /// </summary>
+    Task<(IEnumerable<OrdenPago> Items, int TotalCount)> GetPaginatedListAsync(
+        int? idBanco, string? estado, int? idSede, int pageNumber, int pageSize);
+
+    /// <summary>
+    /// Obtiene las ordenes de pago que el usuario ya aprobo.
+    /// </summary>
+    Task<IEnumerable<OrdenPago>> GetApprovedByUserAsync(int idUsuario);
 }

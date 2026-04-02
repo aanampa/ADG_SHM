@@ -35,4 +35,5 @@ public class OrdenPagoLiquidacion
     // Propiedades de navegacion
     public string? NumeroOrdenPago { get; set; }
     public string? NombreBanco { get; set; }
+    public string? DesTipoLiquidacion { get; set; }
 }

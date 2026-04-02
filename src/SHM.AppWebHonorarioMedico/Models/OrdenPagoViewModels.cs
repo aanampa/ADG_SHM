@@ -28,6 +28,7 @@ public class OrdenPagoItemViewModel
     public string GuidRegistro { get; set; } = string.Empty;
     public string? NumeroOrdenPago { get; set; }
     public DateTime? FechaGeneracion { get; set; }
+    public string? NombreSede { get; set; }
     public string? NombreBanco { get; set; }
     public int? CantLiquidaciones { get; set; }
     public int? CantComprobantes { get; set; }

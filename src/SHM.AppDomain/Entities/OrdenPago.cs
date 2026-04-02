@@ -33,4 +33,5 @@ public class OrdenPago
 
     // Propiedades de navegacion
     public string? NombreBanco { get; set; }
+    public string? NombreSede { get; set; }
 }

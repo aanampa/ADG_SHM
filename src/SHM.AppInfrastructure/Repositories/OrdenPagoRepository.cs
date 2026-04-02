@@ -40,9 +40,11 @@ public class OrdenPagoRepository : IOrdenPagoRepository
             op.FECHA_CREACION as FechaCreacion,
             op.ID_MODIFICADOR as IdModificador,
             op.FECHA_MODIFICACION as FechaModificacion,
-            b.NOMBRE_BANCO as NombreBanco
+            b.NOMBRE_BANCO as NombreBanco,
+            s.NOMBRE as NombreSede
         FROM SHM_ORDEN_PAGO op
-        LEFT JOIN SHM_BANCO b ON op.ID_BANCO = b.ID_BANCO";
+        LEFT JOIN SHM_BANCO b ON op.ID_BANCO = b.ID_BANCO
+        LEFT JOIN SHM_SEDE s ON op.ID_SEDE = s.ID_SEDE";
 
     public OrdenPagoRepository(DatabaseConfig databaseConfig)
     {
@@ -183,7 +185,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
                   WHERE opa2.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
                     AND opa2.ACTIVO = 1
                     AND opa2.ORDEN < opa.ORDEN
-                    AND opa2.ESTADO != 'APROBADO'
+                    AND opa2.ESTADO <> 'APROBADO'
               )
             ORDER BY op.FECHA_GENERACION DESC";
 
@@ -373,5 +375,68 @@ public class OrdenPagoRepository : IOrdenPagoRepository
               AND ACTIVO = 1";
 
         return await connection.ExecuteScalarAsync<int>(sql, new { IdSede = idSede, Anio = anio, Mes = mes });
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
+    /// Compatible con Oracle 11g (ROWNUM).
+    /// </summary>
+    public async Task<(IEnumerable<OrdenPago> Items, int TotalCount)> GetPaginatedListAsync(
+        int? idBanco, string? estado, int? idSede, int pageNumber, int pageSize)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var whereClause = "WHERE op.ACTIVO = 1";
+        if (idBanco.HasValue && idBanco.Value > 0)
+            whereClause += " AND op.ID_BANCO = :IdBanco";
+        if (!string.IsNullOrEmpty(estado))
+            whereClause += " AND op.ESTADO = :Estado";
+        if (idSede.HasValue && idSede.Value > 0)
+            whereClause += " AND op.ID_SEDE = :IdSede";
+
+        var countSql = $@"
+            SELECT COUNT(1)
+            FROM SHM_ORDEN_PAGO op
+            {whereClause}";
+
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql,
+            new { IdBanco = idBanco, Estado = estado, IdSede = idSede });
+
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
+
+        var sql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    {SELECT_BASE}
+                    {whereClause}
+                    ORDER BY op.ID_ORDEN_PAGO DESC
+                ) a WHERE ROWNUM <= :MaxRow
+            ) WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<OrdenPago>(sql,
+            new { IdBanco = idBanco, Estado = estado, IdSede = idSede, MaxRow = maxRow, MinRow = minRow });
+
+        return (items, totalCount);
+    }
+
+    /// <summary>
+    /// Obtiene las ordenes de pago que el usuario ya aprobo.
+    /// Busca en SHM_ORDEN_PAGO_APROBACION los registros donde el usuario tiene estado APROBADO.
+    /// </summary>
+    public async Task<IEnumerable<OrdenPago>> GetApprovedByUserAsync(int idUsuario)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"{SELECT_BASE}
+            INNER JOIN SHM_ORDEN_PAGO_APROBACION opa ON op.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
+                AND opa.ACTIVO = 1 AND opa.ESTADO = 'APROBADO'
+            INNER JOIN SHM_PERFIL_APROBACION_USUARIO pau ON opa.ID_PERFIL_APROBACION = pau.ID_PERFIL_APROBACION
+                AND pau.ID_USUARIO = :IdUsuario
+            WHERE op.ACTIVO = 1
+              AND (pau.ID_SEDE IS NULL OR pau.ID_SEDE = op.ID_SEDE)
+            ORDER BY opa.FECHA_MODIFICACION DESC";
+
+        return await connection.QueryAsync<OrdenPago>(sql, new { IdUsuario = idUsuario });
     }
 }
