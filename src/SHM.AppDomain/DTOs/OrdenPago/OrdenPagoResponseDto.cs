@@ -29,4 +29,8 @@ public class OrdenPagoResponseDto
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
+
+    // Estado de aprobacion por perfil
+    public string? EstadoAprobJefeSede { get; set; }
+    public string? EstadoAprobJefeCorp { get; set; }
 }

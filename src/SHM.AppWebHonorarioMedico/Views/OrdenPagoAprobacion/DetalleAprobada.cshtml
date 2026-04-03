@@ -1,12 +1,11 @@
 @model SHM.AppDomain.DTOs.OrdenPago.OrdenPagoResponseDto
 @using SHM.AppDomain.Constants
 @{
-    ViewData["Title"] = "Aprobación de Orden de Pago";
+    ViewData["Title"] = "Detalle de Orden de Pago";
     var liquidaciones = ViewBag.Liquidaciones as List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.OrdenPagoLiquidacionResponseDto>
         ?? new List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.OrdenPagoLiquidacionResponseDto>();
     var aprobaciones = ViewBag.Aprobaciones as List<SHM.AppDomain.DTOs.OrdenPagoAprobacion.OrdenPagoAprobacionResponseDto>
         ?? new List<SHM.AppDomain.DTOs.OrdenPagoAprobacion.OrdenPagoAprobacionResponseDto>();
-    var perfilesUsuario = ViewBag.PerfilesUsuario as List<string> ?? new List<string>();
     var detalleLiquidaciones = ViewBag.DetalleLiquidaciones as List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.DetalleLiquidacionItemDto>
         ?? new List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.DetalleLiquidacionItemDto>();
     var bitacoras = ViewBag.Bitacoras as List<SHM.AppDomain.DTOs.Bitacora.BitacoraConUsuarioDto>
@@ -31,17 +30,17 @@
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center">
                     <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
-                        <i class="fas fa-file-invoice-dollar mr-2"></i>Aprobaci&oacute;n: @(Model.NumeroOrdenPago ?? "-")
+                        <i class="fas fa-file-invoice-dollar mr-2"></i>Orden de Pago: @(Model.NumeroOrdenPago ?? "-")
                     </h1>
-                    <a href="@Url.Action("Index", "OrdenPagoAprobacion")"
+                    <a href="@Url.Action("Aprobadas", "OrdenPagoAprobacion")"
                         class="btn btn-sm btn-outline-secondary"
-                        title="Volver a la lista">
+                        title="Volver al historial">
                         <i class="fas fa-arrow-left mr-1"></i>Volver
                     </a>
                 </div>
                 <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
                     <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
-                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "OrdenPagoAprobacion")">Aprobaci&oacute;n de Orden de Pago</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("Aprobadas", "OrdenPagoAprobacion")">Historial de Aprobaciones</a></li>
                     <li class="breadcrumb-item active">Detalle</li>
                 </ol>
             </div>
@@ -79,13 +78,13 @@
                         </div>
                         <div class="col-2">
                             <div class="form-group-sm">
-                                <label>Fecha de Generaci&oacute;n</label>
+                                <label>Fecha de Generación</label>
                                 <input type="text" class="form-control form-control-sm" value="@(Model.FechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")" readonly style="background-color: #e9ecef;">
                             </div>
                         </div>
                         <div class="col-3">
                             <div class="form-group-sm">
-                                <label>Estado de Aprobaci&oacute;n</label>
+                                <label>Estado de Aprobación</label>
                                 <div>
                                     <span class="badge @EstadoDescripcion.OrdenPago.GetBadgeClass(Model.Estado)" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">
                                         @EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)
@@ -97,13 +96,13 @@
                     <div class="row">
                         <div class="col-2">
                             <div class="form-group-sm">
-                                <label>N&deg; de Liquidaciones</label>
+                                <label>N° de Liquidaciones</label>
                                 <input type="text" class="form-control form-control-sm" value="@(Model.CantLiquidaciones?.ToString() ?? "-")" readonly style="background-color: #e9ecef;">
                             </div>
                         </div>
                         <div class="col-2">
                             <div class="form-group-sm">
-                                <label>N&deg; de Facturas</label>
+                                <label>N° de Facturas</label>
                                 <input type="text" class="form-control form-control-sm" value="@(Model.CantComprobantes?.ToString() ?? "-")" readonly style="background-color: #e9ecef;">
                             </div>
                         </div>
@@ -133,42 +132,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-footer py-2 d-flex justify-content-between align-items-center">
-                    <div>
-                        @if (Model.Estado == EstadoDescripcion.OrdenPago.AprobacionPendiente && perfilesUsuario.Any())
-                        {
-                            <button type="button" class="btn btn-sm btn-danger" onclick="rechazarOrden()">
-                                <i class="fas fa-times mr-1"></i>Devolver
-                            </button>
-                            <button type="button" class="btn btn-sm btn-success ml-1" onclick="aprobarOrden()">
-                                <i class="fas fa-check mr-1"></i>Aprobar
-                            </button>
-                        }
-                    </div>
-                    <div>
-                        @if (perfilesUsuario.Any())
-                        {
-                            <small class="text-muted mr-2">Tu perfil:</small>
-                            @foreach (var perfil in perfilesUsuario)
-                            {
-                                <span class="badge badge-info mr-1" style="font-size: 0.85rem;">
-                                    <i class="fas fa-user-tag mr-1"></i>@perfil
-                                </span>
-                            }
-                        }
-                        else
-                        {
-                            <small class="text-muted"><i class="fas fa-info-circle mr-1"></i>Sin perfil de aprobaci&oacute;n asignado</small>
-                        }
-                    </div>
-                </div>
             </div>
 
             <!-- Detalle de aprobacion -->
             <div class="card card-compact mb-2 w-75">
                 <div class="card-header bg-light">
                     <h3 class="card-title">
-                        <i class="fas fa-check-double mr-1"></i>Detalle de Aprobaci&oacute;n
+                        <i class="fas fa-check-double mr-1"></i>Detalle de Aprobación
                     </h3>
                 </div>
                 <div class="card-body p-2">
@@ -226,7 +196,7 @@
                                     <th style="width: 30px;">#</th>
                                     <th style="width: 110px;">Cod.<br/>Liquidación</th>
                                     <th style="width: 110px;">Tipo de<br/>Liquidaci&oacute;n</th>
-                                    <th>Descripci&oacute;n</th>
+                                    <th style="width: 150px;">Descripci&oacute;n</th>
                                     <th style="width: 85px;">Periodo</th>
                                     <th style="width: 160px;">Banco</th>
                                     <th style="width: 90px;">Cant.<br/>Comprob.</th>
@@ -306,7 +276,7 @@
                                     <th style="width: 100px;">Tipo<br/>Entidad</th>
                                     <th style="width: 130px;">Raz&oacute;n Social</th>
                                     <th style="width: 160px;">Banco</th>
-                                    <th style="width: 90px;">Comprobante</th>
+                                    <th style="width: 90px;">Comproban.</th>
                                     <th style="width: 40px;">PDF</th>
                                     <th class="text-right" style="width: 100px;">Sub Total<br/>S/.</th>
                                     <th class="text-right" style="width: 80px;">IGV<br/>S/.</th>
@@ -332,7 +302,7 @@
                                             <td class="text-center">@(det.Ruc ?? "-")</td>
                                             <td>@(det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-")</td>
                                             <td>@(det.RazonSocial ?? "-")</td>
-                                            <td>@(det.NombreBanco ?? "-")</td>
+                                            <td class="text-center">@(det.NombreBanco ?? "-")</td>
                                             <td class="text-center">@comprobante</td>
                                             <td class="text-center">
                                                 @if (!string.IsNullOrEmpty(det.GuidArchivoFactura))
@@ -431,149 +401,5 @@
     </div>
 </div>
 
-@Html.AntiForgeryToken()
-
-<input type="hidden" id="hdnGuidOrdenPago" value="@Model.GuidRegistro" />
 <input type="hidden" value="@TempData["APP_RESPONSE"]" id="app-response" />
 <input type="hidden" value="@TempData["APP_MESSAGE"]" id="app-message" />
-
-@section Scripts {
-    <script type="text/javascript">
-        function aprobarOrden() {
-            Swal.fire({
-                icon: 'question',
-                title: 'Aprobar Orden de Pago',
-                text: '\u00bfEst\u00e1 seguro que desea aprobar esta orden de pago?',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'S\u00ed, Aprobar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    ejecutarAprobacion();
-                }
-            });
-        }
-
-        function ejecutarAprobacion() {
-            const guid = document.getElementById('hdnGuidOrdenPago').value;
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-            f_loading();
-            fetch('@Url.Action("Aprobar", "OrdenPagoAprobacion")', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': token
-                },
-                body: JSON.stringify({ guidOrdenPago: guid })
-            })
-            .then(response => response.json())
-            .then(data => {
-                f_remove_loading();
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Aprobado',
-                        text: data.message,
-                        confirmButtonColor: '#28a745'
-                    }).then(() => {
-                        window.location.href = '@Url.Action("Index", "OrdenPagoAprobacion")';
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message,
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            })
-            .catch(error => {
-                f_remove_loading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error al procesar la aprobaci\u00f3n.',
-                    confirmButtonColor: '#dc3545'
-                });
-            });
-        }
-
-        function rechazarOrden() {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Devolver Orden de Pago',
-                html: '<p>\u00bfEst\u00e1 seguro que desea devolver esta orden de pago?</p>' +
-                      '<div class="form-group text-left mt-3">' +
-                      '<label class="font-weight-bold">Comentario <span class="text-danger">*</span></label>' +
-                      '<textarea id="txtComentarioRechazo" class="form-control" rows="3" ' +
-                      'placeholder="Ingrese el motivo del rechazo..." maxlength="500"></textarea>' +
-                      '</div>',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'S\u00ed, Devolver',
-                cancelButtonText: 'Cancelar',
-                preConfirm: () => {
-                    const comentario = document.getElementById('txtComentarioRechazo').value.trim();
-                    if (!comentario) {
-                        Swal.showValidationMessage('Debe ingresar un comentario');
-                        return false;
-                    }
-                    return comentario;
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    ejecutarRechazo(result.value);
-                }
-            });
-        }
-
-        function ejecutarRechazo(comentario) {
-            const guid = document.getElementById('hdnGuidOrdenPago').value;
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-            f_loading();
-            fetch('@Url.Action("Rechazar", "OrdenPagoAprobacion")', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': token
-                },
-                body: JSON.stringify({ guidOrdenPago: guid, comentario: comentario })
-            })
-            .then(response => response.json())
-            .then(data => {
-                f_remove_loading();
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Devuelto',
-                        text: data.message,
-                        confirmButtonColor: '#28a745'
-                    }).then(() => {
-                        window.location.href = '@Url.Action("Index", "OrdenPagoAprobacion")';
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message,
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            })
-            .catch(error => {
-                f_remove_loading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error al procesar el rechazo.',
-                    confirmButtonColor: '#dc3545'
-                });
-            });
-        }
-    </script>
-}

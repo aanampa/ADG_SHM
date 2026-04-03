@@ -12,7 +12,6 @@
                 </h1>
                 <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
                     <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
-                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "OrdenPagoAprobacion")">Aprobaci&oacute;n de Orden de Pago</a></li>
                     <li class="breadcrumb-item active">Historial de Aprobaciones</li>
                 </ol>
             </div>
@@ -22,22 +21,10 @@
             <div class="container-fluid">
                 <div class="card">
                     <div class="card-header">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <span class="text-muted small">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    &Oacute;rdenes de pago que usted ha aprobado.
-                                </span>
-                            </div>
-                            <div class="col-md-6 text-right">
-                                <a href="@Url.Action("Index", "OrdenPagoAprobacion")" class="btn btn-secondary btn-sm mr-1">
-                                    <i class="fas fa-clipboard-check mr-1"></i>Pendientes de Aprobaci&oacute;n
-                                </a>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="loadList(1)">
-                                    <i class="fas fa-sync-alt mr-1"></i>Actualizar
-                                </button>
-                            </div>
-                        </div>
+                        <span class="text-muted small">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            &Oacute;rdenes de pago que usted ha aprobado.
+                        </span>
                     </div>
                     <!-- Contenedor para la lista cargada via AJAX -->
                     <div id="listContainer">
@@ -84,7 +71,7 @@
         }
 
         function verDetalle(guid) {
-            window.location.href = '@Url.Action("Detalle")/' + guid;
+            window.location.href = '@Url.Action("DetalleAprobada", "OrdenPagoAprobacion")/' + guid;
         }
     </script>
 }

@@ -41,7 +41,17 @@ public class OrdenPagoRepository : IOrdenPagoRepository
             op.ID_MODIFICADOR as IdModificador,
             op.FECHA_MODIFICACION as FechaModificacion,
             b.NOMBRE_BANCO as NombreBanco,
-            s.NOMBRE as NombreSede
+            s.NOMBRE as NombreSede,
+            (SELECT opa1.ESTADO FROM SHM_ORDEN_PAGO_APROBACION opa1
+             INNER JOIN SHM_PERFIL_APROBACION pa1 ON pa1.ID_PERFIL_APROBACION = opa1.ID_PERFIL_APROBACION
+             WHERE opa1.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+               AND pa1.CODIGO = 'JEFE_SEDE'
+               AND opa1.ACTIVO = 1) AS EstadoAprobJefeSede,
+            (SELECT opa2.ESTADO FROM SHM_ORDEN_PAGO_APROBACION opa2
+             INNER JOIN SHM_PERFIL_APROBACION pa2 ON pa2.ID_PERFIL_APROBACION = opa2.ID_PERFIL_APROBACION
+             WHERE opa2.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+               AND pa2.CODIGO = 'JEFE_CORPORATIVO'
+               AND opa2.ACTIVO = 1) AS EstadoAprobJefeCorp
         FROM SHM_ORDEN_PAGO op
         LEFT JOIN SHM_BANCO b ON op.ID_BANCO = b.ID_BANCO
         LEFT JOIN SHM_SEDE s ON op.ID_SEDE = s.ID_SEDE";

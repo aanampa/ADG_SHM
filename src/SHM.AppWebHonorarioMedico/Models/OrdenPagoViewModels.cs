@@ -37,6 +37,8 @@ public class OrdenPagoItemViewModel
     public decimal? MtoIgvAcum { get; set; }
     public decimal? MtoRentaAcum { get; set; }
     public decimal? MtoTotalAcum { get; set; }
+    public string? EstadoAprobJefeSede { get; set; }
+    public string? EstadoAprobJefeCorp { get; set; }
 }
 
 /// <summary>

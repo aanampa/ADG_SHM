@@ -19,7 +19,8 @@
     .form-group-sm { margin-bottom: 0.5rem; }
     .form-group-sm label { font-size: 0.8rem; margin-bottom: 0.15rem; color: #6c757d; }
     .form-group-sm .form-control-sm { font-size: 0.8rem; padding: 0.2rem 0.4rem; height: auto; }
-    .table-liq thead th { vertical-align: middle !important; text-align: center !important; }
+    .table-liq thead th { vertical-align: middle !important; text-align: center; }
+    .table-liq thead th.text-right { text-align: right !important; }
 </style>
 
 <div class="wrapper">
@@ -78,7 +79,11 @@
                         <div class="col-3">
                             <div class="form-group-sm">
                                 <label>Estado de Aprobación</label>
-                                <input type="text" class="form-control form-control-sm @EstadoDescripcion.OrdenPago.GetBgClass(Model.Estado)" value="@EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)" readonly style="background-color: #e9ecef;">
+                                <div>
+                                    <span class="badge @EstadoDescripcion.OrdenPago.GetBadgeClass(Model.Estado)" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">
+                                        @EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -189,10 +194,10 @@
                                     <th style="width: 85px;">Periodo</th>
                                     <th style="width: 160px;">Banco</th>
                                     <th style="width: 90px;">Cant.<br/>Comprob.</th>
-                                    <th style="width: 100px;">Sub Total<br/>S/.</th>
-                                    <th style="width: 80px;">IGV<br/>S/.</th>
-                                    <th style="width: 90px;">Imp. Renta<br/>S/.</th>
-                                    <th style="width: 100px;">Total<br/>S/.</th>
+                                    <th class="text-right" style="width: 100px;">Sub Total<br/>S/.</th>
+                                    <th class="text-right" style="width: 80px;">IGV<br/>S/.</th>
+                                    <th class="text-right" style="width: 90px;">Imp. Renta<br/>S/.</th>
+                                    <th class="text-right" style="width: 100px;">Total<br/>S/.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -267,10 +272,10 @@
                                     <th style="width: 160px;">Banco</th>
                                     <th style="width: 90px;">Comproban.</th>
                                     <th style="width: 40px;">PDF</th>
-                                    <th style="width: 100px;">Sub Total<br/>S/.</th>
-                                    <th style="width: 80px;">IGV<br/>S/.</th>
-                                    <th style="width: 90px;">Imp. Renta<br/>S/.</th>
-                                    <th style="width: 100px;">Total<br/>S/.</th>
+                                    <th class="text-right" style="width: 100px;">Sub Total<br/>S/.</th>
+                                    <th class="text-right" style="width: 80px;">IGV<br/>S/.</th>
+                                    <th class="text-right" style="width: 90px;">Imp. Renta<br/>S/.</th>
+                                    <th class="text-right" style="width: 100px;">Total<br/>S/.</th>
                                 </tr>
                             </thead>
                             <tbody>

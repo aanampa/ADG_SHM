@@ -22,6 +22,7 @@ public class OrdenPagoController : Controller
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
     private readonly IBancoService _bancoService;
     private readonly IBitacoraService _bitacoraService;
+    private readonly ITablaDetalleService _tablaDetalleService;
 
     public OrdenPagoController(
        ILogger<OrdenPagoController> logger,
@@ -29,7 +30,8 @@ public class OrdenPagoController : Controller
        IOrdenPagoLiquidacionService ordenPagoLiquidacionService,
        IOrdenPagoAprobacionService ordenPagoAprobacionService,
        IBancoService bancoService,
-       IBitacoraService bitacoraService)
+       IBitacoraService bitacoraService,
+       ITablaDetalleService tablaDetalleService)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
@@ -37,6 +39,7 @@ public class OrdenPagoController : Controller
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
         _bancoService = bancoService;
         _bitacoraService = bitacoraService;
+        _tablaDetalleService = tablaDetalleService;
     }
 
     /// <summary>
@@ -56,6 +59,14 @@ public class OrdenPagoController : Controller
             .OrderBy(b => b.NombreBanco)
             .Select(b => new { id = b.IdBanco, text = b.NombreBanco })
             .ToList();
+
+        // Cargar estados de orden de pago para el filtro
+        var estados = await _tablaDetalleService.ListarPorCodigoTablaAsync("ESTADO_ORDEN_PAGO");
+        ViewBag.Estados = estados.Select(e => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+        {
+            Value = e.Codigo,
+            Text = e.Descripcion
+        }).ToList();
 
         return View();
     }
@@ -89,7 +100,9 @@ public class OrdenPagoController : Controller
                     MtoSubtotalAcum = o.MtoSubtotalAcum,
                     MtoIgvAcum = o.MtoIgvAcum,
                     MtoRentaAcum = o.MtoRentaAcum,
-                    MtoTotalAcum = o.MtoTotalAcum
+                    MtoTotalAcum = o.MtoTotalAcum,
+                    EstadoAprobJefeSede = o.EstadoAprobJefeSede,
+                    EstadoAprobJefeCorp = o.EstadoAprobJefeCorp
                 }).ToList(),
                 TotalCount = totalCount,
                 PageNumber = pageNumber,

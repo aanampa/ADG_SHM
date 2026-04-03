@@ -22,6 +22,7 @@ public class UsuarioInternoItemViewModel
     public string? NumeroDocumento { get; set; }
     public string? Celular { get; set; }
     public string? RolDescripcion { get; set; }
+    public string? PerfilAprobacion { get; set; }
     public int CantidadSedes { get; set; }
     public string? UltimaSede { get; set; }
     public int Activo { get; set; }

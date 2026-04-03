@@ -218,7 +218,9 @@ public class OrdenPagoService : IOrdenPagoService
             GuidRegistro = orden.GuidRegistro,
             Activo = orden.Activo,
             FechaCreacion = orden.FechaCreacion,
-            FechaModificacion = orden.FechaModificacion
+            FechaModificacion = orden.FechaModificacion,
+            EstadoAprobJefeSede = orden.EstadoAprobJefeSede,
+            EstadoAprobJefeCorp = orden.EstadoAprobJefeCorp
         };
     }
 }

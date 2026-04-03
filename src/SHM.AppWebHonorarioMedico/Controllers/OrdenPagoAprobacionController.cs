@@ -20,19 +20,22 @@ public class OrdenPagoAprobacionController : Controller
     private readonly IOrdenPagoLiquidacionService _ordenPagoLiquidacionService;
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
     private readonly IBitacoraService _bitacoraService;
+    private readonly IPerfilAprobacionUsuarioService _perfilAprobacionUsuarioService;
 
     public OrdenPagoAprobacionController(
         ILogger<OrdenPagoAprobacionController> logger,
         IOrdenPagoService ordenPagoService,
         IOrdenPagoLiquidacionService ordenPagoLiquidacionService,
         IOrdenPagoAprobacionService ordenPagoAprobacionService,
-        IBitacoraService bitacoraService)
+        IBitacoraService bitacoraService,
+        IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
         _ordenPagoLiquidacionService = ordenPagoLiquidacionService;
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
         _bitacoraService = bitacoraService;
+        _perfilAprobacionUsuarioService = perfilAprobacionUsuarioService;
     }
 
     /// <summary>
@@ -81,10 +84,9 @@ public class OrdenPagoAprobacionController : Controller
                     CantLiquidaciones = o.CantLiquidaciones,
                     CantComprobantes = o.CantComprobantes,
                     Estado = o.Estado,
-                    MtoSubtotalAcum = o.MtoSubtotalAcum,
-                    MtoIgvAcum = o.MtoIgvAcum,
-                    MtoRentaAcum = o.MtoRentaAcum,
-                    MtoTotalAcum = o.MtoTotalAcum
+                    MtoTotalAcum = o.MtoTotalAcum,
+                    EstadoAprobJefeSede = o.EstadoAprobJefeSede,
+                    EstadoAprobJefeCorp = o.EstadoAprobJefeCorp
                 }).ToList(),
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
@@ -143,6 +145,14 @@ public class OrdenPagoAprobacionController : Controller
             // Cargar bitacora de la orden de pago
             var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_ORDEN_PAGO", ordenPago.IdOrdenPago);
             ViewBag.Bitacoras = bitacoras.ToList();
+
+            // Cargar perfiles de aprobacion del usuario actual
+            var perfilesUsuario = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(userId.Value);
+            ViewBag.PerfilesUsuario = perfilesUsuario
+                .Select(p => p.NombrePerfil)
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Distinct()
+                .ToList();
 
             return View(ordenPago);
         }
@@ -276,10 +286,9 @@ public class OrdenPagoAprobacionController : Controller
                     CantLiquidaciones = o.CantLiquidaciones,
                     CantComprobantes = o.CantComprobantes,
                     Estado = o.Estado,
-                    MtoSubtotalAcum = o.MtoSubtotalAcum,
-                    MtoIgvAcum = o.MtoIgvAcum,
-                    MtoRentaAcum = o.MtoRentaAcum,
-                    MtoTotalAcum = o.MtoTotalAcum
+                    MtoTotalAcum = o.MtoTotalAcum,
+                    EstadoAprobJefeSede = o.EstadoAprobJefeSede,
+                    EstadoAprobJefeCorp = o.EstadoAprobJefeCorp
                 }).ToList(),
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
@@ -295,6 +304,49 @@ public class OrdenPagoAprobacionController : Controller
         {
             _logger.LogError(ex, "Error al listar ordenes aprobadas por el usuario");
             return PartialView("_ApprovedListPartial", new OrdenPagoAprobacionListViewModel());
+        }
+    }
+
+    /// <summary>
+    /// Ver detalle de una orden de pago aprobada (solo consulta, sin acciones).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-02</created>
+    /// </summary>
+    [HttpGet]
+    [Route("OrdenPagoAprobacion/DetalleAprobada/{guid}")]
+    public async Task<IActionResult> DetalleAprobada(string guid)
+    {
+        try
+        {
+            var ordenPago = await _ordenPagoService.GetByGuidAsync(guid);
+            if (ordenPago == null)
+            {
+                TempData["APP_RESPONSE"] = "ERROR";
+                TempData["APP_MESSAGE"] = "Orden de pago no encontrada.";
+                return RedirectToAction("Aprobadas");
+            }
+
+            var liquidaciones = await _ordenPagoLiquidacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            ViewBag.Liquidaciones = liquidaciones.ToList();
+
+            var aprobaciones = await _ordenPagoAprobacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            ViewBag.Aprobaciones = aprobaciones.OrderBy(a => a.Orden).ToList();
+
+            var detalleLiquidaciones = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            ViewBag.DetalleLiquidaciones = detalleLiquidaciones.ToList();
+
+            var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_ORDEN_PAGO", ordenPago.IdOrdenPago);
+            ViewBag.Bitacoras = bitacoras.ToList();
+
+            return View(ordenPago);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener detalle de orden de pago aprobada {Guid}", guid);
+            TempData["APP_RESPONSE"] = "ERROR";
+            TempData["APP_MESSAGE"] = "Error al obtener la orden de pago.";
+            return RedirectToAction("Aprobadas");
         }
     }
 

@@ -37,11 +37,13 @@
                                     <label class="mb-1 small">Estado</label>
                                     <select id="cboEstado" class="form-control form-control-sm">
                                         <option value="">- Todos -</option>
-                                        <option value="PENDIENTE">Pendiente</option>
-                                        <option value="EN_APROBACION">En Aprobaci&oacute;n</option>
-                                        <option value="APROBADO">Aprobado</option>
-                                        <option value="PAGADO">Pagado</option>
-                                        <option value="RECHAZADO">Rechazado</option>
+                                        @if (ViewBag.Estados != null)
+                                        {
+                                            foreach (var e in (List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.Estados)
+                                            {
+                                                <option value="@e.Value">@e.Text</option>
+                                            }
+                                        }
                                     </select>
                                 </div>
                             </div>
