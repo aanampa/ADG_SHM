@@ -19,6 +19,9 @@ public class HomeController : Controller
         _usuarioService = usuarioService;
     }
 
+    [HttpGet]
+    [Route("Home")]
+    [Route("Home/Index")]
     public IActionResult Index()
     {
         _logger.LogInformation("Accediendo a la página principal");
