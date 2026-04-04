@@ -371,6 +371,24 @@ public class ProduccionService : IProduccionService
         const string nuevoEstado = EstadoDescripcion.Produccion.FacturaAceptada;
         return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
     }
+
+    /// <summary>
+    /// Transiciona el estado de una produccion a FACTURA_ENVIADA_HHMM.
+    /// Se invoca automaticamente tras aceptar una factura cuando el parametro SHM_COMPROBANTE_ENVIA_HHMM = SI.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-29</created>
+    /// </summary>
+    public async Task<bool> EnviarAHhmmAsync(string guidRegistro, int idModificador)
+    {
+        const string nuevoEstado = EstadoDescripcion.Produccion.FacturaEnviadaHhmm;
+        return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
+    }
+
+    public async Task<bool> UpdateEstadoAsync(string guidRegistro, string estado, int idModificador)
+    {
+        return await _produccionRepository.UpdateEstadoAsync(guidRegistro, estado, idModificador);
+    }
     /// Obtiene estadisticas del dashboard para una entidad medica.
     ///
     /// <author>ADG Antonio</author>

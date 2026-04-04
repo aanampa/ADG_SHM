@@ -15,11 +15,13 @@ public class DetalleLiquidacionItemDto
     public string? CodigoLiquidacion { get; set; }
     public string? DescripcionLiquidacion { get; set; }
     public string? TipoLiquidacion { get; set; }
+    public string? DesTipoLiquidacion { get; set; }
     public string? PeriodoLiquidacion { get; set; }
 
     // Entidad Medica
     public string? Ruc { get; set; }
     public string? TipoEntidadMedica { get; set; }
+    public string? DesTipoEntidadMedica { get; set; }
     public string? RazonSocial { get; set; }
 
     // Banco
@@ -29,6 +31,7 @@ public class DetalleLiquidacionItemDto
     public string? TipoComprobante { get; set; }
     public string? Serie { get; set; }
     public string? Numero { get; set; }
+    public string? GuidArchivoFactura { get; set; }
 
     // Montos (Produccion)
     public decimal? MtoSubtotal { get; set; }

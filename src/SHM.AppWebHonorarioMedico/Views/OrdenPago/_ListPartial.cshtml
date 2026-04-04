@@ -18,13 +18,13 @@
                 <th class="align-middle text-center" style="width: 50px;">Acciones</th>
                 <th class="align-middle">N&uacute;mero Orden de Pago</th>
                 <th class="align-middle" style="width: 110px;">Fecha<br/>Generaci&oacute;n</th>
+                <th class="align-middle">Sede</th>
                 <th class="align-middle">Banco</th>
                 <th class="align-middle" style="width: 90px;">Cant.<br/>Liquid.</th>
                 <th class="align-middle" style="width: 90px;">Cant.<br/>Comprob.</th>
                 <th class="align-middle" style="width: 110px;">Estado</th>
-                <th class="align-middle text-right" style="width: 110px;">Sub Total S/.</th>
-                <th class="align-middle text-right" style="width: 100px;">IGV S/.</th>
-                <th class="align-middle text-right" style="width: 100px;">Renta S/.</th>
+                <th class="align-middle" style="width: 70px;">Jefe<br/>Sede</th>
+                <th class="align-middle" style="width: 70px;">Jefe<br/>Corp.</th>
                 <th class="align-middle text-right" style="width: 110px;">Total S/.</th>
             </tr>
         </thead>
@@ -42,6 +42,7 @@
                         </td>
                         <td class="text-center">@(item.NumeroOrdenPago ?? "-")</td>
                         <td class="text-center">@(item.FechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@(item.NombreSede ?? "-")</td>
                         <td>@(item.NombreBanco ?? "-")</td>
                         <td class="text-center">@(item.CantLiquidaciones?.ToString() ?? "-")</td>
                         <td class="text-center">@(item.CantComprobantes?.ToString() ?? "-")</td>
@@ -50,9 +51,42 @@
                                 @EstadoDescripcion.OrdenPago.GetDescripcion(item.Estado)
                             </span>
                         </td>
-                        <td class="text-right">@(item.MtoSubtotalAcum?.ToString("N2") ?? "--")</td>
-                        <td class="text-right">@(item.MtoIgvAcum?.ToString("N2") ?? "--")</td>
-                        <td class="text-right">@(item.MtoRentaAcum?.ToString("N2") ?? "--")</td>
+                        <td class="text-center">
+                            @if (item.EstadoAprobJefeSede == "APROBADO")
+                            {
+                                <i class="fas fa-check-circle text-success" title="Aprobado"></i>
+                            }
+                            else if (item.EstadoAprobJefeSede == "DEVUELTO")
+                            {
+                                <i class="fas fa-times-circle text-danger" title="Devuelto"></i>
+                            }
+                            else if (item.EstadoAprobJefeSede != null)
+                            {
+                                <i class="fas fa-clock text-warning" title="Pendiente"></i>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (item.EstadoAprobJefeCorp == "APROBADO")
+                            {
+                                <i class="fas fa-check-circle text-success" title="Aprobado"></i>
+                            }
+                            else if (item.EstadoAprobJefeCorp == "DEVUELTO")
+                            {
+                                <i class="fas fa-times-circle text-danger" title="Devuelto"></i>
+                            }
+                            else if (item.EstadoAprobJefeCorp != null)
+                            {
+                                <i class="fas fa-clock text-warning" title="Pendiente"></i>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
                         <td class="text-right font-weight-bold">@(item.MtoTotalAcum?.ToString("N2") ?? "--")</td>
                     </tr>
                 }

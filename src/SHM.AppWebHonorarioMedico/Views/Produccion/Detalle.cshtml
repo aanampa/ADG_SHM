@@ -161,11 +161,18 @@
                                     var cuentaCorriente = ViewBag.CuentaCorriente as string;
                                     var cuentaCci = ViewBag.CuentaCci as string;
                                     var moneda = ViewBag.Moneda as string;
+                                    var cantCuentas = (int)(ViewBag.CantCuentasActivas ?? 0);
                                 }
-                                @if (string.IsNullOrEmpty(cuentaCorriente) && string.IsNullOrEmpty(cuentaCci))
+                                @if (cantCuentas == 0)
                                 {
                                     <div class="alert alert-warning mb-0" style="font-size: 0.8rem;">
-                                        <i class="fas fa-exclamation-triangle mr-1"></i>No tiene cuenta bancaria registrada.
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>No tiene cuenta bancaria activa registrada.
+                                    </div>
+                                }
+                                else if (cantCuentas > 1)
+                                {
+                                    <div class="alert alert-danger mb-0" style="font-size: 0.8rem;">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>Tiene <strong>@cantCuentas cuentas bancarias activas</strong>. Debe dejar solo una activa desde el mantenimiento de Entidades Médicas &gt; Cuentas Bancarias.
                                     </div>
                                 }
                                 else
@@ -348,10 +355,35 @@
 
                                 @if (Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente || Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada)
                                 {
+                                    var tieneUsuarios = (bool)(ViewBag.TieneUsuariosExternos ?? false);
+                                    var nroCuentas = (int)(ViewBag.CantCuentasActivas ?? 0);
+                                    var btnLabel = Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ? "Actualizar Fecha Limite" : "Solicitar Factura";
+
+                                    string? motivoDeshabilitado = null;
+                                    if (!tieneUsuarios)
+                                        motivoDeshabilitado = "Sin usuarios externos configurados para esta entidad";
+                                    else if (nroCuentas == 0)
+                                        motivoDeshabilitado = "Sin cuenta bancaria activa registrada";
+                                    else if (nroCuentas > 1)
+                                        motivoDeshabilitado = $"Tiene {nroCuentas} cuentas bancarias activas. Debe dejar solo una activa en Entidades Médicas > Cuentas Bancarias";
+
                                     <div class="mt-2">
-                                        <button type="button" class="btn btn-success btn-sm" onclick="solicitarFactura()">
-                                            <i class="fas fa-file-invoice-dollar mr-1"></i>@(Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ? "Actualizar Fecha Limite" : "Solicitar Factura")
-                                        </button>
+                                        @if (motivoDeshabilitado == null)
+                                        {
+                                            <button type="button" class="btn btn-success btn-sm" onclick="solicitarFactura()">
+                                                <i class="fas fa-file-invoice-dollar mr-1"></i>@btnLabel
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-success btn-sm" disabled
+                                                    title="@motivoDeshabilitado">
+                                                <i class="fas fa-file-invoice-dollar mr-1"></i>@btnLabel
+                                            </button>
+                                            <small class="text-warning d-block mt-1">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>@motivoDeshabilitado
+                                            </small>
+                                        }
                                     </div>
                                 }
                                 @if (Model.Estado == EstadoDescripcion.Produccion.FacturaEnviada)
@@ -486,8 +518,16 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Hora Limite <span class="text-danger">*</span></label>
-                                <input type="time" class="form-control" id="txtHoraLimite" required readonly
-                                    style="background-color: #e9ecef;" />
+                                <select class="form-control" id="txtHoraLimite" disabled style="background-color: #e9ecef;">
+                                    @foreach (var h in Enumerable.Range(8, 15))
+                                    {
+                                        foreach (var m in new[] { 0, 15, 30, 45 })
+                                        {
+                                            var val = $"{h:D2}:{m:D2}";
+                                            <option value="@val" selected="@(val == "18:00" ? "selected" : null)">@val</option>
+                                        }
+                                    }
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -553,6 +593,16 @@
             return resultado;
         }
 
+        // Formatear hora en formato AM/PM (ej: 18:00 → 06:00 PM)
+        function formatearHoraAmPm(hora) {
+            var partes = hora.split(':');
+            var h = parseInt(partes[0]);
+            var m = partes[1];
+            var suffix = h >= 12 ? 'PM' : 'AM';
+            var h12 = h % 12 || 12;
+            return String(h12).padStart(2, '0') + ':' + m + ' ' + suffix;
+        }
+
         // Formatear fecha para mostrar (dd/MM/yyyy)
         function formatearFechaMostrar(fecha) {
             var dia = String(fecha.getDate()).padStart(2, '0');
@@ -584,7 +634,7 @@
                 var nombreDia = obtenerNombreDia(fechaSugerida);
                 var fechaFormateada = formatearFechaMostrar(fechaSugerida);
                 var labelId = i === 1 ? 'lblFecha1Dia' : 'lblFecha' + i + 'Dias';
-                document.getElementById(labelId).textContent = nombreDia + ' ' + fechaFormateada + ' 18:00';
+                document.getElementById(labelId).textContent = nombreDia + ' ' + fechaFormateada + ' 06:00 PM';
             }
         }
 
@@ -601,14 +651,14 @@
                 var fechaObj = new Date(fecha + 'T' + hora);
                 var nombreDia = obtenerNombreDia(fechaObj);
                 var fechaFormateada = formatearFechaMostrar(fechaObj);
-                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las ' + hora + ' horas.';
+                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las ' + formatearHoraAmPm(hora) + '.';
             } else if (fecha) {
                 var fechaObj = new Date(fecha + 'T00:00:00');
                 var nombreDia = obtenerNombreDia(fechaObj);
                 var fechaFormateada = formatearFechaMostrar(fechaObj);
-                msgInfo.textContent = 'Fecha seleccionada: ' + nombreDia + ' ' + fechaFormateada + '. Ingrese la hora limite.';
+                msgInfo.textContent = 'Fecha seleccionada: ' + nombreDia + ' ' + fechaFormateada + '. Seleccione la hora limite.';
             } else if (hora) {
-                msgInfo.textContent = 'Hora seleccionada: ' + hora + '. Ingrese la fecha limite.';
+                msgInfo.textContent = 'Hora seleccionada: ' + formatearHoraAmPm(hora) + '. Ingrese la fecha limite.';
             } else {
                 msgInfo.textContent = 'Ingrese manualmente la fecha y hora limite para la entrega de la factura.';
             }
@@ -639,7 +689,7 @@
             if (dias === 0) {
                 // Modo manual
                 txtFecha.readOnly = false;
-                txtHora.readOnly = false;
+                txtHora.disabled = false;
                 txtFecha.style.backgroundColor = '';
                 txtHora.style.backgroundColor = '';
                 txtFecha.value = '';
@@ -653,13 +703,13 @@
                 txtFecha.value = formatearFechaInput(fechaSugerida);
                 txtHora.value = '18:00';
                 txtFecha.readOnly = true;
-                txtHora.readOnly = true;
+                txtHora.disabled = true;
                 txtFecha.style.backgroundColor = '#e9ecef';
                 txtHora.style.backgroundColor = '#e9ecef';
 
                 var nombreDia = obtenerNombreDia(fechaSugerida);
                 var fechaFormateada = formatearFechaMostrar(fechaSugerida);
-                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las 18:00 horas (' + dias + ' dia' + (dias > 1 ? 's' : '') + ' laborable' + (dias > 1 ? 's' : '') + ').';
+                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las 06:00 PM (' + dias + ' dia' + (dias > 1 ? 's' : '') + ' laborable' + (dias > 1 ? 's' : '') + ').';
             }
         }
 
@@ -679,11 +729,11 @@
                 }
             });
 
-            // Resetear campos a readonly
+            // Resetear campos
             var txtFecha = document.getElementById('txtFechaLimite');
             var txtHora = document.getElementById('txtHoraLimite');
             txtFecha.readOnly = true;
-            txtHora.readOnly = true;
+            txtHora.disabled = true;
             txtFecha.style.backgroundColor = '#e9ecef';
             txtHora.style.backgroundColor = '#e9ecef';
 
@@ -763,7 +813,7 @@
                 icon: 'question',
                 title: 'Confirmar Solicitud',
                 html: '¿Desea enviar la solicitud de factura con fecha limite <strong>' +
-                    formatearFecha(fecha) + '</strong> a las <strong>' + hora + '</strong>?',
+                    formatearFecha(fecha) + '</strong> a las <strong>' + formatearHoraAmPm(hora) + '</strong>?',
                 showCancelButton: true,
                 confirmButtonColor: '#007bff',
                 cancelButtonColor: '#6c757d',

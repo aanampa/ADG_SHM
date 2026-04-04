@@ -1,9 +1,9 @@
 # Flujo de Estados de Orden de Pago
 ## Sistema de Honorarios Medicos (SHM)
 
-**Version:** 1.1
+**Version:** 1.2
 **Fecha:** 17 de Febrero 2026
-**Actualizado:** 17 de Febrero 2026 - Agregado flujo de notificaciones por email
+**Actualizado:** 03 de Abril 2026 - Agregado estado ANULADO y flujo de anulacion
 **Autor:** ADG Vladimir D
 
 ---
@@ -46,6 +46,7 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 | Aprobacion Pendiente | `APROBACION_PENDIENTE` | Estado inicial. La orden fue generada y esta pendiente de aprobacion |
 | Aprobado | `APROBADO` | Todos los niveles de aprobacion han sido completados |
 | Devuelto | `DEVUELTO` | Algun aprobador rechazo la orden de pago |
+| Anulado | `ANULADO` | La orden fue anulada manualmente. Las producciones vuelven a `FACTURA_LIQUIDADA` |
 
 ### 4.2 Estados de SHM_ORDEN_PAGO_APROBACION
 
@@ -60,48 +61,50 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 ## 5. Diagrama de Flujo
 
 ```
-    +-------------------------------------------------------------------+
-    |                                                                   |
-    |   FACTURA_LIQUIDADA (producciones en bandeja de Liquidaciones)     |
-    |              |                                                    |
-    |              | [Generador selecciona liquidaciones]                |
-    |              | [y ejecuta "Generar Orden de Pago"]                |
-    |              v                                                    |
-    |   +---------------------+                                         |
-    |   | APROBACION_PENDIENTE|  <- Estado Inicial de Orden de Pago     |
-    |   |  (SHM_ORDEN_PAGO)   |                                         |
-    |   +----------+----------+                                         |
-    |              |                                                    |
-    |              | Cada nivel de SHM_ORDEN_PAGO_APROBACION             |
-    |              | debe aprobar en orden secuencial                    |
-    |              v                                                    |
-    |       +------+------+                                             |
-    |       |             |                                             |
-    |       v             v                                             |
-    |  [Rechazar]    [Aprobar]                                          |
-    |       |             |                                             |
-    |       v             v                                             |
-    |   +---------+   +------------------+                              |
-    |   | DEVUELTO|   | APROBADO (nivel) |                              |
-    |   +---------+   +--------+---------+                              |
-    |       |                  |                                        |
-    |       |                  | Todos los niveles aprobados?           |
-    |       |           +------+------+                                 |
-    |       |           |             |                                 |
-    |       |           v             v                                 |
-    |       |         [No]          [Si]                                |
-    |       |           |             |                                 |
-    |       |           v             v                                 |
-    |       |   (sigue en          +---------+                          |
-    |       |    APROBACION_       | APROBADO|  <- Orden aprobada       |
-    |       |    PENDIENTE)        +---------+                          |
-    |       |                                                           |
-    |       | Se debe volver a generar                                  |
-    |       | la Orden de Pago                                          |
-    |       v                                                           |
-    |   (Vuelve a bandeja de Liquidaciones)                             |
-    |                                                                   |
-    +-------------------------------------------------------------------+
+    +-------------------------------------------------------------------------+
+    |                                                                         |
+    |   FACTURA_LIQUIDADA (producciones en bandeja de Liquidaciones)           |
+    |              |                                                          |
+    |              | [Generador selecciona liquidaciones]                      |
+    |              | [y ejecuta "Generar Orden de Pago"]                      |
+    |              v                                                          |
+    |   +---------------------+                                               |
+    |   | APROBACION_PENDIENTE|  <- Estado Inicial de Orden de Pago           |
+    |   |  (SHM_ORDEN_PAGO)   |                                               |
+    |   +----+----------+-----+                                               |
+    |        |          |                                                     |
+    |   [Anular]        | Cada nivel de SHM_ORDEN_PAGO_APROBACION             |
+    |        |          | debe aprobar en orden secuencial                    |
+    |        v          v                                                     |
+    |        |   +------+------+                                              |
+    |        |   |             |                                              |
+    |        |   v             v                                              |
+    |        |  [Rechazar]  [Aprobar]                                         |
+    |        |   |             |                                              |
+    |        |   v             v                                              |
+    |        |  +---------+  +------------------+                             |
+    |        |  | DEVUELTO|  | APROBADO (nivel) |                             |
+    |        |  +----+----+  +--------+---------+                             |
+    |        |       |                |                                       |
+    |        |  [Anular]              | Todos los niveles aprobados?          |
+    |        |       |         +------+------+                                |
+    |        |       |         |             |                                |
+    |        |       |         v             v                                |
+    |        |       |       [No]          [Si]                               |
+    |        |       |         |             |                                |
+    |        |       |         v             v                                |
+    |        |       |  (sigue en          +---------+                        |
+    |        |       |   APROBACION_       | APROBADO|  <- Orden aprobada     |
+    |        |       |   PENDIENTE)        +---------+                        |
+    |        v       v                                                        |
+    |      +---------+                                                        |
+    |      | ANULADO |  <- Producciones vuelven a FACTURA_LIQUIDADA           |
+    |      +---------+                                                        |
+    |                                                                         |
+    |   DEVUELTO (sin anular): Se debe volver a generar la Orden de Pago      |
+    |   (Vuelve a bandeja de Liquidaciones)                                   |
+    |                                                                         |
+    +-------------------------------------------------------------------------+
 ```
 
 ---
@@ -131,9 +134,28 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 
 **Formato del numero de orden:** `OP-YYYYMMDD-HHmmss`
 
-### 6.2 Rechazar Orden de Pago
+### 6.2 Anular Orden de Pago
+
+- **Actor:** Usuario con acceso a la opcion (no requiere rol especifico de aprobacion)
+- **Controlador:** `OrdenPagoController.Anular`
+- **Precondiciones:** La orden debe estar en estado `APROBACION_PENDIENTE` o `DEVUELTO`
+
+**Acciones ejecutadas (dentro de una transaccion Oracle):**
+
+| # | Tabla | Accion | Detalle |
+|---|-------|--------|---------|
+| 1 | `SHM_ORDEN_PAGO` | UPDATE | Estado cambia a `ANULADO`. Se registra `ID_MODIFICADOR` y `FECHA_MODIFICACION` |
+| 2 | `SHM_PRODUCCION` | UPDATE (bulk) | Estado de las producciones cambia de `FACTURA_ORDEN_PAGO` a `FACTURA_LIQUIDADA`. Se obtienen via `SHM_ORDEN_PAGO_PRODUCCION.ID_PRODUCCION` |
+| 3 | - | BITACORA | Se registra la accion en la bitacora del sistema |
+
+**Consecuencia:** Las producciones quedan disponibles nuevamente en la bandeja de Liquidaciones para generar una nueva Orden de Pago.
+
+---
+
+### 6.3 Rechazar Orden de Pago
 
 - **Actor:** Aprobador
+- **Controlador:** `OrdenPagoAprobacionController.Rechazar`
 - **Precondiciones:** La orden debe estar en estado `APROBACION_PENDIENTE`
 
 **Acciones ejecutadas:**
@@ -142,12 +164,14 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 |---|-------|--------|---------|
 | 1 | `SHM_ORDEN_PAGO_APROBACION` | UPDATE | El registro del aprobador que rechaza pasa a estado `DEVUELTO`. Se registra `ID_USUARIO_APROBADOR` y `FECHA_APROBACION` |
 | 2 | `SHM_ORDEN_PAGO` | UPDATE | Estado cambia a `DEVUELTO` |
+| 3 | - | BITACORA | Se registra la accion con el comentario del rechazo |
 
-**Consecuencia:** La orden de pago queda invalidada. Se debe volver a generar una nueva Orden de Pago desde la bandeja de Liquidaciones (paso 6.1).
+**Consecuencia:** La orden queda en estado `DEVUELTO`. Puede ser anulada (ver 6.2) o el generador puede crear una nueva Orden de Pago desde la bandeja de Liquidaciones (paso 6.1).
 
-### 6.3 Aprobar Orden de Pago
+### 6.4 Aprobar Orden de Pago
 
 - **Actor:** Aprobador
+- **Controlador:** `OrdenPagoAprobacionController.Aprobar`
 - **Precondiciones:** La orden debe estar en estado `APROBACION_PENDIENTE`
 
 **Acciones ejecutadas:**
@@ -157,6 +181,7 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 | 1 | `SHM_ORDEN_PAGO_APROBACION` | UPDATE | El registro del aprobador pasa a estado `APROBADO`. Se registra `ID_USUARIO_APROBADOR` y `FECHA_APROBACION` |
 | 2 | `SHM_ORDEN_PAGO` | UPDATE (condicional) | Si **todos** los registros de `SHM_ORDEN_PAGO_APROBACION` para esta orden estan en estado `APROBADO`, entonces el estado de la orden cambia a `APROBADO` |
 | 3 | - | EMAIL (condicional) | Si quedan niveles pendientes, se notifica por correo a los usuarios del **siguiente nivel** de aprobacion (ver seccion 11) |
+| 4 | - | BITACORA | Se registra si fue aprobacion parcial (nivel) o aprobacion total (orden completa) |
 
 **Regla de negocio:** La orden solo se aprueba completamente cuando el ultimo nivel pendiente da su aprobacion.
 
@@ -202,6 +227,8 @@ SHM_ORDEN_PAGO_APROBACION (instancias creadas por orden)
 | 1 | (nuevo) | APROBACION_PENDIENTE | Generar Orden de Pago | - |
 | 2 | APROBACION_PENDIENTE | DEVUELTO | Algun aprobador rechaza | Cualquier nivel rechaza |
 | 3 | APROBACION_PENDIENTE | APROBADO | Ultimo aprobador aprueba | Todos los niveles en estado APROBADO |
+| 4 | APROBACION_PENDIENTE | ANULADO | Usuario anula la orden | Usuario con acceso a la opcion |
+| 5 | DEVUELTO | ANULADO | Usuario anula la orden | Usuario con acceso a la opcion |
 
 ### SHM_ORDEN_PAGO_APROBACION
 
@@ -216,6 +243,7 @@ SHM_ORDEN_PAGO_APROBACION (instancias creadas por orden)
 | # | Estado Origen | Estado Destino | Accion |
 |---|---------------|----------------|--------|
 | 1 | FACTURA_LIQUIDADA | FACTURA_ORDEN_PAGO | Generar Orden de Pago |
+| 2 | FACTURA_ORDEN_PAGO | FACTURA_LIQUIDADA | Anular Orden de Pago |
 
 ---
 
@@ -291,8 +319,10 @@ COMENTARIOS               Varchar2(1000)
 3. **Flujo de aprobacion:** Los niveles de aprobacion se crean automaticamente desde `SHM_PERFIL_APROBACION` con `GRUPO_FLUJO_TRABAJO = 'FLUJO_APROBACION_ORDEN_PAGO'`
 4. **Rechazo inmediato:** Si cualquier aprobador rechaza, toda la orden pasa a estado `DEVUELTO`
 5. **Aprobacion completa:** La orden solo pasa a `APROBADO` cuando todos los registros de `SHM_ORDEN_PAGO_APROBACION` estan en estado `APROBADO`
-6. **Regeneracion:** Una orden devuelta requiere generar una nueva orden de pago desde la bandeja de Liquidaciones
-7. **Trazabilidad:** Cada aprobacion/rechazo registra el usuario aprobador y la fecha
+6. **Anulacion:** Una orden en estado `APROBACION_PENDIENTE` o `DEVUELTO` puede ser anulada. Al anularse, las producciones vuelven a `FACTURA_LIQUIDADA` y quedan disponibles para una nueva orden
+7. **Regeneracion:** Una orden en estado `DEVUELTO` (no anulada) puede regenerarse desde la bandeja de Liquidaciones
+8. **Trazabilidad:** Cada aprobacion/rechazo/anulacion registra el usuario y la fecha en la bitacora
+9. **Producciones via SHM_ORDEN_PAGO_PRODUCCION:** El vinculo entre la orden y sus producciones se gestiona exclusivamente a traves de `SHM_ORDEN_PAGO_PRODUCCION.ID_PRODUCCION`
 
 ---
 
@@ -387,6 +417,27 @@ Se utiliza `IEmailService.EnviarEmailNotificacionAprobacionAsync` con los siguie
   [Quedan niveles pendientes?]
     ...
 ```
+
+---
+
+## 12. Consulta de Log de Correos
+
+El sistema registra todos los correos enviados en la tabla `SHM_EMAIL_LOG`. Existe una opcion de consulta en el portal administrativo:
+
+- **URL:** `/EmailLog`
+- **Controlador:** `EmailLogController.Index`
+- **Filtros disponibles:** Tipo de correo, Estado (ENVIADO/ERROR), Email destino
+- **Visor:** Permite visualizar el contenido HTML del correo enviado
+
+### Tipos de correo registrados
+
+| TipoEmail | Evento |
+|-----------|--------|
+| `NUEVO_USUARIO` | Creacion de nuevo usuario en el sistema |
+| `RESET_CLAVE` | Restablecimiento de clave por administrador |
+| `RECUPERACION_CLAVE` | Solicitud de recuperacion de clave por el usuario |
+| `SOLICITUD_FACTURA` | Notificacion de solicitud de factura a compania medica |
+| `NOTIFICACION_APROBACION` | Notificacion a aprobador con orden pendiente |
 
 ---
 

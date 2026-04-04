@@ -514,6 +514,14 @@ public class UsuarioController : Controller
             foreach (var u in itemsList)
             {
                 sedesInfoDict.TryGetValue(u.IdUsuario, out var sedesInfo);
+
+                var perfiles = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(u.IdUsuario);
+                var perfilDescripcion = perfiles
+                    .Select(p => p.NombrePerfil)
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .Distinct()
+                    .FirstOrDefault();
+
                 model.Items.Add(new UsuarioInternoItemViewModel
                 {
                     GuidRegistro = u.GuidRegistro ?? "",
@@ -523,6 +531,7 @@ public class UsuarioController : Controller
                     NumeroDocumento = u.NumeroDocumento,
                     Celular = u.Celular,
                     RolDescripcion = u.IdRol.HasValue && rolesDict.TryGetValue(u.IdRol.Value, out var rol) ? rol : "",
+                    PerfilAprobacion = perfilDescripcion,
                     CantidadSedes = sedesInfo.Cantidad,
                     UltimaSede = sedesInfo.UltimaSede,
                     Activo = u.Activo,
@@ -935,6 +944,14 @@ public class UsuarioController : Controller
             if (usuario == null)
             {
                 return Json(new { success = false, message = "Usuario no encontrado" });
+            }
+
+            // Validar que el usuario no tenga ya un perfil asignado
+            var perfilesExistentes = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(usuario.IdUsuario);
+            if (perfilesExistentes.Any())
+            {
+                var perfilActual = perfilesExistentes.First();
+                return Json(new { success = false, message = $"El usuario ya tiene asignado el perfil '{perfilActual.NombrePerfil}'. Solo se permite un perfil por usuario." });
             }
 
             var createDto = new CreatePerfilAprobacionUsuarioDto

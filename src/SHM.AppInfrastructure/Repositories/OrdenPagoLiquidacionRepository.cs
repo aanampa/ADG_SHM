@@ -35,6 +35,7 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             opl.PERIODO_LIQUIDACION as PeriodoLiquidacion,
             opl.ID_BANCO as IdBanco,
             opl.TIPO_LIQUIDACION as TipoLiquidacion,
+            tp.DESCRIPCION as DesTipoLiquidacion,
             opl.COMENTARIOS as Comentarios,
             opl.GUID_REGISTRO as GuidRegistro,
             opl.ACTIVO as Activo,
@@ -46,7 +47,9 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             b.NOMBRE_BANCO as NombreBanco
         FROM SHM_ORDEN_PAGO_LIQUIDACION opl
         LEFT JOIN SHM_ORDEN_PAGO op ON opl.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
-        LEFT JOIN SHM_BANCO b ON opl.ID_BANCO = b.ID_BANCO";
+        LEFT JOIN SHM_BANCO b ON opl.ID_BANCO = b.ID_BANCO
+        LEFT JOIN SHM_TABLA_DETALLE_VW tp
+            ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = opl.TIPO_LIQUIDACION";
 
     public OrdenPagoLiquidacionRepository(DatabaseConfig databaseConfig)
     {
@@ -332,10 +335,12 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 T1.NUMERO_LIQUIDACION AS NumeroLiquidacion,
                 T1.CODIGO_LIQUIDACION AS CodigoLiquidacion,
                 T1.DESCRIPCION_LIQUIDACION AS DescripcionLiquidacion,
-                T1.TIPO_LIQUIDACION AS TipoLiquidacion,
+                OPL.TIPO_LIQUIDACION AS TipoLiquidacion,
+                tp.DESCRIPCION AS DesTipoLiquidacion,
                 T1.PERIODO_LIQUIDACION AS PeriodoLiquidacion,
                 EM.RUC AS Ruc,
                 EM.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
+                tem.DESCRIPCION AS DesTipoEntidadMedica,
                 EM.RAZON_SOCIAL AS RazonSocial,
                 B.NOMBRE_BANCO AS NombreBanco,
                 T1.TIPO_COMPROBANTE AS TipoComprobante,
@@ -344,19 +349,34 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 T1.MTO_SUBTOTAL AS MtoSubtotal,
                 T1.MTO_IGV AS MtoIgv,
                 T1.MTO_RENTA AS MtoRenta,
-                T1.MTO_TOTAL AS MtoTotal
-            FROM SHM_PRODUCCION T1
+                T1.MTO_TOTAL AS MtoTotal,
+                AR.GUID_REGISTRO AS GuidArchivoFactura
+            FROM SHM_ORDEN_PAGO_PRODUCCION OPP
+            INNER JOIN SHM_PRODUCCION T1
+                ON T1.ID_PRODUCCION = OPP.ID_PRODUCCION
             INNER JOIN SHM_ENTIDAD_MEDICA EM
                 ON T1.ID_ENTIDAD_MEDICA = EM.ID_ENTIDAD_MEDICA
             INNER JOIN SHM_ENTIDAD_CUENTA_BANCO ECB
                 ON T1.ID_CUENTA_BANCO = ECB.ID_CUENTA_BANCO
-            INNER JOIN SHM_ORDEN_PAGO_LIQUIDACION T2
-                ON T1.NUMERO_LIQUIDACION = T2.NUMERO_LIQUIDACION
-                AND T1.CODIGO_LIQUIDACION = T2.CODIGO_LIQUIDACION
-                AND ECB.ID_BANCO = T2.ID_BANCO
+            LEFT JOIN SHM_ORDEN_PAGO_LIQUIDACION OPL
+                ON OPL.NUMERO_LIQUIDACION = T1.NUMERO_LIQUIDACION
+                AND OPL.CODIGO_LIQUIDACION = T1.CODIGO_LIQUIDACION
+                AND OPL.ID_ORDEN_PAGO = OPP.ID_ORDEN_PAGO
             LEFT JOIN SHM_BANCO B
                 ON ECB.ID_BANCO = B.ID_BANCO
-            WHERE T2.ID_ORDEN_PAGO = :IdOrdenPago
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp
+                ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = OPL.TIPO_LIQUIDACION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tem
+                ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = EM.TIPO_ENTIDAD_MEDICA
+            LEFT JOIN SHM_ARCHIVO_COMPROBANTE AC
+                ON AC.ID_PRODUCCION = T1.ID_PRODUCCION
+                AND AC.DESCRIPCION = 'Factura PDF'
+                AND AC.ACTIVO = 1
+            LEFT JOIN SHM_ARCHIVO AR
+                ON AR.ID_ARCHIVO = AC.ID_ARCHIVO
+                AND AR.ACTIVO = 1
+            WHERE OPP.ID_ORDEN_PAGO = :IdOrdenPago
+                AND OPP.ACTIVO = 1
                 AND T1.ACTIVO = 1
             ORDER BY T1.CODIGO_LIQUIDACION, T1.CODIGO_PRODUCCION";
 

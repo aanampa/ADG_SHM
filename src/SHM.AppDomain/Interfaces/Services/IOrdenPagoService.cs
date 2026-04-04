@@ -22,4 +22,20 @@ public interface IOrdenPagoService
     Task<OrdenPagoResponseDto> CreateAsync(CreateOrdenPagoDto dto, int idCreador);
     Task<OrdenPagoResponseDto?> UpdateAsync(UpdateOrdenPagoDto dto, int idModificador);
     Task<bool> DeleteAsync(string guid, int idModificador);
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
+    /// </summary>
+    Task<(IEnumerable<OrdenPagoResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        int? idBanco, string? estado, int? idSede, int pageNumber, int pageSize);
+
+    /// <summary>
+    /// Obtiene las ordenes de pago que el usuario ya aprobo.
+    /// </summary>
+    Task<IEnumerable<OrdenPagoResponseDto>> GetApprovedByUserAsync(int idUsuario);
+
+    /// <summary>
+    /// Anula una orden de pago por su GUID y revierte las producciones a FACTURA_LIQUIDADA.
+    /// </summary>
+    Task<bool> AnularAsync(string guid, int idModificador);
 }

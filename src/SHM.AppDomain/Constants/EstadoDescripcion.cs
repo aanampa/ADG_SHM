@@ -100,12 +100,14 @@ public static class EstadoDescripcion
         public const string AprobacionPendiente = "APROBACION_PENDIENTE";
         public const string Devuelto            = "DEVUELTO";
         public const string Aprobado            = "APROBADO";
+        public const string Anulado             = "ANULADO";
 
         private static readonly Dictionary<string, EstadoInfo> _estados = new()
         {
             [AprobacionPendiente] = new("Aprobaci\u00f3n Pendiente", "badge-warning", "bg-gradient-info",    "text-info"),
             [Devuelto]            = new("Devuelto",              "badge-danger",  "bg-gradient-danger",  "text-danger"),
             [Aprobado]            = new("Aprobado",              "badge-success", "bg-gradient-success", "text-success"),
+            [Anulado]             = new("Anulado",               "badge-dark",    "bg-gradient-dark",    "text-dark"),
         };
 
         public static string GetDescripcion(string? estado) =>

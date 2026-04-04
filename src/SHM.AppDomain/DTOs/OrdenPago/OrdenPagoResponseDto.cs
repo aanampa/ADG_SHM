@@ -9,6 +9,8 @@ namespace SHM.AppDomain.DTOs.OrdenPago;
 public class OrdenPagoResponseDto
 {
     public int IdOrdenPago { get; set; }
+    public int IdSede { get; set; }
+    public string? NombreSede { get; set; }
     public int IdBanco { get; set; }
     public string? NombreBanco { get; set; }
     public string? NumeroOrdenPago { get; set; }
@@ -27,4 +29,8 @@ public class OrdenPagoResponseDto
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
+
+    // Estado de aprobacion por perfil
+    public string? EstadoAprobJefeSede { get; set; }
+    public string? EstadoAprobJefeCorp { get; set; }
 }

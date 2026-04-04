@@ -25,6 +25,7 @@ public class OrdenPagoLiquidacionResponseDto
     public int? IdBanco { get; set; }
     public string? NombreBanco { get; set; }
     public string? TipoLiquidacion { get; set; }
+    public string? DesTipoLiquidacion { get; set; }
     public string? Comentarios { get; set; }
     public string? GuidRegistro { get; set; }
     public int Activo { get; set; }

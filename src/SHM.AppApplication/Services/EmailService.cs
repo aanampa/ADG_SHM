@@ -196,7 +196,7 @@ public class EmailService : IEmailService
         var subject = $"Solicitud de Factura - Producción {codigoProduccion}";
         var montoFormateado = mtoTotal?.ToString("N2") ?? "0.00";
         var fechaFormateada = fechaLimite.ToString("dd/MM/yyyy");
-        var horaFormateada = fechaLimite.ToString("hh:mm tt");
+        var horaFormateada = fechaLimite.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture);
         string body;
 
         try

@@ -40,9 +40,21 @@ public class OrdenPagoRepository : IOrdenPagoRepository
             op.FECHA_CREACION as FechaCreacion,
             op.ID_MODIFICADOR as IdModificador,
             op.FECHA_MODIFICACION as FechaModificacion,
-            b.NOMBRE_BANCO as NombreBanco
+            b.NOMBRE_BANCO as NombreBanco,
+            s.NOMBRE as NombreSede,
+            (SELECT opa1.ESTADO FROM SHM_ORDEN_PAGO_APROBACION opa1
+             INNER JOIN SHM_PERFIL_APROBACION pa1 ON pa1.ID_PERFIL_APROBACION = opa1.ID_PERFIL_APROBACION
+             WHERE opa1.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+               AND pa1.CODIGO = 'JEFE_SEDE'
+               AND opa1.ACTIVO = 1) AS EstadoAprobJefeSede,
+            (SELECT opa2.ESTADO FROM SHM_ORDEN_PAGO_APROBACION opa2
+             INNER JOIN SHM_PERFIL_APROBACION pa2 ON pa2.ID_PERFIL_APROBACION = opa2.ID_PERFIL_APROBACION
+             WHERE opa2.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+               AND pa2.CODIGO = 'JEFE_CORPORATIVO'
+               AND opa2.ACTIVO = 1) AS EstadoAprobJefeCorp
         FROM SHM_ORDEN_PAGO op
-        LEFT JOIN SHM_BANCO b ON op.ID_BANCO = b.ID_BANCO";
+        LEFT JOIN SHM_BANCO b ON op.ID_BANCO = b.ID_BANCO
+        LEFT JOIN SHM_SEDE s ON op.ID_SEDE = s.ID_SEDE";
 
     public OrdenPagoRepository(DatabaseConfig databaseConfig)
     {
@@ -183,7 +195,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
                   WHERE opa2.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
                     AND opa2.ACTIVO = 1
                     AND opa2.ORDEN < opa.ORDEN
-                    AND opa2.ESTADO != 'APROBADO'
+                    AND opa2.ESTADO <> 'APROBADO'
               )
             ORDER BY op.FECHA_GENERACION DESC";
 
@@ -373,5 +385,124 @@ public class OrdenPagoRepository : IOrdenPagoRepository
               AND ACTIVO = 1";
 
         return await connection.ExecuteScalarAsync<int>(sql, new { IdSede = idSede, Anio = anio, Mes = mes });
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
+    /// Compatible con Oracle 11g (ROWNUM).
+    /// </summary>
+    public async Task<(IEnumerable<OrdenPago> Items, int TotalCount)> GetPaginatedListAsync(
+        int? idBanco, string? estado, int? idSede, int pageNumber, int pageSize)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var whereClause = "WHERE op.ACTIVO = 1";
+        if (idBanco.HasValue && idBanco.Value > 0)
+            whereClause += " AND op.ID_BANCO = :IdBanco";
+        if (!string.IsNullOrEmpty(estado))
+            whereClause += " AND op.ESTADO = :Estado";
+        if (idSede.HasValue && idSede.Value > 0)
+            whereClause += " AND op.ID_SEDE = :IdSede";
+
+        var countSql = $@"
+            SELECT COUNT(1)
+            FROM SHM_ORDEN_PAGO op
+            {whereClause}";
+
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql,
+            new { IdBanco = idBanco, Estado = estado, IdSede = idSede });
+
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
+
+        var sql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    {SELECT_BASE}
+                    {whereClause}
+                    ORDER BY op.ID_ORDEN_PAGO DESC
+                ) a WHERE ROWNUM <= :MaxRow
+            ) WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<OrdenPago>(sql,
+            new { IdBanco = idBanco, Estado = estado, IdSede = idSede, MaxRow = maxRow, MinRow = minRow });
+
+        return (items, totalCount);
+    }
+
+    /// <summary>
+    /// Anula una orden de pago y revierte sus producciones asociadas a FACTURA_LIQUIDADA.
+    /// Ejecuta ambas operaciones dentro de una transaccion.
+    /// </summary>
+    public async Task<bool> AnularAsync(int idOrdenPago, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            var sqlAnularOrden = @"
+                UPDATE SHM_ORDEN_PAGO
+                SET ESTADO = 'ANULADO',
+                    ID_MODIFICADOR = :IdModificador,
+                    FECHA_MODIFICACION = SYSDATE
+                WHERE ID_ORDEN_PAGO = :IdOrdenPago";
+
+            var rowsOrden = await connection.ExecuteAsync(sqlAnularOrden,
+                new { IdOrdenPago = idOrdenPago, IdModificador = idModificador },
+                transaction);
+
+            if (rowsOrden == 0)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            var sqlRevertirProducciones = @"
+                UPDATE SHM_PRODUCCION T1
+                SET T1.ESTADO = 'FACTURA_LIQUIDADA',
+                    T1.ID_MODIFICADOR = :IdModificador,
+                    T1.FECHA_MODIFICACION = SYSDATE
+                WHERE T1.ACTIVO = 1
+                  AND T1.ID_PRODUCCION IN (
+                      SELECT opp.ID_PRODUCCION
+                      FROM SHM_ORDEN_PAGO_PRODUCCION opp
+                      WHERE opp.ID_ORDEN_PAGO = :IdOrdenPago
+                        AND opp.ACTIVO = 1
+                  )";
+
+            await connection.ExecuteAsync(sqlRevertirProducciones,
+                new { IdOrdenPago = idOrdenPago, IdModificador = idModificador },
+                transaction);
+
+            transaction.Commit();
+            return true;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene las ordenes de pago procesadas por el usuario (aprobadas o devueltas).
+    /// Busca en SHM_ORDEN_PAGO_APROBACION los registros donde el usuario tiene estado APROBADO o DEVUELTO.
+    /// </summary>
+    public async Task<IEnumerable<OrdenPago>> GetApprovedByUserAsync(int idUsuario)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"{SELECT_BASE}
+            INNER JOIN SHM_ORDEN_PAGO_APROBACION opa ON op.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
+                AND opa.ACTIVO = 1 AND opa.ESTADO IN ('APROBADO', 'DEVUELTO')
+            INNER JOIN SHM_PERFIL_APROBACION_USUARIO pau ON opa.ID_PERFIL_APROBACION = pau.ID_PERFIL_APROBACION
+                AND pau.ID_USUARIO = :IdUsuario
+            WHERE op.ACTIVO = 1
+              AND (pau.ID_SEDE IS NULL OR pau.ID_SEDE = op.ID_SEDE)
+            ORDER BY opa.FECHA_MODIFICACION DESC";
+
+        return await connection.QueryAsync<OrdenPago>(sql, new { IdUsuario = idUsuario });
     }
 }

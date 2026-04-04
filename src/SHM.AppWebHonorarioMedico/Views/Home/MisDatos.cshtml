@@ -69,7 +69,7 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label asp-for="TipoUsuario" class="adg-label"></label>
-                                                <input asp-for="TipoUsuario" class="form-control form-control-sm" readonly disabled />
+                                                <input value="@(Model.TipoUsuario == "I" ? "Interno" : Model.TipoUsuario == "E" ? "Externo" : Model.TipoUsuario)" class="form-control form-control-sm" readonly disabled />
                                             </div>
                                         </div>
                                     </div>
@@ -139,7 +139,7 @@
                             <div class="card card-warning card-outline">
                                 <div class="card-header">
                                     <h3 class="card-title">
-                                        <i class="fas fa-key mr-2"></i>Cambiar Contrasena
+                                        <i class="fas fa-key mr-2"></i>Cambiar Contraseña
                                     </h3>
                                     <div class="card-tools">
                                         <div class="custom-control custom-switch">
@@ -155,7 +155,7 @@
                                             <div class="input-group-prepend">
                                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                             </div>
-                                            <input asp-for="PasswordActual" class="form-control" placeholder="Ingrese su contrasena actual" />
+                                            <input asp-for="PasswordActual" class="form-control" placeholder="Ingrese su contraseña actual" />
                                             <div class="input-group-append">
                                                 <span class="input-group-text" onclick="togglePassword('PasswordActual')" style="cursor: pointer;">
                                                     <i class="fas fa-eye" id="icon_PasswordActual"></i>
@@ -171,7 +171,7 @@
                                             <div class="input-group-prepend">
                                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                             </div>
-                                            <input asp-for="PasswordNueva" class="form-control" placeholder="Ingrese la nueva contrasena" />
+                                            <input asp-for="PasswordNueva" class="form-control" placeholder="Ingrese la nueva contraseña" />
                                             <div class="input-group-append">
                                                 <span class="input-group-text" onclick="togglePassword('PasswordNueva')" style="cursor: pointer;">
                                                     <i class="fas fa-eye" id="icon_PasswordNueva"></i>
@@ -187,7 +187,7 @@
                                             <div class="input-group-prepend">
                                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                             </div>
-                                            <input asp-for="ConfirmarPassword" class="form-control" placeholder="Confirme la nueva contrasena" />
+                                            <input asp-for="ConfirmarPassword" class="form-control" placeholder="Confirme la nueva contraseña" />
                                             <div class="input-group-append">
                                                 <span class="input-group-text" onclick="togglePassword('ConfirmarPassword')" style="cursor: pointer;">
                                                     <i class="fas fa-eye" id="icon_ConfirmarPassword"></i>
@@ -249,7 +249,7 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function () {
-            // Mostrar/ocultar seccion de cambio de contrasena
+            // Mostrar/ocultar seccion de cambio de contraseña
             togglePasswordSection();
 
             $('#chkCambiarPassword').change(function () {
@@ -262,7 +262,7 @@
                 $('#divCambiarPassword').slideDown();
             } else {
                 $('#divCambiarPassword').slideUp();
-                // Limpiar campos de contrasena
+                // Limpiar campos de contraseña 
                 $('#PasswordActual').val('');
                 $('#PasswordNueva').val('');
                 $('#ConfirmarPassword').val('');

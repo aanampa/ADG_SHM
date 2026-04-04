@@ -166,7 +166,7 @@ public class OrdenPagoAprobacionRepository : IOrdenPagoAprobacionRepository
                   WHERE opa2.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
                     AND opa2.ACTIVO = 1
                     AND opa2.ORDEN < opa.ORDEN
-                    AND opa2.ESTADO != 'APROBADO'
+                    AND opa2.ESTADO <> 'APROBADO'
               )";
 
         return await connection.QueryFirstOrDefaultAsync<OrdenPagoAprobacion>(sql,

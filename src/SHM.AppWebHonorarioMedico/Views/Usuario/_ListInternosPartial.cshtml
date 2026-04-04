@@ -1,19 +1,25 @@
 @model SHM.AppWebHonorarioMedico.Models.UsuarioInternoListViewModel
 
+<style>
+    thead th {
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+</style>
+
 <div class="card-body table-responsive p-0">
-    <table class="table table-hover table-striped table-sm">
+    <table class="table table-hover table-striped table-sm" style="font-size: 14px; background-color: #FFFFFF; width: 100%;">
         <thead>
             <tr>
-                <th style="width: 120px;">Login</th>
-                <th>Nombre Completo</th>
-                <th style="width: 200px;">Email</th>
-                <th style="width: 100px;">Documento</th>
-                <th style="width: 100px;">Celular</th>
-                <th style="width: 150px;">Rol</th>
-                <th style="width: 60px;" class="text-center">Sedes</th>
-                <th style="width: 150px;">Última Sede</th>
-                <th style="width: 80px;" class="text-center">Estado</th>
-                <th style="width: 170px;" class="text-center">Acciones</th>
+                <th class="align-middle" style="width: 120px;">Login</th>
+                <th class="align-middle">Nombre Completo</th>
+                <th class="align-middle" style="width: 200px;">Email</th>
+                <th class="align-middle" style="width: 150px;">Rol</th>
+                <th class="align-middle" style="width: 150px;">Perfil de<br/>Aprobación</th>
+                <th class="align-middle" style="width: 60px;">Sedes</th>
+                <th class="align-middle" style="width: 150px;">Última Sede</th>
+                <th class="align-middle" style="width: 80px;">Estado</th>
+                <th class="align-middle" style="width: 170px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -25,9 +31,8 @@
                         <td>@item.Login</td>
                         <td>@item.NombreCompleto</td>
                         <td>@item.Email</td>
-                        <td>@item.NumeroDocumento</td>
-                        <td>@item.Celular</td>
                         <td>@item.RolDescripcion</td>
+                        <td>@(item.PerfilAprobacion ?? "-")</td>
                         <td class="text-center">
                             <span class="badge badge-info">@item.CantidadSedes</span>
                         </td>
@@ -66,7 +71,7 @@
             else
             {
                 <tr>
-                    <td colspan="10" class="text-center text-muted py-4">
+                    <td colspan="9" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No se encontraron usuarios internos</p>
                     </td>

@@ -3,6 +3,7 @@ using NLog;
 using NLog.Web;
 using SHM.AppApplication.Services;
 using SHM.AppDomain.Configurations;
+using SHM.AppDomain.DTOs.SanPabloApi;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
@@ -111,6 +112,17 @@ try
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
     builder.Services.AddScoped<IEmailService, EmailService>();
+
+    // Configuracion del API externo de San Pablo
+    builder.Services.Configure<SanPabloApiSettings>(
+        builder.Configuration.GetSection("SanPabloApi"));
+
+    // Registrar HttpClient y servicio para API San Pablo
+    builder.Services.AddHttpClient<ISanPabloApiService, SanPabloApiService>()
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
 
     var app = builder.Build();
 

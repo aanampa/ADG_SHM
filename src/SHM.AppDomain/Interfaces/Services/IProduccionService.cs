@@ -105,6 +105,17 @@ public interface IProduccionService
     /// <param name="idModificador">ID del usuario que acepta la factura</param>
     /// <returns>True si se proceso correctamente</returns>
     Task<bool> AceptarFacturaAsync(string guidRegistro, int idModificador);
+
+    /// <summary>
+    /// Transiciona el estado de una produccion a FACTURA_ENVIADA_HHMM.
+    /// Se invoca automaticamente tras aceptar una factura cuando el parametro SHM_COMPROBANTE_ENVIA_HHMM = SI.
+    /// </summary>
+    Task<bool> EnviarAHhmmAsync(string guidRegistro, int idModificador);
+
+    /// <summary>
+    /// Actualiza el estado de una produccion por GUID.
+    /// </summary>
+    Task<bool> UpdateEstadoAsync(string guidRegistro, string estado, int idModificador);
     /// Obtiene estadisticas del dashboard para una entidad medica.
     /// </summary>
     /// <param name="idEntidadMedica">ID de la entidad medica</param>

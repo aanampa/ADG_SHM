@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Constants;
+using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -20,19 +22,22 @@ public class OrdenPagoAprobacionController : Controller
     private readonly IOrdenPagoLiquidacionService _ordenPagoLiquidacionService;
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
     private readonly IBitacoraService _bitacoraService;
+    private readonly IPerfilAprobacionUsuarioService _perfilAprobacionUsuarioService;
 
     public OrdenPagoAprobacionController(
         ILogger<OrdenPagoAprobacionController> logger,
         IOrdenPagoService ordenPagoService,
         IOrdenPagoLiquidacionService ordenPagoLiquidacionService,
         IOrdenPagoAprobacionService ordenPagoAprobacionService,
-        IBitacoraService bitacoraService)
+        IBitacoraService bitacoraService,
+        IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
         _ordenPagoLiquidacionService = ordenPagoLiquidacionService;
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
         _bitacoraService = bitacoraService;
+        _perfilAprobacionUsuarioService = perfilAprobacionUsuarioService;
     }
 
     /// <summary>
@@ -76,14 +81,14 @@ public class OrdenPagoAprobacionController : Controller
                     GuidRegistro = o.GuidRegistro ?? "",
                     NumeroOrdenPago = o.NumeroOrdenPago,
                     FechaGeneracion = o.FechaGeneracion,
+                    NombreSede = o.NombreSede,
                     NombreBanco = o.NombreBanco,
                     CantLiquidaciones = o.CantLiquidaciones,
                     CantComprobantes = o.CantComprobantes,
                     Estado = o.Estado,
-                    MtoSubtotalAcum = o.MtoSubtotalAcum,
-                    MtoIgvAcum = o.MtoIgvAcum,
-                    MtoRentaAcum = o.MtoRentaAcum,
-                    MtoTotalAcum = o.MtoTotalAcum
+                    MtoTotalAcum = o.MtoTotalAcum,
+                    EstadoAprobJefeSede = o.EstadoAprobJefeSede,
+                    EstadoAprobJefeCorp = o.EstadoAprobJefeCorp
                 }).ToList(),
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
@@ -143,6 +148,14 @@ public class OrdenPagoAprobacionController : Controller
             var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_ORDEN_PAGO", ordenPago.IdOrdenPago);
             ViewBag.Bitacoras = bitacoras.ToList();
 
+            // Cargar perfiles de aprobacion del usuario actual
+            var perfilesUsuario = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(userId.Value);
+            ViewBag.PerfilesUsuario = perfilesUsuario
+                .Select(p => p.NombrePerfil)
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Distinct()
+                .ToList();
+
             return View(ordenPago);
         }
         catch (Exception ex)
@@ -175,6 +188,25 @@ public class OrdenPagoAprobacionController : Controller
                 return Json(new { success = false, message = "Orden de pago no encontrada." });
 
             var (success, message) = await _ordenPagoAprobacionService.AprobarAsync(ordenPago.IdOrdenPago, userId.Value);
+
+            if (success)
+            {
+                var ordenActualizada = await _ordenPagoService.GetByGuidAsync(request.GuidOrdenPago);
+                var esAprobacionTotal = ordenActualizada?.Estado == EstadoDescripcion.OrdenPago.Aprobado;
+
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_ORDEN_PAGO",
+                    IdEntidad = ordenPago.IdOrdenPago,
+                    Accion = esAprobacionTotal
+                        ? EstadoDescripcion.OrdenPago.Aprobado
+                        : EstadoDescripcion.Aprobacion.Aprobado,
+                    Descripcion = esAprobacionTotal
+                        ? $"Orden de Pago aprobada completamente: {ordenPago.NumeroOrdenPago}. Todos los niveles de aprobación han sido completados."
+                        : $"Nivel de aprobación aprobado: {ordenPago.NumeroOrdenPago}. Pendiente aprobación del siguiente nivel.",
+                    FechaAccion = DateTime.Now
+                }, userId.Value);
+            }
 
             _logger.LogInformation("Aprobacion de orden de pago {NumeroOP}: {Resultado} por usuario {UserId}",
                 ordenPago.NumeroOrdenPago, success ? "APROBADO" : "FALLIDO", userId);
@@ -214,6 +246,18 @@ public class OrdenPagoAprobacionController : Controller
             var (success, message) = await _ordenPagoAprobacionService.RechazarAsync(
                 ordenPago.IdOrdenPago, userId.Value, request.Comentario);
 
+            if (success)
+            {
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_ORDEN_PAGO",
+                    IdEntidad = ordenPago.IdOrdenPago,
+                    Accion = EstadoDescripcion.OrdenPago.Devuelto,
+                    Descripcion = $"Orden de Pago devuelta: {ordenPago.NumeroOrdenPago}. Comentario: {request.Comentario}",
+                    FechaAccion = DateTime.Now
+                }, userId.Value);
+            }
+
             _logger.LogInformation("Rechazo de orden de pago {NumeroOP}: {Resultado} por usuario {UserId}",
                 ordenPago.NumeroOrdenPago, success ? "RECHAZADO" : "FALLIDO", userId);
 
@@ -223,6 +267,119 @@ public class OrdenPagoAprobacionController : Controller
         {
             _logger.LogError(ex, "Error al rechazar orden de pago");
             return Json(new { success = false, message = "Error interno al procesar el rechazo." });
+        }
+    }
+
+    /// <summary>
+    /// Vista con el historial de ordenes de pago aprobadas por el usuario.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-30</created>
+    /// </summary>
+    [HttpGet]
+    [Route("OrdenPagoAprobacion/Aprobadas")]
+    public IActionResult Aprobadas()
+    {
+        return View();
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes ya aprobadas por el usuario (AJAX).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-30</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetApprovedList(int pageNumber = 1, int pageSize = 10)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return PartialView("_ApprovedListPartial", new OrdenPagoAprobacionListViewModel());
+
+            var allItems = await _ordenPagoService.GetApprovedByUserAsync(userId.Value);
+            var itemsList = allItems.ToList();
+            var totalCount = itemsList.Count;
+
+            var pagedItems = itemsList
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var model = new OrdenPagoAprobacionListViewModel
+            {
+                Items = pagedItems.Select(o => new OrdenPagoItemViewModel
+                {
+                    GuidRegistro = o.GuidRegistro ?? "",
+                    NumeroOrdenPago = o.NumeroOrdenPago,
+                    FechaGeneracion = o.FechaGeneracion,
+                    NombreSede = o.NombreSede,
+                    NombreBanco = o.NombreBanco,
+                    CantLiquidaciones = o.CantLiquidaciones,
+                    CantComprobantes = o.CantComprobantes,
+                    Estado = o.Estado,
+                    MtoTotalAcum = o.MtoTotalAcum,
+                    EstadoAprobJefeSede = o.EstadoAprobJefeSede,
+                    EstadoAprobJefeCorp = o.EstadoAprobJefeCorp
+                }).ToList(),
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            _logger.LogInformation("Historial de aprobadas. Usuario: {UserId}, Total: {Total}, Pagina: {Page}",
+                userId, totalCount, pageNumber);
+
+            return PartialView("_ApprovedListPartial", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al listar ordenes aprobadas por el usuario");
+            return PartialView("_ApprovedListPartial", new OrdenPagoAprobacionListViewModel());
+        }
+    }
+
+    /// <summary>
+    /// Ver detalle de una orden de pago aprobada (solo consulta, sin acciones).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-02</created>
+    /// </summary>
+    [HttpGet]
+    [Route("OrdenPagoAprobacion/DetalleAprobada/{guid}")]
+    public async Task<IActionResult> DetalleAprobada(string guid)
+    {
+        try
+        {
+            var ordenPago = await _ordenPagoService.GetByGuidAsync(guid);
+            if (ordenPago == null)
+            {
+                TempData["APP_RESPONSE"] = "ERROR";
+                TempData["APP_MESSAGE"] = "Orden de pago no encontrada.";
+                return RedirectToAction("Aprobadas");
+            }
+
+            var liquidaciones = await _ordenPagoLiquidacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            ViewBag.Liquidaciones = liquidaciones.ToList();
+
+            var aprobaciones = await _ordenPagoAprobacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            ViewBag.Aprobaciones = aprobaciones.OrderBy(a => a.Orden).ToList();
+
+            var detalleLiquidaciones = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            ViewBag.DetalleLiquidaciones = detalleLiquidaciones.ToList();
+
+            var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_ORDEN_PAGO", ordenPago.IdOrdenPago);
+            ViewBag.Bitacoras = bitacoras.ToList();
+
+            return View(ordenPago);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener detalle de orden de pago aprobada {Guid}", guid);
+            TempData["APP_RESPONSE"] = "ERROR";
+            TempData["APP_MESSAGE"] = "Error al obtener la orden de pago.";
+            return RedirectToAction("Aprobadas");
         }
     }
 

@@ -1,0 +1,215 @@
+@{
+    ViewData["Title"] = "Log de Correos";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header py-2">
+            <div class="container-fluid">
+                <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
+                    <i class="fas fa-envelope-open-text mr-2"></i>Log de Correos Electr&oacute;nicos
+                </h1>
+                <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
+                    <li class="breadcrumb-item active">Log de Correos</li>
+                </ol>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+
+                <!-- Filtros -->
+                <div class="card mb-3">
+                    <div class="card-header py-2">
+                        <h6 class="m-0"><i class="fas fa-filter mr-1"></i>Filtros de B&uacute;squeda</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row">
+                            <div class="col-md-3 col-sm-6 mb-2">
+                                <label class="small mb-1">Tipo de Correo</label>
+                                <select id="filtroTipoEmail" class="form-control form-control-sm">
+                                    <option value="">-- Todos --</option>
+                                    <option value="NUEVO_USUARIO">Nuevo Usuario</option>
+                                    <option value="RESET_CLAVE">Reset de Clave</option>
+                                    <option value="RECUPERACION_CLAVE">Recuperaci&oacute;n de Clave</option>
+                                    <option value="SOLICITUD_FACTURA">Solicitud de Factura</option>
+                                    <option value="NOTIFICACION_APROBACION">Notificaci&oacute;n de Aprobaci&oacute;n</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <label class="small mb-1">Estado</label>
+                                <select id="filtroEstado" class="form-control form-control-sm">
+                                    <option value="">-- Todos --</option>
+                                    <option value="ENVIADO">Enviado</option>
+                                    <option value="ERROR">Error</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-sm-8 mb-2">
+                                <label class="small mb-1">Email Destino</label>
+                                <input type="text" id="filtroEmailDestino" class="form-control form-control-sm"
+                                       placeholder="Buscar por email..." maxlength="100" />
+                            </div>
+                            <div class="col-md-3 col-sm-4 mb-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary btn-sm mr-2" onclick="buscar()">
+                                    <i class="fas fa-search mr-1"></i>Buscar
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="limpiar()">
+                                    <i class="fas fa-times mr-1"></i>Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Listado -->
+                <div class="card">
+                    <div id="listContainer">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal visor de contenido -->
+<div class="modal fade" id="modalVisorEmail" tabindex="-1" role="dialog" aria-labelledby="modalVisorEmailLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="modalVisorEmailLabel">
+                    <i class="fas fa-envelope mr-1"></i>
+                    <span id="modalAsunto">Contenido del Correo</span>
+                </h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="modalInfoEmail" class="px-3 pt-2 pb-1 bg-light border-bottom" style="font-size: 13px;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <span class="text-muted">Para:</span>
+                            <strong id="modalNombreDestino"></strong>
+                            &lt;<span id="modalEmailDestino" class="text-primary"></span>&gt;
+                        </div>
+                        <div class="col-md-3">
+                            <span class="text-muted">Tipo:</span>
+                            <span id="modalTipo"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="text-muted">Fecha:</span>
+                            <span id="modalFecha"></span>
+                        </div>
+                    </div>
+                    <div id="modalMensajeError" class="mt-1 text-danger small" style="display:none;">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        <strong>Error:</strong> <span id="modalTextoError"></span>
+                    </div>
+                </div>
+                <iframe id="iframeContenido"
+                        style="width: 100%; height: 520px; border: none;"
+                        sandbox="allow-same-origin">
+                </iframe>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList(1);
+
+            document.getElementById('filtroEmailDestino').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') buscar();
+            });
+
+            // Event delegation: captura clicks en botones .btn-ver-email cargados via AJAX
+            document.getElementById('listContainer').addEventListener('click', function (e) {
+                const btn = e.target.closest('.btn-ver-email');
+                if (!btn) return;
+                verContenido(
+                    btn.dataset.id,
+                    btn.dataset.asunto,
+                    btn.dataset.nombre,
+                    btn.dataset.email,
+                    btn.dataset.tipo,
+                    btn.dataset.fecha,
+                    btn.dataset.error
+                );
+            });
+        });
+
+        function buscar() {
+            loadList(1);
+        }
+
+        function limpiar() {
+            document.getElementById('filtroTipoEmail').value = '';
+            document.getElementById('filtroEstado').value = '';
+            document.getElementById('filtroEmailDestino').value = '';
+            loadList(1);
+        }
+
+        function loadList(pageNumber) {
+            const params = new URLSearchParams({
+                tipoEmail: document.getElementById('filtroTipoEmail').value,
+                estado: document.getElementById('filtroEstado').value,
+                emailDestino: document.getElementById('filtroEmailDestino').value,
+                pageNumber: pageNumber || 1,
+                pageSize: 15
+            });
+
+            f_loading();
+            fetch('@Url.Action("GetList", "EmailLog")?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('listContainer').innerHTML = html;
+                    f_remove_loading();
+                })
+                .catch(error => {
+                    f_remove_loading();
+                    document.getElementById('listContainer').innerHTML =
+                        '<div class="card-body text-center text-danger py-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                        '<p>Error al cargar la lista</p></div>';
+                });
+        }
+
+        function verContenido(id, asunto, nombreDestino, emailDestino, tipoEmail, fecha, mensajeError) {
+            document.getElementById('modalAsunto').textContent = asunto || 'Sin asunto';
+            document.getElementById('modalNombreDestino').textContent = nombreDestino || '';
+            document.getElementById('modalEmailDestino').textContent = emailDestino || '';
+            document.getElementById('modalTipo').textContent = tipoEmail || '';
+            document.getElementById('modalFecha').textContent = fecha || '';
+
+            const divError = document.getElementById('modalMensajeError');
+            if (mensajeError) {
+                document.getElementById('modalTextoError').textContent = mensajeError;
+                divError.style.display = 'block';
+            } else {
+                divError.style.display = 'none';
+            }
+
+            const iframe = document.getElementById('iframeContenido');
+            iframe.src = '@Url.Action("VerContenido", "EmailLog")/' + id;
+
+            $('#modalVisorEmail').modal('show');
+        }
+    </script>
+}

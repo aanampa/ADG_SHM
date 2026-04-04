@@ -175,11 +175,44 @@ public class OrdenPagoService : IOrdenPagoService
         return await _ordenPagoRepository.DeleteAsync(orden.IdOrdenPago, idModificador);
     }
 
+    /// <summary>
+    /// Obtiene las ordenes de pago que el usuario ya aprobo.
+    /// </summary>
+    public async Task<IEnumerable<OrdenPagoResponseDto>> GetApprovedByUserAsync(int idUsuario)
+    {
+        var ordenes = await _ordenPagoRepository.GetApprovedByUserAsync(idUsuario);
+        return ordenes.Select(MapToResponseDto);
+    }
+
+    /// <summary>
+    /// Anula una orden de pago por su GUID y revierte las producciones a FACTURA_LIQUIDADA.
+    /// </summary>
+    public async Task<bool> AnularAsync(string guid, int idModificador)
+    {
+        var orden = await _ordenPagoRepository.GetByGuidAsync(guid);
+        if (orden == null)
+            return false;
+
+        return await _ordenPagoRepository.AnularAsync(orden.IdOrdenPago, idModificador);
+    }
+
+    /// <summary>
+    /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
+    /// </summary>
+    public async Task<(IEnumerable<OrdenPagoResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
+        int? idBanco, string? estado, int? idSede, int pageNumber, int pageSize)
+    {
+        var (items, totalCount) = await _ordenPagoRepository.GetPaginatedListAsync(idBanco, estado, idSede, pageNumber, pageSize);
+        return (items.Select(MapToResponseDto), totalCount);
+    }
+
     private static OrdenPagoResponseDto MapToResponseDto(OrdenPago orden)
     {
         return new OrdenPagoResponseDto
         {
             IdOrdenPago = orden.IdOrdenPago,
+            IdSede = orden.IdSede,
+            NombreSede = orden.NombreSede,
             IdBanco = orden.IdBanco,
             NombreBanco = orden.NombreBanco,
             NumeroOrdenPago = orden.NumeroOrdenPago,
@@ -197,7 +230,9 @@ public class OrdenPagoService : IOrdenPagoService
             GuidRegistro = orden.GuidRegistro,
             Activo = orden.Activo,
             FechaCreacion = orden.FechaCreacion,
-            FechaModificacion = orden.FechaModificacion
+            FechaModificacion = orden.FechaModificacion,
+            EstadoAprobJefeSede = orden.EstadoAprobJefeSede,
+            EstadoAprobJefeCorp = orden.EstadoAprobJefeCorp
         };
     }
 }

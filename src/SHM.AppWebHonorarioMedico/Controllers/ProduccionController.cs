@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
+using SHM.AppDomain.DTOs.SanPabloApi;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -28,6 +29,8 @@ public class ProduccionController : Controller
     private readonly IBancoService _bancoService;
     private readonly IBitacoraService _bitacoraService;
     private readonly IConfiguration _configuration;
+    private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly IUsuarioService _usuarioService;
 
     public ProduccionController(
         ILogger<ProduccionController> logger,
@@ -39,7 +42,9 @@ public class ProduccionController : Controller
         IEntidadCuentaBancariaService entidadCuentaBancariaService,
         IBancoService bancoService,
         IBitacoraService bitacoraService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ISanPabloApiService sanPabloApiService,
+        IUsuarioService usuarioService)
     {
         _logger = logger;
         _produccionService = produccionService;
@@ -51,6 +56,8 @@ public class ProduccionController : Controller
         _bancoService = bancoService;
         _bitacoraService = bitacoraService;
         _configuration = configuration;
+        _sanPabloApiService = sanPabloApiService;
+        _usuarioService = usuarioService;
     }
 
     /// <summary>
@@ -202,15 +209,18 @@ public class ProduccionController : Controller
             string? cuentaCorriente = null;
             string? cuentaCci = null;
             string? moneda = null;
+            int cantCuentasActivas = 0;
 
             if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
             {
                 var cuentasBancarias = await _entidadCuentaBancariaService
                     .GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
-                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+                var cuentasActivas = cuentasBancarias.Where(c => c.Activo == 1).ToList();
+                cantCuentasActivas = cuentasActivas.Count;
 
-                if (cuentaBancaria != null)
+                if (cantCuentasActivas == 1)
                 {
+                    var cuentaBancaria = cuentasActivas[0];
                     cuentaCorriente = cuentaBancaria.CuentaCorriente;
                     cuentaCci = cuentaBancaria.CuentaCci;
                     moneda = cuentaBancaria.Moneda;
@@ -227,10 +237,20 @@ public class ProduccionController : Controller
             ViewBag.CuentaCorriente = cuentaCorriente;
             ViewBag.CuentaCci = cuentaCci;
             ViewBag.Moneda = moneda;
+            ViewBag.CantCuentasActivas = cantCuentasActivas;
 
             // Cargar bitacora de la produccion
             var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_PRODUCCION", produccion.IdProduccion);
             ViewBag.Bitacoras = bitacoras.ToList();
+
+            // Verificar si la entidad medica tiene usuarios externos activos (para habilitar Solicitar Factura)
+            var tieneUsuariosExternos = false;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var usuariosEntidad = await _usuarioService.GetUsuariosByEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
+                tieneUsuariosExternos = usuariosEntidad.Any(u => u.TipoUsuario == "E");
+            }
+            ViewBag.TieneUsuariosExternos = tieneUsuariosExternos;
 
             return View(produccion);
         }
@@ -302,6 +322,193 @@ public class ProduccionController : Controller
         {
             _logger.LogError(ex, "Error al solicitar factura: {Guid}", solicitud?.GuidRegistro);
             return Json(new { success = false, message = "Error al procesar la solicitud" });
+        }
+    }
+
+    /// <summary>
+    /// Retorna el modal para solicitud masiva de facturas.
+    /// Lista todos los registros en estado FACTURA_PENDIENTE y FACTURA_SOLICITADA,
+    /// validando que cada uno cumpla con las condiciones para ser enviado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-03</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetModalSolicitudMasiva()
+    {
+        try
+        {
+            // Filtrar por sede del usuario logueado (igual que GetList)
+            var idSede = GetCurrentUserIdSede();
+
+            // Obtener todos los registros FACTURA_PENDIENTE y FACTURA_SOLICITADA
+            var allItems = new List<AppDomain.DTOs.Produccion.ProduccionListaResponseDto>();
+            foreach (var estado in new[] {
+                EstadoDescripcion.Produccion.FacturaPendiente,
+                EstadoDescripcion.Produccion.FacturaSolicitada })
+            {
+                var (items, _) = await _produccionService.GetPaginatedListAsync(
+                    null, estado, null, idSede, 1, 500);
+                allItems.AddRange(items);
+            }
+
+            // Cache de validacion por entidad medica (evitar llamadas repetidas)
+            var usuariosCache = new Dictionary<int, bool>();
+            var cuentasCache = new Dictionary<int, int>();
+
+            var viewItems = new List<Models.SolicitudMasivaItemViewModel>();
+            foreach (var item in allItems)
+            {
+                bool habilitado = true;
+                string? motivo = null;
+
+                if (item.IdEntidadMedica.HasValue)
+                {
+                    int idEnt = item.IdEntidadMedica.Value;
+
+                    if (!usuariosCache.ContainsKey(idEnt))
+                    {
+                        var usuarios = await _usuarioService.GetUsuariosByEntidadMedicaAsync(idEnt);
+                        usuariosCache[idEnt] = usuarios.Any(u => u.TipoUsuario == "E");
+                    }
+
+                    if (!cuentasCache.ContainsKey(idEnt))
+                    {
+                        var cuentas = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(idEnt);
+                        cuentasCache[idEnt] = cuentas.Count(c => c.Activo == 1);
+                    }
+
+                    bool tieneUsuarios = usuariosCache[idEnt];
+                    int nroCuentas = cuentasCache[idEnt];
+
+                    if (!tieneUsuarios)
+                    {
+                        habilitado = false;
+                        motivo = "Sin usuarios externos";
+                    }
+                    else if (nroCuentas == 0)
+                    {
+                        habilitado = false;
+                        motivo = "Sin cuenta bancaria activa";
+                    }
+                    else if (nroCuentas > 1)
+                    {
+                        habilitado = false;
+                        motivo = $"Tiene {nroCuentas} cuentas bancarias activas";
+                    }
+                }
+                else
+                {
+                    habilitado = false;
+                    motivo = "Sin compañía médica asignada";
+                }
+
+                viewItems.Add(new Models.SolicitudMasivaItemViewModel
+                {
+                    GuidRegistro = item.GuidRegistro ?? string.Empty,
+                    NumeroProduccion = item.NumeroProduccion,
+                    DesTipoProduccion = item.DesTipoProduccion,
+                    DesTipoMedico = item.DesTipoMedico,
+                    RazonSocial = item.RazonSocial,
+                    Periodo = item.Periodo,
+                    MtoTotal = item.MtoTotal,
+                    Estado = item.Estado,
+                    DesEstado = item.DesEstado,
+                    Habilitado = habilitado,
+                    MotivoDeshabilitado = motivo,
+                    FechaLimite = item.FechaLimite
+                });
+            }
+
+            var model = new Models.SolicitudMasivaViewModel { Items = viewItems };
+            return PartialView("_SolicitudMasivaModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar modal de solicitud masiva");
+            return StatusCode(500, "Error al cargar el modal");
+        }
+    }
+
+    /// <summary>
+    /// Procesa la solicitud masiva de facturas para una lista de GUIDs.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-03</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> SolicitarFacturaMasivo([FromBody] SolicitudMasivaRequestDto solicitud)
+    {
+        try
+        {
+            if (solicitud == null || solicitud.Guids == null || !solicitud.Guids.Any())
+                return Json(new { success = false, message = "Debe seleccionar al menos un registro" });
+
+            if (string.IsNullOrEmpty(solicitud.Fecha) || string.IsNullOrEmpty(solicitud.Hora))
+                return Json(new { success = false, message = "La fecha y hora límite son requeridas" });
+
+            var idUsuario = GetCurrentUserId();
+            int enviados = 0;
+            int errores = 0;
+            var detalleErrores = new List<string>();
+
+            foreach (var guid in solicitud.Guids)
+            {
+                try
+                {
+                    var dto = new AppDomain.DTOs.Produccion.SolicitarFacturaDto
+                    {
+                        GuidRegistro = guid,
+                        Fecha = solicitud.Fecha,
+                        Hora = solicitud.Hora
+                    };
+
+                    var resultado = await _produccionService.SolicitarFacturaAsync(dto, idUsuario);
+                    if (resultado)
+                    {
+                        var produccion = await _produccionService.GetProduccionByGuidAsync(guid);
+                        if (produccion != null)
+                        {
+                            var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                            {
+                                Entidad = "SHM_PRODUCCION",
+                                IdEntidad = produccion.IdProduccion,
+                                Accion = EstadoDescripcion.Produccion.FacturaSolicitada,
+                                Descripcion = $"Factura Solicitada (masivo) con fecha limite el {solicitud.Fecha} a las {solicitud.Hora} horas",
+                                FechaAccion = DateTime.Now
+                            };
+                            await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                        }
+                        enviados++;
+                    }
+                    else
+                    {
+                        errores++;
+                        detalleErrores.Add(guid);
+                    }
+                }
+                catch (Exception exItem)
+                {
+                    _logger.LogError(exItem, "Error al solicitar factura masiva para GUID: {Guid}", guid);
+                    errores++;
+                    detalleErrores.Add(guid);
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                enviados,
+                errores,
+                message = errores == 0
+                    ? $"Se procesaron {enviados} solicitud(es) correctamente."
+                    : $"Se procesaron {enviados} correctamente y {errores} con error."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en solicitud masiva de facturas");
+            return Json(new { success = false, message = "Error al procesar la solicitud masiva" });
         }
     }
 
@@ -395,7 +602,18 @@ public class ProduccionController : Controller
                     await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
                 }
 
-                _logger.LogInformation("Factura aceptada. GUID: {Guid}, Usuario: {Usuario}",
+                // Invocar San Pablo API y transicionar a FACTURA_ENVIADA_HHMM
+                if (produccion != null)
+                {
+                    var errorHhmm = await RegistrarComprobanteEnSanPabloAsync(produccion, idUsuario);
+                    if (errorHhmm != null)
+                    {
+                        _logger.LogWarning("Factura aceptada pero error al enviar a HHMM. GUID: {Guid}, Error: {Error}", request.GuidRegistro, errorHhmm);
+                        return Json(new { success = false, message = $"Error al enviar el comprobante a HHMM: {errorHhmm}" });
+                    }
+                }
+
+                _logger.LogInformation("Factura aceptada y enviada a HHMM. GUID: {Guid}, Usuario: {Usuario}",
                     request.GuidRegistro, idUsuario);
                 return Json(new { success = true, message = "Factura aceptada correctamente" });
             }
@@ -439,5 +657,123 @@ public class ProduccionController : Controller
             return idSede;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Registra el comprobante en el API de San Pablo y transiciona a FACTURA_ENVIADA_HHMM.
+    /// Retorna null si fue exitoso, o el mensaje de error si fallo.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-29</created>
+    /// </summary>
+    private async Task<string?> RegistrarComprobanteEnSanPabloAsync(
+        ProduccionListaResponseDto produccion,
+        int userId)
+    {
+        try
+        {
+            // Obtener codigo de entidad medica
+            string? codigoEntidad = null;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                codigoEntidad = entidadMedica?.CodigoEntidad;
+            }
+
+            // Derivar tipo comprobante si es nulo
+            var tipoComprobante = produccion.TipoComprobante;
+            if (string.IsNullOrEmpty(tipoComprobante))
+                tipoComprobante = produccion.TipoEntidadMedica == "1" ? "1" : "22";
+
+            // Derivar glosa/concepto si es nulo
+            var glosa = produccion.Concepto;
+            if (string.IsNullOrEmpty(glosa))
+            {
+                var detalleTipoProd = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "";
+                glosa = $"PRODUCCION {produccion.CodigoProduccion} - {descripcionTipoProd}";
+            }
+
+            // Obtener descripcion del tipo de comprobante
+            var tablaDetalle = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_COMPROBANTE", tipoComprobante);
+            var descripcionTipo = tablaDetalle?.Descripcion ?? tipoComprobante;
+
+            // FLG_CIAMEDICA: 1=CIA MEDICA, 0=MEDICO
+            var flgCiaMedica = produccion.TipoEntidadMedica == "1" ? "1" : "0";
+
+            // Formatear numero a 7 digitos
+            var numero = produccion.Numero ?? "";
+            if (int.TryParse(numero, out var numInt))
+                numero = numInt.ToString("D7");
+
+            var request = new SanPabloComprobanteRequestDto
+            {
+                COD_SEDE = produccion.CodigoSede,
+                FLG_CIAMEDICA = flgCiaMedica,
+                COD_ENTIDAD = codigoEntidad,
+                COD_PROD = produccion.CodigoProduccion,
+                FLG_PORTAL = "FA",
+                CPM_TIPO = tipoComprobante,
+                CPM_SERIE = produccion.Serie,
+                CPM_NUMERO = numero,
+                CPM_FECEMI = produccion.FechaEmision?.ToString("dd/MM/yyyy"),
+                CPM_GLOSA = glosa,
+                CPM_MTOTAL = produccion.MtoTotal?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                CPM_FECREG = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
+            };
+
+            var response = await _sanPabloApiService.RegistrarComprobanteAsync(request);
+
+            if (response.IsSuccess)
+            {
+                _logger.LogInformation("Comprobante registrado en San Pablo. CodigoProduccion: {Cod}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}",
+                    produccion.CodigoProduccion, descripcionTipo, produccion.Serie, produccion.Numero);
+
+                // Cambiar estado a FACTURA_ENVIADA_HHMM
+                await _produccionService.EnviarAHhmmAsync(produccion.GuidRegistro!, userId);
+
+                // Registrar en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = EstadoDescripcion.Produccion.FacturaEnviadaHhmm,
+                    Descripcion = $"{descripcionTipo} enviada a HHMM: {produccion.Serie}-{produccion.Numero}",
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                return null; // Exito
+            }
+            else
+            {
+                _logger.LogWarning("Error al registrar comprobante en San Pablo. CodigoProduccion: {Cod}, Mensaje: {Msg}",
+                    produccion.CodigoProduccion, response.Message);
+
+                // Revertir estado a FACTURA_ENVIADA (sin limpiar datos del comprobante)
+                await _produccionService.UpdateEstadoAsync(
+                    produccion.GuidRegistro!,
+                    EstadoDescripcion.Produccion.FacturaEnviada,
+                    userId);
+
+                // Registrar error en bitacora
+                await _bitacoraService.CreateBitacoraAsync(new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                {
+                    Entidad = "SHM_PRODUCCION",
+                    IdEntidad = produccion.IdProduccion,
+                    Accion = "ERROR_ENVIO_HHMM",
+                    Descripcion = $"Error al enviar {descripcionTipo} a HHMM: {response.Message}. Estado revertido a FACTURA_ENVIADA.",
+                    FechaAccion = DateTime.Now
+                }, userId);
+
+                return !string.IsNullOrWhiteSpace(response.Message)
+                    ? response.Message
+                    : "No se pudo enviar el comprobante";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al comunicar comprobante a San Pablo. CodigoProduccion: {Cod}", produccion.CodigoProduccion);
+            return ex.Message;
+        }
     }
 }

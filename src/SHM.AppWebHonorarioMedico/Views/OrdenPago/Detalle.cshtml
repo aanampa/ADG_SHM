@@ -19,6 +19,8 @@
     .form-group-sm { margin-bottom: 0.5rem; }
     .form-group-sm label { font-size: 0.8rem; margin-bottom: 0.15rem; color: #6c757d; }
     .form-group-sm .form-control-sm { font-size: 0.8rem; padding: 0.2rem 0.4rem; height: auto; }
+    .table-liq thead th { vertical-align: middle !important; text-align: center; }
+    .table-liq thead th.text-right { text-align: right !important; }
 </style>
 
 <div class="wrapper">
@@ -77,7 +79,11 @@
                         <div class="col-3">
                             <div class="form-group-sm">
                                 <label>Estado de Aprobación</label>
-                                <input type="text" class="form-control form-control-sm @EstadoDescripcion.OrdenPago.GetBgClass(Model.Estado)" value="@EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)" readonly style="background-color: #e9ecef;">
+                                <div>
+                                    <span class="badge @EstadoDescripcion.OrdenPago.GetBadgeClass(Model.Estado)" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">
+                                        @EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -120,14 +126,11 @@
                         </div>
                     </div>
                 </div>
-                @if (Model.Estado == EstadoDescripcion.OrdenPago.AprobacionPendiente)
+                @if (Model.Estado == EstadoDescripcion.OrdenPago.Devuelto || Model.Estado == EstadoDescripcion.OrdenPago.AprobacionPendiente)
                 {
                     <div class="card-footer py-2">
-                        <button type="button" class="btn btn-sm btn-danger" onclick="rechazarOrden()">
-                            <i class="fas fa-times mr-1"></i>Devolver
-                        </button>
-                        <button type="button" class="btn btn-sm btn-success ml-1" onclick="aprobarOrden()">
-                            <i class="fas fa-check mr-1"></i>Aprobar
+                        <button type="button" class="btn btn-sm btn-danger" onclick="anularOrdenPago()">
+                            <i class="fas fa-ban mr-1"></i>Anular
                         </button>
                     </div>
                 }
@@ -189,19 +192,20 @@
                 </div>
                 <div class="card-body p-2">
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover table-bordered mb-0" style="font-size: 0.85rem;">
-                            <thead class="bg-secondary">
-                                <tr class="text-center">
+                        <table class="table table-sm table-hover table-bordered mb-0 table-liq" style="font-size: 0.85rem; table-layout: fixed; width: 100%;">
+                            <thead style="background-color: #6c757d; color: #fff;">
+                                <tr>
                                     <th style="width: 30px;">#</th>
-                                    <th>Cod. Liquidación</th>
-                                    <th>Descripci&oacute;n</th>
-                                    <th>Periodo</th>
-                                    <th>Banco</th>
-                                    <th>Cant. Comprob.</th>
-                                    <th class="text-right">Sub Total S/.</th>
-                                    <th class="text-right">IGV S/.</th>
-                                    <th class="text-right">Renta S/.</th>
-                                    <th class="text-right">Total S/.</th>
+                                    <th style="width: 110px;">Cod.<br/>Liquidación</th>
+                                    <th style="width: 110px;">Tipo de<br/>Liquidaci&oacute;n</th>
+                                    <th style="width: 150px;">Descripci&oacute;n</th>
+                                    <th style="width: 85px;">Periodo</th>
+                                    <th style="width: 160px;">Banco</th>
+                                    <th style="width: 90px;">Cant.<br/>Comprob.</th>
+                                    <th class="text-right" style="width: 100px;">Sub Total<br/>S/.</th>
+                                    <th class="text-right" style="width: 80px;">IGV<br/>S/.</th>
+                                    <th class="text-right" style="width: 90px;">Imp. Renta<br/>S/.</th>
+                                    <th class="text-right" style="width: 100px;">Total<br/>S/.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -214,6 +218,7 @@
                                         <tr>
                                             <td class="text-center">@index</td>
                                             <td class="text-center">@(liq.NumeroLiquidacion ?? "-")</td>
+                                            <td>@(liq.DesTipoLiquidacion ?? liq.TipoLiquidacion ?? "-")</td>
                                             <td>@(liq.DescripcionLiquidacion ?? "-")</td>
                                             <td class="text-center">@(liq.PeriodoLiquidacion ?? "-")</td>
                                             <td>@(liq.NombreBanco ?? "-")</td>
@@ -228,7 +233,7 @@
                                 else
                                 {
                                     <tr>
-                                        <td colspan="10" class="text-center text-muted py-3">
+                                        <td colspan="11" class="text-center text-muted py-3">
                                             <i class="fas fa-inbox fa-2x mb-2"></i>
                                             <p class="mb-0">No hay liquidaciones asociadas</p>
                                         </td>
@@ -239,7 +244,7 @@
                             {
                                 <tfoot class="bg-light font-weight-bold">
                                     <tr>
-                                        <td colspan="6" class="text-right">TOTALES:</td>
+                                        <td colspan="7" class="text-right">TOTALES:</td>
                                         <td class="text-right">@(liquidaciones.Sum(l => l.MtoSubtotalAcum ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(liquidaciones.Sum(l => l.MtoIgvAcum ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(liquidaciones.Sum(l => l.MtoRentaAcum ?? 0).ToString("N2"))</td>
@@ -261,23 +266,24 @@
                 </div>
                 <div class="card-body p-2">
                     <div class="table-responsive">
-                        <table id="facturasTable" class="table table-sm table-hover table-bordered mb-0" style="font-size: 0.85rem;">
-                            <thead class="bg-secondary">
-                                <tr class="text-center">
+                        <table id="facturasTable" class="table table-sm table-hover table-bordered mb-0 table-liq" style="font-size: 0.85rem; table-layout: fixed; width: 100%;">
+                            <thead style="background-color: #6c757d; color: #fff;">
+                                <tr>
                                     <th style="width: 30px;">#</th>
-                                    <th>Cod. Liquidación</th>
-                                    <th>Descripción</th>
-                                    <th>Tipo de Liquidaci&oacute;n</th>
-                                    <th>Periodo Liquidaci&oacute;n</th>
-                                    <th>RUC</th>
-                                    <th>Tipo Entidad</th>
-                                    <th>Raz&oacute;n Social</th>
-                                    <th>Banco</th>
-                                    <th>Comprobante<br />Factura / RHE</th>
-                                    <th class="text-right">Sub Total<br />S/.</th>
-                                    <th class="text-right">IGV<br />S/.</th>
-                                    <th class="text-right">Imp. Renta<br />S/.</th>
-                                    <th class="text-right">Total<br />S/.</th>
+                                    <th style="width: 110px;">Cod.<br/>Liquidación</th>
+                                    <th style="width: 110px;">Tipo de<br/>Liquidaci&oacute;n</th>
+                                    <th style="width: 120px;">Descripci&oacute;n</th>
+                                    <th style="width: 85px;">Periodo</th>
+                                    <th style="width: 85px;">RUC</th>
+                                    <th style="width: 100px;">Tipo<br/>Entidad</th>
+                                    <th style="width: 130px;">Raz&oacute;n Social</th>
+                                    <th style="width: 160px;">Banco</th>
+                                    <th style="width: 90px;">Comproban.</th>
+                                    <th style="width: 40px;">PDF</th>
+                                    <th class="text-right" style="width: 100px;">Sub Total<br/>S/.</th>
+                                    <th class="text-right" style="width: 80px;">IGV<br/>S/.</th>
+                                    <th class="text-right" style="width: 90px;">Imp. Renta<br/>S/.</th>
+                                    <th class="text-right" style="width: 100px;">Total<br/>S/.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -292,14 +298,27 @@
                                         <tr>
                                             <td class="text-center">@(idxDet++)</td>
                                             <td class="text-center">@(det.NumeroLiquidacion ?? "-")</td>
+                                            <td>@(det.DesTipoLiquidacion ?? det.TipoLiquidacion ?? "-")</td>
                                             <td>@(det.DescripcionLiquidacion ?? "-")</td>
-                                            <td>@(det.TipoLiquidacion ?? "-")</td>
                                             <td class="text-center">@(det.PeriodoLiquidacion ?? "-")</td>
                                             <td class="text-center">@(det.Ruc ?? "-")</td>
-                                            <td>@(det.TipoEntidadMedica ?? "-")</td>
+                                            <td>@(det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-")</td>
                                             <td>@(det.RazonSocial ?? "-")</td>
                                             <td class="text-center">@(det.NombreBanco ?? "-")</td>
                                             <td class="text-center">@comprobante</td>
+                                            <td class="text-center">
+                                                @if (!string.IsNullOrEmpty(det.GuidArchivoFactura))
+                                                {
+                                                    <a href="@Url.Action("Descargar", "Archivo", new { guid = det.GuidArchivoFactura })"
+                                                       class="btn btn-outline-danger btn-xs" target="_blank" title="Ver Factura PDF">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
                                             <td class="text-right">@(det.MtoSubtotal?.ToString("N2") ?? "--")</td>
                                             <td class="text-right">@(det.MtoIgv?.ToString("N2") ?? "--")</td>
                                             <td class="text-right">@(det.MtoRenta?.ToString("N2") ?? "--")</td>
@@ -310,7 +329,7 @@
                                 else
                                 {
                                     <tr>
-                                        <td colspan="14" class="text-center text-muted py-3">
+                                        <td colspan="15" class="text-center text-muted py-3">
                                             <i class="fas fa-inbox fa-2x mb-2"></i>
                                             <p class="mb-0">No hay detalle de liquidaciones</p>
                                         </td>
@@ -321,7 +340,7 @@
                             {
                                 <tfoot class="bg-light font-weight-bold">
                                     <tr>
-                                        <td colspan="10" class="text-right">TOTAL GENERAL:</td>
+                                        <td colspan="11" class="text-right">TOTAL GENERAL:</td>
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoSubtotal ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoIgv ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoRenta ?? 0).ToString("N2"))</td>
@@ -331,6 +350,165 @@
                             }
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Liquidaciones 2 - Vista Treeview (prototipo) - OCULTO -->
+            <div class="card card-compact mb-2" style="display: none;">
+                <div class="card-header" style="background-color: #1a6a9a;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title text-white mb-0">
+                            <i class="fas fa-sitemap mr-1"></i>Liquidaciones &mdash; Vista Consolidada (@liquidaciones.Count)
+                        </h3>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-light py-0 px-2 mr-1" onclick="liq2ExpandAll()" title="Expandir todo">
+                                <i class="fas fa-expand-alt"></i> Todo
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="liq2CollapseAll()" title="Colapsar todo">
+                                <i class="fas fa-compress-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    @if (liquidaciones.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0" style="font-size: 0.82rem; table-layout: fixed; width: 100%;">
+                                <thead style="background-color: #1a6a9a; color: white;">
+                                    <tr class="text-center">
+                                        <th style="width: 28px;"></th>
+                                        <th style="width: 34px;">#</th>
+                                        <th style="width: 100px;">Cod. Liquidación</th>
+                                        <th style="width: 110px;">Tipo de Liquidación</th>
+                                        <th>Descripción</th>
+                                        <th style="width: 85px;">Periodo</th>
+                                        <th style="width: 110px;">Banco</th>
+                                        <th style="width: 90px;">Comprob.</th>
+                                        <th style="width: 100px;" class="text-right">Sub Total S/.</th>
+                                        <th style="width: 85px;" class="text-right">IGV S/.</th>
+                                        <th style="width: 90px;" class="text-right">Imp. Renta S/.</th>
+                                        <th style="width: 100px;" class="text-right">Total S/.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var liq2Index = 0; }
+                                    @foreach (var liq in liquidaciones)
+                                    {
+                                        liq2Index++;
+                                        var liq2Id = $"liq2-det-{liq2Index}";
+                                        var detLiq = detalleLiquidaciones
+                                            .Where(d => d.NumeroLiquidacion == liq.NumeroLiquidacion)
+                                            .ToList();
+                                        var detSubtotal = detLiq.Sum(d => d.MtoSubtotal ?? 0);
+                                        var detIgv      = detLiq.Sum(d => d.MtoIgv      ?? 0);
+                                        var detRenta    = detLiq.Sum(d => d.MtoRenta     ?? 0);
+                                        var detTotal    = detLiq.Sum(d => d.MtoTotal     ?? 0);
+
+                                        <!-- Fila nivel 1 -->
+                                        <tr class="liq2-header" style="cursor:pointer; background-color: #e8f4fd;"
+                                            onclick="liq2Toggle('@liq2Id', this)" title="Clic para ver / ocultar comprobantes">
+                                            <td class="text-center" style="width:28px;">
+                                                <i id="ico-@liq2Id" class="fas fa-chevron-right text-primary" style="font-size:0.75rem;"></i>
+                                            </td>
+                                            <td class="text-center font-weight-bold">@liq2Index</td>
+                                            <td class="text-center font-weight-bold">@(liq.NumeroLiquidacion ?? "-")</td>
+                                            <td>@(liq.DesTipoLiquidacion ?? liq.TipoLiquidacion ?? "-")</td>
+                                            <td>@(liq.DescripcionLiquidacion ?? "-")</td>
+                                            <td class="text-center">@(liq.PeriodoLiquidacion ?? "-")</td>
+                                            <td>@(liq.NombreBanco ?? "-")</td>
+                                            <td class="text-center">
+                                                <span class="badge badge-secondary">@(liq.CantComprobantes?.ToString() ?? "-")</span>
+                                            </td>
+                                            <td class="text-right font-weight-bold">@(liq.MtoSubtotalAcum?.ToString("N2") ?? "--")</td>
+                                            <td class="text-right">@(liq.MtoIgvAcum?.ToString("N2") ?? "--")</td>
+                                            <td class="text-right">@(liq.MtoRentaAcum?.ToString("N2") ?? "--")</td>
+                                            <td class="text-right font-weight-bold text-primary">@(liq.MtoTotalAcum?.ToString("N2") ?? "--")</td>
+                                        </tr>
+
+                                        <!-- Fila nivel 2: sub-tabla colapsable -->
+                                        <tr id="@liq2Id" class="liq2-detail" style="display:none;">
+                                            <td colspan="12" style="padding: 0; background-color: #f8f9fa;">
+                                                @if (detLiq.Any())
+                                                {
+                                                    <table class="table table-sm table-bordered mb-0" style="font-size: 0.80rem; margin: 0; table-layout: fixed; width: 100%;">
+                                                        <thead style="background-color: #3a8fc0; color: white;">
+                                                            <tr class="text-center">
+                                                                <th style="width: 34px;">#</th>
+                                                                <th style="width: 90px;">RUC</th>
+                                                                <th>Raz&oacute;n Social</th>
+                                                                <th style="width: 110px;">Tipo Entidad</th>
+                                                                <th style="width: 110px;">Banco</th>
+                                                                <th style="width: 90px;">Comprobante</th>
+                                                                <th style="width: 100px;" class="text-right">Sub Total S/.</th>
+                                                                <th style="width: 85px;" class="text-right">IGV S/.</th>
+                                                                <th style="width: 90px;" class="text-right">Imp. Renta S/.</th>
+                                                                <th style="width: 100px;" class="text-right">Total S/.</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @{ var detIdx = 0; }
+                                                            @foreach (var det in detLiq)
+                                                            {
+                                                                detIdx++;
+                                                                var comp = (!string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero))
+                                                                    ? $"{det.Serie}-{det.Numero}" : "-";
+                                                                <tr style="background-color: #ffffff;">
+                                                                    <td class="text-center">@detIdx</td>
+                                                                    <td class="text-center">@(det.Ruc ?? "-")</td>
+                                                                    <td>@(det.RazonSocial ?? "-")</td>
+                                                                    <td>@(det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-")</td>
+                                                                    <td>@(det.NombreBanco ?? "-")</td>
+                                                                    <td class="text-center">
+                                                                        <span class="badge badge-light border">@comp</span>
+                                                                    </td>
+                                                                    <td class="text-right">@(det.MtoSubtotal?.ToString("N2") ?? "--")</td>
+                                                                    <td class="text-right">@(det.MtoIgv?.ToString("N2") ?? "--")</td>
+                                                                    <td class="text-right">@(det.MtoRenta?.ToString("N2") ?? "--")</td>
+                                                                    <td class="text-right font-weight-bold">@(det.MtoTotal?.ToString("N2") ?? "--")</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                        <tfoot style="background-color: #d1ecf1; font-weight: bold;">
+                                                            <tr>
+                                                                <td colspan="6" class="text-right pr-2">Subtotal detalle</td>
+                                                                <td class="text-right">@detSubtotal.ToString("N2")</td>
+                                                                <td class="text-right">@detIgv.ToString("N2")</td>
+                                                                <td class="text-right">@detRenta.ToString("N2")</td>
+                                                                <td class="text-right">@detTotal.ToString("N2")</td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                }
+                                                else
+                                                {
+                                                    <div class="text-center text-muted py-2">
+                                                        <i class="fas fa-inbox mr-1"></i> Sin comprobantes en el detalle
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot style="background-color: #1a6a9a; color: white; font-weight: bold;">
+                                    <tr>
+                                        <td colspan="8" class="text-right">TOTAL GENERAL:</td>
+                                        <td class="text-right">@(liquidaciones.Sum(l => l.MtoSubtotalAcum ?? 0).ToString("N2"))</td>
+                                        <td class="text-right">@(liquidaciones.Sum(l => l.MtoIgvAcum ?? 0).ToString("N2"))</td>
+                                        <td class="text-right">@(liquidaciones.Sum(l => l.MtoRentaAcum ?? 0).ToString("N2"))</td>
+                                        <td class="text-right">@(liquidaciones.Sum(l => l.MtoTotalAcum ?? 0).ToString("N2"))</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p class="mb-0">No hay liquidaciones asociadas</p>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -392,6 +570,85 @@
 
 @section Scripts {
     <script type="text/javascript">
+        // --- Liquidaciones 2: Treeview ---
+        function liq2Toggle(id, rowEl) {
+            var detRow = document.getElementById(id);
+            var ico    = document.getElementById('ico-' + id);
+            if (!detRow) return;
+            var isVisible = detRow.style.display !== 'none';
+            detRow.style.display = isVisible ? 'none' : '';
+            if (ico) {
+                ico.classList.toggle('fa-chevron-right', isVisible);
+                ico.classList.toggle('fa-chevron-down',  !isVisible);
+            }
+            if (rowEl) rowEl.style.backgroundColor = isVisible ? '#e8f4fd' : '#cce5f6';
+        }
+
+        function liq2ExpandAll() {
+            document.querySelectorAll('.liq2-detail').forEach(function (row) {
+                var id = row.id;
+                row.style.display = '';
+                var ico = document.getElementById('ico-' + id);
+                if (ico) { ico.classList.remove('fa-chevron-right'); ico.classList.add('fa-chevron-down'); }
+            });
+            document.querySelectorAll('.liq2-header').forEach(function (r) { r.style.backgroundColor = '#cce5f6'; });
+        }
+
+        function liq2CollapseAll() {
+            document.querySelectorAll('.liq2-detail').forEach(function (row) {
+                var id = row.id;
+                row.style.display = 'none';
+                var ico = document.getElementById('ico-' + id);
+                if (ico) { ico.classList.remove('fa-chevron-down'); ico.classList.add('fa-chevron-right'); }
+            });
+            document.querySelectorAll('.liq2-header').forEach(function (r) { r.style.backgroundColor = '#e8f4fd'; });
+        }
+        // --- fin Liquidaciones 2 ---
+
+        function anularOrdenPago() {
+            var guid = document.getElementById('hdnGuidOrdenPago').value;
+            Swal.fire({
+                icon: 'warning',
+                title: 'Anular Orden de Pago',
+                html: '\u00bfEst\u00e1 seguro que desea <strong>anular</strong> esta orden de pago?<br/><small class="text-muted">Las producciones asociadas volver\u00e1n al estado <em>Factura Liquidada</em>.</small>',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'S\u00ed, Anular',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    var formData = new FormData();
+                    formData.append('guid', guid);
+                    formData.append('__RequestVerificationToken', token);
+
+                    fetch('@Url.Action("Anular", "OrdenPago")', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Anulada',
+                                text: data.message,
+                                confirmButtonColor: '#28a745'
+                            }).then(() => {
+                                window.location.href = '@Url.Action("Index", "OrdenPago")';
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#dc3545' });
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+                    });
+                }
+            });
+        }
+
         function enviarAprobacion() {
             Swal.fire({
                 icon: 'question',
@@ -409,38 +666,5 @@
             });
         }
 
-        function aprobarOrden() {
-            Swal.fire({
-                icon: 'question',
-                title: 'Aprobar Orden de Pago',
-                text: '\u00bfEst\u00e1 seguro que desea aprobar esta orden de pago?',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'S\u00ed, Aprobar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    toastr.info('Funcionalidad en desarrollo', 'Aprobar');
-                }
-            });
-        }
-
-        function rechazarOrden() {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Rechazar Orden de Pago',
-                text: '\u00bfEst\u00e1 seguro que desea rechazar esta orden de pago?',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'S\u00ed, Rechazar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    toastr.info('Funcionalidad en desarrollo', 'Rechazar');
-                }
-            });
-        }
     </script>
 }
