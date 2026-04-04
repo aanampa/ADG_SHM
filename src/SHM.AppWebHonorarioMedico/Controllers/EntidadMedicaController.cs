@@ -414,7 +414,7 @@ public class EntidadMedicaController : Controller
     [HttpGet]
     public async Task<IActionResult> GetCreateCuentaBancariaModal(string entidadGuid)
     {
-        var bancos = await _bancoService.GetBancosConCuentasAsync();
+        var bancos = await _bancoService.GetAllBancosAsync();
         var model = new CuentaBancariaCreateViewModel
         {
             EntidadGuid = entidadGuid,
@@ -492,7 +492,7 @@ public class EntidadMedicaController : Controller
                 return NotFound();
             }
 
-            var bancos = await _bancoService.GetBancosConCuentasAsync();
+            var bancos = await _bancoService.GetAllBancosAsync();
             var model = new CuentaBancariaEditViewModel
             {
                 GuidRegistro = cuenta.GuidRegistro,

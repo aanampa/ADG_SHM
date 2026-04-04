@@ -946,6 +946,14 @@ public class UsuarioController : Controller
                 return Json(new { success = false, message = "Usuario no encontrado" });
             }
 
+            // Validar que el usuario no tenga ya un perfil asignado
+            var perfilesExistentes = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(usuario.IdUsuario);
+            if (perfilesExistentes.Any())
+            {
+                var perfilActual = perfilesExistentes.First();
+                return Json(new { success = false, message = $"El usuario ya tiene asignado el perfil '{perfilActual.NombrePerfil}'. Solo se permite un perfil por usuario." });
+            }
+
             var createDto = new CreatePerfilAprobacionUsuarioDto
             {
                 IdPerfilAprobacion = request.IdPerfilAprobacion,

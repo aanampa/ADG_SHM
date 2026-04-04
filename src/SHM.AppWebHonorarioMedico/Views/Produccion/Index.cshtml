@@ -67,6 +67,9 @@
                             <div class="col-md-2 text-right">
                                 <label class="mb-1 small">&nbsp;</label>
                                 <div>
+                                    <button type="button" class="btn btn-success btn-sm mr-1" onclick="abrirModalSolicitudMasiva()" title="Solicitar factura a múltiples producciones">
+                                        <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
+                                    </button>
                                     <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
                                         <i class="fas fa-file-excel mr-1"></i>Exportar
                                     </button>
@@ -290,6 +293,31 @@
             const filterParams = getFilterQueryString();
             const url = '@Url.Action("Detalle")/' + guid + (filterParams ? '?' + filterParams : '');
             window.location.href = url;
+        }
+
+        function abrirModalSolicitudMasiva() {
+            const container = document.getElementById('modalContainer');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalSolicitudMasiva", "Produccion")')
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    // Los scripts dentro de innerHTML no se ejecutan automaticamente
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    console.error('Error al cargar modal solicitud masiva:', err);
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
         }
 
         function exportToExcel() {

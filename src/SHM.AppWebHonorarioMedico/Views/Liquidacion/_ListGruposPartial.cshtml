@@ -16,7 +16,8 @@
             <tr>
                 <th class="text-center align-middle" align="center" style="width: 10px;">
                     Sel.
-                </th>                
+                </th>
+                <th class="align-middle text-center" style="width: 50px;">Detalle</th>
                 <th class="align-middle" style="width: 100px;">Cod.<br/>Liquidacion</th>
                 <th class="align-middle" style="width: 120px;">Tipo Médico</th>
                 <th class="align-middle" style="width: 150px;">Tipo Liquidación</th>
@@ -25,8 +26,7 @@
                 <th class="align-middle">Descripcion</th>
                 <th class="align-middle" style="width: 250px;">Banco</th>
                 <th class="align-middle" style="width: 60px;">Cant. Fact.</th>
-                <th class="align-middle" style="width: 100px;">Total S/.</th>
-                <th class="align-middle" style="width: 60px;">Detalle</th>
+                <th class="align-middle text-right" style="width: 100px;">Total S/.</th>
             </tr>
         </thead>
         <tbody>
@@ -42,6 +42,13 @@
                                    data-banco="@item.IdBanco"
                                    onchange="onCheckboxChange(this, '@item.CodigoLiquidacion', @(item.IdBanco ?? 0), '@(item.NombreBanco?.Replace("'", "\\'") ?? "-")')" />
                         </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-info btn-xs"
+                                    onclick="verProducciones('@item.CodigoLiquidacion', @(item.IdBanco ?? 0), '@(item.Descripcion?.Replace("'", "\\'") ?? "-")', '@(item.DesTipoProduccion?.Replace("'", "\\'") ?? "-")', '@(item.NumeroLiquidacion?.Replace("'", "\\'") ?? "-")')"
+                                    title="Ver Facturas">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </td>
                         <td>@(item.NumeroLiquidacion ?? "-")</td>
                         <td>@(item.DesTipoMedico ?? "-")</td>
                         <td>@(item.DesTipoProduccion ?? "-")</td>
@@ -53,13 +60,6 @@
                             <span class="badge badge-info">@item.CantidadFacturas</span>
                         </td>
                         <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-info btn-xs"
-                                    onclick="verProducciones('@item.CodigoLiquidacion', @(item.IdBanco ?? 0), '@(item.Descripcion?.Replace("'", "\\'") ?? "-")', '@(item.DesTipoProduccion?.Replace("'", "\\'") ?? "-")', '@(item.NumeroLiquidacion?.Replace("'", "\\'") ?? "-")')"
-                                    title="Ver Facturas">
-                                <i class="fas fa-list"></i>
-                            </button>
-                        </td>
                     </tr>
                 }
             }

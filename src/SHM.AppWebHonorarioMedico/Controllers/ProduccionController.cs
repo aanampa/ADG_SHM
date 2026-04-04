@@ -30,6 +30,7 @@ public class ProduccionController : Controller
     private readonly IBitacoraService _bitacoraService;
     private readonly IConfiguration _configuration;
     private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly IUsuarioService _usuarioService;
 
     public ProduccionController(
         ILogger<ProduccionController> logger,
@@ -42,7 +43,8 @@ public class ProduccionController : Controller
         IBancoService bancoService,
         IBitacoraService bitacoraService,
         IConfiguration configuration,
-        ISanPabloApiService sanPabloApiService)
+        ISanPabloApiService sanPabloApiService,
+        IUsuarioService usuarioService)
     {
         _logger = logger;
         _produccionService = produccionService;
@@ -55,6 +57,7 @@ public class ProduccionController : Controller
         _bitacoraService = bitacoraService;
         _configuration = configuration;
         _sanPabloApiService = sanPabloApiService;
+        _usuarioService = usuarioService;
     }
 
     /// <summary>
@@ -206,15 +209,18 @@ public class ProduccionController : Controller
             string? cuentaCorriente = null;
             string? cuentaCci = null;
             string? moneda = null;
+            int cantCuentasActivas = 0;
 
             if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
             {
                 var cuentasBancarias = await _entidadCuentaBancariaService
                     .GetEntidadCuentasBancariasByEntidadIdAsync(produccion.IdEntidadMedica.Value);
-                var cuentaBancaria = cuentasBancarias.FirstOrDefault(c => c.Activo == 1);
+                var cuentasActivas = cuentasBancarias.Where(c => c.Activo == 1).ToList();
+                cantCuentasActivas = cuentasActivas.Count;
 
-                if (cuentaBancaria != null)
+                if (cantCuentasActivas == 1)
                 {
+                    var cuentaBancaria = cuentasActivas[0];
                     cuentaCorriente = cuentaBancaria.CuentaCorriente;
                     cuentaCci = cuentaBancaria.CuentaCci;
                     moneda = cuentaBancaria.Moneda;
@@ -231,10 +237,20 @@ public class ProduccionController : Controller
             ViewBag.CuentaCorriente = cuentaCorriente;
             ViewBag.CuentaCci = cuentaCci;
             ViewBag.Moneda = moneda;
+            ViewBag.CantCuentasActivas = cantCuentasActivas;
 
             // Cargar bitacora de la produccion
             var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_PRODUCCION", produccion.IdProduccion);
             ViewBag.Bitacoras = bitacoras.ToList();
+
+            // Verificar si la entidad medica tiene usuarios externos activos (para habilitar Solicitar Factura)
+            var tieneUsuariosExternos = false;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var usuariosEntidad = await _usuarioService.GetUsuariosByEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
+                tieneUsuariosExternos = usuariosEntidad.Any(u => u.TipoUsuario == "E");
+            }
+            ViewBag.TieneUsuariosExternos = tieneUsuariosExternos;
 
             return View(produccion);
         }
@@ -306,6 +322,193 @@ public class ProduccionController : Controller
         {
             _logger.LogError(ex, "Error al solicitar factura: {Guid}", solicitud?.GuidRegistro);
             return Json(new { success = false, message = "Error al procesar la solicitud" });
+        }
+    }
+
+    /// <summary>
+    /// Retorna el modal para solicitud masiva de facturas.
+    /// Lista todos los registros en estado FACTURA_PENDIENTE y FACTURA_SOLICITADA,
+    /// validando que cada uno cumpla con las condiciones para ser enviado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-03</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetModalSolicitudMasiva()
+    {
+        try
+        {
+            // Filtrar por sede del usuario logueado (igual que GetList)
+            var idSede = GetCurrentUserIdSede();
+
+            // Obtener todos los registros FACTURA_PENDIENTE y FACTURA_SOLICITADA
+            var allItems = new List<AppDomain.DTOs.Produccion.ProduccionListaResponseDto>();
+            foreach (var estado in new[] {
+                EstadoDescripcion.Produccion.FacturaPendiente,
+                EstadoDescripcion.Produccion.FacturaSolicitada })
+            {
+                var (items, _) = await _produccionService.GetPaginatedListAsync(
+                    null, estado, null, idSede, 1, 500);
+                allItems.AddRange(items);
+            }
+
+            // Cache de validacion por entidad medica (evitar llamadas repetidas)
+            var usuariosCache = new Dictionary<int, bool>();
+            var cuentasCache = new Dictionary<int, int>();
+
+            var viewItems = new List<Models.SolicitudMasivaItemViewModel>();
+            foreach (var item in allItems)
+            {
+                bool habilitado = true;
+                string? motivo = null;
+
+                if (item.IdEntidadMedica.HasValue)
+                {
+                    int idEnt = item.IdEntidadMedica.Value;
+
+                    if (!usuariosCache.ContainsKey(idEnt))
+                    {
+                        var usuarios = await _usuarioService.GetUsuariosByEntidadMedicaAsync(idEnt);
+                        usuariosCache[idEnt] = usuarios.Any(u => u.TipoUsuario == "E");
+                    }
+
+                    if (!cuentasCache.ContainsKey(idEnt))
+                    {
+                        var cuentas = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(idEnt);
+                        cuentasCache[idEnt] = cuentas.Count(c => c.Activo == 1);
+                    }
+
+                    bool tieneUsuarios = usuariosCache[idEnt];
+                    int nroCuentas = cuentasCache[idEnt];
+
+                    if (!tieneUsuarios)
+                    {
+                        habilitado = false;
+                        motivo = "Sin usuarios externos";
+                    }
+                    else if (nroCuentas == 0)
+                    {
+                        habilitado = false;
+                        motivo = "Sin cuenta bancaria activa";
+                    }
+                    else if (nroCuentas > 1)
+                    {
+                        habilitado = false;
+                        motivo = $"Tiene {nroCuentas} cuentas bancarias activas";
+                    }
+                }
+                else
+                {
+                    habilitado = false;
+                    motivo = "Sin compañía médica asignada";
+                }
+
+                viewItems.Add(new Models.SolicitudMasivaItemViewModel
+                {
+                    GuidRegistro = item.GuidRegistro ?? string.Empty,
+                    NumeroProduccion = item.NumeroProduccion,
+                    DesTipoProduccion = item.DesTipoProduccion,
+                    DesTipoMedico = item.DesTipoMedico,
+                    RazonSocial = item.RazonSocial,
+                    Periodo = item.Periodo,
+                    MtoTotal = item.MtoTotal,
+                    Estado = item.Estado,
+                    DesEstado = item.DesEstado,
+                    Habilitado = habilitado,
+                    MotivoDeshabilitado = motivo,
+                    FechaLimite = item.FechaLimite
+                });
+            }
+
+            var model = new Models.SolicitudMasivaViewModel { Items = viewItems };
+            return PartialView("_SolicitudMasivaModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar modal de solicitud masiva");
+            return StatusCode(500, "Error al cargar el modal");
+        }
+    }
+
+    /// <summary>
+    /// Procesa la solicitud masiva de facturas para una lista de GUIDs.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-03</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> SolicitarFacturaMasivo([FromBody] SolicitudMasivaRequestDto solicitud)
+    {
+        try
+        {
+            if (solicitud == null || solicitud.Guids == null || !solicitud.Guids.Any())
+                return Json(new { success = false, message = "Debe seleccionar al menos un registro" });
+
+            if (string.IsNullOrEmpty(solicitud.Fecha) || string.IsNullOrEmpty(solicitud.Hora))
+                return Json(new { success = false, message = "La fecha y hora límite son requeridas" });
+
+            var idUsuario = GetCurrentUserId();
+            int enviados = 0;
+            int errores = 0;
+            var detalleErrores = new List<string>();
+
+            foreach (var guid in solicitud.Guids)
+            {
+                try
+                {
+                    var dto = new AppDomain.DTOs.Produccion.SolicitarFacturaDto
+                    {
+                        GuidRegistro = guid,
+                        Fecha = solicitud.Fecha,
+                        Hora = solicitud.Hora
+                    };
+
+                    var resultado = await _produccionService.SolicitarFacturaAsync(dto, idUsuario);
+                    if (resultado)
+                    {
+                        var produccion = await _produccionService.GetProduccionByGuidAsync(guid);
+                        if (produccion != null)
+                        {
+                            var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                            {
+                                Entidad = "SHM_PRODUCCION",
+                                IdEntidad = produccion.IdProduccion,
+                                Accion = EstadoDescripcion.Produccion.FacturaSolicitada,
+                                Descripcion = $"Factura Solicitada (masivo) con fecha limite el {solicitud.Fecha} a las {solicitud.Hora} horas",
+                                FechaAccion = DateTime.Now
+                            };
+                            await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                        }
+                        enviados++;
+                    }
+                    else
+                    {
+                        errores++;
+                        detalleErrores.Add(guid);
+                    }
+                }
+                catch (Exception exItem)
+                {
+                    _logger.LogError(exItem, "Error al solicitar factura masiva para GUID: {Guid}", guid);
+                    errores++;
+                    detalleErrores.Add(guid);
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                enviados,
+                errores,
+                message = errores == 0
+                    ? $"Se procesaron {enviados} solicitud(es) correctamente."
+                    : $"Se procesaron {enviados} correctamente y {errores} con error."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en solicitud masiva de facturas");
+            return Json(new { success = false, message = "Error al procesar la solicitud masiva" });
         }
     }
 
