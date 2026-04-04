@@ -185,6 +185,18 @@ public class OrdenPagoService : IOrdenPagoService
     }
 
     /// <summary>
+    /// Anula una orden de pago por su GUID y revierte las producciones a FACTURA_LIQUIDADA.
+    /// </summary>
+    public async Task<bool> AnularAsync(string guid, int idModificador)
+    {
+        var orden = await _ordenPagoRepository.GetByGuidAsync(guid);
+        if (orden == null)
+            return false;
+
+        return await _ordenPagoRepository.AnularAsync(orden.IdOrdenPago, idModificador);
+    }
+
+    /// <summary>
     /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
     /// </summary>
     public async Task<(IEnumerable<OrdenPagoResponseDto> Items, int TotalCount)> GetPaginatedListAsync(

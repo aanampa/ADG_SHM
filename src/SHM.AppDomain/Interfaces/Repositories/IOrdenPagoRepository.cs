@@ -39,4 +39,9 @@ public interface IOrdenPagoRepository
     /// Obtiene las ordenes de pago que el usuario ya aprobo.
     /// </summary>
     Task<IEnumerable<OrdenPago>> GetApprovedByUserAsync(int idUsuario);
+
+    /// <summary>
+    /// Anula una orden de pago y revierte las producciones asociadas a FACTURA_LIQUIDADA.
+    /// </summary>
+    Task<bool> AnularAsync(int idOrdenPago, int idModificador);
 }

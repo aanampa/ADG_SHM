@@ -39,4 +39,10 @@ public interface IEmailLogRepository
     /// Obtiene logs de email por destinatario.
     /// </summary>
     Task<IEnumerable<EmailLog>> GetByEmailDestinoAsync(string emailDestino);
+
+    /// <summary>
+    /// Obtiene el listado paginado de logs de email con filtros opcionales.
+    /// </summary>
+    Task<(IEnumerable<EmailLog> Items, int TotalCount)> GetPaginatedListAsync(
+        string? tipoEmail, string? estado, string? emailDestino, int pageNumber, int pageSize);
 }

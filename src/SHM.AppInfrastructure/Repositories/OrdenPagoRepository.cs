@@ -431,8 +431,64 @@ public class OrdenPagoRepository : IOrdenPagoRepository
     }
 
     /// <summary>
-    /// Obtiene las ordenes de pago que el usuario ya aprobo.
-    /// Busca en SHM_ORDEN_PAGO_APROBACION los registros donde el usuario tiene estado APROBADO.
+    /// Anula una orden de pago y revierte sus producciones asociadas a FACTURA_LIQUIDADA.
+    /// Ejecuta ambas operaciones dentro de una transaccion.
+    /// </summary>
+    public async Task<bool> AnularAsync(int idOrdenPago, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            var sqlAnularOrden = @"
+                UPDATE SHM_ORDEN_PAGO
+                SET ESTADO = 'ANULADO',
+                    ID_MODIFICADOR = :IdModificador,
+                    FECHA_MODIFICACION = SYSDATE
+                WHERE ID_ORDEN_PAGO = :IdOrdenPago";
+
+            var rowsOrden = await connection.ExecuteAsync(sqlAnularOrden,
+                new { IdOrdenPago = idOrdenPago, IdModificador = idModificador },
+                transaction);
+
+            if (rowsOrden == 0)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            var sqlRevertirProducciones = @"
+                UPDATE SHM_PRODUCCION T1
+                SET T1.ESTADO = 'FACTURA_LIQUIDADA',
+                    T1.ID_MODIFICADOR = :IdModificador,
+                    T1.FECHA_MODIFICACION = SYSDATE
+                WHERE T1.ACTIVO = 1
+                  AND T1.ID_PRODUCCION IN (
+                      SELECT opp.ID_PRODUCCION
+                      FROM SHM_ORDEN_PAGO_PRODUCCION opp
+                      WHERE opp.ID_ORDEN_PAGO = :IdOrdenPago
+                        AND opp.ACTIVO = 1
+                  )";
+
+            await connection.ExecuteAsync(sqlRevertirProducciones,
+                new { IdOrdenPago = idOrdenPago, IdModificador = idModificador },
+                transaction);
+
+            transaction.Commit();
+            return true;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene las ordenes de pago procesadas por el usuario (aprobadas o devueltas).
+    /// Busca en SHM_ORDEN_PAGO_APROBACION los registros donde el usuario tiene estado APROBADO o DEVUELTO.
     /// </summary>
     public async Task<IEnumerable<OrdenPago>> GetApprovedByUserAsync(int idUsuario)
     {
@@ -440,7 +496,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
 
         var sql = $@"{SELECT_BASE}
             INNER JOIN SHM_ORDEN_PAGO_APROBACION opa ON op.ID_ORDEN_PAGO = opa.ID_ORDEN_PAGO
-                AND opa.ACTIVO = 1 AND opa.ESTADO = 'APROBADO'
+                AND opa.ACTIVO = 1 AND opa.ESTADO IN ('APROBADO', 'DEVUELTO')
             INNER JOIN SHM_PERFIL_APROBACION_USUARIO pau ON opa.ID_PERFIL_APROBACION = pau.ID_PERFIL_APROBACION
                 AND pau.ID_USUARIO = :IdUsuario
             WHERE op.ACTIVO = 1

@@ -245,6 +245,61 @@ public class EmailLogRepository : IEmailLogRepository
     }
 
     /// <summary>
+    /// Obtiene el listado paginado de logs de email con filtros opcionales.
+    /// Compatible con Oracle 11g (ROWNUM).
+    /// </summary>
+    public async Task<(IEnumerable<EmailLog> Items, int TotalCount)> GetPaginatedListAsync(
+        string? tipoEmail, string? estado, string? emailDestino, int pageNumber, int pageSize)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var whereClause = "WHERE ACTIVO = 1";
+        if (!string.IsNullOrEmpty(tipoEmail))
+            whereClause += " AND TIPO_EMAIL = :TipoEmail";
+        if (!string.IsNullOrEmpty(estado))
+            whereClause += " AND ESTADO = :Estado";
+        if (!string.IsNullOrEmpty(emailDestino))
+            whereClause += " AND UPPER(EMAIL_DESTINO) LIKE UPPER(:EmailDestino)";
+
+        var countSql = $"SELECT COUNT(1) FROM SHM_EMAIL_LOG {whereClause}";
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql,
+            new { TipoEmail = tipoEmail, Estado = estado, EmailDestino = $"%{emailDestino}%" });
+
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
+
+        var sql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        ID_EMAIL_LOG AS IdEmailLog,
+                        GUID_REGISTRO AS GuidRegistro,
+                        EMAIL_DESTINO AS EmailDestino,
+                        NOMBRE_DESTINO AS NombreDestino,
+                        ASUNTO AS Asunto,
+                        TIPO_EMAIL AS TipoEmail,
+                        ES_HTML AS EsHtml,
+                        ESTADO AS Estado,
+                        MENSAJE_ERROR AS MensajeError,
+                        ID_USUARIO AS IdUsuario,
+                        ENTIDAD_REFERENCIA AS EntidadReferencia,
+                        ID_REFERENCIA AS IdReferencia,
+                        SERVIDOR_SMTP AS ServidorSmtp,
+                        ACTIVO AS Activo,
+                        FECHA_CREACION AS FechaCreacion
+                    FROM SHM_EMAIL_LOG
+                    {whereClause}
+                    ORDER BY ID_EMAIL_LOG DESC
+                ) a WHERE ROWNUM <= :MaxRow
+            ) WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<EmailLog>(sql,
+            new { TipoEmail = tipoEmail, Estado = estado, EmailDestino = $"%{emailDestino}%", MaxRow = maxRow, MinRow = minRow });
+
+        return (items, totalCount);
+    }
+
+    /// <summary>
     /// Obtiene logs de email por destinatario.
     /// </summary>
     public async Task<IEnumerable<EmailLog>> GetByEmailDestinoAsync(string emailDestino)

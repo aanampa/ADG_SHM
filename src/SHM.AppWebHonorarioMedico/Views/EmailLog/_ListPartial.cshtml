@@ -1,0 +1,146 @@
+@model List<SHM.AppDomain.Entities.EmailLog>
+
+<style>
+    thead th {
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+</style>
+
+<div class="card-body table-responsive px-2 py-1">
+    <table class="table table-sm table-bordered" style="font-size: 13px; background-color: #FFFFFF; width: 100%;">
+        <thead style="background-color: #6c757d; color: #fff;">
+            <tr>
+                <th class="align-middle text-center" style="width: 46px;">Ver</th>
+                <th class="align-middle" style="width: 130px;">Fecha</th>
+                <th class="align-middle" style="width: 160px;">Tipo</th>
+                <th class="align-middle">Email Destino</th>
+                <th class="align-middle">Nombre Destino</th>
+                <th class="align-middle">Asunto</th>
+                <th class="align-middle" style="width: 90px;">Estado</th>
+                <th class="align-middle" style="width: 90px;">Servidor SMTP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                @foreach (var item in Model)
+                {
+                    var estadoBadge = item.Estado == "ENVIADO" ? "badge-success" : "badge-danger";
+                    var estadoLabel = item.Estado == "ENVIADO" ? "Enviado" : (item.Estado == "ERROR" ? "Error" : item.Estado);
+                    var fechaStr = item.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "-";
+                    var tipoLabel = item.TipoEmail switch {
+                        "NUEVO_USUARIO" => "Nuevo Usuario",
+                        "RESET_CLAVE" => "Reset de Clave",
+                        "RECUPERACION_CLAVE" => "Recuperación de Clave",
+                        "SOLICITUD_FACTURA" => "Solicitud de Factura",
+                        "NOTIFICACION_APROBACION" => "Notif. Aprobación",
+                        _ => item.TipoEmail
+                    };
+                    <tr>
+                        <td class="text-center">
+                            <button type="button"
+                                    class="btn btn-info btn-xs btn-ver-email"
+                                    title="Ver contenido del correo"
+                                    data-id="@item.IdEmailLog"
+                                    data-asunto="@item.Asunto"
+                                    data-nombre="@(item.NombreDestino ?? "")"
+                                    data-email="@item.EmailDestino"
+                                    data-tipo="@tipoLabel"
+                                    data-fecha="@fechaStr"
+                                    data-error="@(item.MensajeError ?? "")">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                        <td class="text-center text-nowrap">@fechaStr</td>
+                        <td>
+                            <span class="badge badge-secondary" style="font-size: 11px;">@tipoLabel</span>
+                        </td>
+                        <td>@item.EmailDestino</td>
+                        <td>@(item.NombreDestino ?? "-")</td>
+                        <td>
+                            <span title="@item.Asunto">
+                                @(item.Asunto?.Length > 60 ? item.Asunto.Substring(0, 60) + "…" : item.Asunto ?? "-")
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge @estadoBadge">@estadoLabel</span>
+                        </td>
+                        <td class="text-center small text-muted">@(item.ServidorSmtp ?? "-")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No se encontraron registros
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@{
+    var pageNumber = (int)(ViewBag.PageNumber ?? 1);
+    var pageSize = (int)(ViewBag.PageSize ?? 15);
+    var totalCount = (int)(ViewBag.TotalCount ?? 0);
+    var totalPages = (int)(ViewBag.TotalPages ?? 0);
+}
+
+@if (totalPages > 1)
+{
+    <div class="card-footer clearfix">
+        <div class="float-left">
+            <small class="text-muted">
+                Mostrando @((pageNumber - 1) * pageSize + 1) -
+                @(Math.Min(pageNumber * pageSize, totalCount)) de @totalCount registros
+            </small>
+        </div>
+        <ul class="pagination pagination-sm m-0 float-right">
+            <li class="page-item @(pageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" href="javascript:void(0)"
+                   onclick="@(pageNumber > 1 ? $"loadList({pageNumber - 1})" : "")">Anterior</a>
+            </li>
+            @{
+                int startPage = Math.Max(1, pageNumber - 2);
+                int endPage = Math.Min(totalPages, pageNumber + 2);
+            }
+            @if (startPage > 1)
+            {
+                <li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadList(1)">1</a></li>
+                @if (startPage > 2)
+                {
+                    <li class="page-item disabled"><a class="page-link">…</a></li>
+                }
+            }
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                var p = i;
+                <li class="page-item @(i == pageNumber ? "active" : "")">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@p)">@i</a>
+                </li>
+            }
+            @if (endPage < totalPages)
+            {
+                @if (endPage < totalPages - 1)
+                {
+                    <li class="page-item disabled"><a class="page-link">…</a></li>
+                }
+                <li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadList(@totalPages)">@totalPages</a></li>
+            }
+            <li class="page-item @(pageNumber == totalPages ? "disabled" : "")">
+                <a class="page-link" href="javascript:void(0)"
+                   onclick="@(pageNumber < totalPages ? $"loadList({pageNumber + 1})" : "")">Siguiente</a>
+            </li>
+        </ul>
+    </div>
+}
+else if (totalCount > 0)
+{
+    <div class="card-footer">
+        <small class="text-muted">Mostrando @totalCount registro(s)</small>
+    </div>
+}

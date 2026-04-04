@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Constants;
+using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -187,6 +189,25 @@ public class OrdenPagoAprobacionController : Controller
 
             var (success, message) = await _ordenPagoAprobacionService.AprobarAsync(ordenPago.IdOrdenPago, userId.Value);
 
+            if (success)
+            {
+                var ordenActualizada = await _ordenPagoService.GetByGuidAsync(request.GuidOrdenPago);
+                var esAprobacionTotal = ordenActualizada?.Estado == EstadoDescripcion.OrdenPago.Aprobado;
+
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_ORDEN_PAGO",
+                    IdEntidad = ordenPago.IdOrdenPago,
+                    Accion = esAprobacionTotal
+                        ? EstadoDescripcion.OrdenPago.Aprobado
+                        : EstadoDescripcion.Aprobacion.Aprobado,
+                    Descripcion = esAprobacionTotal
+                        ? $"Orden de Pago aprobada completamente: {ordenPago.NumeroOrdenPago}. Todos los niveles de aprobación han sido completados."
+                        : $"Nivel de aprobación aprobado: {ordenPago.NumeroOrdenPago}. Pendiente aprobación del siguiente nivel.",
+                    FechaAccion = DateTime.Now
+                }, userId.Value);
+            }
+
             _logger.LogInformation("Aprobacion de orden de pago {NumeroOP}: {Resultado} por usuario {UserId}",
                 ordenPago.NumeroOrdenPago, success ? "APROBADO" : "FALLIDO", userId);
 
@@ -224,6 +245,18 @@ public class OrdenPagoAprobacionController : Controller
 
             var (success, message) = await _ordenPagoAprobacionService.RechazarAsync(
                 ordenPago.IdOrdenPago, userId.Value, request.Comentario);
+
+            if (success)
+            {
+                await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+                {
+                    Entidad = "SHM_ORDEN_PAGO",
+                    IdEntidad = ordenPago.IdOrdenPago,
+                    Accion = EstadoDescripcion.OrdenPago.Devuelto,
+                    Descripcion = $"Orden de Pago devuelta: {ordenPago.NumeroOrdenPago}. Comentario: {request.Comentario}",
+                    FechaAccion = DateTime.Now
+                }, userId.Value);
+            }
 
             _logger.LogInformation("Rechazo de orden de pago {NumeroOP}: {Resultado} por usuario {UserId}",
                 ordenPago.NumeroOrdenPago, success ? "RECHAZADO" : "FALLIDO", userId);

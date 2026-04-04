@@ -126,6 +126,14 @@
                         </div>
                     </div>
                 </div>
+                @if (Model.Estado == EstadoDescripcion.OrdenPago.Devuelto || Model.Estado == EstadoDescripcion.OrdenPago.AprobacionPendiente)
+                {
+                    <div class="card-footer py-2">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="anularOrdenPago()">
+                            <i class="fas fa-ban mr-1"></i>Anular
+                        </button>
+                    </div>
+                }
             </div>
 
             <!-- Detalle de aprobacion -->
@@ -596,6 +604,50 @@
             document.querySelectorAll('.liq2-header').forEach(function (r) { r.style.backgroundColor = '#e8f4fd'; });
         }
         // --- fin Liquidaciones 2 ---
+
+        function anularOrdenPago() {
+            var guid = document.getElementById('hdnGuidOrdenPago').value;
+            Swal.fire({
+                icon: 'warning',
+                title: 'Anular Orden de Pago',
+                html: '\u00bfEst\u00e1 seguro que desea <strong>anular</strong> esta orden de pago?<br/><small class="text-muted">Las producciones asociadas volver\u00e1n al estado <em>Factura Liquidada</em>.</small>',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'S\u00ed, Anular',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    var formData = new FormData();
+                    formData.append('guid', guid);
+                    formData.append('__RequestVerificationToken', token);
+
+                    fetch('@Url.Action("Anular", "OrdenPago")', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Anulada',
+                                text: data.message,
+                                confirmButtonColor: '#28a745'
+                            }).then(() => {
+                                window.location.href = '@Url.Action("Index", "OrdenPago")';
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#dc3545' });
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+                    });
+                }
+            });
+        }
 
         function enviarAprobacion() {
             Swal.fire({

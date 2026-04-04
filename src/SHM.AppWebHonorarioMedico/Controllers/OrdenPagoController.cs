@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Constants;
+using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -168,6 +170,62 @@ public class OrdenPagoController : Controller
             TempData["APP_MESSAGE"] = "Error al obtener la orden de pago.";
             return RedirectToAction("Index");
         }
+    }
+
+    /// <summary>
+    /// Anula una orden de pago en estado DEVUELTO y revierte las producciones a FACTURA_LIQUIDADA.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-02</created>
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Anular([FromForm] string guid)
+    {
+        try
+        {
+            var idUsuario = GetCurrentUserId();
+            if (!idUsuario.HasValue)
+                return Json(new { success = false, message = "Usuario no autenticado." });
+
+            var ordenPago = await _ordenPagoService.GetByGuidAsync(guid);
+            if (ordenPago == null)
+                return Json(new { success = false, message = "Orden de pago no encontrada." });
+
+            var estadosAnulables = new[] { EstadoDescripcion.OrdenPago.Devuelto, EstadoDescripcion.OrdenPago.AprobacionPendiente };
+            if (!estadosAnulables.Contains(ordenPago.Estado))
+                return Json(new { success = false, message = "Solo se pueden anular órdenes en estado Aprobación Pendiente o Devuelto." });
+
+            var resultado = await _ordenPagoService.AnularAsync(guid, idUsuario.Value);
+            if (!resultado)
+                return Json(new { success = false, message = "No se pudo anular la orden de pago." });
+
+            await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+            {
+                Entidad = "SHM_ORDEN_PAGO",
+                IdEntidad = ordenPago.IdOrdenPago,
+                Accion = EstadoDescripcion.OrdenPago.Anulado,
+                Descripcion = $"Orden de Pago anulada: {ordenPago.NumeroOrdenPago}. Las producciones asociadas fueron revertidas a Factura Liquidada.",
+                FechaAccion = DateTime.Now
+            }, idUsuario.Value);
+
+            _logger.LogInformation("Orden de pago {NumeroOrden} anulada por usuario {IdUsuario}", ordenPago.NumeroOrdenPago, idUsuario);
+
+            return Json(new { success = true, message = "Orden de pago anulada correctamente." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al anular orden de pago {Guid}", guid);
+            return Json(new { success = false, message = "Error al anular la orden de pago." });
+        }
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            return userId;
+        return null;
     }
 
     private int? GetCurrentUserIdSede()
