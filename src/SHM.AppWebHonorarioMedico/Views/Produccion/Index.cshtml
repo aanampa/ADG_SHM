@@ -321,8 +321,16 @@
         }
 
         function exportToExcel() {
-            // TODO: Implementar exportacion a Excel
-            toastr.info('Funcionalidad en desarrollo', 'Exportar');
+            const produccion = document.getElementById('txtProduccion').value.trim();
+            const estado = document.getElementById('cboEstado').value;
+            const idEntidadMedica = $('#cboCiaMedica').val() || '';
+
+            const params = new URLSearchParams();
+            if (produccion) params.set('produccion', produccion);
+            if (estado) params.set('estado', estado);
+            if (idEntidadMedica) params.set('idEntidadMedica', idEntidadMedica);
+
+            window.location.href = '@Url.Action("ExportarExcel", "Produccion")?' + params.toString();
         }
 
         // Mapeo de estados a clases CSS (generado desde EstadoDescripcion.Produccion)

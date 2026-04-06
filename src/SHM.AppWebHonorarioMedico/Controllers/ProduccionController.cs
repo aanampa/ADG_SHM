@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -638,6 +639,165 @@ public class ProduccionController : Controller
     // {
     //     return RedirectToAction("Descargar", "Archivo", new { guid });
     // }
+
+    /// <summary>
+    /// Exporta el listado de producciones a un archivo Excel (.xlsx).
+    /// Respeta los mismos filtros y filtro de sede que la lista paginada.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-04</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> ExportarExcel(string? produccion, string? estado, int? idEntidadMedica)
+    {
+        try
+        {
+            var idSede = GetCurrentUserIdSede();
+            var (items, _) = await _produccionService.GetPaginatedListAsync(
+                produccion, estado, idEntidadMedica, idSede, 1, 10000);
+
+            // Cargar catalogo TIPO_COMPROBANTE para lookup
+            var tiposComprobante = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_COMPROBANTE");
+            var dicTipoComprobante = tiposComprobante.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "-");
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Producciones");
+
+            // --- Colores corporativos ---
+            var colorHeader = XLColor.FromHtml("#6c757d");
+            var colorHeaderFont = XLColor.White;
+            var colorAlt = XLColor.FromHtml("#f8f9fa");
+
+            // --- Logo (fila 1) ---
+            ws.Row(1).Height = 36;
+            ws.Range(1, 1, 1, 26).Merge();
+            var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo_login.jpg");
+            if (System.IO.File.Exists(imagePath))
+            {
+                using var imageStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+                var picture = ws.AddPicture(imageStream).MoveTo(ws.Cell("A1"));
+                picture.WithSize(120, 32);
+            }
+
+            // --- Título (fila 2) ---
+            ws.Range(2, 1, 2, 26).Merge();
+            ws.Cell(2, 1).Value = "Reporte de Producciones";
+            ws.Cell(2, 1).Style.Font.Bold = true;
+            ws.Cell(2, 1).Style.Font.FontSize = 14;
+            ws.Cell(2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws.Cell(2, 1).Style.Fill.BackgroundColor = colorHeader;
+            ws.Cell(2, 1).Style.Font.FontColor = colorHeaderFont;
+            ws.Row(2).Height = 22;
+
+            // --- Fecha de generación (fila 3) ---
+            ws.Cell(3, 1).Value = $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            ws.Cell(3, 1).Style.Font.Italic = true;
+            ws.Cell(3, 1).Style.Font.FontSize = 9;
+            ws.Range(3, 1, 3, 26).Merge();
+
+            // --- Encabezados (fila 5) ---
+            int rowHeader = 5;
+            var headers = new[]
+            {
+                "#", "ID", "Cód. Producción", "Tipo Producción", "Tipo Médico", "Tipo Rubro",
+                "Sede", "Periodo", "Descripción",
+                "RUC", "Razón Social", "Tipo Entidad",
+                "Consumo", "Descuento", "Sub Total", "IGV", "Renta", "Total",
+                "Tipo Comprobante", "Serie-Número", "Fecha Emisión",
+                "Estado", "Fecha Límite", "Concepto", "Glosa",
+                "F. Solicitud"
+            };
+            ws.Row(rowHeader).Height = 28;
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = ws.Cell(rowHeader, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontSize = 9;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cell.Style.Alignment.WrapText = true;
+                cell.Style.Fill.BackgroundColor = colorHeader;
+                cell.Style.Font.FontColor = colorHeaderFont;
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            // --- Datos ---
+            int rowIndex = rowHeader + 1;
+            int count = 1;
+            foreach (var item in items)
+            {
+                bool isAlt = count % 2 == 0;
+                var bgColor = isAlt ? colorAlt : XLColor.White;
+
+                ws.Cell(rowIndex, 1).Value = count;
+                ws.Cell(rowIndex, 2).Value = item.IdProduccion;
+                ws.Cell(rowIndex, 3).Value = item.NumeroProduccion ?? "-";
+                ws.Cell(rowIndex, 4).Value = item.DesTipoProduccion ?? item.TipoProduccion ?? "-";
+                ws.Cell(rowIndex, 5).Value = item.DesTipoMedico ?? item.TipoMedico ?? "-";
+                ws.Cell(rowIndex, 6).Value = item.DesTipoRubro ?? item.TipoRubro ?? "-";
+                ws.Cell(rowIndex, 7).Value = item.NombreSede ?? "-";
+                ws.Cell(rowIndex, 8).Value = item.Periodo ?? "-";
+                ws.Cell(rowIndex, 9).Value = item.Descripcion ?? "-";
+                ws.Cell(rowIndex, 10).Value = item.Ruc ?? "-";
+                ws.Cell(rowIndex, 11).Value = item.RazonSocial ?? "-";
+                ws.Cell(rowIndex, 12).Value = item.DesTipoEntidadMedica ?? item.TipoEntidadMedica ?? "-";
+
+                // Montos — formato numérico
+                ws.Cell(rowIndex, 13).Value = item.MtoConsumo ?? 0;
+                ws.Cell(rowIndex, 14).Value = item.MtoDescuento ?? 0;
+                ws.Cell(rowIndex, 15).Value = item.MtoSubtotal ?? 0;
+                ws.Cell(rowIndex, 16).Value = item.MtoIgv ?? 0;
+                ws.Cell(rowIndex, 17).Value = item.MtoRenta ?? 0;
+                ws.Cell(rowIndex, 18).Value = item.MtoTotal ?? 0;
+                for (int col = 13; col <= 18; col++)
+                    ws.Cell(rowIndex, col).Style.NumberFormat.Format = "#,##0.00";
+
+                // Tipo Comprobante: lookup en catalogo
+                var codComp = item.TipoComprobante ?? "";
+                ws.Cell(rowIndex, 19).Value = dicTipoComprobante.TryGetValue(codComp, out var desComp) ? desComp : (codComp == "" ? "-" : codComp);
+                ws.Cell(rowIndex, 20).Value = item.ComprobanteFactura ?? "-";
+                ws.Cell(rowIndex, 21).Value = item.FechaEmision.HasValue ? item.FechaEmision.Value.ToString("dd/MM/yyyy") : "-";
+                ws.Cell(rowIndex, 22).Value = item.DesEstado ?? item.Estado ?? "-";
+                ws.Cell(rowIndex, 23).Value = item.FechaLimite.HasValue ? item.FechaLimite.Value.ToString("dd/MM/yyyy HH:mm") : "-";
+                ws.Cell(rowIndex, 24).Value = item.Concepto ?? "-";
+                ws.Cell(rowIndex, 25).Value = item.Glosa ?? "-";
+                ws.Cell(rowIndex, 26).Value = item.FacturaFechaSolicitud.HasValue ? item.FacturaFechaSolicitud.Value.ToString("dd/MM/yyyy HH:mm") : "-";
+
+                // Estilo de fila
+                ws.Row(rowIndex).Height = 15;
+                for (int col = 1; col <= headers.Length; col++)
+                {
+                    var cell = ws.Cell(rowIndex, col);
+                    cell.Style.Font.FontSize = 9;
+                    cell.Style.Fill.BackgroundColor = bgColor;
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = XLColor.FromHtml("#dee2e6");
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+
+                count++;
+                rowIndex++;
+            }
+
+            // --- Ajustar anchos ---
+            ws.Columns().AdjustToContents(5, 60); // min 5, max 60 chars
+
+            using var ms = new MemoryStream();
+            workbook.SaveAs(ms);
+            ms.Position = 0;
+
+            var fileName = $"Producciones_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al exportar producciones a Excel");
+            return BadRequest("Error al generar el reporte");
+        }
+    }
 
     private int GetCurrentUserId()
     {
