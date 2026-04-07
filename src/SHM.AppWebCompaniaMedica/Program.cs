@@ -8,6 +8,7 @@ using SHM.AppDomain.DTOs.SapApi;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
+using SHM.AppInfrastructure.HealthChecks;
 using SHM.AppInfrastructure.Repositories;
 using SHM.AppWebCompaniaMedica.Services;
 
@@ -110,6 +111,10 @@ try
     // Registrar servicios de la aplicacion web
     builder.Services.AddScoped<FacturaXmlParserService>();
     builder.Services.AddScoped<RheXmlParserService>();
+
+    // Health Checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<OracleHealthCheck>("oracle-database", tags: new[] { "db", "oracle" });
 
     var app = builder.Build();
 
