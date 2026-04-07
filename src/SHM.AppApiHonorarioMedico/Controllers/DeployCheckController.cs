@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using SHM.AppDomain.Interfaces.Services;
 
 namespace SHM.AppApiHonorarioMedico.Controllers;
 
@@ -16,11 +17,19 @@ namespace SHM.AppApiHonorarioMedico.Controllers;
 public class DeployCheckController : ControllerBase
 {
     private readonly IConfiguration _configuration;
+    private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly ISapApiService _sapApiService;
     private readonly ILogger<DeployCheckController> _logger;
 
-    public DeployCheckController(IConfiguration configuration, ILogger<DeployCheckController> logger)
+    public DeployCheckController(
+        IConfiguration configuration,
+        ISanPabloApiService sanPabloApiService,
+        ISapApiService sapApiService,
+        ILogger<DeployCheckController> logger)
     {
         _configuration = configuration;
+        _sanPabloApiService = sanPabloApiService;
+        _sapApiService = sapApiService;
         _logger = logger;
     }
 
@@ -29,9 +38,14 @@ public class DeployCheckController : ControllerBase
     /// TEMPORAL - Solo para uso en validacion de despliegue y pruebas.
     /// </summary>
     [HttpGet("config")]
-    public IActionResult GetConfig()
+    public async Task<IActionResult> GetConfig()
     {
         _logger.LogWarning("Acceso al endpoint temporal DeployCheck/config");
+
+        // Verificar conexion a servicios externos en paralelo
+        var taskSanPablo = _sanPabloApiService.CheckConnectionAsync();
+        var taskSap      = _sapApiService.CheckConnectionAsync();
+        await Task.WhenAll(taskSanPablo, taskSap);
 
         var config = new
         {
@@ -69,6 +83,19 @@ public class DeployCheckController : ControllerBase
                 EndpointToken           = _configuration["SapApi:EndpointToken"],
                 EndpointBancos          = _configuration["SapApi:EndpointBancos"],
                 EndpointCuentasAcreedor = _configuration["SapApi:EndpointCuentasAcreedor"]
+            },
+            serviciosExternos = new
+            {
+                sanPablo = new
+                {
+                    status  = taskSanPablo.Result.Ok ? "OK" : "ERROR",
+                    mensaje = taskSanPablo.Result.Mensaje
+                },
+                sap = new
+                {
+                    status  = taskSap.Result.Ok ? "OK" : "ERROR",
+                    mensaje = taskSap.Result.Mensaje
+                }
             },
             _meta = new
             {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Interfaces.Services;
 using System.Text.Json;
 
 namespace SHM.AppWebHonorarioMedico.Controllers;
@@ -13,11 +14,19 @@ namespace SHM.AppWebHonorarioMedico.Controllers;
 public class DeployCheckController : Controller
 {
     private readonly IConfiguration _configuration;
+    private readonly ISanPabloApiService _sanPabloApiService;
+    private readonly ISapApiService _sapApiService;
     private readonly ILogger<DeployCheckController> _logger;
 
-    public DeployCheckController(IConfiguration configuration, ILogger<DeployCheckController> logger)
+    public DeployCheckController(
+        IConfiguration configuration,
+        ISanPabloApiService sanPabloApiService,
+        ISapApiService sapApiService,
+        ILogger<DeployCheckController> logger)
     {
         _configuration = configuration;
+        _sanPabloApiService = sanPabloApiService;
+        _sapApiService = sapApiService;
         _logger = logger;
     }
 
@@ -25,9 +34,14 @@ public class DeployCheckController : Controller
     /// Retorna el contenido del appsettings.json para validar la configuracion del despliegue.
     /// TEMPORAL - Solo para uso en validacion de despliegue y pruebas.
     /// </summary>
-    public IActionResult Config()
+    public async Task<IActionResult> Config()
     {
         _logger.LogWarning("Acceso al endpoint temporal DeployCheck/Config");
+
+        // Verificar conexion a servicios externos en paralelo
+        var taskSanPablo = _sanPabloApiService.CheckConnectionAsync();
+        var taskSap      = _sapApiService.CheckConnectionAsync();
+        await Task.WhenAll(taskSanPablo, taskSap);
 
         var config = new
         {
@@ -68,6 +82,17 @@ public class DeployCheckController : Controller
             {
                 UploadPath = _configuration["FileStorage:UploadPath"]
             },
+            SanPabloApi = new
+            {
+                BaseUrl                    = _configuration["SanPabloApi:BaseUrl"],
+                Usuario                    = _configuration["SanPabloApi:Usuario"],
+                Password                   = _configuration["SanPabloApi:Password"],
+                TimeoutSeconds             = _configuration["SanPabloApi:TimeoutSeconds"],
+                EndpointLogin              = _configuration["SanPabloApi:EndpointLogin"],
+                EndpointObtenerEntidad     = _configuration["SanPabloApi:EndpointObtenerEntidad"],
+                EndpointObtenerSede        = _configuration["SanPabloApi:EndpointObtenerSede"],
+                EndpointRegistrarComprobante = _configuration["SanPabloApi:EndpointRegistrarComprobante"]
+            },
             SapApi = new
             {
                 BaseUrl        = _configuration["SapApi:BaseUrl"],
@@ -77,6 +102,19 @@ public class DeployCheckController : Controller
                 TimeoutSeconds = _configuration["SapApi:TimeoutSeconds"],
                 EndpointToken  = _configuration["SapApi:EndpointToken"],
                 EndpointBancos = _configuration["SapApi:EndpointBancos"]
+            },
+            serviciosExternos = new
+            {
+                sanPablo = new
+                {
+                    status  = taskSanPablo.Result.Ok ? "OK" : "ERROR",
+                    mensaje = taskSanPablo.Result.Mensaje
+                },
+                sap = new
+                {
+                    status  = taskSap.Result.Ok ? "OK" : "ERROR",
+                    mensaje = taskSap.Result.Mensaje
+                }
             },
             _meta = new
             {
