@@ -37,6 +37,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     private readonly ISapApiService _sapApiService;
     private readonly IEntidadCuentaBancariaRepository _entidadCuentaBancariaRepository;
     private readonly IBancoRepository _bancoRepository;
+    private readonly IParametroService _parametroService;
     private readonly ILogger<ProduccionInterfaceService> _logger;
 
     public ProduccionInterfaceService(
@@ -50,6 +51,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         ISapApiService sapApiService,
         IEntidadCuentaBancariaRepository entidadCuentaBancariaRepository,
         IBancoRepository bancoRepository,
+        IParametroService parametroService,
         ILogger<ProduccionInterfaceService> logger)
     {
         _produccionRepository = produccionRepository;
@@ -62,6 +64,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         _sapApiService = sapApiService;
         _entidadCuentaBancariaRepository = entidadCuentaBancariaRepository;
         _bancoRepository = bancoRepository;
+        _parametroService = parametroService;
         _logger = logger;
     }
 
@@ -733,11 +736,30 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
             // Obtener cuentas ya registradas localmente para esta entidad
             var cuentasLocales = (await _entidadCuentaBancariaRepository.GetByEntidadIdAsync(idEntidadMedica)).ToList();
 
+            // Obtener codigos de bancos excluidos desde parametro SHM_EXCLUYE_BANCO
+            var parametroExcluye = await _parametroService.GetParametroByCodigoAsync("SHM_EXCLUYE_BANCO");
+            var bancosExcluidos = parametroExcluye?.Valor?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>();
+
+            if (bancosExcluidos.Count > 0)
+                _logger.LogDebug("Bancos excluidos de sincronizacion (SHM_EXCLUYE_BANCO): {Bancos}", string.Join(", ", bancosExcluidos));
+
             int creadas = 0;
             int omitidas = 0;
 
             foreach (var cuentaSap in cuentasSap)
             {
+                // Excluir si el banco esta en la lista del parametro SHM_EXCLUYE_BANCO
+                if (!string.IsNullOrWhiteSpace(cuentaSap.CodigoBanco) && bancosExcluidos.Contains(cuentaSap.CodigoBanco))
+                {
+                    _logger.LogDebug("Cuenta {NroCuenta} excluida por parametro SHM_EXCLUYE_BANCO. Banco: {CodigoBanco}",
+                        cuentaSap.NroCuenta, cuentaSap.CodigoBanco);
+                    omitidas++;
+                    continue;
+                }
+
                 // Verificar si ya existe por NroCuenta
                 var yaExiste = cuentasLocales.Any(c =>
                     string.Equals(c.CuentaCorriente, cuentaSap.NroCuenta, StringComparison.OrdinalIgnoreCase));

@@ -566,6 +566,37 @@
                 });
         }
 
+        function sincronizarCuentasBancarias() {
+
+            console.log("Entro 1");
+
+            const btn = document.getElementById('btnSincronizarCuentas');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Sincronizando...';
+
+            const formData = new FormData();
+            formData.append('guid', currentEntidadGuid);
+            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+            fetch('@Url.Action("SincronizarCuentasBancarias")', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        Swal.fire({ icon: 'success', title: 'Sincronización', text: result.message, confirmButtonColor: '#28a745' });
+                        loadCuentasBancarias();
+                    } else {
+                        Swal.fire({ icon: 'warning', title: 'Sincronización', text: result.message, confirmButtonColor: '#f26522' });
+                    }
+                })
+                .catch(() => {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo conectar con el servidor', confirmButtonColor: '#dc3545' });
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sincronizar Cuentas';
+                });
+        }
+
         function loadCuentasBancarias() {
             fetch('@Url.Action("GetListCuentasBancarias")?entidadGuid=' + encodeURIComponent(currentEntidadGuid))
                 .then(response => response.text())
