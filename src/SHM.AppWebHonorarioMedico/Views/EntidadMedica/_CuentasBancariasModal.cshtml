@@ -13,10 +13,14 @@
                 </button>
             </div>
             <div class="modal-body">
+                @Html.AntiForgeryToken()
                 <div class="mb-3">
                     <strong>Entidad:</strong> @Model.EntidadRazonSocial
                 </div>
                 <div class="mb-3 text-right">
+                    <button type="button" class="btn btn-success btn-sm mr-2" id="btnSincronizarCuentas" onclick="sincronizarCuentasBancarias()">
+                        <i class="fas fa-sync mr-1"></i>Sincronizar Cuentas
+                    </button>
                     <button type="button" class="btn btn-primary btn-sm" onclick="openCreateCuentaBancariaModal()">
                         <i class="fas fa-plus mr-1"></i>Nueva Cuenta
                     </button>

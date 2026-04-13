@@ -18,6 +18,8 @@ public class EntidadMedicaController : Controller
     private readonly IEntidadCuentaBancariaService _cuentaBancariaService;
     private readonly IBancoService _bancoService;
     private readonly IUsuarioService _usuarioService;
+    private readonly ISapApiService _sapApiService;
+    private readonly IParametroService _parametroService;
 
     public EntidadMedicaController(
         ILogger<EntidadMedicaController> logger,
@@ -25,7 +27,9 @@ public class EntidadMedicaController : Controller
         ITablaDetalleService tablaDetalleService,
         IEntidadCuentaBancariaService cuentaBancariaService,
         IBancoService bancoService,
-        IUsuarioService usuarioService)
+        IUsuarioService usuarioService,
+        ISapApiService sapApiService,
+        IParametroService parametroService)
     {
         _logger = logger;
         _entidadMedicaService = entidadMedicaService;
@@ -33,6 +37,8 @@ public class EntidadMedicaController : Controller
         _cuentaBancariaService = cuentaBancariaService;
         _bancoService = bancoService;
         _usuarioService = usuarioService;
+        _sapApiService = sapApiService;
+        _parametroService = parametroService;
     }
 
     public IActionResult Index()
@@ -408,6 +414,92 @@ public class EntidadMedicaController : Controller
         {
             _logger.LogError(ex, "Error al listar cuentas bancarias");
             return PartialView("_CuentasBancariasListPartial", new CuentaBancariaListViewModel());
+        }
+    }
+
+    /// <summary>
+    /// Sincroniza las cuentas bancarias de una entidad medica desde SAP.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> SincronizarCuentasBancarias([FromForm] string guid)
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByGuidAsync(guid);
+            if (entidad == null)
+                return Json(new { success = false, message = "Entidad no encontrada" });
+
+            if (string.IsNullOrWhiteSpace(entidad.CodigoAcreedor))
+                return Json(new { success = false, message = "La entidad no tiene Código de Acreedor configurado" });
+
+            var cuentasSap = await _sapApiService.GetCuentasBancariasByAcreedorAsync(entidad.CodigoAcreedor);
+            if (cuentasSap == null || cuentasSap.Count == 0)
+                return Json(new { success = false, message = "SAP no retornó cuentas bancarias para esta entidad" });
+
+            // Obtener bancos excluidos desde parametro SHM_EXCLUYE_BANCO
+            var parametroExcluye = await _parametroService.GetParametroByCodigoAsync("SHM_EXCLUYE_BANCO");
+            var bancosExcluidos = parametroExcluye?.Valor?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>();
+
+            var cuentasLocales = (await _cuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(entidad.IdEntidadMedica)).ToList();
+
+            int creadas = 0;
+            int omitidas = 0;
+
+            foreach (var cuentaSap in cuentasSap)
+            {
+                // Excluir bancos del parametro SHM_EXCLUYE_BANCO
+                if (!string.IsNullOrWhiteSpace(cuentaSap.CodigoBanco) && bancosExcluidos.Contains(cuentaSap.CodigoBanco))
+                {
+                    omitidas++;
+                    continue;
+                }
+
+                // Omitir si ya existe localmente
+                var yaExiste = cuentasLocales.Any(c =>
+                    string.Equals(c.CuentaCorriente, cuentaSap.NroCuenta, StringComparison.OrdinalIgnoreCase));
+                if (yaExiste)
+                {
+                    omitidas++;
+                    continue;
+                }
+
+                // Resolver CodigoBanco -> IdBanco
+                int? idBanco = null;
+                if (!string.IsNullOrWhiteSpace(cuentaSap.CodigoBanco))
+                {
+                    var banco = await _bancoService.GetBancoByCodigoAsync(cuentaSap.CodigoBanco);
+                    idBanco = banco?.IdBanco;
+                }
+
+                await _cuentaBancariaService.CreateEntidadCuentaBancariaAsync(new CreateEntidadCuentaBancariaDto
+                {
+                    IdEntidad       = entidad.IdEntidadMedica,
+                    IdBanco         = idBanco,
+                    CuentaCorriente = cuentaSap.NroCuenta,
+                    CuentaCci       = string.IsNullOrWhiteSpace(cuentaSap.NroCtaInterbancaria) ? null : cuentaSap.NroCtaInterbancaria,
+                    Moneda          = cuentaSap.Moneda
+                }, userId);
+
+                creadas++;
+            }
+
+            var mensaje = creadas > 0
+                ? $"Sincronización completada. {creadas} cuenta(s) nueva(s) registrada(s)."
+                : "Sincronización completada. No se encontraron cuentas nuevas.";
+
+            _logger.LogInformation("Sincronizacion de cuentas desde SAP. Entidad: {Guid}, Creadas: {Creadas}, Omitidas: {Omitidas}", guid, creadas, omitidas);
+
+            return Json(new { success = true, message = mensaje });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al sincronizar cuentas bancarias desde SAP. Guid: {Guid}", guid);
+            return Json(new { success = false, message = "Error al sincronizar con SAP" });
         }
     }
 
