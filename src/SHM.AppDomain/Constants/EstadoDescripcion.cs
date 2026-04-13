@@ -101,6 +101,7 @@ public static class EstadoDescripcion
         public const string Devuelto            = "DEVUELTO";
         public const string Aprobado            = "APROBADO";
         public const string Anulado             = "ANULADO";
+        public const string Pagado              = "PAGADO";
 
         private static readonly Dictionary<string, EstadoInfo> _estados = new()
         {
@@ -108,6 +109,7 @@ public static class EstadoDescripcion
             [Devuelto]            = new("Devuelto",              "badge-danger",  "bg-gradient-danger",  "text-danger"),
             [Aprobado]            = new("Aprobado",              "badge-success", "bg-gradient-success", "text-success"),
             [Anulado]             = new("Anulado",               "badge-dark",    "bg-gradient-dark",    "text-dark"),
+            [Pagado]              = new("Pagado",                "badge-info",    "bg-gradient-primary", "text-primary"),
         };
 
         public static string GetDescripcion(string? estado) =>

@@ -36,9 +36,13 @@
                                 onclick="openEditUsuarioEntidad('@u.GuidRegistro')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
+                        <button type="button" class="btn btn-warning btn-xs"
+                                onclick="openResetClaveUsuarioEntidad('@u.GuidRegistro')" title="Resetear Clave">
+                            <i class="fas fa-key"></i>
+                        </button>
                         @if (u.Activo == 1)
                         {
-                            <button type="button" class="btn btn-warning btn-xs"
+                            <button type="button" class="btn btn-danger btn-xs"
                                     onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 0)" title="Desactivar">
                                 <i class="fas fa-ban"></i>
                             </button>

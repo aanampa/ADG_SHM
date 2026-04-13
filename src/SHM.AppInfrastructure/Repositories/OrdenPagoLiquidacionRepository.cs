@@ -343,6 +343,8 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 tem.DESCRIPCION AS DesTipoEntidadMedica,
                 EM.RAZON_SOCIAL AS RazonSocial,
                 B.NOMBRE_BANCO AS NombreBanco,
+                T1.GUID_REGISTRO AS GuidRegistro,
+                T1.ESTADO AS Estado,
                 T1.TIPO_COMPROBANTE AS TipoComprobante,
                 T1.SERIE AS Serie,
                 T1.NUMERO AS Numero,
@@ -350,7 +352,8 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 T1.MTO_IGV AS MtoIgv,
                 T1.MTO_RENTA AS MtoRenta,
                 T1.MTO_TOTAL AS MtoTotal,
-                AR.GUID_REGISTRO AS GuidArchivoFactura
+                AR.GUID_REGISTRO  AS GuidArchivoFactura,
+                ARX.GUID_REGISTRO AS GuidArchivoXml
             FROM SHM_ORDEN_PAGO_PRODUCCION OPP
             INNER JOIN SHM_PRODUCCION T1
                 ON T1.ID_PRODUCCION = OPP.ID_PRODUCCION
@@ -375,6 +378,13 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
             LEFT JOIN SHM_ARCHIVO AR
                 ON AR.ID_ARCHIVO = AC.ID_ARCHIVO
                 AND AR.ACTIVO = 1
+            LEFT JOIN SHM_ARCHIVO_COMPROBANTE ACX
+                ON ACX.ID_PRODUCCION = T1.ID_PRODUCCION
+                AND ACX.DESCRIPCION = 'Factura XML'
+                AND ACX.ACTIVO = 1
+            LEFT JOIN SHM_ARCHIVO ARX
+                ON ARX.ID_ARCHIVO = ACX.ID_ARCHIVO
+                AND ARX.ACTIVO = 1
             WHERE OPP.ID_ORDEN_PAGO = :IdOrdenPago
                 AND OPP.ACTIVO = 1
                 AND T1.ACTIVO = 1

@@ -79,4 +79,8 @@ public class ProduccionListaResponseDto
     public string? ComprobanteFactura => !string.IsNullOrEmpty(Serie) && !string.IsNullOrEmpty(Numero)
         ? $"{Serie}-{Numero}"
         : null;
+
+    // Campos de validacion para modal solicitud masiva (populados solo en GetListSolicitudMasivaAsync)
+    public int NroUsuariosExternos { get; set; }
+    public int NroCuentasBancarias { get; set; }
 }

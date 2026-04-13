@@ -83,6 +83,12 @@ public interface IProduccionService
         string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize);
 
     /// <summary>
+    /// Obtiene producciones FACTURA_PENDIENTE y FACTURA_SOLICITADA para el modal de solicitud masiva,
+    /// con datos de validacion (usuarios externos y cuentas bancarias) en una sola query.
+    /// </summary>
+    Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede);
+
+    /// <summary>
     /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
     /// </summary>
     /// <param name="solicitudDto">Datos de la solicitud (GUID, fecha y hora)</param>
@@ -128,6 +134,11 @@ public interface IProduccionService
     /// <param name="idEntidadMedica">ID de la entidad medica</param>
     /// <returns>Cantidad de facturas enviadas en el mes</returns>
     Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Obtiene el resumen del mes actual: total facturado, cantidad procesada y tiempo promedio.
+    /// </summary>
+    Task<(decimal TotalFacturado, int FacturasProcesadas, decimal TiempoPromedioDias)> GetResumenMesActualAsync(int idEntidadMedica);
 
     /// <summary>
     /// Obtiene datos de facturas por mes para los ultimos 6 meses.

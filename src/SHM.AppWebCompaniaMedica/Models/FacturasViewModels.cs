@@ -4,6 +4,7 @@ public class FacturaPendienteViewModel
 {
     public int IdProduccion { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
     public decimal? MtoSubtotal { get; set; }
@@ -32,6 +33,7 @@ public class FacturaEnviadaViewModel
 {
     public int IdProduccion { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
     public decimal? MtoTotal { get; set; }
@@ -57,6 +59,7 @@ public class SubirFacturaViewModel
     public int IdProduccion { get; set; }
     public string? GuidRegistro { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
     public string? Descripcion { get; set; }
@@ -100,6 +103,7 @@ public class DetalleFacturaViewModel
     public int IdProduccion { get; set; }
     public string? GuidRegistro { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
     public string? Descripcion { get; set; }
@@ -177,6 +181,7 @@ public class VistaPreviaFacturaViewModel
     // Datos de la produccion
     public string? GuidRegistro { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? NombreSede { get; set; }
     public string? Concepto { get; set; }
     public decimal? MtoTotal { get; set; }

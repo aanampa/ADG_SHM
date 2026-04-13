@@ -194,8 +194,10 @@
 
                     @if (!string.IsNullOrEmpty(ViewBag.LoginMessage))
                     {
-                        <div class="alert alert-default-danger alert-dismissible fade show mt-3" role="alert">
-                            <div class="text-center">@ViewBag.LoginMessage</div>
+                        <div class="alert alert-info mt-3" role="alert">
+                            <div class="text-center">
+                                <i class="fas fa-envelope mr-1"></i>@ViewBag.LoginMessage
+                            </div>
                         </div>
                     }
 

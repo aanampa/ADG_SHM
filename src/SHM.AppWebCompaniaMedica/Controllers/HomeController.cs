@@ -61,6 +61,12 @@ public class HomeController : BaseController
             // Obtener facturas enviadas del mes actual
             model.FacturasEnviadasMes = await _produccionService.GetFacturasEnviadasMesActualAsync(idEntidadMedica);
 
+            // Obtener resumen del mes (total facturado, procesadas, tiempo promedio)
+            var resumenMes = await _produccionService.GetResumenMesActualAsync(idEntidadMedica);
+            model.TotalFacturadoMes = resumenMes.TotalFacturado;
+            model.FacturasProcesadasMes = resumenMes.FacturasProcesadas;
+            model.TiempoPromedioDias = resumenMes.TiempoPromedioDias;
+
             // Obtener datos para grafico de barras (ultimos 6 meses)
             var facturasPorMes = await _produccionService.GetFacturasPorMesAsync(idEntidadMedica);
             model.FacturasPorMes = facturasPorMes.Select(f => new FacturasPorMesViewModel

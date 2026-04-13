@@ -342,69 +342,37 @@ public class ProduccionController : Controller
             // Filtrar por sede del usuario logueado (igual que GetList)
             var idSede = GetCurrentUserIdSede();
 
-            // Obtener todos los registros FACTURA_PENDIENTE y FACTURA_SOLICITADA
-            var allItems = new List<AppDomain.DTOs.Produccion.ProduccionListaResponseDto>();
-            foreach (var estado in new[] {
-                EstadoDescripcion.Produccion.FacturaPendiente,
-                EstadoDescripcion.Produccion.FacturaSolicitada })
-            {
-                var (items, _) = await _produccionService.GetPaginatedListAsync(
-                    null, estado, null, idSede, 1, 500);
-                allItems.AddRange(items);
-            }
+            // Una sola query: estados FACTURA_PENDIENTE/FACTURA_SOLICITADA +
+            // validacion (usuarios externos y cuentas bancarias) embebida como subqueries
+            var allItems = await _produccionService.GetListSolicitudMasivaAsync(idSede);
 
-            // Cache de validacion por entidad medica (evitar llamadas repetidas)
-            var usuariosCache = new Dictionary<int, bool>();
-            var cuentasCache = new Dictionary<int, int>();
-
-            var viewItems = new List<Models.SolicitudMasivaItemViewModel>();
-            foreach (var item in allItems)
+            var viewItems = allItems.Select(item =>
             {
                 bool habilitado = true;
                 string? motivo = null;
 
-                if (item.IdEntidadMedica.HasValue)
-                {
-                    int idEnt = item.IdEntidadMedica.Value;
-
-                    if (!usuariosCache.ContainsKey(idEnt))
-                    {
-                        var usuarios = await _usuarioService.GetUsuariosByEntidadMedicaAsync(idEnt);
-                        usuariosCache[idEnt] = usuarios.Any(u => u.TipoUsuario == "E");
-                    }
-
-                    if (!cuentasCache.ContainsKey(idEnt))
-                    {
-                        var cuentas = await _entidadCuentaBancariaService.GetEntidadCuentasBancariasByEntidadIdAsync(idEnt);
-                        cuentasCache[idEnt] = cuentas.Count(c => c.Activo == 1);
-                    }
-
-                    bool tieneUsuarios = usuariosCache[idEnt];
-                    int nroCuentas = cuentasCache[idEnt];
-
-                    if (!tieneUsuarios)
-                    {
-                        habilitado = false;
-                        motivo = "Sin usuarios externos";
-                    }
-                    else if (nroCuentas == 0)
-                    {
-                        habilitado = false;
-                        motivo = "Sin cuenta bancaria activa";
-                    }
-                    else if (nroCuentas > 1)
-                    {
-                        habilitado = false;
-                        motivo = $"Tiene {nroCuentas} cuentas bancarias activas";
-                    }
-                }
-                else
+                if (!item.IdEntidadMedica.HasValue)
                 {
                     habilitado = false;
                     motivo = "Sin compañía médica asignada";
                 }
+                else if (item.NroUsuariosExternos == 0)
+                {
+                    habilitado = false;
+                    motivo = "Sin usuarios externos";
+                }
+                else if (item.NroCuentasBancarias == 0)
+                {
+                    habilitado = false;
+                    motivo = "Sin cuenta bancaria activa";
+                }
+                else if (item.NroCuentasBancarias > 1)
+                {
+                    habilitado = false;
+                    motivo = $"Tiene {item.NroCuentasBancarias} cuentas bancarias activas";
+                }
 
-                viewItems.Add(new Models.SolicitudMasivaItemViewModel
+                return new Models.SolicitudMasivaItemViewModel
                 {
                     GuidRegistro = item.GuidRegistro ?? string.Empty,
                     NumeroProduccion = item.NumeroProduccion,
@@ -418,8 +386,8 @@ public class ProduccionController : Controller
                     Habilitado = habilitado,
                     MotivoDeshabilitado = motivo,
                     FechaLimite = item.FechaLimite
-                });
-            }
+                };
+            }).ToList();
 
             var model = new Models.SolicitudMasivaViewModel { Items = viewItems };
             return PartialView("_SolicitudMasivaModal", model);

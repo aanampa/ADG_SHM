@@ -11,6 +11,7 @@ public class UsuarioController : BaseController
     private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IEntidadCuentaBancariaService _cuentaBancariaService;
     private readonly IBancoService _bancoService;
+    private readonly IProduccionService _produccionService;
     private readonly ILogger<UsuarioController> _logger;
 
     public UsuarioController(
@@ -18,12 +19,14 @@ public class UsuarioController : BaseController
         IEntidadMedicaService entidadMedicaService,
         IEntidadCuentaBancariaService cuentaBancariaService,
         IBancoService bancoService,
+        IProduccionService produccionService,
         ILogger<UsuarioController> logger)
     {
         _usuarioService = usuarioService;
         _entidadMedicaService = entidadMedicaService;
         _cuentaBancariaService = cuentaBancariaService;
         _bancoService = bancoService;
+        _produccionService = produccionService;
         _logger = logger;
     }
 
@@ -115,10 +118,31 @@ public class UsuarioController : BaseController
     }
 
     // GET: Usuario/Configuracion
-    public IActionResult Configuracion()
+    public async Task<IActionResult> Configuracion()
     {
         ViewData["Title"] = "Configuracion";
-        return View();
+
+        var model = new ConfiguracionViewModel();
+
+        try
+        {
+            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
+            if (int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica) && idEntidadMedica > 0)
+            {
+                var stats = await _produccionService.GetDashboardStatsAsync(idEntidadMedica);
+                model.FacturasTotal = stats.Pendientes + stats.Enviadas + stats.EnviadasHHMM + stats.Pagadas;
+            }
+
+            var fechaLoginClaim = User.FindFirstValue("FechaLogin");
+            if (DateTime.TryParse(fechaLoginClaim, null, System.Globalization.DateTimeStyles.RoundtripKind, out var fechaLogin))
+                model.UltimoAcceso = fechaLogin;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener estadisticas para configuracion");
+        }
+
+        return View(model);
     }
 
     // POST: Usuario/ActualizarPerfil

@@ -17,6 +17,7 @@ namespace SHM.AppApplication.Services;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-25 - Agregado logging de emails en base de datos</modified>
+/// <modified>ADG Vladimir D - 2026-04-11 - URLs de portales desde appsettings.json</modified>
 /// </summary>
 public class EmailService : IEmailService
 {
@@ -217,6 +218,7 @@ public class EmailService : IEmailService
                       .Replace("{{MONTO_TOTAL}}", montoFormateado)
                       .Replace("{{FECHA_LIMITE}}", fechaFormateada)
                       .Replace("{{HORA_LIMITE}}", horaFormateada)
+                      .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? "")
                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
 
             await EnviarEmailConLogAsync(
@@ -245,8 +247,9 @@ public class EmailService : IEmailService
 
     /// <summary>
     /// Envia un correo electronico notificando al usuario que su clave fue restablecida por un administrador.
+    /// <modified>ADG Vladimir D - 2026-04-10 - Usar URL de portal segun tipo de usuario</modified>
     /// </summary>
-    public async Task<bool> EnviarEmailResetClaveAsync(string email, string nombreUsuario, string loginUsuario, string nuevaClave, int? idUsuario)
+    public async Task<bool> EnviarEmailResetClaveAsync(string email, string nombreUsuario, string loginUsuario, string nuevaClave, int? idUsuario, string tipoUsuario = "I")
     {
         var subject = "Clave Restablecida - Sistema de Honorarios Medicos";
         string body;
@@ -262,12 +265,14 @@ public class EmailService : IEmailService
             }
 
             body = await File.ReadAllTextAsync(templatePath);
-            var urlBaseApp = _configuration["AppSettings:UrlBaseApp"] ?? "";
+            var urlSistema = tipoUsuario == "E"
+                ? _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? ""
+                : _configuration["AppSettings:UrlPortalAdministrativo"] ?? "";
 
             body = body.Replace("{{NOMBRE_USUARIO}}", nombreUsuario)
                       .Replace("{{LOGIN_USUARIO}}", loginUsuario)
                       .Replace("{{NUEVA_CLAVE}}", nuevaClave)
-                      .Replace("{{URL_SISTEMA}}", urlBaseApp)
+                      .Replace("{{URL_SISTEMA}}", urlSistema)
                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
 
             await EnviarEmailConLogAsync(
@@ -294,8 +299,9 @@ public class EmailService : IEmailService
 
     /// <summary>
     /// Envia un correo electronico de bienvenida al nuevo usuario con sus credenciales de acceso.
+    /// <modified>ADG Vladimir D - 2026-04-10 - Usar URL de portal segun tipo de usuario</modified>
     /// </summary>
-    public async Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario)
+    public async Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario, string tipoUsuario = "I")
     {
         var subject = "Credenciales de Acceso - Sistema de Honorarios Medicos";
         string body;
@@ -311,12 +317,14 @@ public class EmailService : IEmailService
             }
 
             body = await File.ReadAllTextAsync(templatePath);
-            var urlBaseApp = _configuration["AppSettings:UrlBaseApp"] ?? "";
+            var urlSistema = tipoUsuario == "E"
+                ? _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? ""
+                : _configuration["AppSettings:UrlPortalAdministrativo"] ?? "";
 
             body = body.Replace("{{NOMBRE_USUARIO}}", nombreUsuario)
                       .Replace("{{LOGIN_USUARIO}}", loginUsuario)
                       .Replace("{{CLAVE_USUARIO}}", claveUsuario)
-                      .Replace("{{URL_SISTEMA}}", urlBaseApp)
+                      .Replace("{{URL_SISTEMA}}", urlSistema)
                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
 
             await EnviarEmailConLogAsync(
@@ -343,6 +351,7 @@ public class EmailService : IEmailService
 
     /// <summary>
     /// Envia un correo electronico notificando al siguiente aprobador que tiene una orden de pago pendiente.
+    /// <modified>ADG Vladimir D - 2026-04-10 - Usar URL del portal administrativo</modified>
     /// </summary>
     public async Task<bool> EnviarEmailNotificacionAprobacionAsync(
         string email,
@@ -367,14 +376,13 @@ public class EmailService : IEmailService
             }
 
             body = await File.ReadAllTextAsync(templatePath);
-            var urlBaseApp = _configuration["AppSettings:UrlBaseApp"] ?? "";
 
             body = body.Replace("{{NOMBRE_USUARIO}}", nombreAprobador)
                       .Replace("{{NUMERO_ORDEN_PAGO}}", numeroOrdenPago ?? "-")
                       .Replace("{{FECHA_GENERACION}}", fechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")
                       .Replace("{{MONTO_TOTAL}}", montoTotal?.ToString("N2") ?? "0.00")
                       .Replace("{{NOMBRE_PERFIL}}", nombrePerfil ?? "-")
-                      .Replace("{{URL_SISTEMA}}", urlBaseApp)
+                      .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalAdministrativo"] ?? "")
                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
 
             await EnviarEmailConLogAsync(

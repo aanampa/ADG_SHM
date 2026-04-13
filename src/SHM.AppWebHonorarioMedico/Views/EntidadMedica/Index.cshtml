@@ -491,6 +491,55 @@
             );
         }
 
+        function openResetClaveUsuarioEntidad(guid) {
+            fetch('/Usuario/GetResetClaveModal?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.text();
+                })
+                .then(html => {
+                    $('#usuarioEntidadBodyContainer').remove();
+                    $('body').append('<div id="usuarioEntidadBodyContainer">' + wrapEnModal('usuarioResetClaveModal', html) + '</div>');
+                    $('#usuarioResetClaveModal button[onclick="submitResetClave()"]').attr('onclick', 'submitResetClaveUsuarioEntidad()');
+                    $('#usuarioResetClaveModal').modal('show');
+                })
+                .catch(err => f_alert('e', '', 'Error al cargar el formulario: ' + err.message));
+        }
+
+        function submitResetClaveUsuarioEntidad() {
+            var formData = {
+                guidRegistro: document.querySelector('#usuarioResetClaveModal #GuidRegistro').value,
+                enviarCorreo: document.querySelector('#usuarioResetClaveModal #EnviarCorreo').checked
+            };
+            var token = document.querySelector('#usuarioResetClaveModal input[name="__RequestVerificationToken"]').value;
+
+            f_loading();
+            fetch('/Usuario/ResetClave', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                f_remove_loading();
+                $('#usuarioResetClaveModal').modal('hide');
+                if (data.success) {
+                    f_alert('s', '', data.message);
+                    if (data.generatedPassword) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Clave generada',
+                            html: '<strong>Clave:</strong> <code style="font-size:1.1em;">' + data.generatedPassword + '</code>',
+                            confirmButtonColor: '#28a745'
+                        });
+                    }
+                } else {
+                    f_alert('e', '', data.message);
+                }
+            })
+            .catch(() => { f_remove_loading(); f_alert('e', '', 'Error al procesar la solicitud'); });
+        }
+
         function toggleActivoUsuarioEntidad(guid, nuevoActivo) {
             var msg = nuevoActivo === 1 ? '¿Activar este usuario?' : '¿Desactivar este usuario?';
             if (!confirm(msg)) return;

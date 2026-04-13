@@ -49,6 +49,10 @@ public class AuthController : Controller
         {
             string instancia = _configuration["AppSettings:InstanceName"] ?? "";
 
+            // Quitar espacios al inicio y al final
+            username = username?.Trim() ?? "";
+            password = password?.Trim() ?? "";
+
             _logger.LogInformation("Intento de login para usuario: {Username}", username);
 
             // Validar campos requeridos
@@ -105,7 +109,8 @@ public class AuthController : Controller
                 new Claim("ApellidoMaterno", usuario.ApellidoMaterno ?? ""),
                 new Claim(ClaimTypes.Email, usuario.Email ?? ""),
                 new Claim("TipoUsuario", usuario.TipoUsuario),
-                new Claim("RazonSocial", razonSocial)
+                new Claim("RazonSocial", razonSocial),
+                new Claim("FechaLogin", DateTime.Now.ToString("o"))
             };
 
             if (usuario.IdEntidadMedica.HasValue)

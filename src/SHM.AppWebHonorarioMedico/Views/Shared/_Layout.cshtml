@@ -386,5 +386,54 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 
+    <script>
+        // Manejo de sesion expirada: interceptor fetch + jQuery + polling automatico
+        (function () {
+            var _sessionAlertShown = false;
+            var _loginUrl = '@Url.Action("Login", "Auth")';
+            var _pingUrl = '@Url.Action("Ping", "Auth")';
+
+            function f_sesion_expirada() {
+                if (_sessionAlertShown) return;
+                _sessionAlertShown = true;
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión expirada',
+                    text: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+                    confirmButtonColor: '#5d1665',
+                    confirmButtonText: 'Ir al Login',
+                    allowOutsideClick: false
+                }).then(function () {
+                    window.location.href = _loginUrl;
+                });
+            }
+
+            // Interceptar fetch: agregar X-Requested-With y detectar 401
+            const originalFetch = window.fetch;
+            window.fetch = function (input, init) {
+                init = init || {};
+                init.headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, init.headers || {});
+                return originalFetch.call(this, input, init).then(function (response) {
+                    if (response.status === 401) f_sesion_expirada();
+                    return response;
+                });
+            };
+
+            // Interceptar jQuery AJAX
+            $(document).ajaxError(function (event, xhr) {
+                if (xhr.status === 401) f_sesion_expirada();
+            });
+
+            // Polling: verificar sesion cada 60 segundos para detectar expiracion en inactividad
+            setInterval(function () {
+                if (_sessionAlertShown) return;
+                originalFetch(_pingUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (response) { if (response.status === 401) f_sesion_expirada(); })
+                    .catch(function () { /* ignorar errores de red */ });
+            }, 60000);
+
+        })();
+    </script>
+
 </body>
 </html>

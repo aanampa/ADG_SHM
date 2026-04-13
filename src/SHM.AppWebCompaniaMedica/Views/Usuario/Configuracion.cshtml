@@ -1,3 +1,4 @@
+@model SHM.AppWebCompaniaMedica.Models.ConfiguracionViewModel
 @{
     ViewData["Title"] = "Configuración";
 }
@@ -145,11 +146,11 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
                     <span style="color: var(--text-secondary); font-weight: 600;">Último Acceso</span>
-                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">25/12/2024 10:30</span>
+                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">@(Model.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px; margin-bottom: 1rem;">
                     <span style="color: var(--text-secondary); font-weight: 600;">Facturas Totales</span>
-                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">32</span>
+                    <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">@Model.FacturasTotal</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
                     <span style="color: var(--text-secondary); font-weight: 600;">Estado de Cuenta</span>

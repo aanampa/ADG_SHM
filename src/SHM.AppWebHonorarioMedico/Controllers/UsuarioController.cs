@@ -162,14 +162,14 @@ public class UsuarioController : Controller
             var createDto = new CreateUsuarioDto
             {
                 TipoUsuario = "E",
-                Login = model.Login ?? "",
+                Login = (model.Login ?? "").Trim().ToUpper(),
                 Password = "", // Se generara automaticamente
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = model.IdEntidadMedica,
                 IdRol = model.IdRol
             };
@@ -281,13 +281,13 @@ public class UsuarioController : Controller
 
             var updateDto = new UpdateUsuarioDto
             {
-                Login = model.Login,
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Login = model.Login?.Trim().ToUpper(),
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = model.IdEntidadMedica,
                 IdRol = model.IdRol,
                 Activo = model.Activo
@@ -596,14 +596,14 @@ public class UsuarioController : Controller
             var createDto = new CreateUsuarioDto
             {
                 TipoUsuario = "I",
-                Login = model.Login ?? "",
+                Login = (model.Login ?? "").Trim().ToUpper(),
                 Password = "", // Se generara automaticamente
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = null, // Usuario interno no tiene entidad medica
                 IdRol = model.IdRol,
                 IdsSedesSeleccionadas = model.IdsSedesSeleccionadas
@@ -717,13 +717,13 @@ public class UsuarioController : Controller
 
             var updateDto = new UpdateUsuarioDto
             {
-                Login = model.Login,
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Login = model.Login?.Trim().ToUpper(),
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = null, // Usuario interno no tiene entidad medica
                 IdRol = model.IdRol,
                 Activo = model.Activo,

@@ -505,4 +505,26 @@ public class OrdenPagoRepository : IOrdenPagoRepository
 
         return await connection.QueryAsync<OrdenPago>(sql, new { IdUsuario = idUsuario });
     }
+
+    /// <summary>
+    /// Cuenta las producciones de una orden de pago que NO estan en estado FACTURA_PAGADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-11</created>
+    /// </summary>
+    public async Task<int> GetCountProduccionesNotPagadasAsync(int idOrdenPago)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT COUNT(1)
+            FROM SHM_ORDEN_PAGO_PRODUCCION OPP
+            INNER JOIN SHM_PRODUCCION P ON P.ID_PRODUCCION = OPP.ID_PRODUCCION
+            WHERE OPP.ID_ORDEN_PAGO = :IdOrdenPago
+              AND OPP.ACTIVO = 1
+              AND P.ACTIVO = 1
+              AND P.ESTADO != 'FACTURA_PAGADA'";
+
+        return await connection.ExecuteScalarAsync<int>(sql, new { IdOrdenPago = idOrdenPago });
+    }
 }

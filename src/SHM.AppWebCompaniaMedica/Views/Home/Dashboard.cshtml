@@ -95,19 +95,19 @@
                     <div class="col-md-4">
                         <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
                             <span style="color: var(--text-secondary); font-weight: 600;">Total Facturado</span>
-                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent);">S/ 245,680.00</span>
+                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent);">S/ @Model.TotalFacturadoMes.ToString("N2")</span>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
                             <span style="color: var(--text-secondary); font-weight: 600;">Facturas Procesadas</span>
-                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">32</span>
+                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">@Model.FacturasProcesadasMes</span>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-main); border-radius: 10px;">
                             <span style="color: var(--text-secondary); font-weight: 600;">Tiempo Promedio</span>
-                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">2.5 dias</span>
+                            <span style="font-weight: 700; font-family: 'JetBrains Mono', monospace;">@Model.TiempoPromedioDias.ToString("N1") dias</span>
                         </div>
                     </div>
                 </div>
