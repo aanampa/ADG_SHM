@@ -109,6 +109,7 @@ public class FacturasController : BaseController
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
+                NumeroProduccion = p.NumeroProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
                 Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
                     : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
@@ -177,6 +178,7 @@ public class FacturasController : BaseController
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
+                NumeroProduccion = p.NumeroProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
                 Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
                     : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
@@ -275,6 +277,7 @@ public class FacturasController : BaseController
             {
                 success = true,
                 codigoProduccion = produccion.CodigoProduccion,
+                numeroProduccion = produccion.NumeroProduccion,
                 concepto = concepto,
                 descripcion = produccion.Descripcion ?? "-",
                 tipoComprobante = tipoComprobanteTexto,
@@ -334,6 +337,7 @@ public class FacturasController : BaseController
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
+                NumeroProduccion = p.NumeroProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
                 Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
                     : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
@@ -416,6 +420,7 @@ public class FacturasController : BaseController
             {
                 IdProduccion = p.IdProduccion,
                 CodigoProduccion = p.CodigoProduccion,
+                NumeroProduccion = p.NumeroProduccion,
                 NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
                 Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
                     : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
@@ -562,6 +567,7 @@ public class FacturasController : BaseController
                 IdProduccion = produccion.IdProduccion,
                 GuidRegistro = produccion.GuidRegistro,
                 CodigoProduccion = produccion.CodigoProduccion,
+                NumeroProduccion = produccion.NumeroProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
                 Concepto = concepto,
                 Descripcion = produccion.Descripcion,
@@ -696,6 +702,7 @@ public class FacturasController : BaseController
                 IdProduccion = produccion.IdProduccion,
                 GuidRegistro = produccion.GuidRegistro,
                 CodigoProduccion = produccion.CodigoProduccion,
+                NumeroProduccion = produccion.NumeroProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
                 Concepto = produccion.Concepto,
                 Descripcion = produccion.Descripcion,
@@ -1595,6 +1602,7 @@ public class FacturasController : BaseController
                 SessionId = sessionId,
                 GuidRegistro = guidRegistro,
                 CodigoProduccion = produccion.CodigoProduccion,
+                NumeroProduccion = produccion.NumeroProduccion,
                 NombreSede = sede?.Nombre ?? $"Sede {produccion.IdSede}",
                 Concepto = conceptoVistaPrevia,
                 MtoTotal = produccion.MtoTotal,

@@ -50,12 +50,30 @@ try
             options.LoginPath = "/Auth/Login";
             options.LogoutPath = "/Auth/Logout";
             options.AccessDeniedPath = "/Auth/AccesoDenegado";
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(1);
             options.SlidingExpiration = true;
             options.Cookie.HttpOnly = true;
             options.Cookie.IsEssential = true;
             options.Cookie.Name = ".SHM.HonorarioMedico.Auth";
             options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+            // Para peticiones AJAX: devolver 401 en lugar de redirigir al login
+            // Esto permite al JS interceptar la sesion expirada y redirigir correctamente
+            options.Events = new CookieAuthenticationEvents
+            {
+                OnRedirectToLogin = context =>
+                {
+                    var isAjax = context.Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                                 || context.Request.Headers["Accept"].ToString().Contains("application/json");
+                    if (isAjax)
+                    {
+                        context.Response.StatusCode = 401;
+                        return Task.CompletedTask;
+                    }
+                    context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                }
+            };
         });
 
     // Registrar servicios de infraestructura
@@ -155,9 +173,9 @@ try
 
     app.UseRouting();
 
+    app.UseSession();
     app.UseAuthentication();
     app.UseAuthorization();
-    app.UseSession();
 
     // Middleware: Forzar cambio de clave si el password es temporal
     app.Use(async (context, next) =>

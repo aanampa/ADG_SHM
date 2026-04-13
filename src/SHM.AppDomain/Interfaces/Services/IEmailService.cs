@@ -42,7 +42,8 @@ public interface IEmailService
     /// <param name="loginUsuario">Login del usuario</param>
     /// <param name="nuevaClave">Nueva clave generada</param>
     /// <param name="idUsuario">ID del usuario (para log)</param>
-    Task<bool> EnviarEmailResetClaveAsync(string email, string nombreUsuario, string loginUsuario, string nuevaClave, int? idUsuario);
+    /// <param name="tipoUsuario">Tipo de usuario: "I" = Interno (portal admin), "E" = Externo (portal cia medica)</param>
+    Task<bool> EnviarEmailResetClaveAsync(string email, string nombreUsuario, string loginUsuario, string nuevaClave, int? idUsuario, string tipoUsuario = "I");
 
     /// <summary>
     /// Envia un correo electronico de bienvenida al nuevo usuario con sus credenciales de acceso.
@@ -52,7 +53,8 @@ public interface IEmailService
     /// <param name="loginUsuario">Login del usuario</param>
     /// <param name="claveUsuario">Clave generada</param>
     /// <param name="idUsuario">ID del usuario (para log)</param>
-    Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario);
+    /// <param name="tipoUsuario">Tipo de usuario: "I" = Interno (portal admin), "E" = Externo (portal cia medica)</param>
+    Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario, string tipoUsuario = "I");
 
     /// <summary>
     /// Envia un correo electronico notificando al siguiente aprobador que tiene una orden de pago pendiente.

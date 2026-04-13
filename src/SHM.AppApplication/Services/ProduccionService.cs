@@ -287,6 +287,11 @@ public class ProduccionService : IProduccionService
         return await _produccionRepository.GetPaginatedListAsync(produccion, estado, idEntidadMedica, idSede, pageNumber, pageSize);
     }
 
+    public async Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede)
+    {
+        return await _produccionRepository.GetListSolicitudMasivaAsync(idSede);
+    }
+
     /// <summary>
     /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
     /// Envia notificacion por correo a los usuarios de la Cia Medica asociada.
@@ -411,6 +416,17 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
+    /// Obtiene el resumen del mes actual: total facturado, cantidad procesada y tiempo promedio.
+    ///
+    /// <author>ADG Vladimir</author>
+    /// <created>2026-04-11</created>
+    /// </summary>
+    public async Task<(decimal TotalFacturado, int FacturasProcesadas, decimal TiempoPromedioDias)> GetResumenMesActualAsync(int idEntidadMedica)
+    {
+        return await _produccionRepository.GetResumenMesActualAsync(idEntidadMedica);
+    }
+
+    /// <summary>
     /// Obtiene datos de facturas por mes para los ultimos 6 meses.
     ///
     /// <author>ADG Antonio</author>
@@ -429,6 +445,7 @@ public class ProduccionService : IProduccionService
             IdSede = produccion.IdSede,
             IdEntidadMedica = produccion.IdEntidadMedica,
             CodigoProduccion = produccion.CodigoProduccion,
+            NumeroProduccion = produccion.NumeroProduccion,
             TipoProduccion = produccion.TipoProduccion,
             TipoMedico = produccion.TipoMedico,
             TipoRubro = produccion.TipoRubro,

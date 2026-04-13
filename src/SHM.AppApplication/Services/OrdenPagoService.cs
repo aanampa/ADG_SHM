@@ -197,6 +197,24 @@ public class OrdenPagoService : IOrdenPagoService
     }
 
     /// <summary>
+    /// Actualiza el estado de una orden de pago por su ID.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-11</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoAsync(int idOrdenPago, string estado, int idModificador)
+        => await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, estado, idModificador);
+
+    /// <summary>
+    /// Cuenta las producciones de la orden que NO estan en FACTURA_PAGADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-11</created>
+    /// </summary>
+    public async Task<int> GetCountProduccionesNotPagadasAsync(int idOrdenPago)
+        => await _ordenPagoRepository.GetCountProduccionesNotPagadasAsync(idOrdenPago);
+
+    /// <summary>
     /// Obtiene el listado paginado de ordenes de pago con filtros aplicados en BD.
     /// </summary>
     public async Task<(IEnumerable<OrdenPagoResponseDto> Items, int TotalCount)> GetPaginatedListAsync(

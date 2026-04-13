@@ -44,4 +44,10 @@ public interface IOrdenPagoRepository
     /// Anula una orden de pago y revierte las producciones asociadas a FACTURA_LIQUIDADA.
     /// </summary>
     Task<bool> AnularAsync(int idOrdenPago, int idModificador);
+
+    /// <summary>
+    /// Cuenta las producciones de una orden de pago que NO estan en estado FACTURA_PAGADA.
+    /// Usado para determinar si la orden debe pasar a estado PAGADO.
+    /// </summary>
+    Task<int> GetCountProduccionesNotPagadasAsync(int idOrdenPago);
 }

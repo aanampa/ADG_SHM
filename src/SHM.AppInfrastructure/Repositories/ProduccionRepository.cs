@@ -603,6 +603,58 @@ public class ProduccionRepository : IProduccionRepository
     }
 
     /// <summary>
+    /// Obtiene producciones con estado FACTURA_PENDIENTE o FACTURA_SOLICITADA para el modal
+    /// de solicitud masiva. Incluye conteo de usuarios externos y cuentas bancarias por entidad
+    /// en una sola query, evitando llamadas N+1.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-08</created>
+    /// </summary>
+    public async Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var whereClause = "WHERE p.ACTIVO = 1 AND p.ESTADO IN ('FACTURA_PENDIENTE', 'FACTURA_SOLICITADA')";
+        if (idSede.HasValue && idSede.Value > 0)
+            whereClause += " AND p.ID_SEDE = :IdSede";
+
+        var sql = $@"
+            SELECT
+                p.ID_PRODUCCION       AS IdProduccion,
+                p.GUID_REGISTRO       AS GuidRegistro,
+                p.ID_SEDE             AS IdSede,
+                p.ID_ENTIDAD_MEDICA   AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION   AS CodigoProduccion,
+                p.NUMERO_PRODUCCION   AS NumeroProduccion,
+                p.TIPO_PRODUCCION     AS TipoProduccion,
+                tp.DESCRIPCION        AS DesTipoProduccion,
+                p.TIPO_MEDICO         AS TipoMedico,
+                tm.DESCRIPCION        AS DesTipoMedico,
+                p.ESTADO              AS Estado,
+                ep.DESCRIPCION        AS DesEstado,
+                p.PERIODO             AS Periodo,
+                p.MTO_TOTAL           AS MtoTotal,
+                p.FECHA_LIMITE        AS FechaLimite,
+                em.RAZON_SOCIAL       AS RazonSocial,
+                em.RUC                AS Ruc,
+                (SELECT COUNT(1) FROM SHM_SEG_USUARIO u
+                 WHERE u.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND u.TIPO_USUARIO = 'E' AND u.ACTIVO = 1) AS NroUsuariosExternos,
+                (SELECT COUNT(1) FROM SHM_ENTIDAD_CUENTA_BANCO ecb
+                 WHERE ecb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND ecb.ACTIVO = 1)                         AS NroCuentasBancarias
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_ENTIDAD_MEDICA em    ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp  ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm  ON tm.CODIGO_TABLA = 'TIPO_MEDICO'     AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW ep  ON ep.CODIGO_TABLA = 'ESTADO_PROCESO'  AND ep.CODIGO = p.ESTADO
+            {whereClause}
+            ORDER BY p.CODIGO_PRODUCCION DESC";
+
+        return await connection.QueryAsync<ProduccionListaResponseDto>(sql, new { IdSede = idSede });
+    }
+
+    /// <summary>
     /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
     ///
     /// <author>ADG Vladimir D</author>
@@ -784,6 +836,38 @@ public class ProduccionRepository : IProduccionRepository
             AND TRUNC(FECHA_EMISION, 'MM') = TRUNC(SYSDATE, 'MM')";
 
         return await connection.ExecuteScalarAsync<int>(sql, new { IdEntidadMedica = idEntidadMedica });
+    }
+
+    /// <summary>
+    /// Obtiene el resumen del mes actual: total facturado, cantidad procesada y tiempo promedio
+    /// (dias entre FACTURA_FECHA_SOLICITUD y FECHA_EMISION).
+    ///
+    /// <author>ADG Vladimir</author>
+    /// <created>2026-04-11</created>
+    /// </summary>
+    public async Task<(decimal TotalFacturado, int FacturasProcesadas, decimal TiempoPromedioDias)> GetResumenMesActualAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                NVL(SUM(MTO_TOTAL), 0)                               AS TOTAL_FACTURADO,
+                COUNT(1)                                             AS FACTURAS_PROCESADAS,
+                NVL(AVG(FECHA_EMISION - FACTURA_FECHA_SOLICITUD), 0) AS TIEMPO_PROMEDIO_DIAS
+            FROM SHM_PRODUCCION
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+              AND ACTIVO = 1
+              AND ESTADO IN ('FACTURA_ENVIADA', 'FACTURA_ENVIADA_HHMM', 'FACTURA_PAGADA')
+              AND TRUNC(FECHA_EMISION, 'MM') = TRUNC(SYSDATE, 'MM')
+              AND FACTURA_FECHA_SOLICITUD IS NOT NULL
+              AND FECHA_EMISION IS NOT NULL";
+
+        var result = await connection.QueryFirstOrDefaultAsync<ResumenMesDto>(sql, new { IdEntidadMedica = idEntidadMedica });
+
+        if (result == null)
+            return (0m, 0, 0m);
+
+        return (result.TotalFacturado, result.FacturasProcesadas, Math.Round(result.TiempoPromedioDias, 1));
     }
 
     /// <summary>
@@ -1019,4 +1103,14 @@ public class ProduccionRepository : IProduccionRepository
 
         return rowsAffected > 0;
     }
+}
+
+/// <summary>
+/// DTO interno para mapear el resultado de GetResumenMesActualAsync.
+/// </summary>
+file class ResumenMesDto
+{
+    public decimal TotalFacturado { get; set; }
+    public int FacturasProcesadas { get; set; }
+    public decimal TiempoPromedioDias { get; set; }
 }

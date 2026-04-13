@@ -185,9 +185,9 @@
         // Filtro por defecto: Factura Pendiente
         filtrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente');
 
-        // Fecha por defecto: hoy + 3 días
+        // Fecha por defecto: mañana
         const hoy = new Date();
-        hoy.setDate(hoy.getDate() + 3);
+        hoy.setDate(hoy.getDate() + 1);
         const yyyy = hoy.getFullYear();
         const mm = String(hoy.getMonth() + 1).padStart(2, '0');
         const dd = String(hoy.getDate()).padStart(2, '0');
@@ -272,8 +272,14 @@
         }).then(result => {
             if (!result.isConfirmed) return;
 
-            document.getElementById('btnEnviarMasivo').disabled = true;
-            document.getElementById('btnEnviarMasivo').innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Enviando...';
+            Swal.fire({
+                title: 'Enviando solicitud...',
+                text: 'Procesando, por favor espere.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
 
             fetch('@Url.Action("SolicitarFacturaMasivo", "Produccion")', {
                 method: 'POST',
@@ -282,8 +288,7 @@
             })
             .then(r => r.json())
             .then(data => {
-                document.getElementById('btnEnviarMasivo').disabled = false;
-                document.getElementById('btnEnviarMasivo').innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Solicitar Seleccionados';
+                Swal.close();
 
                 if (data.success) {
                     $('#modalSolicitudMasiva').modal('hide');
@@ -300,8 +305,6 @@
                 }
             })
             .catch(() => {
-                document.getElementById('btnEnviarMasivo').disabled = false;
-                document.getElementById('btnEnviarMasivo').innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Solicitar Seleccionados';
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.', confirmButtonColor: '#dc3545' });
             });
         });

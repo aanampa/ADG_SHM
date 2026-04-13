@@ -38,4 +38,14 @@ public interface IOrdenPagoService
     /// Anula una orden de pago por su GUID y revierte las producciones a FACTURA_LIQUIDADA.
     /// </summary>
     Task<bool> AnularAsync(string guid, int idModificador);
+
+    /// <summary>
+    /// Actualiza el estado de una orden de pago por su ID.
+    /// </summary>
+    Task<bool> UpdateEstadoAsync(int idOrdenPago, string estado, int idModificador);
+
+    /// <summary>
+    /// Cuenta las producciones de la orden que NO estan en FACTURA_PAGADA.
+    /// </summary>
+    Task<int> GetCountProduccionesNotPagadasAsync(int idOrdenPago);
 }

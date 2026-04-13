@@ -100,6 +100,8 @@ public class TestController : Controller
         ViewBag.AppCompanyName = _configuration["AppSettings:CompanyName"];
         ViewBag.AppVersion = _configuration["AppSettings:Version"];
         ViewBag.AppUrlBase = _configuration["AppSettings:UrlBaseApp"];
+        ViewBag.AppUrlPortalAdministrativo = _configuration["AppSettings:UrlPortalAdministrativo"];
+        ViewBag.AppUrlPortalCompaniaMedica = _configuration["AppSettings:UrlPortalCompaniaMedica"];
 
         // ConnectionStrings (ocultando password)
         var connLocal = _configuration.GetConnectionString("OracleConnectionLocal") ?? "";

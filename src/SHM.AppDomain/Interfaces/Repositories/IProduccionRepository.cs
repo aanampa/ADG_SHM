@@ -92,6 +92,13 @@ public interface IProduccionRepository
         string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize);
 
     /// <summary>
+    /// Obtiene producciones con estado FACTURA_PENDIENTE o FACTURA_SOLICITADA para el modal
+    /// de solicitud masiva. Incluye conteo de usuarios externos y cuentas bancarias por entidad
+    /// en una sola query, evitando llamadas N+1 al controller.
+    /// </summary>
+    Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede);
+
+    /// <summary>
     /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
     /// </summary>
     /// <param name="guidRegistro">GUID del registro de produccion</param>
@@ -128,6 +135,11 @@ public interface IProduccionRepository
     /// <param name="idEntidadMedica">ID de la entidad medica</param>
     /// <returns>Cantidad de facturas enviadas en el mes</returns>
     Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Obtiene el resumen del mes actual: total facturado, cantidad procesada y tiempo promedio.
+    /// </summary>
+    Task<(decimal TotalFacturado, int FacturasProcesadas, decimal TiempoPromedioDias)> GetResumenMesActualAsync(int idEntidadMedica);
 
     /// <summary>
     /// Obtiene datos de facturas por mes para los ultimos 6 meses.

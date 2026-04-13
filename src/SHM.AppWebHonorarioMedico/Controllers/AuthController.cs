@@ -60,6 +60,10 @@ public class AuthController : Controller
 
         try
         {
+            // Quitar espacios al inicio y al final
+            model.Username = model.Username?.Trim() ?? "";
+            model.Password = model.Password?.Trim() ?? "";
+
             // Limpiar username si viene con @
             if (!string.IsNullOrEmpty(model.Username) && model.Username.Contains("@"))
             {
@@ -100,8 +104,7 @@ public class AuthController : Controller
                     new ClaimsPrincipal(claimsIdentity),
                     new AuthenticationProperties
                     {
-                        IsPersistent = model.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                        IsPersistent = model.RememberMe
                     }
                 );
 
@@ -171,8 +174,7 @@ public class AuthController : Controller
                     new ClaimsPrincipal(devIdentity),
                     new AuthenticationProperties
                     {
-                        IsPersistent = model.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                        IsPersistent = model.RememberMe
                     }
                 );
 
@@ -245,8 +247,8 @@ public class AuthController : Controller
                 new ClaimsPrincipal(identity),
                 new AuthenticationProperties
                 {
-                    IsPersistent = model.RememberMe,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    IsPersistent = model.RememberMe
+                    // ExpiresUtc se toma de options.ExpireTimeSpan en Program.cs
                 }
             );
 
@@ -305,6 +307,20 @@ public class AuthController : Controller
                 model.InstanceDescription = $"INSTANCIA {instancia.ToUpper()}";
                 break;
         }
+    }
+
+    /// <summary>
+    /// Endpoint liviano para verificar si la sesion sigue activa (usado por polling en el cliente).
+    /// Devuelve 200 si autenticado, 401 si la sesion expiro.
+    /// Nota: [AllowAnonymous] en el controlador no impide que el middleware de autenticacion
+    /// procese la cookie; solo omite el bloqueo de autorizacion. Por eso IsAuthenticated es confiable.
+    /// </summary>
+    [HttpGet]
+    public IActionResult Ping()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return Ok();
+        return Unauthorized();
     }
 
     [Authorize]
@@ -529,7 +545,7 @@ public class AuthController : Controller
                 new AuthenticationProperties
                 {
                     IsPersistent = false,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
                 }
             );
 
@@ -624,7 +640,7 @@ public class AuthController : Controller
                 new AuthenticationProperties
                 {
                     IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
                 }
             );
 

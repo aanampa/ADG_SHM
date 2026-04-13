@@ -1,9 +1,9 @@
 # Flujo de Estados de Orden de Pago
 ## Sistema de Honorarios Medicos (SHM)
 
-**Version:** 1.2
+**Version:** 1.3
 **Fecha:** 17 de Febrero 2026
-**Actualizado:** 03 de Abril 2026 - Agregado estado ANULADO y flujo de anulacion
+**Actualizado:** 09 de Abril 2026 - Correcciones: formato numero de orden, estado ANULADO en SQL, vistas de historial, comentario obligatorio al rechazar
 **Autor:** ADG Vladimir D
 
 ---
@@ -58,7 +58,9 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 
 ---
 
-## 5. Diagrama de Flujo
+## 5. Diagrama de Flujo (Estados)
+
+Representa las transiciones de estado de `SHM_ORDEN_PAGO` y las acciones que las desencadenan.
 
 ```
     +-------------------------------------------------------------------------+
@@ -73,8 +75,8 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
     |   |  (SHM_ORDEN_PAGO)   |                                               |
     |   +----+----------+-----+                                               |
     |        |          |                                                     |
-    |   [Anular]        | Cada nivel de SHM_ORDEN_PAGO_APROBACION             |
-    |        |          | debe aprobar en orden secuencial                    |
+    |   [Anular]        | NIVEL 1: JEFE_SEDE (orden=1)                        |
+    |        |          | notificado por email al generar                     |
     |        v          v                                                     |
     |        |   +------+------+                                              |
     |        |   |             |                                              |
@@ -82,21 +84,25 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
     |        |  [Rechazar]  [Aprobar]                                         |
     |        |   |             |                                              |
     |        |   v             v                                              |
-    |        |  +---------+  +------------------+                             |
-    |        |  | DEVUELTO|  | APROBADO (nivel) |                             |
-    |        |  +----+----+  +--------+---------+                             |
-    |        |       |                |                                       |
-    |        |  [Anular]              | Todos los niveles aprobados?          |
-    |        |       |         +------+------+                                |
-    |        |       |         |             |                                |
-    |        |       |         v             v                                |
-    |        |       |       [No]          [Si]                               |
-    |        |       |         |             |                                |
-    |        |       |         v             v                                |
-    |        |       |  (sigue en          +---------+                        |
-    |        |       |   APROBACION_       | APROBADO|  <- Orden aprobada     |
-    |        |       |   PENDIENTE)        +---------+                        |
-    |        v       v                                                        |
+    |        |  +---------+  +---------------------+                          |
+    |        |  | DEVUELTO|  | APROBADO (JEFE_SEDE) |                         |
+    |        |  +----+----+  +----------+----------+                          |
+    |        |       |                  |                                     |
+    |        |  [Anular]     NIVEL 2: JEFE_CORPORATIVO (orden=2)              |
+    |        |       |       notificado por email al aprobar nivel 1          |
+    |        |       |                  v                                     |
+    |        |       |   +-------------+-------------+                        |
+    |        |       |   |                           |                        |
+    |        |       |   v                           v                        |
+    |        |       |  [Rechazar]               [Aprobar]                    |
+    |        |       |   |                           |                        |
+    |        |       |   v                           v                        |
+    |        |       |  +---------+           +---------+                     |
+    |        |       |  | DEVUELTO|           | APROBADO|  <- Orden aprobada  |
+    |        |       |  +----+----+           +---------+                     |
+    |        |       |       |                                                |
+    |        |       |  [Anular]                                              |
+    |        v       v       v                                                |
     |      +---------+                                                        |
     |      | ANULADO |  <- Producciones vuelven a FACTURA_LIQUIDADA           |
     |      +---------+                                                        |
@@ -109,9 +115,52 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 
 ---
 
-## 6. Descripcion Detallada de Cada Evento
+## 6. Diagrama de Proceso BPMN (Bizagi)
 
-### 6.1 Generar Orden de Pago
+Representa el flujo de trabajo por actor con swimlanes: quién hace qué y cuándo.
+
+```mermaid
+flowchart TD
+
+    subgraph ADM ["🏢 Administrador de Honorarios"]
+        direction TB
+        A1([Inicio]) --> A2["Seleccionar liquidaciones\nen bandeja\n(estado FACTURA_LIQUIDADA)"]
+        A2 --> A3["Ejecutar:\nGenerar Orden de Pago"]
+        A3 --> A4(["APROBACION_PENDIENTE\nProducciones → FACTURA_ORDEN_PAGO\nEmail enviado a Jefe de Sede"])
+        A4 -.->|"¿Anular orden?\n(desde APROBACION_PENDIENTE\no DEVUELTO)"| A5["Anular Orden de Pago"]
+        A5 --> A6(["ANULADO\nProducciones → FACTURA_LIQUIDADA"])
+    end
+
+    subgraph SEDE ["👤 Jefe de Sede  ·  JEFE_SEDE  ·  Nivel 1"]
+        direction TB
+        S1[/"Recibe email:\norden pendiente de aprobacion"/]
+        S1 --> S2["Revisar Orden de Pago\n(liquidaciones, comprobantes, montos)"]
+        S2 --> S3{"Decision"}
+        S3 -- "Aprobar" --> S4(["Nivel 1 APROBADO\nEmail enviado a Jefe Corporativo"])
+        S3 -- "Rechazar\n(comentario obligatorio)" --> S5(["DEVUELTO"])
+        S5 -.->|"¿Anular?"| A5
+    end
+
+    subgraph CORP ["👤 Jefe Corporativo  ·  JEFE_CORPORATIVO  ·  Nivel 2"]
+        direction TB
+        C1[/"Recibe email:\norden pendiente de aprobacion"/]
+        C1 --> C2["Revisar Orden de Pago\n(liquidaciones, comprobantes, montos)"]
+        C2 --> C3{"Decision"}
+        C3 -- "Aprobar" --> C4(["APROBADO\nFlujo completado"])
+        C3 -- "Rechazar\n(comentario obligatorio)" --> C5(["DEVUELTO"])
+        C5 -.->|"¿Anular?"| A5
+        C4 --> C6([Fin])
+    end
+
+    A4 --> S1
+    S4 --> C1
+```
+
+---
+
+## 7. Descripcion Detallada de Cada Evento
+
+### 7.1 Generar Orden de Pago
 
 - **Actor:** Generador (Empresa)
 - **Origen:** Bandeja de Liquidaciones (`/Liquidacion/Index`)
@@ -128,13 +177,13 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 | 1 | `SHM_ORDEN_PAGO` | INSERT | Se crea la cabecera con estado `APROBACION_PENDIENTE`, totales acumulados, banco y sede |
 | 2 | `SHM_ORDEN_PAGO_PRODUCCION` | INSERT (bulk) | Un registro por cada produccion incluida en la orden |
 | 3 | `SHM_ORDEN_PAGO_LIQUIDACION` | INSERT | Un registro por cada codigo de liquidacion agrupado, con totales y datos de la liquidacion |
-| 4 | `SHM_ORDEN_PAGO_APROBACION` | INSERT | Un registro por cada perfil de `SHM_PERFIL_APROBACION` donde `GRUPO_FLUJO_TRABAJO = 'FLUJO_APROBACION_ORDEN_PAGO'`, todos con estado `APROBACION_PENDIENTE` |
+| 4 | `SHM_ORDEN_PAGO_APROBACION` | INSERT | Dos registros: uno para `JEFE_SEDE` (orden=1) y otro para `JEFE_CORPORATIVO` (orden=2), ambos con estado `APROBACION_PENDIENTE` |
 | 5 | `SHM_PRODUCCION` | UPDATE | Estado de las producciones cambia de `FACTURA_LIQUIDADA` a `FACTURA_ORDEN_PAGO` |
-| 6 | - | EMAIL | Se notifica por correo a los usuarios del **primer nivel** de aprobacion (ver seccion 11) |
+| 6 | - | EMAIL | Se notifica por correo a los usuarios del perfil `JEFE_SEDE` de la sede correspondiente (ver seccion 12) |
 
-**Formato del numero de orden:** `OP-YYYYMMDD-HHmmss`
+**Formato del numero de orden:** `OP-{CodigoSede}-{YYYY}{MM}{XX}` donde `CodigoSede` es el codigo de la sede (ej: `HN`) y `XX` es un correlativo de 2 digitos por sede/año/mes. Ejemplo: `OP-HN-20260401`
 
-### 6.2 Anular Orden de Pago
+### 7.2 Anular Orden de Pago
 
 - **Actor:** Usuario con acceso a la opcion (no requiere rol especifico de aprobacion)
 - **Controlador:** `OrdenPagoController.Anular`
@@ -152,11 +201,12 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 
 ---
 
-### 6.3 Rechazar Orden de Pago
+### 7.3 Rechazar Orden de Pago
 
 - **Actor:** Aprobador
 - **Controlador:** `OrdenPagoAprobacionController.Rechazar`
 - **Precondiciones:** La orden debe estar en estado `APROBACION_PENDIENTE`
+- **Nota:** El comentario de rechazo es **obligatorio**. El controlador valida que no este vacio antes de procesar
 
 **Acciones ejecutadas:**
 
@@ -166,9 +216,9 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 | 2 | `SHM_ORDEN_PAGO` | UPDATE | Estado cambia a `DEVUELTO` |
 | 3 | - | BITACORA | Se registra la accion con el comentario del rechazo |
 
-**Consecuencia:** La orden queda en estado `DEVUELTO`. Puede ser anulada (ver 6.2) o el generador puede crear una nueva Orden de Pago desde la bandeja de Liquidaciones (paso 6.1).
+**Consecuencia:** La orden queda en estado `DEVUELTO`. Puede ser anulada (ver 7.2) o el generador puede crear una nueva Orden de Pago desde la bandeja de Liquidaciones (paso 7.1).
 
-### 6.4 Aprobar Orden de Pago
+### 7.4 Aprobar Orden de Pago
 
 - **Actor:** Aprobador
 - **Controlador:** `OrdenPagoAprobacionController.Aprobar`
@@ -180,16 +230,21 @@ Este documento describe el flujo de estados del proceso de Orden de Pago en el S
 |---|-------|--------|---------|
 | 1 | `SHM_ORDEN_PAGO_APROBACION` | UPDATE | El registro del aprobador pasa a estado `APROBADO`. Se registra `ID_USUARIO_APROBADOR` y `FECHA_APROBACION` |
 | 2 | `SHM_ORDEN_PAGO` | UPDATE (condicional) | Si **todos** los registros de `SHM_ORDEN_PAGO_APROBACION` para esta orden estan en estado `APROBADO`, entonces el estado de la orden cambia a `APROBADO` |
-| 3 | - | EMAIL (condicional) | Si quedan niveles pendientes, se notifica por correo a los usuarios del **siguiente nivel** de aprobacion (ver seccion 11) |
+| 3 | - | EMAIL (condicional) | Si quedan niveles pendientes, se notifica por correo a los usuarios del **siguiente nivel** de aprobacion (ver seccion 12) |
 | 4 | - | BITACORA | Se registra si fue aprobacion parcial (nivel) o aprobacion total (orden completa) |
 
 **Regla de negocio:** La orden solo se aprueba completamente cuando el ultimo nivel pendiente da su aprobacion.
 
 ---
 
-## 7. Flujo de Aprobacion
+## 8. Flujo de Aprobacion
 
-El flujo de aprobacion se basa en perfiles configurados en `SHM_PERFIL_APROBACION`:
+El flujo de aprobacion se basa en perfiles configurados en `SHM_PERFIL_APROBACION`. Existen **2 niveles secuenciales**:
+
+| Nivel | Codigo | Descripcion | Orden |
+|-------|--------|-------------|-------|
+| 1 | `JEFE_SEDE` | Jefe de Sede | 1 |
+| 2 | `JEFE_CORPORATIVO` | Jefe Corporativo | 2 |
 
 ```
 SHM_PERFIL_APROBACION (plantilla)
@@ -197,36 +252,36 @@ SHM_PERFIL_APROBACION (plantilla)
   +------------------+---------------------------+-------+
   | CODIGO           | DESCRIPCION               | ORDEN |
   +------------------+---------------------------+-------+
-  | NIVEL_1          | Primer nivel aprobacion    |   1   |
-  | NIVEL_2          | Segundo nivel aprobacion   |   2   |
-  | ...              | ...                        |  ...  |
+  | JEFE_SEDE        | Jefe de Sede              |   1   |
+  | JEFE_CORPORATIVO | Jefe Corporativo          |   2   |
   +------------------+---------------------------+-------+
 
 SHM_PERFIL_APROBACION_USUARIO (usuarios asignados por sede)
   +----------------------+------------+---------+
   | ID_PERFIL_APROBACION | ID_USUARIO | ID_SEDE |
   +----------------------+------------+---------+
+  Nota: ID_SEDE = NULL indica que el usuario aplica a todas las sedes
 
 SHM_ORDEN_PAGO_APROBACION (instancias creadas por orden)
-  +---------------+----------------------+-----------------------+
-  | ID_ORDEN_PAGO | ID_PERFIL_APROBACION | ESTADO                |
-  +---------------+----------------------+-----------------------+
-  |     100       |          1           | APROBACION_PENDIENTE  |
-  |     100       |          2           | APROBACION_PENDIENTE  |
-  +---------------+----------------------+-----------------------+
+  +---------------+---------------------+-----------------------+
+  | ID_ORDEN_PAGO | CODIGO_PERFIL        | ESTADO                |
+  +---------------+---------------------+-----------------------+
+  |     100       | JEFE_SEDE           | APROBACION_PENDIENTE  |
+  |     100       | JEFE_CORPORATIVO    | APROBACION_PENDIENTE  |
+  +---------------+---------------------+-----------------------+
 ```
 
 ---
 
-## 8. Transiciones de Estado
+## 9. Transiciones de Estado
 
 ### SHM_ORDEN_PAGO
 
 | # | Estado Origen | Estado Destino | Accion | Condicion |
 |---|---------------|----------------|--------|-----------|
 | 1 | (nuevo) | APROBACION_PENDIENTE | Generar Orden de Pago | - |
-| 2 | APROBACION_PENDIENTE | DEVUELTO | Algun aprobador rechaza | Cualquier nivel rechaza |
-| 3 | APROBACION_PENDIENTE | APROBADO | Ultimo aprobador aprueba | Todos los niveles en estado APROBADO |
+| 2 | APROBACION_PENDIENTE | DEVUELTO | Algun aprobador rechaza | JEFE_SEDE o JEFE_CORPORATIVO rechaza |
+| 3 | APROBACION_PENDIENTE | APROBADO | Ultimo aprobador aprueba | JEFE_SEDE y JEFE_CORPORATIVO en estado APROBADO |
 | 4 | APROBACION_PENDIENTE | ANULADO | Usuario anula la orden | Usuario con acceso a la opcion |
 | 5 | DEVUELTO | ANULADO | Usuario anula la orden | Usuario con acceso a la opcion |
 
@@ -235,8 +290,8 @@ SHM_ORDEN_PAGO_APROBACION (instancias creadas por orden)
 | # | Estado Origen | Estado Destino | Accion | Actor |
 |---|---------------|----------------|--------|-------|
 | 1 | (nuevo) | APROBACION_PENDIENTE | Generar Orden de Pago | Sistema |
-| 2 | APROBACION_PENDIENTE | APROBADO | Aprobar | Aprobador del nivel |
-| 3 | APROBACION_PENDIENTE | DEVUELTO | Rechazar | Aprobador del nivel |
+| 2 | APROBACION_PENDIENTE | APROBADO | Aprobar | Aprobador del nivel (JEFE_SEDE o JEFE_CORPORATIVO) |
+| 3 | APROBACION_PENDIENTE | DEVUELTO | Rechazar | Aprobador del nivel (JEFE_SEDE o JEFE_CORPORATIVO) |
 
 ### SHM_PRODUCCION (estados relacionados)
 
@@ -247,7 +302,7 @@ SHM_ORDEN_PAGO_APROBACION (instancias creadas por orden)
 
 ---
 
-## 9. Estructura de Tablas
+## 10. Estructura de Tablas
 
 ### SHM_ORDEN_PAGO
 ```sql
@@ -256,7 +311,7 @@ ID_SEDE               Number NOT NULL    -- FK a SHM_SEDE
 ID_BANCO              Number NOT NULL    -- FK a SHM_BANCO
 NUMERO_ORDEN_PAGO     Varchar2(20)       -- Formato: OP-YYYYMMDD-HHmmss
 FECHA_GENERACION      Date
-ESTADO                Varchar2(30)       -- APROBACION_PENDIENTE | APROBADO | DEVUELTO
+ESTADO                Varchar2(30)       -- APROBACION_PENDIENTE | APROBADO | DEVUELTO | ANULADO
 MTO_CONSUMO_ACUM      Number
 MTO_DESCUENTO_ACUM    Number
 MTO_SUBTOTAL_ACUM     Number
@@ -312,7 +367,7 @@ COMENTARIOS               Varchar2(1000)
 
 ---
 
-## 10. Reglas de Negocio
+## 11. Reglas de Negocio
 
 1. **Mismo banco:** Todas las liquidaciones seleccionadas para una orden deben pertenecer al mismo banco
 2. **Estado previo:** Solo producciones en estado `FACTURA_LIQUIDADA` pueden incluirse en una orden de pago
@@ -326,26 +381,26 @@ COMENTARIOS               Varchar2(1000)
 
 ---
 
-## 11. Notificaciones por Email
+## 12. Notificaciones por Email
 
 El sistema envia notificaciones por correo electronico a los aprobadores en dos momentos del flujo:
 
-### 11.1 Al Generar la Orden de Pago
+### 12.1 Al Generar la Orden de Pago
 
 - **Evento:** `LiquidacionController.GenerarOrdenPago`
 - **Servicio:** `OrdenPagoAprobacionService.NotificarPrimerAprobadorAsync`
-- **Destinatarios:** Usuarios asignados al **primer nivel** de aprobacion pendiente
+- **Destinatarios:** Usuarios asignados al perfil **`JEFE_SEDE`** (primer nivel, orden=1) filtrados por la sede de la orden
 - **Momento:** Despues de crear todos los registros y actualizar el estado de las producciones
 
-### 11.2 Al Aprobar un Nivel
+### 12.2 Al Aprobar un Nivel
 
 - **Evento:** `OrdenPagoAprobacionService.AprobarAsync`
 - **Servicio:** `OrdenPagoAprobacionService.NotificarSiguienteAprobadorAsync` (privado)
-- **Destinatarios:** Usuarios asignados al **siguiente nivel** de aprobacion pendiente
-- **Momento:** Despues de aprobar el nivel actual, solo si quedan niveles pendientes
-- **No se notifica** si el nivel aprobado es el ultimo (la orden pasa a estado `APROBADO`)
+- **Destinatarios:** Usuarios asignados al perfil **`JEFE_CORPORATIVO`** (siguiente nivel, orden=2) cuando `JEFE_SEDE` aprueba
+- **Momento:** Despues de que `JEFE_SEDE` aprueba, notifica a `JEFE_CORPORATIVO`
+- **No se notifica** cuando `JEFE_CORPORATIVO` aprueba (la orden pasa a estado `APROBADO`)
 
-### 11.3 Logica de Seleccion de Destinatarios
+### 12.3 Logica de Seleccion de Destinatarios
 
 ```
 1. Obtener el siguiente registro de SHM_ORDEN_PAGO_APROBACION
@@ -363,7 +418,7 @@ El sistema envia notificaciones por correo electronico a los aprobadores en dos 
    - Enviar correo si tiene email configurado
 ```
 
-### 11.4 Plantilla de Email
+### 12.4 Plantilla de Email
 
 Se utiliza `IEmailService.EnviarEmailNotificacionAprobacionAsync` con los siguientes datos:
 
@@ -377,13 +432,13 @@ Se utiliza `IEmailService.EnviarEmailNotificacionAprobacionAsync` con los siguie
 | Nombre del perfil | `SHM_PERFIL_APROBACION.DESCRIPCION` (del nivel pendiente) |
 | ID orden de pago | `SHM_ORDEN_PAGO.ID_ORDEN_PAGO` |
 
-### 11.5 Manejo de Errores
+### 12.5 Manejo de Errores
 
 - Los errores en el envio de correo **no interrumpen** el flujo principal
 - Los errores se registran en el log con nivel `LogError`
 - La generacion de la orden o la aprobacion se completa exitosamente aunque falle el envio del correo
 
-### 11.6 Diagrama de Notificaciones
+### 12.6 Diagrama de Notificaciones
 
 ```
   Generar Orden de Pago
@@ -392,35 +447,49 @@ Se utiliza `IEmailService.EnviarEmailNotificacionAprobacionAsync` con los siguie
   [Crear registros en BD]
          |
          v
-  [Notificar primer nivel] --email--> Usuarios NIVEL_1 (sede)
+  [Notificar JEFE_SEDE] --email--> Usuarios JEFE_SEDE (sede de la orden)
          |
          v
-  (Aprobador NIVEL_1 aprueba)
+  (JEFE_SEDE aprueba)
          |
          v
-  [Quedan niveles pendientes?]
+  [Quedan niveles pendientes? -> Si: JEFE_CORPORATIVO pendiente]
          |
     Si ---+--- No
     |           |
     v           v
   [Notificar   (Orden APROBADA,
-   siguiente    no se notifica)
-   nivel]
+   JEFE_CORP]   no se notifica)
     |
     v
-  --email--> Usuarios NIVEL_2 (sede)
+  --email--> Usuarios JEFE_CORPORATIVO (sin filtro de sede, aplican a todas)
          |
          v
-  (Aprobador NIVEL_2 aprueba)
+  (JEFE_CORPORATIVO aprueba)
          |
          v
-  [Quedan niveles pendientes?]
-    ...
+  [Quedan niveles pendientes? -> No]
+         |
+         v
+  (Orden APROBADA, no se notifica)
 ```
 
 ---
 
-## 12. Consulta de Log de Correos
+## 13. Vistas del Portal de Aprobadores
+
+Ademas de la bandeja de ordenes pendientes, el aprobador dispone de las siguientes vistas:
+
+| Vista | URL | Controlador | Descripcion |
+|-------|-----|-------------|-------------|
+| Bandeja pendientes | `/OrdenPagoAprobacion` | `OrdenPagoAprobacionController.Index` | Ordenes en estado `APROBACION_PENDIENTE` donde el usuario tiene turno de aprobar |
+| Historial aprobadas | `/OrdenPagoAprobacion/Aprobadas` | `OrdenPagoAprobacionController.Aprobadas` | Ordenes donde el usuario ya aprobo su nivel |
+| Detalle para aprobar | `/OrdenPagoAprobacion/Detalle/{guid}` | `OrdenPagoAprobacionController.Detalle` | Vista completa con botones Aprobar/Rechazar |
+| Detalle aprobada | `/OrdenPagoAprobacion/DetalleAprobada/{guid}` | `OrdenPagoAprobacionController.DetalleAprobada` | Vista de solo consulta (sin acciones), para ordenes ya procesadas |
+
+---
+
+## 14. Consulta de Log de Correos
 
 El sistema registra todos los correos enviados en la tabla `SHM_EMAIL_LOG`. Existe una opcion de consulta en el portal administrativo:
 

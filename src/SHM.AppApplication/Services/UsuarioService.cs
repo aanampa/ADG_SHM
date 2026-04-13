@@ -428,7 +428,8 @@ public class UsuarioService : IUsuarioService
                 nombreCompleto,
                 usuario.Login ?? "",
                 generatedPassword,
-                idUsuario);
+                idUsuario,
+                usuario.TipoUsuario ?? "E");
         }
 
         return (true, null, generatedPassword);
@@ -493,20 +494,22 @@ public class UsuarioService : IUsuarioService
         };
 
         // Usar TransactionScope para operaciones en multiples tablas
-        using var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
-        var idUsuario = await _usuarioRepository.CreateAsync(usuario);
-
-        // Asignar sedes al usuario interno si se proporcionaron
-        if (createDto.IdsSedesSeleccionadas != null && createDto.IdsSedesSeleccionadas.Count > 0)
+        int idUsuario;
+        using (var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
         {
-            await _usuarioSedeRepository.UpdateSedesUsuarioAsync(idUsuario, createDto.IdsSedesSeleccionadas, idCreador);
+            idUsuario = await _usuarioRepository.CreateAsync(usuario);
+
+            // Asignar sedes al usuario interno si se proporcionaron
+            if (createDto.IdsSedesSeleccionadas != null && createDto.IdsSedesSeleccionadas.Count > 0)
+            {
+                await _usuarioSedeRepository.UpdateSedesUsuarioAsync(idUsuario, createDto.IdsSedesSeleccionadas, idCreador);
+            }
+
+            // Commit de la transaccion - si no se llama, se hace rollback automatico
+            transactionScope.Complete();
         }
 
-        // Commit de la transaccion - si no se llama, se hace rollback automatico
-        transactionScope.Complete();
-
-        // Enviar email con credenciales si se solicito
+        // Enviar email FUERA del TransactionScope para que el log no quede enlazado en la transaccion
         if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
         {
             var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
@@ -515,7 +518,8 @@ public class UsuarioService : IUsuarioService
                 nombreCompleto,
                 usuario.Login ?? "",
                 generatedPassword,
-                idUsuario);
+                idUsuario,
+                usuario.TipoUsuario ?? "I");
         }
 
         return (true, null, generatedPassword);
@@ -572,7 +576,8 @@ public class UsuarioService : IUsuarioService
                 nombreCompleto,
                 usuario.Login ?? "",
                 nuevaClave,
-                idUsuario);
+                idUsuario,
+                usuario.TipoUsuario ?? "I");
         }
 
         return (true, null, nuevaClave);

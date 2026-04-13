@@ -27,11 +27,18 @@ public class DetalleLiquidacionItemDto
     // Banco
     public string? NombreBanco { get; set; }
 
+    // Produccion
+    public string? GuidRegistro { get; set; }
+
     // Comprobante (Produccion)
     public string? TipoComprobante { get; set; }
     public string? Serie { get; set; }
     public string? Numero { get; set; }
     public string? GuidArchivoFactura { get; set; }
+    public string? GuidArchivoXml { get; set; }
+
+    // Estado
+    public string? Estado { get; set; }
 
     // Montos (Produccion)
     public decimal? MtoSubtotal { get; set; }

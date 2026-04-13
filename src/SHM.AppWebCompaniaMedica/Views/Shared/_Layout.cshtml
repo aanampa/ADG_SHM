@@ -76,12 +76,14 @@
                     <span>Mi Perfil</span>
                 </a>
             </li>
+            @*
             <li>
                 <a asp-controller="Usuario" asp-action="Configuracion" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Configuracion" ? "active" : "")">
                     <i class="bi bi-gear-fill"></i>
                     <span>Configuración</span>
                 </a>
             </li>
+            *@
             <li>
                 <a href="#" id="logoutLink" style="margin-top: 2rem;">
                     <i class="bi bi-box-arrow-left"></i>

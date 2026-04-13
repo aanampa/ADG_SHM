@@ -65,7 +65,9 @@ public class DeployCheckController : Controller
                 CompanyName     = _configuration["AppSettings:CompanyName"],
                 Version         = _configuration["AppSettings:Version"],
                 Year            = _configuration["AppSettings:Year"],
-                UrlBaseApp      = _configuration["AppSettings:UrlBaseApp"]
+                UrlBaseApp              = _configuration["AppSettings:UrlBaseApp"],
+                UrlPortalAdministrativo = _configuration["AppSettings:UrlPortalAdministrativo"],
+                UrlPortalCompaniaMedica = _configuration["AppSettings:UrlPortalCompaniaMedica"]
             },
             SmtpSettings = new
             {
