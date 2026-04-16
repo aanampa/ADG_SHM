@@ -56,6 +56,9 @@
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="clearFilters()">
                                         <i class="fas fa-eraser mr-1"></i>Limpiar
                                     </button>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="exportarExcel()" title="Exportar a Excel">
+                                        <i class="fas fa-file-excel mr-1"></i>Exportar
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -181,6 +184,13 @@
 
         function verDetalle(guid) {
             window.location.href = '@Url.Action("Detalle", "Tesoreria")/' + guid;
+        }
+
+        function exportarExcel() {
+            const idBanco = $('#cboBanco').val() || '';
+            const estado  = $('#cboEstado').val() || '';
+            const params  = new URLSearchParams({ idBanco, estado });
+            window.location.href = '@Url.Action("ExportarExcel", "Tesoreria")?' + params.toString();
         }
     </script>
 }

@@ -545,7 +545,7 @@ public class AuthController : Controller
                 new AuthenticationProperties
                 {
                     IsPersistent = false,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
                 }
             );
 
@@ -640,7 +640,7 @@ public class AuthController : Controller
                 new AuthenticationProperties
                 {
                     IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
                 }
             );
 
