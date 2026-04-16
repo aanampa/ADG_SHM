@@ -50,7 +50,7 @@ try
             options.LoginPath = "/Auth/Login";
             options.LogoutPath = "/Auth/Logout";
             options.AccessDeniedPath = "/Auth/AccesoDenegado";
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(1);
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
             options.SlidingExpiration = true;
             options.Cookie.HttpOnly = true;
             options.Cookie.IsEssential = true;

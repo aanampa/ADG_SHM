@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -224,6 +225,213 @@ public class TesoreriaController : Controller
         {
             _logger.LogError(ex, "Error en RegistrarPago");
             return StatusCode(500, new { success = false, message = "Error interno al registrar el pago." });
+        }
+    }
+
+    /// <summary>
+    /// Exporta el listado de ordenes de pago y el detalle de liquidaciones a Excel.
+    /// Respeta los mismos filtros que la lista paginada.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-13</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> ExportarExcel(int? idBanco, string? estado)
+    {
+        try
+        {
+            var idSede = GetCurrentUserIdSede();
+            var estadoFiltro = string.IsNullOrEmpty(estado) ? EstadoDescripcion.OrdenPago.Aprobado : estado;
+
+            var (ordenes, _) = await _ordenPagoService.GetPaginatedListAsync(idBanco, estadoFiltro, idSede, 1, 10000);
+            var listaOrdenes = ordenes.ToList();
+
+            using var workbook = new XLWorkbook();
+
+            var colorHeader    = XLColor.FromHtml("#6c757d");
+            var colorHeaderFont = XLColor.White;
+            var colorAlt       = XLColor.FromHtml("#f8f9fa");
+
+            var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo_login.jpg");
+
+            // ----------------------------------------------------------------
+            // HOJA 1 — Órdenes de Pago
+            // ----------------------------------------------------------------
+            var ws1 = workbook.Worksheets.Add("Ordenes de Pago");
+
+            ws1.Row(1).Height = 36;
+            ws1.Range(1, 1, 1, 12).Merge();
+            if (System.IO.File.Exists(imagePath))
+            {
+                using var imgStream1 = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+                ws1.AddPicture(imgStream1).MoveTo(ws1.Cell("A1")).WithSize(120, 32);
+            }
+
+            ws1.Range(2, 1, 2, 12).Merge();
+            ws1.Cell(2, 1).Value = "Reporte de Tesorería - Órdenes de Pago";
+            ws1.Cell(2, 1).Style.Font.Bold = true;
+            ws1.Cell(2, 1).Style.Font.FontSize = 14;
+            ws1.Cell(2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws1.Cell(2, 1).Style.Fill.BackgroundColor = colorHeader;
+            ws1.Cell(2, 1).Style.Font.FontColor = colorHeaderFont;
+            ws1.Row(2).Height = 22;
+
+            ws1.Cell(3, 1).Value = $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            ws1.Cell(3, 1).Style.Font.Italic = true;
+            ws1.Cell(3, 1).Style.Font.FontSize = 9;
+            ws1.Range(3, 1, 3, 12).Merge();
+
+            int rH1 = 5;
+            var hdrs1 = new[] { "#", "N° Orden de Pago", "Sede", "Banco", "Fecha Generación", "Estado",
+                                "N° Liquid.", "N° Facturas", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Total S/." };
+            ws1.Row(rH1).Height = 28;
+            for (int i = 0; i < hdrs1.Length; i++)
+            {
+                var c = ws1.Cell(rH1, i + 1);
+                c.Value = hdrs1[i];
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontSize = 9;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                c.Style.Alignment.Vertical   = XLAlignmentVerticalValues.Center;
+                c.Style.Alignment.WrapText   = true;
+                c.Style.Fill.BackgroundColor = colorHeader;
+                c.Style.Font.FontColor       = colorHeaderFont;
+                c.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            int row1 = rH1 + 1;
+            int cnt1 = 1;
+            foreach (var o in listaOrdenes)
+            {
+                var bg = cnt1 % 2 == 0 ? colorAlt : XLColor.White;
+                ws1.Cell(row1, 1).Value  = cnt1;
+                ws1.Cell(row1, 2).Value  = o.NumeroOrdenPago ?? "-";
+                ws1.Cell(row1, 3).Value  = o.NombreSede ?? "-";
+                ws1.Cell(row1, 4).Value  = o.NombreBanco ?? "-";
+                ws1.Cell(row1, 5).Value  = o.FechaGeneracion.HasValue ? o.FechaGeneracion.Value.ToString("dd/MM/yyyy") : "-";
+                ws1.Cell(row1, 6).Value  = EstadoDescripcion.OrdenPago.GetDescripcion(o.Estado);
+                ws1.Cell(row1, 7).Value  = o.CantLiquidaciones ?? 0;
+                ws1.Cell(row1, 8).Value  = o.CantComprobantes ?? 0;
+                ws1.Cell(row1, 9).Value  = o.MtoSubtotalAcum ?? 0;
+                ws1.Cell(row1, 10).Value = o.MtoIgvAcum ?? 0;
+                ws1.Cell(row1, 11).Value = o.MtoRentaAcum ?? 0;
+                ws1.Cell(row1, 12).Value = o.MtoTotalAcum ?? 0;
+                for (int c = 9; c <= 12; c++)
+                    ws1.Cell(row1, c).Style.NumberFormat.Format = "#,##0.00";
+                ws1.Row(row1).Height = 15;
+                for (int c = 1; c <= hdrs1.Length; c++)
+                {
+                    ws1.Cell(row1, c).Style.Font.FontSize = 9;
+                    ws1.Cell(row1, c).Style.Fill.BackgroundColor = bg;
+                    ws1.Cell(row1, c).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    ws1.Cell(row1, c).Style.Border.OutsideBorderColor = XLColor.FromHtml("#dee2e6");
+                    ws1.Cell(row1, c).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                cnt1++; row1++;
+            }
+            ws1.Columns().AdjustToContents(5, 60);
+
+            // ----------------------------------------------------------------
+            // HOJA 2 — Detalle de Liquidaciones
+            // ----------------------------------------------------------------
+            var ws2 = workbook.Worksheets.Add("Detalle de Liquidaciones");
+
+            ws2.Row(1).Height = 36;
+            ws2.Range(1, 1, 1, 13).Merge();
+            if (System.IO.File.Exists(imagePath))
+            {
+                using var imgStream2 = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+                ws2.AddPicture(imgStream2).MoveTo(ws2.Cell("A1")).WithSize(120, 32);
+            }
+
+            ws2.Range(2, 1, 2, 13).Merge();
+            ws2.Cell(2, 1).Value = "Reporte de Tesorería - Detalle de Liquidaciones";
+            ws2.Cell(2, 1).Style.Font.Bold = true;
+            ws2.Cell(2, 1).Style.Font.FontSize = 14;
+            ws2.Cell(2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws2.Cell(2, 1).Style.Fill.BackgroundColor = colorHeader;
+            ws2.Cell(2, 1).Style.Font.FontColor = colorHeaderFont;
+            ws2.Row(2).Height = 22;
+
+            ws2.Cell(3, 1).Value = $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            ws2.Cell(3, 1).Style.Font.Italic = true;
+            ws2.Cell(3, 1).Style.Font.FontSize = 9;
+            ws2.Range(3, 1, 3, 13).Merge();
+
+            int rH2 = 5;
+            var hdrs2 = new[] { "#", "N° Orden de Pago", "Liquidación", "Tipo Liquidación", "Período",
+                                "RUC", "Tipo Entidad", "Cía Médica", "Banco",
+                                "Comprobante", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Total S/." };
+            ws2.Row(rH2).Height = 28;
+            for (int i = 0; i < hdrs2.Length; i++)
+            {
+                var c = ws2.Cell(rH2, i + 1);
+                c.Value = hdrs2[i];
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontSize = 9;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                c.Style.Alignment.Vertical   = XLAlignmentVerticalValues.Center;
+                c.Style.Alignment.WrapText   = true;
+                c.Style.Fill.BackgroundColor = colorHeader;
+                c.Style.Font.FontColor       = colorHeaderFont;
+                c.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            int row2 = rH2 + 1;
+            int cnt2 = 1;
+            foreach (var o in listaOrdenes)
+            {
+                var detalles = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(o.IdOrdenPago);
+                foreach (var det in detalles)
+                {
+                    var bg = cnt2 % 2 == 0 ? colorAlt : XLColor.White;
+                    var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                        ? $"{det.Serie}-{det.Numero}" : "-";
+
+                    ws2.Cell(row2, 1).Value  = cnt2;
+                    ws2.Cell(row2, 2).Value  = o.NumeroOrdenPago ?? "-";
+                    ws2.Cell(row2, 3).Value  = det.NumeroLiquidacion ?? "-";
+                    ws2.Cell(row2, 4).Value  = det.DesTipoLiquidacion ?? det.TipoLiquidacion ?? "-";
+                    ws2.Cell(row2, 5).Value  = det.PeriodoLiquidacion ?? "-";
+                    ws2.Cell(row2, 6).Value  = det.Ruc ?? "-";
+                    ws2.Cell(row2, 7).Value  = det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-";
+                    ws2.Cell(row2, 8).Value  = det.RazonSocial ?? "-";
+                    ws2.Cell(row2, 9).Value  = det.NombreBanco ?? "-";
+                    ws2.Cell(row2, 10).Value = comprobante;
+                    ws2.Cell(row2, 11).Value = EstadoDescripcion.Produccion.GetDescripcion(det.Estado);
+                    ws2.Cell(row2, 12).Value = det.MtoSubtotal ?? 0;
+                    ws2.Cell(row2, 13).Value = det.MtoIgv ?? 0;
+                    ws2.Cell(row2, 14).Value = det.MtoRenta ?? 0;
+                    ws2.Cell(row2, 15).Value = det.MtoTotal ?? 0;
+                    for (int c = 12; c <= 15; c++)
+                        ws2.Cell(row2, c).Style.NumberFormat.Format = "#,##0.00";
+                    ws2.Row(row2).Height = 15;
+                    for (int c = 1; c <= hdrs2.Length; c++)
+                    {
+                        ws2.Cell(row2, c).Style.Font.FontSize = 9;
+                        ws2.Cell(row2, c).Style.Fill.BackgroundColor = bg;
+                        ws2.Cell(row2, c).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        ws2.Cell(row2, c).Style.Border.OutsideBorderColor = XLColor.FromHtml("#dee2e6");
+                        ws2.Cell(row2, c).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    }
+                    cnt2++; row2++;
+                }
+            }
+            ws2.Columns().AdjustToContents(5, 60);
+
+            using var ms = new MemoryStream();
+            workbook.SaveAs(ms);
+            ms.Position = 0;
+
+            var fileName = $"Tesoreria_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al exportar tesoreria a Excel");
+            return BadRequest("Error al generar el reporte");
         }
     }
 
