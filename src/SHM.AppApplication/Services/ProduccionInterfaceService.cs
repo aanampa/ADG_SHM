@@ -318,6 +318,8 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     MtoRenta = createDto.MtoRenta,
                     MtoIgv = createDto.MtoIgv,
                     MtoTotal = createDto.MtoTotal,
+                    MtoDetraccion = createDto.MtoDetraccion,
+                    PorcDetraccion = createDto.PorcDetraccion,
                     IdCreador = idCreador,
                     Activo = 1
                 };

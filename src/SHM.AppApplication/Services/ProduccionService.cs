@@ -120,6 +120,8 @@ public class ProduccionService : IProduccionService
             MtoRenta = createDto.MtoRenta,
             MtoIgv = createDto.MtoIgv,
             MtoTotal = createDto.MtoTotal,
+            MtoDetraccion = createDto.MtoDetraccion,
+            PorcDetraccion = createDto.PorcDetraccion,
             TipoComprobante = createDto.TipoComprobante,
             Serie = createDto.Serie,
             Numero = createDto.Numero,
@@ -199,6 +201,12 @@ public class ProduccionService : IProduccionService
 
         if (updateDto.MtoTotal.HasValue)
             produccionExistente.MtoTotal = updateDto.MtoTotal;
+
+        if (updateDto.MtoDetraccion.HasValue)
+            produccionExistente.MtoDetraccion = updateDto.MtoDetraccion;
+
+        if (updateDto.PorcDetraccion.HasValue)
+            produccionExistente.PorcDetraccion = updateDto.PorcDetraccion;
 
         if (updateDto.TipoComprobante != null)
             produccionExistente.TipoComprobante = updateDto.TipoComprobante;
@@ -458,6 +466,8 @@ public class ProduccionService : IProduccionService
             MtoRenta = produccion.MtoRenta,
             MtoIgv = produccion.MtoIgv,
             MtoTotal = produccion.MtoTotal,
+            MtoDetraccion = produccion.MtoDetraccion,
+            PorcDetraccion = produccion.PorcDetraccion,
             TipoComprobante = produccion.TipoComprobante,
             Serie = produccion.Serie,
             Numero = produccion.Numero,
