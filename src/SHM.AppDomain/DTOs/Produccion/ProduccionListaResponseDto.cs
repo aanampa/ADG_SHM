@@ -40,6 +40,8 @@ public class ProduccionListaResponseDto
     public decimal? MtoRenta { get; set; }
     public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
 
     // Produccion - Comprobante
     public string? TipoComprobante { get; set; }

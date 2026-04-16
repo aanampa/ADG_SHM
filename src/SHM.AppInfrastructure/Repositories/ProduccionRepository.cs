@@ -18,6 +18,7 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
 /// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
 /// </summary>
 public class ProduccionRepository : IProduccionRepository
 {
@@ -55,6 +56,8 @@ public class ProduccionRepository : IProduccionRepository
         MTO_RENTA as MtoRenta,
         MTO_IGV as MtoIgv,
         MTO_TOTAL as MtoTotal,
+        MTO_DETRACCION as MtoDetraccion,
+        PORC_DETRACCION as PorcDetraccion,
         TIPO_COMPROBANTE as TipoComprobante,
         SERIE as Serie,
         NUMERO as Numero,
@@ -194,6 +197,8 @@ public class ProduccionRepository : IProduccionRepository
                 MTO_RENTA,
                 MTO_IGV,
                 MTO_TOTAL,
+                MTO_DETRACCION,
+                PORC_DETRACCION,
                 TIPO_COMPROBANTE,
                 SERIE,
                 NUMERO,
@@ -238,6 +243,8 @@ public class ProduccionRepository : IProduccionRepository
                 :MtoRenta,
                 :MtoIgv,
                 :MtoTotal,
+                :MtoDetraccion,
+                :PorcDetraccion,
                 :TipoComprobante,
                 :Serie,
                 :Numero,
@@ -284,6 +291,8 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("MtoRenta", produccion.MtoRenta);
         parameters.Add("MtoIgv", produccion.MtoIgv);
         parameters.Add("MtoTotal", produccion.MtoTotal);
+        parameters.Add("MtoDetraccion", produccion.MtoDetraccion);
+        parameters.Add("PorcDetraccion", produccion.PorcDetraccion);
         parameters.Add("TipoComprobante", produccion.TipoComprobante);
         parameters.Add("Serie", produccion.Serie);
         parameters.Add("Numero", produccion.Numero);
@@ -341,6 +350,8 @@ public class ProduccionRepository : IProduccionRepository
                 MTO_RENTA = :MtoRenta,
                 MTO_IGV = :MtoIgv,
                 MTO_TOTAL = :MtoTotal,
+                MTO_DETRACCION = :MtoDetraccion,
+                PORC_DETRACCION = :PorcDetraccion,
                 TIPO_COMPROBANTE = :TipoComprobante,
                 SERIE = :Serie,
                 NUMERO = :Numero,
@@ -388,6 +399,8 @@ public class ProduccionRepository : IProduccionRepository
             produccion.MtoRenta,
             produccion.MtoIgv,
             produccion.MtoTotal,
+            produccion.MtoDetraccion,
+            produccion.PorcDetraccion,
             produccion.TipoComprobante,
             produccion.Serie,
             produccion.Numero,
@@ -551,6 +564,8 @@ public class ProduccionRepository : IProduccionRepository
                         p.MTO_RENTA AS MtoRenta,
                         p.MTO_IGV AS MtoIgv,
                         p.MTO_TOTAL AS MtoTotal,
+                        p.MTO_DETRACCION AS MtoDetraccion,
+                        p.PORC_DETRACCION AS PorcDetraccion,
                         p.TIPO_COMPROBANTE AS TipoComprobante,
                         p.CONCEPTO AS Concepto,
                         p.FECHA_LIMITE AS FechaLimite,
@@ -689,6 +704,8 @@ public class ProduccionRepository : IProduccionRepository
                 p.MTO_RENTA AS MtoRenta,
                 p.MTO_IGV AS MtoIgv,
                 p.MTO_TOTAL AS MtoTotal,
+                p.MTO_DETRACCION AS MtoDetraccion,
+                p.PORC_DETRACCION AS PorcDetraccion,
                 p.TIPO_COMPROBANTE AS TipoComprobante,
                 tc.DESCRIPCION AS DesTipoComprobante,
                 p.CONCEPTO AS Concepto,

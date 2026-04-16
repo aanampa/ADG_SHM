@@ -10,6 +10,7 @@ namespace SHM.AppDomain.DTOs.Produccion;
 /// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
 /// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
 /// </summary>
 public class CreateProduccionDto
 {
@@ -54,6 +55,8 @@ public class CreateProduccionDto
     public decimal? MtoRenta { get; set; }
     public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
 
     [MaxLength(2)]
     public string? TipoComprobante { get; set; }

@@ -10,6 +10,7 @@ namespace SHM.AppDomain.DTOs.Produccion;
 /// <created>2026-01-19</created>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
 /// <modified>ADG Antonio - 2026-01-31 - Quitado FechaCreacion, Concepto y campos liquidacion, nueva llave compuesta</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
 /// </summary>
 public class CreateInterfaceProduccionDto
 {
@@ -65,4 +66,7 @@ public class CreateInterfaceProduccionDto
 
     [Required]
     public decimal MtoTotal { get; set; }
+
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
 }
