@@ -45,4 +45,10 @@ public interface IEmailLogRepository
     /// </summary>
     Task<(IEnumerable<EmailLog> Items, int TotalCount)> GetPaginatedListAsync(
         string? tipoEmail, string? estado, string? emailDestino, int pageNumber, int pageSize);
+
+    /// <summary>
+    /// Obtiene logs de email por entidad y ID de referencia, con filtro opcional por tipo.
+    /// Util para consultar el historial de notificaciones de un registro especifico.
+    /// </summary>
+    Task<IEnumerable<EmailLog>> GetByReferenciaAsync(string entidadReferencia, int idReferencia, string? tipoEmail = null);
 }

@@ -11,6 +11,10 @@ public class EmailLog
     public int IdEmailLog { get; set; }
     public string GuidRegistro { get; set; } = string.Empty;
 
+    // Informacion del remitente
+    public string? EmailOrigen { get; set; }
+    public string? NombreOrigen { get; set; }
+
     // Informacion del destinatario
     public string EmailDestino { get; set; } = string.Empty;
     public string? NombreDestino { get; set; }

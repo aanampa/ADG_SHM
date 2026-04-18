@@ -33,7 +33,7 @@
 | **Modulo** | API Interface de Produccion |
 | **Cliente** | Complejo Hospitalario San Pablo |
 | **Desarrollador** | ADG Systems |
-| **Version** | 3.0 |
+| **Version** | 4.0 |
 
 ---
 
@@ -313,7 +313,9 @@ El endpoint recibe un **array JSON** de objetos con la siguiente estructura:
     "mtoSubtotal": 0.00,
     "mtoRenta": 0.00,
     "mtoIgv": 0.00,
-    "mtoTotal": 0.00
+    "mtoTotal": 0.00,
+    "mtoDetraccion": 0.00,
+    "porcDetraccion": 0.00
   }
 ]
 ```
@@ -333,13 +335,15 @@ El endpoint recibe un **array JSON** de objetos con la siguiente estructura:
 | `descripcion` | string | Si | Descripcion de la produccion. |
 | `periodo` | string | Si | Periodo de la produccion en formato `dd/MM/yyyy` (ej: "12/01/2026"). |
 | `fechaProduccion` | string | Si | Fecha de produccion en formato `dd/MM/yyyy HH:mm:ss` (ej: "31/01/2026 14:30:00"). |
-| `estadoProduccion` | string | Si | Estado de la produccion (ej: "ACTIVO", "PENDIENTE"). |
+| `estadoProduccion` | string | Si | Estado de la produccion. Valores: `0` = Anular produccion, `2` = Crear, `9` = Anular comprobante. |
 | `mtoConsumo` | decimal | Si | Monto de consumo. |
 | `mtoDescuento` | decimal | Si | Monto de descuento. |
 | `mtoSubtotal` | decimal | Si | Monto subtotal. |
 | `mtoRenta` | decimal | Si | Monto de renta. |
 | `mtoIgv` | decimal | Si | Monto de IGV. |
 | `mtoTotal` | decimal | Si | Monto total. |
+| `mtoDetraccion` | decimal | No | Monto de detraccion. Si no aplica, enviar `0`. |
+| `porcDetraccion` | decimal | No | Porcentaje de detraccion (hasta 2 decimales, ej: `12.00`). Si no aplica, enviar `0`. |
 
 ### Llave Unica (Producciones)
 
@@ -647,42 +651,46 @@ Content-Type: application/json
   {
     "codigoSede": "01",
     "codigoEntidad": "0994",
-    "codigoProduccion": "20251017",
-    "numeroProduccion": "20251039",
+    "codigoProduccion": "046474",
+    "numeroProduccion": "20260201",
     "tipoProduccion": "02",
     "tipoEntidadMedica": "1",
     "tipoMedico": "02",
     "tipoRubro": "03",
-    "descripcion": "SEGUNDA SEMANA DE OCTUBRE 2025",
-    "periodo": "09/10/2025",
-    "fechaProduccion": "09/10/2025 10:30:00",
-    "estadoProduccion": "ACTIVO",
+    "descripcion": "1RA SEMANA FEBRERO",
+    "periodo": "07/02/2026",
+    "fechaProduccion": "07/02/2026 10:30:00",
+    "estadoProduccion": "2",
     "mtoConsumo": 1368.46,
     "mtoDescuento": 794.23,
     "mtoSubtotal": 574.23,
     "mtoRenta": 0,
     "mtoIgv": 103.36,
-    "mtoTotal": 677.59
+    "mtoTotal": 677.59,
+    "mtoDetraccion": 81.31,
+    "porcDetraccion": 12.00
   },
   {
     "codigoSede": "01",
     "codigoEntidad": "0995",
-    "codigoProduccion": "20251055",
-    "numeroProduccion": "20251055",
+    "codigoProduccion": "046474",
+    "numeroProduccion": "20260201",
     "tipoProduccion": "01",
     "tipoEntidadMedica": "1",
     "tipoMedico": "02",
     "tipoRubro": "03",
-    "descripcion": "OCTUBRE 2025",
-    "periodo": "10/10/2025",
-    "fechaProduccion": "10/10/2025 14:00:00",
-    "estadoProduccion": "ACTIVO",
+    "descripcion": "1RA SEMANA FEBRERO",
+    "periodo": "07/02/2026",
+    "fechaProduccion": "07/02/2026 14:00:00",
+    "estadoProduccion": "2",
     "mtoConsumo": 200,
     "mtoDescuento": 0,
     "mtoSubtotal": 200,
     "mtoRenta": 16,
     "mtoIgv": 0,
-    "mtoTotal": 184
+    "mtoTotal": 184,
+    "mtoDetraccion": 22.08,
+    "porcDetraccion": 12.00
   }
 ]
 ```
@@ -788,13 +796,15 @@ curl -X POST "http://localhost:92/api/ProduccionInterface/producciones" \
       "descripcion": "Consulta ambulatoria cardiologia",
       "periodo": "202601",
       "fechaProduccion": "15/01/2026 09:00:00",
-      "estadoProduccion": "PROCESADO",
+      "estadoProduccion": "2",
       "mtoConsumo": 200.00,
       "mtoDescuento": 0.00,
       "mtoSubtotal": 200.00,
       "mtoRenta": 20.00,
       "mtoIgv": 36.00,
-      "mtoTotal": 216.00
+      "mtoTotal": 216.00,
+      "mtoDetraccion": 25.92,
+      "porcDetraccion": 12.00
     }
   ]'
 ```
@@ -999,7 +1009,7 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |----------|-------|
 | **Autor** | ADG Antonio |
 | **Fecha de Creacion** | 2026-01-19 |
-| **Version** | 3.0 |
+| **Version** | 4.0 |
 | **Proyecto** | SHM.AppApiHonorarioMedico |
 
 ---
@@ -1023,3 +1033,4 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |     |            | - Errores de sede/entidad/fecha ya no devuelven HTTP 400, se reportan en `detalle` con `estado: "ER"` |
 |     |            | - Eliminado comportamiento transaccional (abort-all), reemplazado por procesamiento por registro |
 |     |            | - Log de errores mejorado con campo CantidadErrores |
+| 4.0 | 2026-04-15 | - Nuevos campos `mtoDetraccion` y `porcDetraccion` en endpoint `/producciones` |
