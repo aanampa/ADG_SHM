@@ -117,11 +117,35 @@
                 </a>
             </li>
 
-            @for (int i = 1; i <= Model.TotalPages; i++)
+            @{
+                int startPage = Math.Max(1, Model.PageNumber - 2);
+                int endPage   = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+            }
+            @if (startPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(1)">1</a>
+                </li>
+                @if (startPage > 2)
+                {
+                    <li class="page-item disabled"><a class="page-link">…</a></li>
+                }
+            }
+            @for (int i = startPage; i <= endPage; i++)
             {
                 var pageNum = i;
                 <li class="page-item @(i == Model.PageNumber ? "active" : "")">
                     <a class="page-link" href="javascript:void(0)" onclick="loadList(@pageNum)">@i</a>
+                </li>
+            }
+            @if (endPage < Model.TotalPages)
+            {
+                @if (endPage < Model.TotalPages - 1)
+                {
+                    <li class="page-item disabled"><a class="page-link">…</a></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@Model.TotalPages)">@Model.TotalPages</a>
                 </li>
             }
 

@@ -21,6 +21,19 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // Fijar cultura en-US para que el formato de numeros (decimales, miles)
+    // sea siempre consistente independientemente del locale del servidor.
+    var culturaNumerica = new System.Globalization.CultureInfo("en-US");
+    System.Globalization.CultureInfo.DefaultThreadCurrentCulture   = culturaNumerica;
+    System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culturaNumerica;
+    builder.Services.Configure<Microsoft.AspNetCore.Builder.RequestLocalizationOptions>(opts =>
+    {
+        opts.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en-US");
+        opts.SupportedCultures     = new[] { culturaNumerica };
+        opts.SupportedUICultures   = new[] { culturaNumerica };
+        opts.RequestCultureProviders.Clear(); // ignorar Accept-Language del browser
+    });
+
     // Configurar NLog como proveedor de logging
     builder.Logging.ClearProviders();
     builder.Host.UseNLog();
@@ -128,6 +141,7 @@ try
     app.UseHttpsRedirection();
     app.UseStaticFiles();
 
+    app.UseRequestLocalization();
     app.UseRouting();
 
     app.UseAuthentication();
