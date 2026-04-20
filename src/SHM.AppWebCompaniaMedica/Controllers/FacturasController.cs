@@ -1332,10 +1332,30 @@ public class FacturasController : BaseController
         [FromForm] DateTime fechaEmision,
         [FromForm] IFormFile? archivoPdf,
         [FromForm] IFormFile? archivoXml,
-        [FromForm] IFormFile? archivoCdr)
+        [FromForm] IFormFile? archivoCdr,
+        [FromForm] string? sessionIdAnterior = null)
     {
         try
         {
+            // Limpiar sesion anterior si existe (usuario subio nuevos archivos)
+            if (!string.IsNullOrEmpty(sessionIdAnterior))
+            {
+                try
+                {
+                    var basePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                    var oldPath = Path.Combine(basePath, "temp", sessionIdAnterior);
+                    if (Directory.Exists(oldPath))
+                    {
+                        Directory.Delete(oldPath, true);
+                        _logger.LogInformation("Sesion anterior limpiada al subir nuevos archivos. SessionId: {SessionId}", sessionIdAnterior);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "No se pudo limpiar sesion anterior: {SessionId}", sessionIdAnterior);
+                }
+            }
+
             // Validar produccion
             var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
             if (produccion == null)
@@ -1638,6 +1658,216 @@ public class FacturasController : BaseController
             _logger.LogError(ex, "Error al cargar vista previa");
             TempData["Error"] = "Error al cargar la vista previa";
             return RedirectToAction(nameof(Pendientes));
+        }
+    }
+
+    /// <summary>
+    /// Procesa archivos para vista previa y devuelve JSON (usado por el wizard AJAX en Subir.cshtml).
+    /// </summary>
+    /// <author>ADG Vladimir</author>
+    /// <created>2026-04-19</created>
+    [HttpPost]
+    public async Task<IActionResult> PrepararVistaPreviaAjax(
+        [FromForm] string guidRegistro,
+        [FromForm] string tipoComprobante,
+        [FromForm] string serie,
+        [FromForm] string numero,
+        [FromForm] DateTime fechaEmision,
+        [FromForm] IFormFile? archivoPdf,
+        [FromForm] IFormFile? archivoXml,
+        [FromForm] IFormFile? archivoCdr,
+        [FromForm] string? sessionIdAnterior = null)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(sessionIdAnterior))
+            {
+                try
+                {
+                    var basePath2 = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                    var oldPath = Path.Combine(basePath2, "temp", sessionIdAnterior);
+                    if (Directory.Exists(oldPath)) Directory.Delete(oldPath, true);
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "No se pudo limpiar sesion anterior: {S}", sessionIdAnterior); }
+            }
+
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
+            if (produccion == null) return Json(new { success = false, error = "Producción no encontrada" });
+
+            if (fechaEmision.Date > DateTime.Now.Date)
+                return Json(new { success = false, error = "La fecha de emisión no puede ser una fecha futura" });
+
+            var requiereArchivoCdr2 = await _parametroService.GetValorByCodigoAsync("SHM_REQUIERE_ARCHIVO_CDR");
+            var requiereCdr2 = requiereArchivoCdr2?.ToUpper() != "N";
+
+            if (archivoPdf == null || archivoXml == null || (requiereCdr2 && archivoCdr == null))
+                return Json(new { success = false, error = requiereCdr2 ? "Archivos requeridos: PDF, XML y CDR" : "Archivos requeridos: PDF y XML" });
+
+            FacturaXmlData facturaData;
+            if (tipoComprobante == "22" || tipoComprobante == "02")
+            {
+                RheXmlValidationResult rv;
+                using (var s = archivoXml.OpenReadStream()) { rv = _rheXmlParserService.ValidateRheXml(s); }
+                if (!rv.IsValid) return Json(new { success = false, error = $"XML no válido: {rv.ErrorMessage}" });
+                using (var s = archivoXml.OpenReadStream()) { facturaData = _rheXmlParserService.ParseRheXml(s); }
+            }
+            else
+            {
+                FacturaXmlValidationResult fv;
+                using (var s = archivoXml.OpenReadStream()) { fv = _facturaXmlParserService.ValidateFacturaXml(s); }
+                if (!fv.IsValid) return Json(new { success = false, error = $"XML no válido: {fv.ErrorMessage}" });
+                using (var s = archivoXml.OpenReadStream()) { facturaData = _facturaXmlParserService.ParseFacturaXml(s); }
+            }
+
+            var sessionId2 = Guid.NewGuid().ToString("N");
+            var uploadBasePath2 = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var tempPath2 = Path.Combine(uploadBasePath2, "temp", sessionId2);
+            Directory.CreateDirectory(tempPath2);
+
+            using (var fs = new FileStream(Path.Combine(tempPath2, "factura.pdf"), FileMode.Create)) await archivoPdf.CopyToAsync(fs);
+            using (var fs = new FileStream(Path.Combine(tempPath2, "factura.xml"), FileMode.Create)) await archivoXml.CopyToAsync(fs);
+            if (archivoCdr != null)
+            {
+                using var fs = new FileStream(Path.Combine(tempPath2, $"cdr{Path.GetExtension(archivoCdr.FileName)}"), FileMode.Create);
+                await archivoCdr.CopyToAsync(fs);
+            }
+
+            var jsonContent2 = JsonSerializer.Serialize(facturaData, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            await System.IO.File.WriteAllTextAsync(Path.Combine(tempPath2, "datos.json"), jsonContent2);
+
+            var metadata2 = new { GuidRegistro = guidRegistro, TipoComprobante = tipoComprobante, Serie = serie, Numero = numero, FechaEmision = fechaEmision, CdrExtension = archivoCdr != null ? Path.GetExtension(archivoCdr.FileName) : "", TieneCdr = archivoCdr != null, CreatedAt = DateTime.Now };
+            await System.IO.File.WriteAllTextAsync(Path.Combine(tempPath2, "metadata.json"), JsonSerializer.Serialize(metadata2, new JsonSerializerOptions { WriteIndented = true }));
+
+            _logger.LogInformation("VistaPreviaAjax preparada. SessionId: {SessionId}", sessionId2);
+            return Json(new { success = true, sessionId = sessionId2 });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en PrepararVistaPreviaAjax");
+            return Json(new { success = false, error = "Error al procesar los archivos. Intente nuevamente." });
+        }
+    }
+
+    /// <summary>
+    /// Devuelve la vista parcial de validacion para el wizard AJAX.
+    /// </summary>
+    /// <author>ADG Vladimir</author>
+    /// <created>2026-04-19</created>
+    [HttpGet]
+    public async Task<IActionResult> ValidacionPartial(string sessionId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(sessionId)) return BadRequest();
+
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var tempPath = Path.Combine(uploadBasePath, "temp", sessionId);
+
+            if (!Directory.Exists(tempPath)) return BadRequest("Sesión no encontrada");
+
+            var metadataJson = await System.IO.File.ReadAllTextAsync(Path.Combine(tempPath, "metadata.json"));
+            using var metadataDoc = JsonDocument.Parse(metadataJson);
+            var meta = metadataDoc.RootElement;
+
+            var guidRegistro = meta.GetProperty("GuidRegistro").GetString();
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro ?? "");
+            if (produccion == null) return BadRequest("Producción no encontrada");
+
+            var sedes = await _sedeService.GetAllSedesAsync();
+            var sede = sedes.FirstOrDefault(s => s.IdSede == produccion.IdSede);
+
+            var datosJson = await System.IO.File.ReadAllTextAsync(Path.Combine(tempPath, "datos.json"));
+            var datosXml = JsonSerializer.Deserialize<FacturaXmlData>(datosJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            string? emisorRuc = null;
+            string? emisorRazonSocial = null;
+            if (produccion.IdEntidadMedica.HasValue && produccion.IdEntidadMedica.Value > 0)
+            {
+                var em = await _entidadMedicaService.GetEntidadMedicaByIdAsync(produccion.IdEntidadMedica.Value);
+                if (em != null) { emisorRuc = em.Ruc; emisorRazonSocial = em.RazonSocial; }
+            }
+
+            DateTime? fechaEmision = null;
+            if (meta.TryGetProperty("FechaEmision", out var feEl)) fechaEmision = feEl.GetDateTime();
+
+            var conceptoVP = produccion.Concepto;
+            if (string.IsNullOrEmpty(conceptoVP))
+            {
+                var det = await _tablaDetalleService.GetTablaDetalleByCodigoAsync("TIPO_PRODUCCION", produccion.TipoProduccion ?? "");
+                conceptoVP = $"PRODUCCION {produccion.CodigoProduccion} - {(det?.Descripcion?.ToUpper() ?? produccion.TipoProduccion ?? "")}";
+            }
+
+            var model = new VistaPreviaFacturaViewModel
+            {
+                SessionId = sessionId,
+                GuidRegistro = guidRegistro,
+                Concepto = conceptoVP,
+                MtoTotal = produccion.MtoTotal,
+                TipoComprobante = meta.GetProperty("TipoComprobante").GetString(),
+                Serie = meta.GetProperty("Serie").GetString(),
+                Numero = meta.GetProperty("Numero").GetString(),
+                FechaEmision = fechaEmision,
+                EmisorRuc = emisorRuc,
+                EmisorRazonSocial = emisorRazonSocial,
+                ReceptorRuc = sede?.Ruc,
+                ReceptorNombre = sede?.Nombre,
+                DatosXml = datosXml,
+                ValidaTipo = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_TIPO"))?.ToUpper() != "N",
+                ValidaFechaEmision = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_FECHA_EMISION"))?.ToUpper() != "N",
+                ValidaSerie = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_SERIE"))?.ToUpper() != "N",
+                ValidaNumero = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_NUMERO"))?.ToUpper() != "N",
+                ValidaImporte = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_IMPORTE"))?.ToUpper() != "N",
+                ValidaConcepto = (await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_FACTURA_CONCEPTO"))?.ToUpper() == "S",
+                ValidaRucEmisor = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_EMISOR"))?.ToUpper() != "N",
+                ValidaRucReceptor = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_RECEPTOR"))?.ToUpper() != "N"
+            };
+
+            return PartialView("_ValidacionPartial", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en ValidacionPartial");
+            return StatusCode(500, "Error al cargar validaciones");
+        }
+    }
+
+    /// <summary>
+    /// Retorna el partial con los datos extraídos del XML para el Paso 3.
+    /// </summary>
+    /// <author>ADG Vladimir</author>
+    /// <created>2026-04-20</created>
+    [HttpGet]
+    public async Task<IActionResult> DatosXmlPartial(string sessionId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(sessionId)) return BadRequest();
+
+            var uploadBasePath = _configuration["FileStorage:UploadPath"] ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var tempPath = Path.Combine(uploadBasePath, "temp", sessionId);
+
+            if (!Directory.Exists(tempPath)) return BadRequest("Sesión no encontrada");
+
+            var metadataJson = await System.IO.File.ReadAllTextAsync(Path.Combine(tempPath, "metadata.json"));
+            using var metadataDoc = JsonDocument.Parse(metadataJson);
+            var meta = metadataDoc.RootElement;
+
+            var datosJson = await System.IO.File.ReadAllTextAsync(Path.Combine(tempPath, "datos.json"));
+            var datosXml = JsonSerializer.Deserialize<FacturaXmlData>(datosJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var model = new VistaPreviaFacturaViewModel
+            {
+                SessionId = sessionId,
+                TipoComprobante = meta.GetProperty("TipoComprobante").GetString(),
+                DatosXml = datosXml
+            };
+
+            return PartialView("_DatosXmlPartial", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en DatosXmlPartial");
+            return StatusCode(500, "Error al cargar datos XML");
         }
     }
 
