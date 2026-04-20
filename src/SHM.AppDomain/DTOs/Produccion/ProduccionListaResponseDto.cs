@@ -60,6 +60,14 @@ public class ProduccionListaResponseDto
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
 
+    // Produccion - Estado de Pago (sincronizados desde SAP)
+    public string? PagoEstado { get; set; }
+    public DateTime? PagoFecha { get; set; }
+    public string? PagoNumeroOperacion { get; set; }
+    public string? PagoBanco { get; set; }
+    public string? PagoCuentaDeposito { get; set; }
+    public decimal? PagoMontoPagado { get; set; }
+
     // Produccion - Auditoria
     public int Activo { get; set; }
     public int? IdCreador { get; set; }

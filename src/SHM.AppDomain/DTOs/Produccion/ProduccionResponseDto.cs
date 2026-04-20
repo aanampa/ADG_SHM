@@ -9,6 +9,7 @@ namespace SHM.AppDomain.DTOs.Produccion;
 /// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
 /// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos de estado de pago SAP (PAGO_*)</modified>
 /// </summary>
 public class ProduccionResponseDto
 {
@@ -55,6 +56,14 @@ public class ProduccionResponseDto
     public DateTime? FechaLiquidacion { get; set; }
     public string? DescripcionLiquidacion { get; set; }
     public string? TipoLiquidacion { get; set; }
+
+    // Campos de Estado de Pago (sincronizados desde SAP)
+    public string? PagoEstado { get; set; }
+    public DateTime? PagoFecha { get; set; }
+    public string? PagoNumeroOperacion { get; set; }
+    public string? PagoBanco { get; set; }
+    public string? PagoCuentaDeposito { get; set; }
+    public decimal? PagoMontoPagado { get; set; }
 
     public int Activo { get; set; }
     public string? GuidRegistro { get; set; }

@@ -279,4 +279,103 @@ public class SapApiService : ISapApiService
             return new List<SapAcreedorCuentaBancariaDto>();
         }
     }
+
+    /// <summary>
+    /// Obtiene el estado de pago de un comprobante desde SAP (DatosFacturaSet).
+    /// Transforma los parametros del sistema interno al formato esperado por SAP:
+    /// - TipoComprobante: "1"→"H1", "22"→"H2"
+    /// - Serie: prefijo "0" a la izquierda
+    /// - NumeroComprobante: completado con ceros a la izquierda (7 caracteres)
+    /// - Anio: obtenido de fechaEmision
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    /// </summary>
+    public async Task<SapDatosFacturaDto?> GetDatosFacturaAsync(
+        string codigoAcreedor,
+        string tipoComprobante,
+        string serie,
+        string numeroComprobante,
+        DateTime fechaEmision)
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("No se pudo obtener token para consultar datos de factura en SAP");
+                return null;
+            }
+
+            // Transformaciones a formato SAP
+            var tipoSap = tipoComprobante switch
+            {
+                "1"  => "H1",
+                "22" => "H2",
+                _    => tipoComprobante
+            };
+            var serieSap  = "0" + serie;
+            var numeroSap = numeroComprobante.PadLeft(7, '0');
+            var anioSap   = fechaEmision.Year.ToString();
+
+            var url = $"{_settings.EndpointDatosFactura}(CodigoAcreedor='{codigoAcreedor}',TipoComprobante='{tipoSap}',Serie='{serieSap}',NumeroComprobante='{numeroSap}',Anio='{anioSap}')";
+
+            _logger.LogInformation(
+                "Consultando datos de factura en SAP. Acreedor: {Acreedor}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}, Anio: {Anio}",
+                codigoAcreedor, tipoSap, serieSap, numeroSap, anioSap);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning(
+                    "Error al consultar datos de factura en SAP. StatusCode: {StatusCode}, Response: {Response}",
+                    response.StatusCode, errorContent);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _cachedToken = null;
+                    _tokenExpiration = DateTime.MinValue;
+                }
+
+                return null;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Respuesta de datos de factura SAP: {Response}", responseContent);
+
+            var odataResponse = JsonSerializer.Deserialize<SapODataSingleResponseDto<SapDatosFacturaDto>>(responseContent, _jsonOptions);
+
+            if (odataResponse?.D != null)
+            {
+                _logger.LogInformation(
+                    "Datos de factura obtenidos desde SAP. Acreedor: {Acreedor}, EstadoPago: {EstadoPago}",
+                    codigoAcreedor, odataResponse.D.EstadoPago);
+                return odataResponse.D;
+            }
+
+            _logger.LogWarning("No se obtuvieron datos de factura desde SAP. Respuesta sin datos");
+            return null;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error de conexion al consultar datos de factura en SAP. Acreedor: {Acreedor}", codigoAcreedor);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout al consultar datos de factura en SAP. Acreedor: {Acreedor}", codigoAcreedor);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al consultar datos de factura en SAP. Acreedor: {Acreedor}", codigoAcreedor);
+            return null;
+        }
+    }
 }

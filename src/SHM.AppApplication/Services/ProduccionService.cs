@@ -524,6 +524,33 @@ public class ProduccionService : IProduccionService
         return await _produccionRepository.GetFacturasPorMesAsync(idEntidadMedica);
     }
 
+    /// <summary>
+    /// Actualiza los campos de estado de pago SAP de una produccion por su ID.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoPagoAsync(
+        int idProduccion,
+        string? pagoEstado,
+        DateTime? pagoFecha,
+        string? pagoNumeroOperacion,
+        string? pagoBanco,
+        string? pagoCuentaDeposito,
+        decimal? pagoMontoPagado,
+        int idModificador)
+    {
+        return await _produccionRepository.UpdateEstadoPagoAsync(
+            idProduccion,
+            pagoEstado,
+            pagoFecha,
+            pagoNumeroOperacion,
+            pagoBanco,
+            pagoCuentaDeposito,
+            pagoMontoPagado,
+            idModificador);
+    }
+
     private static ProduccionResponseDto MapToResponseDto(Produccion produccion)
     {
         return new ProduccionResponseDto
@@ -547,6 +574,12 @@ public class ProduccionService : IProduccionService
             MtoTotal = produccion.MtoTotal,
             MtoDetraccion = produccion.MtoDetraccion,
             PorcDetraccion = produccion.PorcDetraccion,
+            PagoEstado = produccion.PagoEstado,
+            PagoFecha = produccion.PagoFecha,
+            PagoNumeroOperacion = produccion.PagoNumeroOperacion,
+            PagoBanco = produccion.PagoBanco,
+            PagoCuentaDeposito = produccion.PagoCuentaDeposito,
+            PagoMontoPagado = produccion.PagoMontoPagado,
             TipoComprobante = produccion.TipoComprobante,
             Serie = produccion.Serie,
             Numero = produccion.Numero,

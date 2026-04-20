@@ -1,5 +1,6 @@
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using SHM.AppDomain.DTOs.OrdenPago;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppInfrastructure.Configurations;
@@ -13,6 +14,7 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <author>ADG Antonio</author>
 /// <created>2026-02-03</created>
 /// <modified>ADG Antonio - 2026-02-07 - Renombrado de OrdenPagoLiquidacion a OrdenPagoProduccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregado GetComprobantesParaSapByOrdenPagoGuidAsync</modified>
 /// </summary>
 public class OrdenPagoProduccionRepository : IOrdenPagoProduccionRepository
 {
@@ -295,5 +297,39 @@ public class OrdenPagoProduccionRepository : IOrdenPagoProduccionRepository
         var rowsAffected = await connection.ExecuteAsync(sql, new { IdOrdenPago = idOrdenPago, IdModificador = idModificador });
 
         return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Obtiene los datos de comprobante de todas las producciones activas de una orden de pago,
+    /// con JOIN a SHM_PRODUCCION y SHM_ENTIDAD_MEDICA para obtener los campos necesarios para SAP.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    /// </summary>
+    public async Task<IEnumerable<OrdenPagoComprobanteQueryDto>> GetComprobantesParaSapByOrdenPagoGuidAsync(string guidOrdenPago)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                p.ID_PRODUCCION       AS IdProduccion,
+                p.GUID_REGISTRO       AS GuidProduccion,
+                p.TIPO_COMPROBANTE    AS TipoComprobante,
+                p.SERIE               AS Serie,
+                p.NUMERO              AS Numero,
+                p.FECHA_EMISION       AS FechaEmision,
+                em.CODIGO_ACREEDOR    AS CodigoAcreedor,
+                em.RAZON_SOCIAL       AS RazonSocial,
+                em.RUC                AS Ruc
+            FROM SHM_ORDEN_PAGO op
+            INNER JOIN SHM_ORDEN_PAGO_PRODUCCION opp ON opp.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+                                                     AND opp.ACTIVO = 1
+            INNER JOIN SHM_PRODUCCION p              ON p.ID_PRODUCCION = opp.ID_PRODUCCION
+            INNER JOIN SHM_ENTIDAD_MEDICA em         ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            WHERE op.GUID_REGISTRO = :GuidOrdenPago
+              AND op.ACTIVO = 1
+            ORDER BY opp.ID_ORDEN_PAGO_PRODUCCION";
+
+        return await connection.QueryAsync<OrdenPagoComprobanteQueryDto>(sql, new { GuidOrdenPago = guidOrdenPago });
     }
 }
