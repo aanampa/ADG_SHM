@@ -108,6 +108,8 @@ public class EmailService : IEmailService
         var emailLog = new EmailLog
         {
             GuidRegistro = Guid.NewGuid().ToString(),
+            EmailOrigen = _smtpSettings.FromEmail,
+            NombreOrigen = _smtpSettings.FromName,
             EmailDestino = toEmail,
             NombreDestino = nombreDestino,
             Asunto = subject,

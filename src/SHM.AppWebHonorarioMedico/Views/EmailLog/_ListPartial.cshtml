@@ -46,6 +46,8 @@
                                     data-asunto="@item.Asunto"
                                     data-nombre="@(item.NombreDestino ?? "")"
                                     data-email="@item.EmailDestino"
+                                    data-email-origen="@(item.EmailOrigen ?? "")"
+                                    data-nombre-origen="@(item.NombreOrigen ?? "")"
                                     data-tipo="@tipoLabel"
                                     data-fecha="@fechaStr"
                                     data-error="@(item.MensajeError ?? "")">

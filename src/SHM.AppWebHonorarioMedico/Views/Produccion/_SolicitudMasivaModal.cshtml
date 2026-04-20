@@ -149,6 +149,9 @@
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
                         <i class="fas fa-times mr-1"></i>Cancelar
                     </button>
+                    <button type="button" class="btn btn-warning btn-sm" id="btnRenotificarMasivo" onclick="renotificarMasivo()" style="display:none;" title="Reenviar correo con la fecha límite ya establecida">
+                        <i class="fas fa-bell mr-1"></i>Renotificar Seleccionados
+                    </button>
                     <button type="button" class="btn btn-primary btn-sm" id="btnEnviarMasivo" onclick="enviarSolicitudMasiva()">
                         <i class="fas fa-paper-plane mr-1"></i>Solicitar Seleccionados
                     </button>
@@ -212,6 +215,11 @@
             row.style.display = visible ? '' : 'none';
         });
 
+        // Mostrar botón Renotificar solo cuando el filtro es Factura Solicitada
+        const esSolicitada = estado === '@EstadoDescripcion.Produccion.FacturaSolicitada';
+        document.getElementById('btnRenotificarMasivo').style.display = esSolicitada ? '' : 'none';
+        document.getElementById('btnEnviarMasivo').style.display = esSolicitada ? 'none' : '';
+
         // Desmarcar "seleccionar todos" y actualizar contador
         document.getElementById('smChkSelectAll').checked = false;
         actualizarContador();
@@ -228,6 +236,58 @@
         const suffix = h >= 12 ? 'PM' : 'AM';
         const h12 = h % 12 || 12;
         return `${String(h12).padStart(2, '0')}:${mStr} ${suffix}`;
+    }
+
+    function renotificarMasivo() {
+        const guids = Array.from(document.querySelectorAll('.sm-chk-item:checked'))
+            .map(cb => cb.dataset.guid);
+
+        if (guids.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Sin selección', text: 'Seleccione al menos un registro.', confirmButtonColor: '#f26522' });
+            return;
+        }
+
+        Swal.fire({
+            icon: 'question',
+            title: 'Renotificar correos',
+            html: `Se reenviará el correo de solicitud con la fecha límite ya establecida a <strong>${guids.length}</strong> registro(s).`,
+            showCancelButton: true,
+            confirmButtonColor: '#f26522',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-bell"></i> Renotificar',
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Enviando notificaciones...',
+                text: 'Procesando, por favor espere.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            fetch('@Url.Action("RenotificarFacturaMasivo", "Produccion")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
+                body: JSON.stringify(guids)
+            })
+            .then(r => r.json())
+            .then(data => {
+                Swal.close();
+                $('#modalSolicitudMasiva').modal('hide');
+                Swal.fire({
+                    icon: data.errores > 0 ? 'warning' : 'success',
+                    title: 'Proceso completado',
+                    text: data.message,
+                    confirmButtonColor: '#28a745'
+                });
+            })
+            .catch(() => {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.', confirmButtonColor: '#dc3545' });
+            });
+        });
     }
 
     function enviarSolicitudMasiva() {

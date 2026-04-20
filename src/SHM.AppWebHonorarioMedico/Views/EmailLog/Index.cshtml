@@ -80,41 +80,46 @@
 
 <!-- Modal visor de contenido -->
 <div class="modal fade" id="modalVisorEmail" tabindex="-1" role="dialog" aria-labelledby="modalVisorEmailLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header py-2">
                 <h6 class="modal-title" id="modalVisorEmailLabel">
-                    <i class="fas fa-envelope mr-1"></i>
-                    <span id="modalAsunto">Contenido del Correo</span>
+                    <i class="fas fa-envelope mr-1"></i>Contenido del Correo
                 </h6>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body p-0">
-                <div id="modalInfoEmail" class="px-3 pt-2 pb-1 bg-light border-bottom" style="font-size: 13px;">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <span class="text-muted">Para:</span>
-                            <strong id="modalNombreDestino"></strong>
-                            &lt;<span id="modalEmailDestino" class="text-primary"></span>&gt;
-                        </div>
-                        <div class="col-md-3">
-                            <span class="text-muted">Tipo:</span>
-                            <span id="modalTipo"></span>
-                        </div>
-                        <div class="col-md-3">
-                            <span class="text-muted">Fecha:</span>
-                            <span id="modalFecha"></span>
-                        </div>
+                <div id="modalInfoEmail" class="px-3 pt-3 pb-2 bg-light border-bottom" style="font-size: 13px;">
+                    <!-- Asunto -->
+                    <div class="mb-2">
+                        <strong id="modalAsunto" style="font-size: 15px; color: #1a1a2e;"></strong>
                     </div>
+                    <hr class="my-1">
+                    <!-- De -->
+                    <div class="d-flex mb-1">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">De:</span>
+                        <span id="modalNombreOrigen"></span>&nbsp;&lt;<span id="modalEmailOrigen" class="text-primary"></span>&gt;
+                    </div>
+                    <!-- Destinatario -->
+                    <div class="d-flex mb-1">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Destinatario:</span>
+                        <span><strong id="modalNombreDestino"></strong> &lt;<span id="modalEmailDestino" class="text-primary"></span>&gt;</span>
+                    </div>
+                    <!-- Fecha -->
+                    <div class="d-flex mb-1">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Fecha:</span>
+                        <span id="modalFecha"></span>
+                    </div>
+                    <!-- Error -->
                     <div id="modalMensajeError" class="mt-1 text-danger small" style="display:none;">
                         <i class="fas fa-exclamation-triangle mr-1"></i>
                         <strong>Error:</strong> <span id="modalTextoError"></span>
                     </div>
                 </div>
                 <iframe id="iframeContenido"
-                        style="width: 100%; height: 520px; border: none;"
+                        style="width: 100%; height: 580px; border: none;"
                         sandbox="allow-same-origin">
                 </iframe>
             </div>
@@ -145,6 +150,8 @@
                     btn.dataset.asunto,
                     btn.dataset.nombre,
                     btn.dataset.email,
+                    btn.dataset.emailOrigen,
+                    btn.dataset.nombreOrigen,
                     btn.dataset.tipo,
                     btn.dataset.fecha,
                     btn.dataset.error
@@ -191,11 +198,12 @@
                 });
         }
 
-        function verContenido(id, asunto, nombreDestino, emailDestino, tipoEmail, fecha, mensajeError) {
+        function verContenido(id, asunto, nombreDestino, emailDestino, emailOrigen, nombreOrigen, tipoEmail, fecha, mensajeError) {
             document.getElementById('modalAsunto').textContent = asunto || 'Sin asunto';
+            document.getElementById('modalNombreOrigen').textContent = nombreOrigen || '';
+            document.getElementById('modalEmailOrigen').textContent = emailOrigen || '';
             document.getElementById('modalNombreDestino').textContent = nombreDestino || '';
             document.getElementById('modalEmailDestino').textContent = emailDestino || '';
-            document.getElementById('modalTipo').textContent = tipoEmail || '';
             document.getElementById('modalFecha').textContent = fecha || '';
 
             const divError = document.getElementById('modalMensajeError');

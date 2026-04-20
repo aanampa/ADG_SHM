@@ -33,6 +33,8 @@ public class EmailLogRepository : IEmailLogRepository
             INSERT INTO SHM_EMAIL_LOG (
                 ID_EMAIL_LOG,
                 GUID_REGISTRO,
+                EMAIL_ORIGEN,
+                NOMBRE_ORIGEN,
                 EMAIL_DESTINO,
                 NOMBRE_DESTINO,
                 ASUNTO,
@@ -53,6 +55,8 @@ public class EmailLogRepository : IEmailLogRepository
             ) VALUES (
                 SHM_EMAIL_LOG_SEQ.NEXTVAL,
                 :GuidRegistro,
+                :EmailOrigen,
+                :NombreOrigen,
                 :EmailDestino,
                 :NombreDestino,
                 :Asunto,
@@ -75,6 +79,8 @@ public class EmailLogRepository : IEmailLogRepository
 
         var parameters = new DynamicParameters();
         parameters.Add("GuidRegistro", emailLog.GuidRegistro);
+        parameters.Add("EmailOrigen", emailLog.EmailOrigen);
+        parameters.Add("NombreOrigen", emailLog.NombreOrigen);
         parameters.Add("EmailDestino", emailLog.EmailDestino);
         parameters.Add("NombreDestino", emailLog.NombreDestino);
         parameters.Add("Asunto", emailLog.Asunto);
@@ -108,6 +114,8 @@ public class EmailLogRepository : IEmailLogRepository
             SELECT
                 ID_EMAIL_LOG AS IdEmailLog,
                 GUID_REGISTRO AS GuidRegistro,
+                EMAIL_ORIGEN AS EmailOrigen,
+                NOMBRE_ORIGEN AS NombreOrigen,
                 EMAIL_DESTINO AS EmailDestino,
                 NOMBRE_DESTINO AS NombreDestino,
                 ASUNTO AS Asunto,
@@ -144,6 +152,8 @@ public class EmailLogRepository : IEmailLogRepository
             SELECT
                 ID_EMAIL_LOG AS IdEmailLog,
                 GUID_REGISTRO AS GuidRegistro,
+                EMAIL_ORIGEN AS EmailOrigen,
+                NOMBRE_ORIGEN AS NombreOrigen,
                 EMAIL_DESTINO AS EmailDestino,
                 NOMBRE_DESTINO AS NombreDestino,
                 ASUNTO AS Asunto,
@@ -181,6 +191,8 @@ public class EmailLogRepository : IEmailLogRepository
             SELECT
                 ID_EMAIL_LOG AS IdEmailLog,
                 GUID_REGISTRO AS GuidRegistro,
+                EMAIL_ORIGEN AS EmailOrigen,
+                NOMBRE_ORIGEN AS NombreOrigen,
                 EMAIL_DESTINO AS EmailDestino,
                 NOMBRE_DESTINO AS NombreDestino,
                 ASUNTO AS Asunto,
@@ -218,6 +230,8 @@ public class EmailLogRepository : IEmailLogRepository
             SELECT
                 ID_EMAIL_LOG AS IdEmailLog,
                 GUID_REGISTRO AS GuidRegistro,
+                EMAIL_ORIGEN AS EmailOrigen,
+                NOMBRE_ORIGEN AS NombreOrigen,
                 EMAIL_DESTINO AS EmailDestino,
                 NOMBRE_DESTINO AS NombreDestino,
                 ASUNTO AS Asunto,
@@ -274,6 +288,8 @@ public class EmailLogRepository : IEmailLogRepository
                     SELECT
                         ID_EMAIL_LOG AS IdEmailLog,
                         GUID_REGISTRO AS GuidRegistro,
+                        EMAIL_ORIGEN AS EmailOrigen,
+                        NOMBRE_ORIGEN AS NombreOrigen,
                         EMAIL_DESTINO AS EmailDestino,
                         NOMBRE_DESTINO AS NombreDestino,
                         ASUNTO AS Asunto,
@@ -300,6 +316,43 @@ public class EmailLogRepository : IEmailLogRepository
     }
 
     /// <summary>
+    /// Obtiene logs de email por entidad y ID de referencia, con filtro opcional por tipo.
+    /// </summary>
+    public async Task<IEnumerable<EmailLog>> GetByReferenciaAsync(string entidadReferencia, int idReferencia, string? tipoEmail = null)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var where = "WHERE ACTIVO = 1 AND ENTIDAD_REFERENCIA = :EntidadReferencia AND ID_REFERENCIA = :IdReferencia";
+        if (!string.IsNullOrEmpty(tipoEmail))
+            where += " AND TIPO_EMAIL = :TipoEmail";
+
+        var sql = $@"
+            SELECT
+                ID_EMAIL_LOG       AS IdEmailLog,
+                GUID_REGISTRO      AS GuidRegistro,
+                EMAIL_ORIGEN       AS EmailOrigen,
+                NOMBRE_ORIGEN      AS NombreOrigen,
+                EMAIL_DESTINO      AS EmailDestino,
+                NOMBRE_DESTINO     AS NombreDestino,
+                ASUNTO             AS Asunto,
+                TIPO_EMAIL         AS TipoEmail,
+                ES_HTML            AS EsHtml,
+                ESTADO             AS Estado,
+                MENSAJE_ERROR      AS MensajeError,
+                ID_ENTIDAD_MEDICA  AS IdEntidadMedica,
+                ENTIDAD_REFERENCIA AS EntidadReferencia,
+                ID_REFERENCIA      AS IdReferencia,
+                ACTIVO             AS Activo,
+                FECHA_CREACION     AS FechaCreacion
+            FROM SHM_EMAIL_LOG
+            {where}
+            ORDER BY ID_EMAIL_LOG DESC";
+
+        return await connection.QueryAsync<EmailLog>(sql,
+            new { EntidadReferencia = entidadReferencia, IdReferencia = idReferencia, TipoEmail = tipoEmail });
+    }
+
+    /// <summary>
     /// Obtiene logs de email por destinatario.
     /// </summary>
     public async Task<IEnumerable<EmailLog>> GetByEmailDestinoAsync(string emailDestino)
@@ -310,6 +363,8 @@ public class EmailLogRepository : IEmailLogRepository
             SELECT
                 ID_EMAIL_LOG AS IdEmailLog,
                 GUID_REGISTRO AS GuidRegistro,
+                EMAIL_ORIGEN AS EmailOrigen,
+                NOMBRE_ORIGEN AS NombreOrigen,
                 EMAIL_DESTINO AS EmailDestino,
                 NOMBRE_DESTINO AS NombreDestino,
                 ASUNTO AS Asunto,

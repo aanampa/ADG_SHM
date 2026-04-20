@@ -97,6 +97,24 @@ public interface IProduccionService
     Task<bool> SolicitarFacturaAsync(SolicitarFacturaDto solicitudDto, int idModificador);
 
     /// <summary>
+    /// Renotifica la solicitud de factura enviando nuevamente el correo con la fecha limite ya establecida.
+    /// No modifica el estado ni la fecha limite del registro. Solo aplica a FACTURA_SOLICITADA.
+    /// </summary>
+    /// <param name="guidRegistro">GUID del registro de produccion</param>
+    /// <param name="idModificador">ID del usuario que solicita la renotificacion</param>
+    /// <returns>True si el correo fue enviado correctamente</returns>
+    Task<bool> RenotificarFacturaAsync(string guidRegistro, int idModificador);
+
+    /// <summary>
+    /// Renotifica todos los registros en estado FACTURA_SOLICITADA de una sede,
+    /// reenviando el correo con la fecha limite ya establecida en cada uno.
+    /// </summary>
+    /// <param name="idSede">ID de la sede del usuario logueado</param>
+    /// <param name="idModificador">ID del usuario que solicita la renotificacion</param>
+    /// <returns>Tupla con cantidad de correos enviados y cantidad de errores</returns>
+    Task<(int Enviados, int Errores)> RenotificarTodasSolicitadasAsync(int? idSede, int idModificador);
+
+    /// <summary>
     /// Devuelve una factura cambiando el estado a FACTURA_DEVUELTA.
     /// </summary>
     /// <param name="guidRegistro">GUID del registro de produccion</param>

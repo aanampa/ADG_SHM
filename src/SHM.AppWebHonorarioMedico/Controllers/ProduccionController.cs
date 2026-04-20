@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.DTOs.SanPabloApi;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -32,6 +33,7 @@ public class ProduccionController : Controller
     private readonly IConfiguration _configuration;
     private readonly ISanPabloApiService _sanPabloApiService;
     private readonly IUsuarioService _usuarioService;
+    private readonly IEmailLogRepository _emailLogRepository;
 
     public ProduccionController(
         ILogger<ProduccionController> logger,
@@ -45,7 +47,8 @@ public class ProduccionController : Controller
         IBitacoraService bitacoraService,
         IConfiguration configuration,
         ISanPabloApiService sanPabloApiService,
-        IUsuarioService usuarioService)
+        IUsuarioService usuarioService,
+        IEmailLogRepository emailLogRepository)
     {
         _logger = logger;
         _produccionService = produccionService;
@@ -59,6 +62,7 @@ public class ProduccionController : Controller
         _configuration = configuration;
         _sanPabloApiService = sanPabloApiService;
         _usuarioService = usuarioService;
+        _emailLogRepository = emailLogRepository;
     }
 
     /// <summary>
@@ -478,6 +482,197 @@ public class ProduccionController : Controller
         {
             _logger.LogError(ex, "Error en solicitud masiva de facturas");
             return Json(new { success = false, message = "Error al procesar la solicitud masiva" });
+        }
+    }
+
+    /// <summary>
+    /// Retorna el modal con el historial de notificaciones de correo para una produccion.
+    /// Muestra los registros de SHM_EMAIL_LOG tipo SOLICITUD_FACTURA asociados al ID de produccion.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-17</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetModalHistorialNotificaciones(string guidRegistro)
+    {
+        try
+        {
+            var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
+            if (produccion == null)
+                return StatusCode(404, "Produccion no encontrada");
+
+            var logs = await _emailLogRepository.GetByReferenciaAsync(
+                "SHM_PRODUCCION", produccion.IdProduccion, "SOLICITUD_FACTURA");
+
+            ViewBag.GuidRegistro      = guidRegistro;
+            ViewBag.NumeroProduccion  = produccion.NumeroProduccion;
+            ViewBag.FechaLimite       = produccion.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-";
+            ViewBag.PuedeRenotificar  = produccion.Estado == EstadoDescripcion.Produccion.FacturaSolicitada;
+
+            return PartialView("_HistorialNotificacionesModal", logs.ToList());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar historial de notificaciones: {Guid}", guidRegistro);
+            return StatusCode(500, "Error al cargar el historial");
+        }
+    }
+
+    /// <summary>
+    /// Renotifica la solicitud de factura reenviando el correo con la fecha limite ya establecida.
+    /// Solo aplica a registros en estado FACTURA_SOLICITADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-17</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> RenotificarFactura([FromBody] string guidRegistro)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(guidRegistro))
+                return Json(new { success = false, message = "GUID invalido" });
+
+            var idUsuario = GetCurrentUserId();
+            var resultado = await _produccionService.RenotificarFacturaAsync(guidRegistro, idUsuario);
+
+            if (resultado)
+            {
+                var produccion = await _produccionService.GetProduccionByGuidAsync(guidRegistro);
+                if (produccion != null)
+                {
+                    var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                    {
+                        Entidad = "SHM_PRODUCCION",
+                        IdEntidad = produccion.IdProduccion,
+                        Accion = "RENOTIFICAR_FACTURA",
+                        Descripcion = "Renotificacion de solicitud de factura enviada por correo",
+                        FechaAccion = DateTime.Now
+                    };
+                    await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                }
+
+                _logger.LogInformation("Renotificacion enviada. GUID: {Guid}, Usuario: {Usuario}", guidRegistro, idUsuario);
+                return Json(new { success = true, message = "Notificacion reenviada correctamente" });
+            }
+            else
+            {
+                return Json(new { success = false, message = "No se pudo enviar la notificacion. Verifique que el registro este en estado Factura Solicitada y tenga fecha limite asignada." });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al renotificar factura: {Guid}", guidRegistro);
+            return Json(new { success = false, message = "Error al procesar la renotificacion" });
+        }
+    }
+
+    /// <summary>
+    /// Renotifica todos los registros en estado FACTURA_SOLICITADA de la sede del usuario logueado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-17</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> RenotificarTodasSolicitadas()
+    {
+        try
+        {
+            var idUsuario = GetCurrentUserId();
+            var idSede = GetCurrentUserIdSede();
+
+            var (enviados, errores) = await _produccionService.RenotificarTodasSolicitadasAsync(idSede, idUsuario);
+
+            if (enviados == 0 && errores == 0)
+                return Json(new { success = false, message = "No hay registros en estado Factura Solicitada con fecha límite asignada." });
+
+            _logger.LogInformation("Renotificacion masiva completada. Enviados: {E}, Errores: {Er}, Sede: {S}, Usuario: {U}",
+                enviados, errores, idSede, idUsuario);
+
+            return Json(new
+            {
+                success = true,
+                enviados,
+                errores,
+                message = errores == 0
+                    ? $"Se renotificaron {enviados} correo(s) correctamente."
+                    : $"Se renotificaron {enviados} correctamente y {errores} no pudieron procesarse."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en renotificacion de todas las solicitadas");
+            return Json(new { success = false, message = "Error al procesar la renotificación" });
+        }
+    }
+
+    /// <summary>
+    /// Renotifica masivamente los correos de solicitud de factura para una lista de GUIDs.
+    /// Solo procesa registros en estado FACTURA_SOLICITADA con fecha limite establecida.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-17</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> RenotificarFacturaMasivo([FromBody] List<string> guids)
+    {
+        try
+        {
+            if (guids == null || !guids.Any())
+                return Json(new { success = false, message = "Debe seleccionar al menos un registro" });
+
+            var idUsuario = GetCurrentUserId();
+            int enviados = 0;
+            int errores = 0;
+
+            foreach (var guid in guids)
+            {
+                try
+                {
+                    var resultado = await _produccionService.RenotificarFacturaAsync(guid, idUsuario);
+                    if (resultado)
+                    {
+                        var produccion = await _produccionService.GetProduccionByGuidAsync(guid);
+                        if (produccion != null)
+                        {
+                            var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                            {
+                                Entidad = "SHM_PRODUCCION",
+                                IdEntidad = produccion.IdProduccion,
+                                Accion = "RENOTIFICAR_FACTURA",
+                                Descripcion = "Renotificacion masiva de solicitud de factura enviada por correo",
+                                FechaAccion = DateTime.Now
+                            };
+                            await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                        }
+                        enviados++;
+                    }
+                    else
+                    {
+                        errores++;
+                    }
+                }
+                catch (Exception exItem)
+                {
+                    _logger.LogError(exItem, "Error en renotificacion masiva para GUID: {Guid}", guid);
+                    errores++;
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                enviados,
+                errores,
+                message = errores == 0
+                    ? $"Se renotificaron {enviados} correo(s) correctamente."
+                    : $"Se renotificaron {enviados} correctamente y {errores} no pudieron procesarse."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en renotificacion masiva de facturas");
+            return Json(new { success = false, message = "Error al procesar la renotificacion masiva" });
         }
     }
 

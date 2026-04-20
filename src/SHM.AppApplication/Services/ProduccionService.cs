@@ -362,6 +362,85 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
+    /// Renotifica la solicitud de factura reenviando el correo con la fecha limite ya establecida.
+    /// No modifica el estado ni la fecha limite. Solo aplica a registros en FACTURA_SOLICITADA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-17</created>
+    /// </summary>
+    public async Task<bool> RenotificarFacturaAsync(string guidRegistro, int idModificador)
+    {
+        var produccion = await _produccionRepository.GetByGuidWithDetailsAsync(guidRegistro);
+
+        if (produccion == null
+            || produccion.Estado != EstadoDescripcion.Produccion.FacturaSolicitada
+            || !produccion.FechaLimite.HasValue
+            || !produccion.IdEntidadMedica.HasValue)
+        {
+            return false;
+        }
+
+        var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
+        foreach (var usuario in usuarios)
+        {
+            if (!string.IsNullOrEmpty(usuario.Email))
+            {
+                var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
+                await _emailService.EnviarEmailSolicitudFacturaAsync(
+                    email: usuario.Email,
+                    nombreDestinatario: nombreCompleto,
+                    codigoProduccion: produccion.NumeroProduccion ?? "",
+                    razonSocial: produccion.RazonSocial ?? "",
+                    mtoTotal: produccion.MtoTotal,
+                    fechaLimite: produccion.FechaLimite.Value,
+                    idEntidadMedica: produccion.IdEntidadMedica,
+                    idProduccion: produccion.IdProduccion);
+            }
+        }
+
+        _logger.LogInformation("Renotificacion de solicitud de factura enviada. GUID: {Guid}, Usuario: {Usuario}",
+            guidRegistro, idModificador);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Renotifica todos los registros en estado FACTURA_SOLICITADA de una sede,
+    /// reenviando el correo con la fecha limite ya establecida en cada uno.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-17</created>
+    /// </summary>
+    public async Task<(int Enviados, int Errores)> RenotificarTodasSolicitadasAsync(int? idSede, int idModificador)
+    {
+        var todos = await _produccionRepository.GetListSolicitudMasivaAsync(idSede);
+        var solicitadas = todos
+            .Where(p => p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada
+                        && !string.IsNullOrEmpty(p.GuidRegistro))
+            .ToList();
+
+        int enviados = 0;
+        int errores = 0;
+
+        foreach (var item in solicitadas)
+        {
+            try
+            {
+                var resultado = await RenotificarFacturaAsync(item.GuidRegistro!, idModificador);
+                if (resultado) enviados++;
+                else errores++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en renotificacion masiva para GUID: {Guid}", item.GuidRegistro);
+                errores++;
+            }
+        }
+
+        return (enviados, errores);
+    }
+
+    /// <summary>
     /// Devuelve una factura cambiando el estado a FACTURA_DEVUELTA.
     ///
     /// <author>ADG Vladimir D</author>

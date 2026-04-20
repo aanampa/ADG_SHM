@@ -25,7 +25,8 @@
             <div class="container-fluid">
                 <div class="card">
                     <div class="card-header">
-                        <div class="row align-items-center">
+                        <!-- Fila 1: Filtros -->
+                        <div class="row align-items-end">
                             <div class="col-md-2">
                                 <div class="form-group mb-0">
                                     <label class="mb-1 small">Produccion</label>
@@ -53,8 +54,8 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <label class="mb-1 small">&nbsp;</label>
+                            <div class="col-md-4 d-flex align-items-end justify-content-between">
+                                <!-- Buscar / Limpiar -->
                                 <div>
                                     <button type="button" class="btn btn-primary btn-sm" onclick="searchList()">
                                         <i class="fas fa-search mr-1"></i>Buscar
@@ -63,12 +64,13 @@
                                         <i class="fas fa-eraser mr-1"></i>Limpiar
                                     </button>
                                 </div>
-                            </div>
-                            <div class="col-md-2 text-right">
-                                <label class="mb-1 small">&nbsp;</label>
+                                <!-- Acciones -->
                                 <div>
-                                    <button type="button" class="btn btn-success btn-sm mr-1" onclick="abrirModalSolicitudMasiva()" title="Solicitar factura a múltiples producciones">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="abrirModalSolicitudMasiva()" title="Solicitar factura a múltiples producciones">
                                         <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-sm" onclick="renotificarTodasSolicitadas()" title="Reenviar correo a todos los registros en estado Factura Solicitada">
+                                        <i class="fas fa-bell mr-1"></i>Renotificar Todas
                                     </button>
                                     <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
                                         <i class="fas fa-file-excel mr-1"></i>Exportar
@@ -293,6 +295,71 @@
             const filterParams = getFilterQueryString();
             const url = '@Url.Action("Detalle")/' + guid + (filterParams ? '?' + filterParams : '');
             window.location.href = url;
+        }
+
+        function abrirHistorialNotificaciones(guid) {
+            const container = document.getElementById('modalContainer');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalHistorialNotificaciones", "Produccion")?guidRegistro=' + guid)
+                .then(r => {
+                    if (!r.ok) throw new Error('Error HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(() => {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el historial.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function renotificarTodasSolicitadas() {
+            Swal.fire({
+                title: '¿Reenviar notificaciones?',
+                html: 'Se reenviará el correo de solicitud de factura a <strong>todos</strong> los registros en estado <strong>Factura Solicitada</strong>, con la fecha límite ya establecida en cada uno.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#f26522',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-bell"></i> Renotificar Todas',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Enviando notificaciones...',
+                    text: 'Procesando, por favor espere.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                fetch('@Url.Action("RenotificarTodasSolicitadas", "Produccion")', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    Swal.fire({
+                        icon: data.success ? (data.errores > 0 ? 'warning' : 'success') : 'info',
+                        title: data.success ? 'Proceso completado' : 'Sin registros',
+                        text: data.message,
+                        confirmButtonColor: data.success && data.errores === 0 ? '#28a745' : '#f26522'
+                    });
+                })
+                .catch(() => {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+                });
+            });
         }
 
         function abrirModalSolicitudMasiva() {
