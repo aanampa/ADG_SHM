@@ -168,6 +168,84 @@ uploads/
 
 ---
 
+## Limpieza de Carpetas Temporales
+
+> ⚠️ **Pendiente de implementación.** Esta sección documenta el comportamiento actual y las soluciones planificadas.
+
+### Estado Actual
+
+Las carpetas `temp/{sessionId}/` solo se eliminan en los siguientes casos:
+
+| Caso | Cuándo | Qué elimina |
+|------|--------|-------------|
+| Re-subida de archivos | Usuario vuelve al Paso 2 y sube nuevos archivos | Carpeta de `sessionIdAnterior` |
+| Confirmación exitosa | `POST ConfirmarEnvio` completa correctamente | Carpeta del `sessionId` actual |
+| Cancelación | Action de cancelación en el controller | Carpeta del `sessionId` actual |
+
+### Carpetas Huérfanas (no se limpian actualmente)
+
+Las siguientes situaciones generan carpetas que **nunca se eliminan**:
+
+- Usuario cierra el navegador estando en el Paso 2, 3 o 4
+- Error grave en `ConfirmarEnvio` que interrumpe antes de llegar al `Directory.Delete`
+- Pestaña duplicada: crea una sesión temp y la abandona
+- Sesiones de prueba / desarrollo
+
+### Opciones de Solución Planificadas
+
+#### Opción A — `BackgroundService` con timer ⭐ Recomendada
+Implementar un `BackgroundService` de ASP.NET Core que se ejecute periódicamente (ej. cada hora) y elimine las carpetas `temp/{sessionId}/` cuyo `metadata.json → CreatedAt` tenga más de N horas de antigüedad.
+
+```csharp
+// Registro en Program.cs
+builder.Services.AddHostedService<TempFilesCleanupService>();
+```
+
+```
+Comportamiento:
+- Se ejecuta cada 1 hora
+- Elimina carpetas con CreatedAt > 2 horas
+- Registra en log las carpetas eliminadas
+- No interrumpe el flujo normal de la aplicación
+```
+
+**Ventajas:** automático, no invasivo, configurable, estándar en ASP.NET Core.
+
+#### Opción B — Limpieza al iniciar la aplicación
+En `Program.cs`, al arrancar la app, eliminar todas las carpetas `temp/` existentes.
+
+```csharp
+// En Program.cs antes de app.Run()
+var tempPath = Path.Combine(uploadBasePath, "temp");
+if (Directory.Exists(tempPath))
+    Directory.Delete(tempPath, recursive: true);
+```
+
+**Ventajas:** simple.  
+**Desventajas:** agresivo — elimina sesiones activas si la app se reinicia durante uso.
+
+#### Opción C — Endpoint de limpieza manual
+Un action de administración para limpiar manualmente bajo demanda.
+
+```
+GET /Admin/LimpiarTempFiles
+```
+
+Útil como complemento de la Opción A para limpieza forzada en caso de necesidad.
+
+### Implementación Recomendada: A + C
+
+Implementar el `BackgroundService` (Opción A) como mecanismo automático, complementado con el endpoint manual (Opción C) para operaciones de mantenimiento.
+
+**Archivos a crear:**
+- `Services/TempFilesCleanupService.cs` — el `BackgroundService`
+- Registro en `Program.cs`
+- Action `LimpiarTempFiles` en `AdminController` o `FacturasController`
+
+**Parámetro sugerido:** `SHM_TEMP_FILES_MAX_HORAS` — horas máximas de vida de una carpeta temp (default: 2).
+
+---
+
 ## Parámetros del Sistema Involucrados
 
 | Código | Descripción | Efecto |
