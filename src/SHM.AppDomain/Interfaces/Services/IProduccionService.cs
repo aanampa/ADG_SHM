@@ -8,6 +8,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregado UpdateEstadoPagoAsync</modified>
 /// </summary>
 public interface IProduccionService
 {
@@ -164,4 +165,19 @@ public interface IProduccionService
     /// <param name="idEntidadMedica">ID de la entidad medica</param>
     /// <returns>Lista de datos por mes</returns>
     Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Actualiza los campos de estado de pago SAP de una produccion por su ID.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    Task<bool> UpdateEstadoPagoAsync(
+        int idProduccion,
+        string? pagoEstado,
+        DateTime? pagoFecha,
+        string? pagoNumeroOperacion,
+        string? pagoBanco,
+        string? pagoCuentaDeposito,
+        decimal? pagoMontoPagado,
+        int idModificador);
 }

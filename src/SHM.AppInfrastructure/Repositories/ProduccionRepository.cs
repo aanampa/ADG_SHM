@@ -19,6 +19,7 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
 /// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
 /// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos de estado de pago SAP (PAGO_*)</modified>
 /// </summary>
 public class ProduccionRepository : IProduccionRepository
 {
@@ -78,6 +79,12 @@ public class ProduccionRepository : IProduccionRepository
         FECHA_LIQUIDACION as FechaLiquidacion,
         DESCRIPCION_LIQUIDACION as DescripcionLiquidacion,
         TIPO_LIQUIDACION as TipoLiquidacion,
+        PAGO_ESTADO as PagoEstado,
+        PAGO_FECHA as PagoFecha,
+        PAGO_NUMERO_OPERACION as PagoNumeroOperacion,
+        PAGO_BANCO as PagoBanco,
+        PAGO_CUENTA_DEPOSITO as PagoCuentaDeposito,
+        PAGO_MONTO_PAGADO as PagoMontoPagado,
         GUID_REGISTRO as GuidRegistro,
         ACTIVO as Activo,
         ID_CREADOR as IdCreador,
@@ -372,6 +379,12 @@ public class ProduccionRepository : IProduccionRepository
                 FECHA_LIQUIDACION = :FechaLiquidacion,
                 DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
                 TIPO_LIQUIDACION = :TipoLiquidacion,
+                PAGO_ESTADO = :PagoEstado,
+                PAGO_FECHA = :PagoFecha,
+                PAGO_NUMERO_OPERACION = :PagoNumeroOperacion,
+                PAGO_BANCO = :PagoBanco,
+                PAGO_CUENTA_DEPOSITO = :PagoCuentaDeposito,
+                PAGO_MONTO_PAGADO = :PagoMontoPagado,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -421,6 +434,12 @@ public class ProduccionRepository : IProduccionRepository
             produccion.FechaLiquidacion,
             produccion.DescripcionLiquidacion,
             produccion.TipoLiquidacion,
+            produccion.PagoEstado,
+            produccion.PagoFecha,
+            produccion.PagoNumeroOperacion,
+            produccion.PagoBanco,
+            produccion.PagoCuentaDeposito,
+            produccion.PagoMontoPagado,
             produccion.Activo,
             produccion.IdModificador
         });
@@ -578,6 +597,12 @@ public class ProduccionRepository : IProduccionRepository
                         p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
                         p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
                         p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                        p.PAGO_ESTADO AS PagoEstado,
+                        p.PAGO_FECHA AS PagoFecha,
+                        p.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,
+                        p.PAGO_BANCO AS PagoBanco,
+                        p.PAGO_CUENTA_DEPOSITO AS PagoCuentaDeposito,
+                        p.PAGO_MONTO_PAGADO AS PagoMontoPagado,
                         p.ACTIVO AS Activo,
                         p.ID_CREADOR AS IdCreador,
                         p.FECHA_CREACION AS FechaCreacion,
@@ -719,6 +744,12 @@ public class ProduccionRepository : IProduccionRepository
                 p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
                 p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
                 p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                p.PAGO_ESTADO AS PagoEstado,
+                p.PAGO_FECHA AS PagoFecha,
+                p.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,
+                p.PAGO_BANCO AS PagoBanco,
+                p.PAGO_CUENTA_DEPOSITO AS PagoCuentaDeposito,
+                p.PAGO_MONTO_PAGADO AS PagoMontoPagado,
                 p.ACTIVO AS Activo,
                 p.ID_CREADOR AS IdCreador,
                 p.FECHA_CREACION AS FechaCreacion,
@@ -1116,6 +1147,51 @@ public class ProduccionRepository : IProduccionRepository
             IdProduccion = idProduccion,
             Estado = estado,
             IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza los campos de estado de pago SAP de una produccion por su ID.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoPagoAsync(
+        int idProduccion,
+        string? pagoEstado,
+        DateTime? pagoFecha,
+        string? pagoNumeroOperacion,
+        string? pagoBanco,
+        string? pagoCuentaDeposito,
+        decimal? pagoMontoPagado,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET PAGO_ESTADO           = :PagoEstado,
+                PAGO_FECHA            = :PagoFecha,
+                PAGO_NUMERO_OPERACION = :PagoNumeroOperacion,
+                PAGO_BANCO            = :PagoBanco,
+                PAGO_CUENTA_DEPOSITO  = :PagoCuentaDeposito,
+                PAGO_MONTO_PAGADO     = :PagoMontoPagado,
+                ID_MODIFICADOR        = :IdModificador,
+                FECHA_MODIFICACION    = SYSDATE
+            WHERE ID_PRODUCCION = :IdProduccion";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdProduccion        = idProduccion,
+            PagoEstado          = pagoEstado,
+            PagoFecha           = pagoFecha,
+            PagoNumeroOperacion = pagoNumeroOperacion,
+            PagoBanco           = pagoBanco,
+            PagoCuentaDeposito  = pagoCuentaDeposito,
+            PagoMontoPagado     = pagoMontoPagado,
+            IdModificador       = idModificador
         });
 
         return rowsAffected > 0;

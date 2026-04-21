@@ -10,6 +10,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// <modified>ADG Antonio - 2026-01-31 - Actualizada llave compuesta en ExistsByKeyAsync</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregado UpdateEstadoPagoAsync</modified>
 /// </summary>
 public interface IProduccionRepository
 {
@@ -211,4 +212,19 @@ public interface IProduccionRepository
     /// <author>ADG Antonio</author>
     /// <created>2026-03-01</created>
     Task<bool> RevertComprobanteByIdAsync(int idProduccion, string estado, int idModificador);
+
+    /// <summary>
+    /// Actualiza los campos de estado de pago SAP de una produccion por su ID.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    Task<bool> UpdateEstadoPagoAsync(
+        int idProduccion,
+        string? pagoEstado,
+        DateTime? pagoFecha,
+        string? pagoNumeroOperacion,
+        string? pagoBanco,
+        string? pagoCuentaDeposito,
+        decimal? pagoMontoPagado,
+        int idModificador);
 }
