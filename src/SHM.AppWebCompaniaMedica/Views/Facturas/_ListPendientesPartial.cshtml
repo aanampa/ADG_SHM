@@ -10,7 +10,7 @@
                 <th>Importe</th>
                 <th>Fecha Limite</th>
                 <th>Estado</th>
-                <th>Accion</th>
+                <th style="text-align:center;">Accion</th>
             </tr>
         </thead>
         <tbody>
@@ -41,17 +41,11 @@
                             }
                             <span class="badge @badgeClass">@estadoTexto</span>
                         </td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn-action btn-ver-datos" data-guid="@factura.GuidRegistro" title="Ver Datos para Facturación">
-                                    <i class="bi bi-eye"></i>
-                                    Ver Datos
-                                </button>
-                                <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action" title="Enviar Factura">
-                                    <i class="bi bi-upload"></i>
-                                    Enviar
-                                </a>
-                            </div>
+                        <td style="text-align:center;">
+                            <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action" title="Enviar Factura">
+                                <i class="bi bi-upload"></i>
+                                Enviar Factura
+                            </a>
                         </td>
                     </tr>
                 }

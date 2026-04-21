@@ -290,10 +290,10 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                 // Calcular TipoComprobante segun TipoEntidadMedica: 1=Factura(1), 0=RHE(22)
                 var tipoComprobante = createDto.TipoEntidadMedica == "1" ? "1" : "22";
 
-                // Calcular Concepto: "PRODUCCION {CodigoProduccion} - {descripcionTipoProduccion}"
+                // Calcular Concepto: "PRODUCCION {NumeroProduccion} - {descripcionTipoProduccion}"
                 var detalleTipoProd = await _tablaDetalleRepository.GetByCodigoAsync("TIPO_PRODUCCION", createDto.TipoProduccion ?? "");
                 var descripcionTipoProd = detalleTipoProd?.Descripcion?.ToUpper() ?? createDto.TipoProduccion ?? "";
-                var concepto = $"PRODUCCION {createDto.CodigoProduccion} - {descripcionTipoProd}";
+                var concepto = $"PRODUCCION {createDto.NumeroProduccion} - {descripcionTipoProd}";
 
                 var produccion = new Produccion
                 {
