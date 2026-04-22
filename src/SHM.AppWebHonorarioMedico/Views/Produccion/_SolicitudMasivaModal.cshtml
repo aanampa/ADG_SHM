@@ -2,7 +2,7 @@
 @model SHM.AppWebHonorarioMedico.Models.SolicitudMasivaViewModel
 
 @{
-    var habilitados = Model.Items.Where(i => i.Habilitado).ToList();
+    var habilitados   = Model.Items.Where(i => i.Habilitado).ToList();
     var deshabilitados = Model.Items.Where(i => !i.Habilitado).ToList();
 }
 
@@ -17,6 +17,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
+
             <div class="modal-body py-2">
                 @if (!Model.Items.Any())
                 {
@@ -27,134 +28,235 @@
                 }
                 else
                 {
-                    <!-- Filtro por Estado -->
-                    <div class="row mb-2">
-                        <div class="col-md-12">
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button type="button" class="btn btn-secondary active" id="smFiltroTodos" onclick="filtrarEstado('')">
-                                    Todos <span class="badge badge-light ml-1">@Model.Items.Count</span>
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" id="smFiltroPendiente" onclick="filtrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente')">
-                                    Factura Pendiente <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaPendiente)</span>
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" id="smFiltroSolicitada" onclick="filtrarEstado('@EstadoDescripcion.Produccion.FacturaSolicitada')">
-                                    Factura Solicitada <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada)</span>
-                                </button>
-                            </div>
+                    <!-- Indicador de pasos -->
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <div class="d-flex flex-column align-items-center" style="min-width:130px;">
+                            <div id="smStepCircle1" style="width:32px;height:32px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">1</div>
+                            <small id="smStepLabel1" class="mt-1 font-weight-bold text-primary">Seleccionar</small>
+                        </div>
+                        <div style="flex:1;height:2px;background:#dee2e6;margin-bottom:18px;max-width:80px;"></div>
+                        <div class="d-flex flex-column align-items-center" style="min-width:130px;">
+                            <div id="smStepCircle2" style="width:32px;height:32px;border-radius:50%;background:#dee2e6;color:#6c757d;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">2</div>
+                            <small id="smStepLabel2" class="mt-1 text-muted">Solicitar / Renotificar</small>
                         </div>
                     </div>
 
-                    <!-- Fecha y Hora Límite -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <label class="small font-weight-bold">Fecha Límite <span class="text-danger">*</span></label>
-                            <input type="date" id="smFecha" class="form-control form-control-sm" />
+                    <!-- ═══════════════════════════════════════
+                         PASO 1 — Filtrar y seleccionar
+                    ════════════════════════════════════════ -->
+                    <div id="smPaso1">
+                        <div class="row mb-2">
+                            <div class="col-md-12 d-flex align-items-center">
+                                <span class="font-weight-bold small mr-2" style="white-space:nowrap;">Filtrar por estado:</span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" id="smFiltroTodos"
+                                            onclick="smFiltrarEstado('')">
+                                        Todos <span class="badge badge-light ml-1">@Model.Items.Count</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="smFiltroPendiente"
+                                            onclick="smFiltrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente')">
+                                        Factura Pendiente
+                                        <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaPendiente)</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="smFiltroSolicitada"
+                                            onclick="smFiltrarEstado('@EstadoDescripcion.Produccion.FacturaSolicitada')">
+                                        Factura Solicitada
+                                        <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada)</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-2">
-                            <label class="small font-weight-bold">Hora Límite <span class="text-danger">*</span></label>
-                            <select id="smHora" class="form-control form-control-sm">
-                                @foreach (var h in Enumerable.Range(8, 15))
-                                {
-                                    foreach (var m in new[] { 0, 15, 30, 45 })
+
+                        <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size: 13px;">
+                                <thead style="background-color: #6c757d; color: #fff; position: sticky; top: 0; z-index: 1;">
+                                    <tr>
+                                        <th class="text-center align-middle" style="width: 40px;">
+                                            <input type="checkbox" id="smChkSelectAll" title="Seleccionar todos los visibles" />
+                                        </th>
+                                        <th class="align-middle" style="width: 110px;">Cód. Producción</th>
+                                        <th class="align-middle" style="width: 130px;">Tipo Producción</th>
+                                        <th class="align-middle d-none" style="width: 100px;">Tipo Médico</th>
+                                        <th class="align-middle">Cía Médica</th>
+                                        <th class="align-middle" style="width: 80px;">Periodo</th>
+                                        <th class="align-middle text-right" style="width: 100px;">Total S/.</th>
+                                        <th class="align-middle text-center" style="width: 110px;">Estado</th>
+                                        <th class="align-middle text-center" style="width: 130px;">Fecha Límite</th>
+                                        <th class="align-middle" style="width: 160px;">Observación</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Items)
                                     {
-                                        var val = $"{h:D2}:{m:D2}";
-                                        <option value="@val" selected="@(val == "18:00" ? "selected" : null)">@val</option>
+                                        var rowClass  = item.Habilitado ? "" : "table-light text-muted";
+                                        var badgeClass = EstadoDescripcion.Produccion.GetBadgeClass(item.Estado);
+                                        <tr class="sm-row @rowClass" data-estado="@item.Estado">
+                                            <td class="text-center">
+                                                @if (item.Habilitado)
+                                                {
+                                                    <input type="checkbox" class="sm-chk-item"
+                                                           data-guid="@item.GuidRegistro"
+                                                           data-estado="@item.Estado" />
+                                                }
+                                                else
+                                                {
+                                                    <input type="checkbox" disabled title="@item.MotivoDeshabilitado" />
+                                                }
+                                            </td>
+                                            <td>@(item.NumeroProduccion ?? "-")</td>
+                                            <td>@(item.DesTipoProduccion ?? "-")</td>
+                                            <td class="d-none">@(item.DesTipoMedico ?? "-")</td>
+                                            <td>@(item.RazonSocial ?? "-")</td>
+                                            <td>@(item.Periodo ?? "-")</td>
+                                            <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                                            <td class="text-center">
+                                                <span class="badge @badgeClass">@item.DesEstado</span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if (item.FechaLimite.HasValue)
+                                                {
+                                                    <span>@item.FechaLimite.Value.ToString("dd/MM/yyyy")</span>
+                                                    <br /><span class="text-muted">@item.FechaLimite.Value.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!item.Habilitado)
+                                                {
+                                                    <span class="text-danger small"><i class="fas fa-exclamation-circle mr-1"></i>@item.MotivoDeshabilitado</span>
+                                                }
+                                            </td>
+                                        </tr>
                                     }
-                                }
-                            </select>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-md-7 d-flex align-items-end">
+
+                        <div class="mt-1">
                             <small class="text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                La fecha y hora se aplicarán a todos los registros seleccionados.
+                                Total: <strong>@Model.Items.Count</strong> |
+                                Habilitados: <strong class="text-success">@habilitados.Count</strong> |
+                                No habilitados: <strong class="text-danger">@deshabilitados.Count</strong> |
+                                Seleccionados: <strong id="smContadorSeleccionados">0</strong>
                             </small>
                         </div>
                     </div>
 
-                    <!-- Tabla de registros -->
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                        <table class="table table-sm table-bordered mb-0" style="font-size: 13px;">
-                            <thead style="background-color: #6c757d; color: #fff; position: sticky; top: 0; z-index: 1;">
-                                <tr>
-                                    <th class="text-center align-middle" style="width: 40px;">
-                                        <input type="checkbox" id="smChkSelectAll" title="Seleccionar todos los habilitados" />
-                                    </th>
-                                    <th class="align-middle" style="width: 110px;">Cód. Producción</th>
-                                    <th class="align-middle" style="width: 130px;">Tipo Producción</th>
-                                    <th class="align-middle" style="width: 100px;">Tipo Médico</th>
-                                    <th class="align-middle">Cía Médica</th>
-                                    <th class="align-middle" style="width: 80px;">Periodo</th>
-                                    <th class="align-middle text-right" style="width: 100px;">Total S/.</th>
-                                    <th class="align-middle text-center" style="width: 110px;">Estado</th>
-                                    <th class="align-middle" style="width: 160px;">Observación</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in Model.Items)
-                                {
-                                    var rowClass = item.Habilitado ? "" : "table-light text-muted";
-                                    var badgeClass = EstadoDescripcion.Produccion.GetBadgeClass(item.Estado);
-                                    <tr class="sm-row @rowClass" data-estado="@item.Estado">
-                                        <td class="text-center">
-                                            @if (item.Habilitado)
-                                            {
-                                                <input type="checkbox" class="sm-chk-item" data-guid="@item.GuidRegistro" />
-                                            }
-                                            else
-                                            {
-                                                <input type="checkbox" disabled title="@item.MotivoDeshabilitado" />
-                                            }
-                                        </td>
-                                        <td>@(item.NumeroProduccion ?? "-")</td>
-                                        <td>@(item.DesTipoProduccion ?? "-")</td>
-                                        <td>@(item.DesTipoMedico ?? "-")</td>
-                                        <td>@(item.RazonSocial ?? "-")</td>
-                                        <td>@(item.Periodo ?? "-")</td>
-                                        <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
-                                        <td class="text-center">
-                                            <span class="badge @badgeClass">@item.DesEstado</span>
-                                            @if (item.Estado == EstadoDescripcion.Produccion.FacturaSolicitada && item.FechaLimite.HasValue)
-                                            {
-                                                <br /><small class="text-muted" style="font-size: 11px;">@item.FechaLimite.Value.ToString("dd/MM/yyyy HH:mm")</small>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (!item.Habilitado)
-                                            {
-                                                <span class="text-danger small"><i class="fas fa-exclamation-circle mr-1"></i>@item.MotivoDeshabilitado</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                    <!-- ═══════════════════════════════════════
+                         PASO 2 — Fecha y confirmar
+                    ════════════════════════════════════════ -->
+                    <div id="smPaso2" style="display:none;">
 
-                    <!-- Resumen -->
-                    <div class="mt-2">
-                        <small class="text-muted">
-                            Total: <strong>@Model.Items.Count</strong> registro(s) |
-                            Habilitados: <strong class="text-success">@habilitados.Count</strong> |
-                            No habilitados: <strong class="text-danger">@deshabilitados.Count</strong>
-                        </small>
+                        <!-- Resumen de selección -->
+                        <div id="smResumenSeleccion" class="mb-3 p-2 rounded" style="background:#f8f9fa; border:1px solid #dee2e6; font-size:13px;"></div>
+
+                        <!-- VARIANTE A: fecha obligatoria (hay pendientes) -->
+                        <div id="smFechaObligatoria" style="display:none;">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="small font-weight-bold">Fecha Límite <span class="text-danger">*</span></label>
+                                    <input type="date" id="smFechaObl" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="small font-weight-bold">Hora Límite <span class="text-danger">*</span></label>
+                                    <select id="smHoraObl" class="form-control form-control-sm">
+                                        <option value="">-- Hora --</option>
+                                        @foreach (var h in Enumerable.Range(8, 15))
+                                        {
+                                            foreach (var m in new[] { 0, 15, 30, 45 })
+                                            {
+                                                var val = $"{h:D2}:{m:D2}";
+                                                <option value="@val">@val</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-7 d-flex align-items-end">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle mr-1"></i>Se aplicará a todos los registros seleccionados.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VARIANTE B: fecha opcional con radio (solo solicitadas) -->
+                        <div id="smFechaOpcional" style="display:none;">
+                            <div class="mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="smOpcionFecha"
+                                           id="smRadioMantener" value="mantener" checked
+                                           onchange="smToggleNuevaFecha()" />
+                                    <label class="form-check-label small" for="smRadioMantener">
+                                        Mantener la fecha límite registrada de cada registro
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="smOpcionFecha"
+                                           id="smRadioNueva" value="nueva"
+                                           onchange="smToggleNuevaFecha()" />
+                                    <label class="form-check-label small" for="smRadioNueva">
+                                        Ingresar nueva fecha límite
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="smNuevaFechaFields" style="display:none;">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label class="small font-weight-bold">Nueva Fecha Límite <span class="text-danger">*</span></label>
+                                        <input type="date" id="smFechaOpc" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="small font-weight-bold">Nueva Hora <span class="text-danger">*</span></label>
+                                        <select id="smHoraOpc" class="form-control form-control-sm">
+                                            <option value="">-- Hora --</option>
+                                            @foreach (var h in Enumerable.Range(8, 15))
+                                            {
+                                                foreach (var m in new[] { 0, 15, 30, 45 })
+                                                {
+                                                    var val = $"{h:D2}:{m:D2}";
+                                                    <option value="@val">@val</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-7 d-flex align-items-end">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle mr-1"></i>Se aplicará a todos los registros seleccionados.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 }
             </div>
+
             @if (Model.Items.Any())
             {
-                <div class="modal-footer">
-                    <small class="text-muted mr-auto">
-                        Seleccionados: <strong id="smContadorSeleccionados">0</strong>
-                    </small>
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
-                        <i class="fas fa-times mr-1"></i>Cancelar
-                    </button>
-                    <button type="button" class="btn btn-warning btn-sm" id="btnRenotificarMasivo" onclick="renotificarMasivo()" style="display:none;" title="Reenviar correo con la fecha límite ya establecida">
-                        <i class="fas fa-bell mr-1"></i>Renotificar Seleccionados
-                    </button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btnEnviarMasivo" onclick="enviarSolicitudMasiva()">
-                        <i class="fas fa-paper-plane mr-1"></i>Solicitar Seleccionados
-                    </button>
+                <!-- display:block evita que Bootstrap flex del modal-footer anule los display:none internos -->
+                <div class="modal-footer py-2" style="display:block;">
+                    <div id="smFooterPaso1" style="display:flex; justify-content:space-between; align-items:center;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                            <i class="fas fa-times mr-1"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnSiguiente"
+                                onclick="smIrPaso2()" disabled>
+                            Siguiente <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                    <div id="smFooterPaso2" style="display:none; justify-content:space-between; align-items:center;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="smIrPaso1()">
+                            <i class="fas fa-arrow-left mr-1"></i>Anterior
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="btnEjecutarMasivo"
+                                onclick="smEjecutar()">
+                            <i class="fas fa-paper-plane mr-1"></i><span id="smBtnEjecutarLabel">Ejecutar</span>
+                        </button>
+                    </div>
                 </div>
             }
         </div>
@@ -162,211 +264,272 @@
 </div>
 
 <script>
-    // Inicializar modal y eventos al cargar
-    (function () {
-        // Seleccionar todos los habilitados (solo filas visibles)
-        document.getElementById('smChkSelectAll').addEventListener('change', function () {
-            document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item').forEach(cb => {
-                cb.checked = this.checked;
-            });
-            actualizarContador();
+(function () {
+    var chkAll = document.getElementById('smChkSelectAll');
+    if (chkAll) {
+        chkAll.addEventListener('change', function () {
+            document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item')
+                    .forEach(function (cb) { cb.checked = chkAll.checked; });
+            smActualizarContador();
         });
-
-        // Actualizar contador al cambiar checkboxes individuales
-        document.getElementById('modalSolicitudMasiva').addEventListener('change', function (e) {
-            if (e.target.classList.contains('sm-chk-item')) {
-                actualizarContador();
-                const visibles = document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item');
-                const marcados = document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item:checked');
-                document.getElementById('smChkSelectAll').checked = (visibles.length > 0 && visibles.length === marcados.length);
-            }
-        });
-
-        // Mostrar modal
-        $('#modalSolicitudMasiva').modal('show');
-
-        // Filtro por defecto: Factura Pendiente
-        filtrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente');
-
-        // Fecha por defecto: mañana
-        const hoy = new Date();
-        hoy.setDate(hoy.getDate() + 1);
-        const yyyy = hoy.getFullYear();
-        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dd = String(hoy.getDate()).padStart(2, '0');
-        document.getElementById('smFecha').value = `${yyyy}-${mm}-${dd}`;
-    })();
-
-    function filtrarEstado(estado) {
-        // Actualizar botones activos
-        document.getElementById('smFiltroTodos').classList.toggle('active', estado === '');
-        document.getElementById('smFiltroTodos').classList.toggle('btn-secondary', estado === '');
-        document.getElementById('smFiltroTodos').classList.toggle('btn-outline-secondary', estado !== '');
-        document.getElementById('smFiltroPendiente').classList.toggle('active', estado === '@EstadoDescripcion.Produccion.FacturaPendiente');
-        document.getElementById('smFiltroPendiente').classList.toggle('btn-secondary', estado === '@EstadoDescripcion.Produccion.FacturaPendiente');
-        document.getElementById('smFiltroPendiente').classList.toggle('btn-outline-secondary', estado !== '@EstadoDescripcion.Produccion.FacturaPendiente');
-        document.getElementById('smFiltroSolicitada').classList.toggle('active', estado === '@EstadoDescripcion.Produccion.FacturaSolicitada');
-        document.getElementById('smFiltroSolicitada').classList.toggle('btn-secondary', estado === '@EstadoDescripcion.Produccion.FacturaSolicitada');
-        document.getElementById('smFiltroSolicitada').classList.toggle('btn-outline-secondary', estado !== '@EstadoDescripcion.Produccion.FacturaSolicitada');
-
-        // Mostrar/ocultar filas
-        document.querySelectorAll('.sm-row').forEach(row => {
-            const visible = estado === '' || row.dataset.estado === estado;
-            row.style.display = visible ? '' : 'none';
-        });
-
-        // Mostrar botón Renotificar solo cuando el filtro es Factura Solicitada
-        const esSolicitada = estado === '@EstadoDescripcion.Produccion.FacturaSolicitada';
-        document.getElementById('btnRenotificarMasivo').style.display = esSolicitada ? '' : 'none';
-        document.getElementById('btnEnviarMasivo').style.display = esSolicitada ? 'none' : '';
-
-        // Desmarcar "seleccionar todos" y actualizar contador
-        document.getElementById('smChkSelectAll').checked = false;
-        actualizarContador();
     }
 
-    function actualizarContador() {
-        const count = document.querySelectorAll('.sm-chk-item:checked').length;
-        document.getElementById('smContadorSeleccionados').textContent = count;
-    }
-
-    function formatearHoraAmPm(hora) {
-        const [hStr, mStr] = hora.split(':');
-        const h = parseInt(hStr);
-        const suffix = h >= 12 ? 'PM' : 'AM';
-        const h12 = h % 12 || 12;
-        return `${String(h12).padStart(2, '0')}:${mStr} ${suffix}`;
-    }
-
-    function renotificarMasivo() {
-        const guids = Array.from(document.querySelectorAll('.sm-chk-item:checked'))
-            .map(cb => cb.dataset.guid);
-
-        if (guids.length === 0) {
-            Swal.fire({ icon: 'warning', title: 'Sin selección', text: 'Seleccione al menos un registro.', confirmButtonColor: '#f26522' });
-            return;
+    document.getElementById('modalSolicitudMasiva').addEventListener('change', function (e) {
+        if (e.target.classList.contains('sm-chk-item')) {
+            smActualizarContador();
+            var visibles = document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item');
+            var marcados = document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item:checked');
+            if (chkAll) chkAll.checked = (visibles.length > 0 && visibles.length === marcados.length);
         }
+    });
 
-        Swal.fire({
-            icon: 'question',
-            title: 'Renotificar correos',
-            html: `Se reenviará el correo de solicitud con la fecha límite ya establecida a <strong>${guids.length}</strong> registro(s).`,
-            showCancelButton: true,
-            confirmButtonColor: '#f26522',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-bell"></i> Renotificar',
-            cancelButtonText: 'Cancelar'
-        }).then(result => {
-            if (!result.isConfirmed) return;
+    $('#modalSolicitudMasiva').modal('show');
 
-            Swal.fire({
-                title: 'Enviando notificaciones...',
-                text: 'Procesando, por favor espere.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
+    // Inicio: filtro Factura Pendiente por defecto
+    smFiltrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente');
+})();
 
-            fetch('@Url.Action("RenotificarFacturaMasivo", "Produccion")', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
-                body: JSON.stringify(guids)
-            })
-            .then(r => r.json())
-            .then(data => {
-                Swal.close();
-                $('#modalSolicitudMasiva').modal('hide');
-                Swal.fire({
-                    icon: data.errores > 0 ? 'warning' : 'success',
-                    title: 'Proceso completado',
-                    text: data.message,
-                    confirmButtonColor: '#28a745'
-                });
-            })
-            .catch(() => {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.', confirmButtonColor: '#dc3545' });
-            });
-        });
+// ─── Paso 1 ───────────────────────────────────────────────────────────────────
+
+function smFiltrarEstado(estado) {
+    var PENDIENTE  = '@EstadoDescripcion.Produccion.FacturaPendiente';
+    var SOLICITADA = '@EstadoDescripcion.Produccion.FacturaSolicitada';
+    var mapa = { '': 'smFiltroTodos' };
+    mapa[PENDIENTE]  = 'smFiltroPendiente';
+    mapa[SOLICITADA] = 'smFiltroSolicitada';
+
+    Object.keys(mapa).forEach(function (e) {
+        var btn = document.getElementById(mapa[e]);
+        var activo = (estado === e);
+        btn.classList.toggle('active',                activo);
+        btn.classList.toggle('btn-secondary',         activo);
+        btn.classList.toggle('btn-outline-secondary', !activo);
+    });
+
+    document.querySelectorAll('.sm-row').forEach(function (row) {
+        row.style.display = (estado === '' || row.dataset.estado === estado) ? '' : 'none';
+    });
+
+    document.querySelectorAll('.sm-chk-item').forEach(function (cb) { cb.checked = false; });
+    var chkAll = document.getElementById('smChkSelectAll');
+    if (chkAll) chkAll.checked = false;
+    smActualizarContador();
+}
+
+function smActualizarContador() {
+    var count = document.querySelectorAll('.sm-chk-item:checked').length;
+    document.getElementById('smContadorSeleccionados').textContent = count;
+    var btn = document.getElementById('btnSiguiente');
+    if (btn) btn.disabled = (count === 0);
+}
+
+// ─── Transiciones entre pasos ─────────────────────────────────────────────────
+
+function smGetSeleccion() {
+    var PENDIENTE  = '@EstadoDescripcion.Produccion.FacturaPendiente';
+    var SOLICITADA = '@EstadoDescripcion.Produccion.FacturaSolicitada';
+    var checked    = Array.from(document.querySelectorAll('.sm-chk-item:checked'));
+    return {
+        pendientes:  checked.filter(function (cb) { return cb.dataset.estado === PENDIENTE;  }).map(function (cb) { return cb.dataset.guid; }),
+        solicitadas: checked.filter(function (cb) { return cb.dataset.estado === SOLICITADA; }).map(function (cb) { return cb.dataset.guid; }),
+        total: checked.length
+    };
+}
+
+function smIrPaso2() {
+    var sel = smGetSeleccion();
+    if (sel.total === 0) return;
+
+    var hayPendientes  = sel.pendientes.length > 0;
+    var haySolicitadas = sel.solicitadas.length > 0;
+
+    // Resumen
+    var html = '';
+    if (hayPendientes)  html += '<div><i class="fas fa-file-invoice text-warning mr-1"></i><strong>' + sel.pendientes.length  + '</strong> factura(s) pendiente(s) &mdash; se enviará la solicitud de factura</div>';
+    if (haySolicitadas) html += '<div><i class="fas fa-bell text-info mr-1"></i><strong>'             + sel.solicitadas.length + '</strong> factura(s) solicitada(s) &mdash; se renotificará el correo</div>';
+    if (hayPendientes && haySolicitadas) {
+        html += '<div class="mt-1"><small class="text-info"><i class="fas fa-info-circle mr-1"></i>La fecha límite indicada se aplicará a todos los registros seleccionados.</small></div>';
+    }
+    document.getElementById('smResumenSeleccion').innerHTML = html;
+
+    // Mostrar variante de fecha correcta y limpiar
+    if (hayPendientes) {
+        // Fecha obligatoria (pendientes o mezcla)
+        document.getElementById('smFechaObligatoria').style.display = '';
+        document.getElementById('smFechaOpcional').style.display    = 'none';
+        document.getElementById('smFechaObl').value = '';
+        document.getElementById('smHoraObl').value  = '';
+    } else {
+        // Solo solicitadas — fecha opcional con radio
+        document.getElementById('smFechaObligatoria').style.display = 'none';
+        document.getElementById('smFechaOpcional').style.display    = '';
+        document.getElementById('smRadioMantener').checked = true;
+        document.getElementById('smNuevaFechaFields').style.display = 'none';
+        document.getElementById('smFechaOpc').value = '';
+        document.getElementById('smHoraOpc').value  = '';
     }
 
-    function enviarSolicitudMasiva() {
-        const fecha = document.getElementById('smFecha').value;
-        const hora = document.getElementById('smHora').value;
-        const guids = Array.from(document.querySelectorAll('.sm-chk-item:checked'))
-            .map(cb => cb.dataset.guid);
+    // Etiqueta botón Ejecutar
+    var label;
+    if (hayPendientes && !haySolicitadas)      label = 'Solicitar Seleccionados';
+    else if (!hayPendientes && haySolicitadas) label = 'Renotificar Seleccionados';
+    else                                        label = 'Solicitar y Renotificar';
+    document.getElementById('smBtnEjecutarLabel').textContent = label;
 
-        var errores = [];
+    // Indicador: paso 1 completado (verde), paso 2 activo (azul)
+    document.getElementById('smStepCircle1').style.background = '#28a745';
+    document.getElementById('smStepCircle1').style.color      = '#fff';
+    document.getElementById('smStepLabel1').className = 'mt-1 text-success small';
+    document.getElementById('smStepCircle2').style.background = '#007bff';
+    document.getElementById('smStepCircle2').style.color      = '#fff';
+    document.getElementById('smStepLabel2').className = 'mt-1 font-weight-bold text-primary small';
+
+    document.getElementById('smPaso1').style.display       = 'none';
+    document.getElementById('smPaso2').style.display       = '';
+    document.getElementById('smFooterPaso1').style.display = 'none';
+    document.getElementById('smFooterPaso2').style.display = 'flex';
+}
+
+function smIrPaso1() {
+    document.getElementById('smStepCircle1').style.background = '#007bff';
+    document.getElementById('smStepCircle1').style.color      = '#fff';
+    document.getElementById('smStepLabel1').className = 'mt-1 font-weight-bold text-primary small';
+    document.getElementById('smStepCircle2').style.background = '#dee2e6';
+    document.getElementById('smStepCircle2').style.color      = '#6c757d';
+    document.getElementById('smStepLabel2').className = 'mt-1 text-muted small';
+
+    document.getElementById('smPaso2').style.display       = 'none';
+    document.getElementById('smPaso1').style.display       = '';
+    document.getElementById('smFooterPaso2').style.display = 'none';
+    document.getElementById('smFooterPaso1').style.display = 'flex';
+}
+
+function smToggleNuevaFecha() {
+    var nueva = document.getElementById('smRadioNueva').checked;
+    document.getElementById('smNuevaFechaFields').style.display = nueva ? '' : 'none';
+    if (!nueva) {
+        document.getElementById('smFechaOpc').value = '';
+        document.getElementById('smHoraOpc').value  = '';
+    }
+}
+
+// ─── Paso 2: Ejecutar ─────────────────────────────────────────────────────────
+
+function smFormatearHoraAmPm(hora) {
+    var p = hora.split(':'), h = parseInt(p[0]), m = p[1];
+    var sfx = h >= 12 ? 'PM' : 'AM', h12 = h % 12 || 12;
+    return String(h12).padStart(2, '0') + ':' + m + ' ' + sfx;
+}
+
+function smEjecutar() {
+    var sel = smGetSeleccion();
+    var hayPendientes  = sel.pendientes.length > 0;
+    var haySolicitadas = sel.solicitadas.length > 0;
+
+    // Obtener fecha/hora según variante activa
+    var fecha = '', hora = '';
+    if (hayPendientes) {
+        fecha = document.getElementById('smFechaObl').value;
+        hora  = document.getElementById('smHoraObl').value;
+    } else {
+        var usaNueva = document.getElementById('smRadioNueva').checked;
+        if (usaNueva) {
+            fecha = document.getElementById('smFechaOpc').value;
+            hora  = document.getElementById('smHoraOpc').value;
+        }
+    }
+
+    // Validaciones
+    var errores = [];
+    if (hayPendientes) {
         if (!fecha) errores.push('La fecha límite es requerida');
-        if (!hora) errores.push('La hora límite es requerida');
+        if (!hora)  errores.push('La hora límite es requerida');
+    } else if (document.getElementById('smRadioNueva').checked) {
+        if (!fecha) errores.push('La nueva fecha límite es requerida');
+        if (!hora)  errores.push('La nueva hora límite es requerida');
+    }
+    if (fecha && hora) {
+        if (new Date(fecha + 'T' + hora) <= new Date())
+            errores.push('La fecha y hora límite debe ser mayor a la actual');
+    }
 
-        if (fecha && hora) {
-            var fechaHoraLimite = new Date(fecha + 'T' + hora);
-            var ahora = new Date();
-            if (fechaHoraLimite <= ahora) {
-                errores.push('La fecha y hora límite debe ser mayor a la fecha y hora actual');
-            }
-        }
+    if (errores.length > 0) {
+        Swal.fire({
+            icon: 'warning', title: 'Atención',
+            html: '<ul style="text-align:left;">' + errores.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul>',
+            confirmButtonColor: '#f26522'
+        });
+        return;
+    }
 
-        if (guids.length === 0) errores.push('Seleccione al menos un registro');
+    // Confirmación
+    var confirmHtml = '';
+    if (hayPendientes)  confirmHtml += '<div><i class="fas fa-file-invoice text-warning mr-1"></i>Solicitar factura a <strong>' + sel.pendientes.length  + '</strong> registro(s) pendiente(s)</div>';
+    if (haySolicitadas) confirmHtml += '<div><i class="fas fa-bell text-info mr-1"></i>Renotificar a <strong>'                  + sel.solicitadas.length + '</strong> registro(s) solicitado(s)</div>';
+    if (fecha && hora) {
+        confirmHtml += '<div class="mt-1"><small>Fecha límite: <strong>' + fecha.split('-').reverse().join('/') + ' ' + smFormatearHoraAmPm(hora) + '</strong></small></div>';
+    } else {
+        confirmHtml += '<div class="mt-1"><small class="text-muted">Se mantendrá la fecha límite actual de cada registro</small></div>';
+    }
 
-        if (errores.length > 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Campos requeridos',
-                html: '<ul style="text-align:left;">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
-                confirmButtonColor: '#f26522'
-            });
-            return;
-        }
+    Swal.fire({
+        icon: 'question', title: 'Confirmar operación',
+        html: confirmHtml,
+        showCancelButton: true,
+        confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check"></i> Confirmar',
+        cancelButtonText: 'Cancelar'
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
 
         Swal.fire({
-            icon: 'question',
-            title: 'Confirmar solicitud masiva',
-            html: `Se enviará la solicitud de factura a <strong>${guids.length}</strong> registro(s).<br/>Fecha límite: <strong>${fecha.split('-').reverse().join('/')} ${formatearHoraAmPm(hora)}</strong>`,
-            showCancelButton: true,
-            confirmButtonColor: '#007bff',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, enviar',
-            cancelButtonText: 'Cancelar'
-        }).then(result => {
-            if (!result.isConfirmed) return;
-
-            Swal.fire({
-                title: 'Enviando solicitud...',
-                text: 'Procesando, por favor espere.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-
-            fetch('@Url.Action("SolicitarFacturaMasivo", "Produccion")', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
-                body: JSON.stringify({ guids: guids, fecha: fecha, hora: hora })
-            })
-            .then(r => r.json())
-            .then(data => {
-                Swal.close();
-
-                if (data.success) {
-                    $('#modalSolicitudMasiva').modal('hide');
-                    Swal.fire({
-                        icon: data.errores > 0 ? 'warning' : 'success',
-                        title: 'Proceso completado',
-                        text: data.message,
-                        confirmButtonColor: '#28a745'
-                    }).then(() => {
-                        refreshList();
-                    });
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#dc3545' });
-                }
-            })
-            .catch(() => {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.', confirmButtonColor: '#dc3545' });
-            });
+            title: 'Procesando...', text: 'Por favor espere.',
+            allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false,
+            didOpen: function () { Swal.showLoading(); }
         });
-    }
+
+        var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
+        var promesas = [];
+        var resultados = [];
+
+        if (sel.pendientes.length > 0) {
+            promesas.push(
+                fetch('@Url.Action("SolicitarFacturaMasivo", "Produccion")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ guids: sel.pendientes, fecha: fecha, hora: hora })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { resultados.push(d); })
+                .catch(function ()  { resultados.push({ success: false, message: 'Error al solicitar facturas pendientes.', errores: sel.pendientes.length }); })
+            );
+        }
+
+        if (sel.solicitadas.length > 0) {
+            promesas.push(
+                fetch('@Url.Action("RenotificarFacturaMasivo", "Produccion")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ guids: sel.solicitadas, fecha: fecha || null, hora: hora || null })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { resultados.push(d); })
+                .catch(function ()  { resultados.push({ success: false, message: 'Error al renotificar facturas solicitadas.', errores: sel.solicitadas.length }); })
+            );
+        }
+
+        Promise.all(promesas).then(function () {
+            Swal.close();
+            var totalErrores = resultados.reduce(function (s, d) { return s + (d.errores || 0); }, 0);
+            var mensajes     = resultados.map(function (d) { return d.message; }).join(' | ');
+            $('#modalSolicitudMasiva').modal('hide');
+            Swal.fire({
+                icon: totalErrores > 0 ? 'warning' : 'success',
+                title: 'Proceso completado',
+                text: mensajes,
+                confirmButtonColor: '#28a745'
+            }).then(function () { refreshList(); });
+        });
+    });
+}
 </script>

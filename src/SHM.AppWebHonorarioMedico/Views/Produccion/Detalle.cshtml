@@ -336,7 +336,7 @@
                                     <div class="col-3">
                                         <div class="form-group-sm">
                                             <label>Fecha Límite</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture) ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
                                     <div class="col-4">
@@ -353,11 +353,11 @@
                                     </div>
                                 </div>
 
-                                @if (Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente || Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada)
+                                @if (Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente || Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
                                 {
                                     var tieneUsuarios = (bool)(ViewBag.TieneUsuariosExternos ?? false);
                                     var nroCuentas = (int)(ViewBag.CantCuentasActivas ?? 0);
-                                    var btnLabel = Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ? "Actualizar Fecha Limite" : "Solicitar Factura";
+                                    var btnLabel = (Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta) ? "Renotificar Solicitud de Factura" : "Solicitar Factura";
 
                                     string? motivoDeshabilitado = null;
                                     if (!tieneUsuarios)
@@ -371,14 +371,14 @@
                                         @if (motivoDeshabilitado == null)
                                         {
                                             <button type="button" class="btn btn-success btn-sm" onclick="solicitarFactura()">
-                                                <i class="fas fa-file-invoice-dollar mr-1"></i>@btnLabel
+                                                <i class="fas fa-paper-plane mr-1"></i>@btnLabel
                                             </button>
                                         }
                                         else
                                         {
                                             <button type="button" class="btn btn-success btn-sm" disabled
                                                     title="@motivoDeshabilitado">
-                                                <i class="fas fa-file-invoice-dollar mr-1"></i>@btnLabel
+                                                <i class="fas fa-paper-plane mr-1"></i>@btnLabel
                                             </button>
                                             <small class="text-warning d-block mt-1">
                                                 <i class="fas fa-exclamation-triangle mr-1"></i>@motivoDeshabilitado
@@ -471,7 +471,7 @@
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="modalSolicitarFacturaLabel">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i>@(Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ? "Actualizar Fecha Limite" : "Solicitar Factura")
+                    <i class="fas fa-paper-plane mr-2"></i>@((Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta) ? "Renotificar Solicitud de Factura" : "Solicitar Factura")
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -480,6 +480,30 @@
             <div class="modal-body">
                 <form id="formSolicitarFactura">
                     <input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
+
+                    @if (Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
+                    {
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="opcionFecha"
+                                       id="rdoMantener" value="mantener" checked
+                                       onchange="toggleOpcionFecha()" />
+                                <label class="form-check-label" for="rdoMantener">
+                                    Mantener fecha límite actual
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="opcionFecha"
+                                       id="rdoNueva" value="nueva"
+                                       onchange="toggleOpcionFecha()" />
+                                <label class="form-check-label" for="rdoNueva">
+                                    Ingresar nueva fecha límite
+                                </label>
+                            </div>
+                        </div>
+                    }
+
+                    <div id="divCamposFecha"@((Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta) ? " style=\"display:none;\"" : "")>
 
                     <!-- Opciones rapidas -->
                     <div class="row mb-3">
@@ -540,6 +564,7 @@
                             </div>
                         </div>
                     </div>
+                    </div><!-- /divCamposFecha -->
                 </form>
             </div>
             <div class="modal-footer">
@@ -743,6 +768,13 @@
             // Calcular fechas sugeridas
             calcularFechasSugeridas();
 
+            // Resetear opcion de fecha para renotificacion
+            var rdoMantener = document.getElementById('rdoMantener');
+            if (rdoMantener) {
+                rdoMantener.checked = true;
+                toggleOpcionFecha();
+            }
+
             // Abrir modal
             $('#modalSolicitarFactura').modal('show');
         }
@@ -772,29 +804,53 @@
             });
         });
 
+        function toggleOpcionFecha() {
+            var rdoNueva = document.getElementById('rdoNueva');
+            var divCampos = document.getElementById('divCamposFecha');
+            if (!divCampos) return;
+            if (rdoNueva && rdoNueva.checked) {
+                divCampos.style.display = '';
+            } else {
+                divCampos.style.display = 'none';
+                document.getElementById('txtFechaLimite').value = '';
+                document.getElementById('txtHoraLimite').value = '';
+                document.querySelectorAll('.btn-plazo').forEach(function (btn) {
+                    btn.classList.remove('active', 'btn-primary');
+                    btn.classList.add(btn.dataset.dias === '0' ? 'btn-outline-secondary' : 'btn-outline-primary');
+                });
+                document.getElementById('msgInfoPlazo').textContent = 'Seleccione una opcion de plazo para establecer la fecha y hora limite.';
+            }
+        }
+
         function enviarSolicitudFactura() {
             var fecha = document.getElementById('txtFechaLimite').value;
             var hora = document.getElementById('txtHoraLimite').value;
             var guid = document.getElementById('hdnGuidProduccion').value;
+
+            // Verificar si se mantiene la fecha actual (solo para renotificacion)
+            var rdoMantener = document.getElementById('rdoMantener');
+            var mantenerFecha = rdoMantener && rdoMantener.checked;
 
             // Verificar si se selecciono alguna opcion
             var botonActivo = document.querySelector('.btn-plazo.active');
 
             // Validar campos requeridos
             var errores = [];
-            if (!botonActivo) {
-                errores.push('Debe seleccionar una opcion de plazo');
-            }
-            if (!fecha) errores.push('La fecha limite es requerida');
-            if (!hora) errores.push('La hora limite es requerida');
+            if (!mantenerFecha) {
+                if (!botonActivo) {
+                    errores.push('Debe seleccionar una opcion de plazo');
+                }
+                if (!fecha) errores.push('La fecha limite es requerida');
+                if (!hora) errores.push('La hora limite es requerida');
 
-            // Validar que la fecha y hora limite no sea menor a la actual
-            if (fecha && hora) {
-                var fechaHoraLimite = new Date(fecha + 'T' + hora);
-                var ahora = new Date();
+                // Validar que la fecha y hora limite no sea menor a la actual
+                if (fecha && hora) {
+                    var fechaHoraLimite = new Date(fecha + 'T' + hora);
+                    var ahora = new Date();
 
-                if (fechaHoraLimite <= ahora) {
-                    errores.push('La fecha y hora limite debe ser mayor a la fecha y hora actual');
+                    if (fechaHoraLimite <= ahora) {
+                        errores.push('La fecha y hora limite debe ser mayor a la fecha y hora actual');
+                    }
                 }
             }
 
@@ -812,8 +868,9 @@
             Swal.fire({
                 icon: 'question',
                 title: 'Confirmar Solicitud',
-                html: '¿Desea enviar la solicitud de factura con fecha limite <strong>' +
-                    formatearFecha(fecha) + '</strong> a las <strong>' + formatearHoraAmPm(hora) + '</strong>?',
+                html: mantenerFecha
+                    ? '¿Desea renotificar manteniendo la <strong>fecha límite actual</strong>?'
+                    : '¿Desea enviar la solicitud de factura con fecha limite <strong>' + formatearFecha(fecha) + '</strong> a las <strong>' + formatearHoraAmPm(hora) + '</strong>?',
                 showCancelButton: true,
                 confirmButtonColor: '#007bff',
                 cancelButtonColor: '#6c757d',
@@ -842,8 +899,8 @@
                         },
                         body: JSON.stringify({
                             guidRegistro: guid,
-                            fecha: fecha,
-                            hora: hora
+                            fecha: mantenerFecha ? null : fecha,
+                            hora: mantenerFecha ? null : hora
                         })
                     })
                         .then(response => response.json())
