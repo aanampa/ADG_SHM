@@ -18,6 +18,8 @@ try
 {
     logger.Debug("Iniciando aplicacion SHM.AppWebHonorarioMedico");
 
+    QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
     var builder = WebApplication.CreateBuilder(args);
 
     // Fijar cultura en-US para que el formato de numeros (decimales, miles)

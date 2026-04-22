@@ -2,9 +2,11 @@ using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using QuestPDF.Fluent;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
+using SHM.AppWebHonorarioMedico.Reports;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -25,6 +27,8 @@ public class TesoreriaController : Controller
     private readonly IBancoService _bancoService;
     private readonly ITablaDetalleService _tablaDetalleService;
     private readonly IProduccionService _produccionService;
+    private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
+    private readonly IWebHostEnvironment _env;
 
     public TesoreriaController(
         ILogger<TesoreriaController> logger,
@@ -32,7 +36,9 @@ public class TesoreriaController : Controller
         IOrdenPagoLiquidacionService ordenPagoLiquidacionService,
         IBancoService bancoService,
         ITablaDetalleService tablaDetalleService,
-        IProduccionService produccionService)
+        IProduccionService produccionService,
+        IOrdenPagoAprobacionService ordenPagoAprobacionService,
+        IWebHostEnvironment env)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
@@ -40,6 +46,8 @@ public class TesoreriaController : Controller
         _bancoService = bancoService;
         _tablaDetalleService = tablaDetalleService;
         _produccionService = produccionService;
+        _ordenPagoAprobacionService = ordenPagoAprobacionService;
+        _env = env;
     }
 
     /// <summary>
@@ -225,6 +233,218 @@ public class TesoreriaController : Controller
         {
             _logger.LogError(ex, "Error en RegistrarPago");
             return StatusCode(500, new { success = false, message = "Error interno al registrar el pago." });
+        }
+    }
+
+    /// <summary>
+    /// Genera y descarga el PDF de una Orden de Pago directamente en memoria.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-21</created>
+    /// </summary>
+    [HttpGet]
+    [Route("Tesoreria/DescargarOrdenPago/{guid}")]
+    public async Task<IActionResult> DescargarOrdenPago(string guid)
+    {
+        try
+        {
+            var ordenPago = await _ordenPagoService.GetByGuidAsync(guid);
+            if (ordenPago == null)
+                return NotFound("Orden de pago no encontrada.");
+
+            var liquidaciones = await _ordenPagoLiquidacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            var detalle       = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            var aprobaciones  = await _ordenPagoAprobacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
+            var logoPath      = Path.Combine(_env.WebRootPath, "images", "logo_login.jpg");
+
+            var documento = new OrdenPagoDocument(
+                ordenPago,
+                [.. liquidaciones],
+                [.. detalle],
+                [.. aprobaciones],
+                logoPath);
+
+            var pdfBytes      = documento.GeneratePdf();
+            var nombreArchivo = $"{ordenPago.NumeroOrdenPago ?? $"OP_{guid}"}.pdf";
+
+            _logger.LogInformation("PDF Orden de Pago generado en memoria: {Numero}", ordenPago.NumeroOrdenPago);
+            return File(pdfBytes, "application/pdf", nombreArchivo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar PDF de orden de pago {Guid}", guid);
+            return StatusCode(500, "Error al generar el reporte PDF.");
+        }
+    }
+
+    /// <summary>
+    /// Genera y descarga el Excel de comprobantes de una Orden de Pago directamente en memoria.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-21</created>
+    /// </summary>
+    [HttpGet]
+    [Route("Tesoreria/DescargarExcelOrdenPago/{guid}")]
+    public async Task<IActionResult> DescargarExcelOrdenPago(string guid)
+    {
+        try
+        {
+            var ordenPago = await _ordenPagoService.GetByGuidAsync(guid);
+            if (ordenPago == null)
+                return NotFound("Orden de pago no encontrada.");
+
+            var detalle   = (await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago)).ToList();
+            var logoPath  = Path.Combine(_env.WebRootPath, "images", "logo_login.jpg");
+
+            var colorHeader     = XLColor.FromHtml("#6c757d");
+            var colorHeaderFont = XLColor.White;
+            var colorAlt        = XLColor.FromHtml("#f8f9fa");
+            var colorAcento     = XLColor.FromHtml("#f26522");
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Comprobantes");
+
+            // --- Logo ---
+            ws.Row(1).Height = 36;
+            ws.Range(1, 1, 1, 13).Merge();
+            if (System.IO.File.Exists(logoPath))
+            {
+                using var imgStream = new FileStream(logoPath, FileMode.Open, FileAccess.Read);
+                ws.AddPicture(imgStream).MoveTo(ws.Cell("A1")).WithSize(120, 32);
+            }
+
+            // --- Título ---
+            ws.Range(2, 1, 2, 13).Merge();
+            ws.Cell(2, 1).Value = $"ORDEN DE PAGO  N° {ordenPago.NumeroOrdenPago ?? "-"}  —  {ordenPago.NombreSede ?? "-"}";
+            ws.Cell(2, 1).Style.Font.Bold = true;
+            ws.Cell(2, 1).Style.Font.FontSize = 13;
+            ws.Cell(2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws.Cell(2, 1).Style.Fill.BackgroundColor = colorAcento;
+            ws.Cell(2, 1).Style.Font.FontColor = colorHeaderFont;
+            ws.Row(2).Height = 22;
+
+            // --- Resumen ---
+            int rRes = 3;
+            var resumenLabels = new[]
+            {
+                ("Banco:",          ordenPago.NombreBanco ?? "-"),
+                ("Fecha:",          ordenPago.FechaGeneracion?.ToString("dd/MM/yyyy") ?? "-"),
+                ("Estado:",         EstadoDescripcion.OrdenPago.GetDescripcion(ordenPago.Estado)),
+                ("Liquidaciones:",  ordenPago.CantLiquidaciones?.ToString() ?? "-"),
+                ("Comprobantes:",   ordenPago.CantComprobantes?.ToString() ?? "-"),
+                ("Sub Total S/:",   ordenPago.MtoSubtotalAcum?.ToString("N2") ?? "--"),
+                ("IGV S/:",         ordenPago.MtoIgvAcum?.ToString("N2") ?? "--"),
+                ("Imp. Renta S/:",  ordenPago.MtoRentaAcum?.ToString("N2") ?? "--"),
+                ("TOTAL S/:",       ordenPago.MtoTotalAcum?.ToString("N2") ?? "--"),
+            };
+            int col = 1;
+            foreach (var (label, valor) in resumenLabels)
+            {
+                ws.Cell(rRes, col).Value = label;
+                ws.Cell(rRes, col).Style.Font.Bold = true;
+                ws.Cell(rRes, col).Style.Font.FontSize = 8;
+                ws.Cell(rRes, col).Style.Fill.BackgroundColor = XLColor.FromHtml("#e9ecef");
+                ws.Cell(rRes, col + 1).Value = valor;
+                ws.Cell(rRes, col + 1).Style.Font.FontSize = 8;
+                if (label == "TOTAL S/:")
+                {
+                    ws.Cell(rRes, col + 1).Style.Font.Bold = true;
+                    ws.Cell(rRes, col + 1).Style.Font.FontColor = colorAcento;
+                }
+                rRes++;
+                if (rRes > 5) { rRes = 3; col += 2; }
+            }
+
+            // --- Encabezado tabla ---
+            int rH = 9;
+            var hdrs = new[] { "#", "Liquidación", "RUC", "Tipo Entidad", "Cía Médica", "Banco",
+                               "Comprobante", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Detracción S/.", "Total S/." };
+            ws.Row(rH).Height = 28;
+            for (int i = 0; i < hdrs.Length; i++)
+            {
+                var c = ws.Cell(rH, i + 1);
+                c.Value = hdrs[i];
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontSize = 9;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                c.Style.Alignment.Vertical   = XLAlignmentVerticalValues.Center;
+                c.Style.Alignment.WrapText   = true;
+                c.Style.Fill.BackgroundColor = colorHeader;
+                c.Style.Font.FontColor       = colorHeaderFont;
+                c.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            // --- Filas ---
+            int row = rH + 1;
+            int cnt = 1;
+            foreach (var det in detalle)
+            {
+                var bg          = cnt % 2 == 0 ? colorAlt : XLColor.White;
+                var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                    ? $"{det.Serie}-{det.Numero}" : "-";
+
+                ws.Cell(row, 1).Value  = cnt;
+                ws.Cell(row, 2).Value  = det.NumeroLiquidacion ?? "-";
+                ws.Cell(row, 3).Value  = det.Ruc ?? "-";
+                ws.Cell(row, 4).Value  = det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-";
+                ws.Cell(row, 5).Value  = det.RazonSocial ?? "-";
+                ws.Cell(row, 6).Value  = det.NombreBanco ?? "-";
+                ws.Cell(row, 7).Value  = comprobante;
+                ws.Cell(row, 8).Value  = EstadoDescripcion.Produccion.GetDescripcion(det.Estado);
+                ws.Cell(row, 9).Value  = det.MtoSubtotal ?? 0;
+                ws.Cell(row, 10).Value = det.MtoIgv ?? 0;
+                ws.Cell(row, 11).Value = det.MtoRenta ?? 0;
+                ws.Cell(row, 12).Value = 0;  // MtoDetraccion — campo futuro
+                ws.Cell(row, 13).Value = det.MtoTotal ?? 0;
+
+                for (int c = 9; c <= 13; c++)
+                    ws.Cell(row, c).Style.NumberFormat.Format = "#,##0.00";
+
+                ws.Row(row).Height = 15;
+                for (int c = 1; c <= hdrs.Length; c++)
+                {
+                    ws.Cell(row, c).Style.Font.FontSize = 9;
+                    ws.Cell(row, c).Style.Fill.BackgroundColor = bg;
+                    ws.Cell(row, c).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    ws.Cell(row, c).Style.Border.OutsideBorderColor = XLColor.FromHtml("#dee2e6");
+                    ws.Cell(row, c).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                cnt++; row++;
+            }
+
+            // --- Fila de totales ---
+            int rTot = row;
+            ws.Cell(rTot, 8).Value = "TOTAL:";
+            ws.Cell(rTot, 8).Style.Font.Bold = true;
+            ws.Cell(rTot, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+            var totalCols = new[] { 9, 10, 11, 12, 13 };
+            foreach (var tc in totalCols)
+            {
+                ws.Cell(rTot, tc).FormulaA1 = $"SUM({ws.Cell(rH + 1, tc).Address}:{ws.Cell(row - 1, tc).Address})";
+                ws.Cell(rTot, tc).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(rTot, tc).Style.Font.Bold = true;
+                ws.Cell(rTot, tc).Style.Fill.BackgroundColor = XLColor.FromHtml("#e9ecef");
+                ws.Cell(rTot, tc).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            ws.Range(rTot, 1, rTot, 8).Style.Fill.BackgroundColor = XLColor.FromHtml("#e9ecef");
+            ws.Columns().AdjustToContents(5, 60);
+
+            using var ms = new MemoryStream();
+            workbook.SaveAs(ms);
+            ms.Position = 0;
+
+            var nombreArchivo = $"{ordenPago.NumeroOrdenPago ?? $"OP_{guid}"}.xlsx";
+            _logger.LogInformation("Excel Orden de Pago generado en memoria: {Numero}", ordenPago.NumeroOrdenPago);
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                nombreArchivo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar Excel de orden de pago {Guid}", guid);
+            return StatusCode(500, "Error al generar el reporte Excel.");
         }
     }
 

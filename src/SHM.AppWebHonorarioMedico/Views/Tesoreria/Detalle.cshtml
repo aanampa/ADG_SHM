@@ -29,10 +29,20 @@
                     <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
                         <i class="fas fa-cash-register mr-2"></i>Tesorería: @(Model.NumeroOrdenPago ?? "-")
                     </h1>
-                    <a href="@Url.Action("Index", "Tesoreria")"
-                       class="btn btn-sm btn-outline-secondary" title="Volver a la bandeja">
-                        <i class="fas fa-arrow-left mr-1"></i>Volver
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="@Url.Action("DescargarOrdenPago", "Tesoreria", new { guid = Model.GuidRegistro })"
+                           class="btn btn-sm btn-outline-danger" title="Descargar PDF de la Orden de Pago" target="_blank">
+                            <i class="fas fa-file-pdf mr-1"></i>PDF
+                        </a>
+                        <a href="@Url.Action("DescargarExcelOrdenPago", "Tesoreria", new { guid = Model.GuidRegistro })"
+                           class="btn btn-sm btn-outline-success" title="Descargar Excel con comprobantes de la Orden de Pago">
+                            <i class="fas fa-file-excel mr-1"></i>Excel
+                        </a>
+                        <a href="@Url.Action("Index", "Tesoreria")"
+                           class="btn btn-sm btn-outline-secondary" title="Volver a la bandeja">
+                            <i class="fas fa-arrow-left mr-1"></i>Volver
+                        </a>
+                    </div>
                 </div>
                 <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
                     <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
