@@ -315,7 +315,7 @@ public class SapApiService : ISapApiService
                 _    => tipoComprobante
             };
             var serieSap  = "0" + serie;
-            var numeroSap = numeroComprobante.PadLeft(7, '0');
+            var numeroSap = numeroComprobante.TrimStart('0').PadLeft(7, '0');
             var anioSap   = fechaEmision.Year.ToString();
 
             var url = $"{_settings.EndpointDatosFactura}(CodigoAcreedor='{codigoAcreedor}',TipoComprobante='{tipoSap}',Serie='{serieSap}',NumeroComprobante='{numeroSap}',Anio='{anioSap}')";

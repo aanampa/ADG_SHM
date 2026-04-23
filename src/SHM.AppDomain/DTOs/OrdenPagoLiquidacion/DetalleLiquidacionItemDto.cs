@@ -40,6 +40,10 @@ public class DetalleLiquidacionItemDto
     // Estado
     public string? Estado { get; set; }
 
+    // Datos de pago SAP
+    public DateTime? PagoFecha { get; set; }
+    public string? PagoNumeroOperacion { get; set; }
+
     // Montos (Produccion)
     public decimal? MtoSubtotal { get; set; }
     public decimal? MtoIgv { get; set; }

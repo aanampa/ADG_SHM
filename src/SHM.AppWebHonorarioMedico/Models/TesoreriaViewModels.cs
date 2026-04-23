@@ -47,3 +47,14 @@ public class RegistrarPagoRequest
     public string GuidOrdenPago { get; set; } = string.Empty;
     public List<string> Guids { get; set; } = new();
 }
+
+/// <summary>
+/// Request para el endpoint SincronizarPagoFacturas.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-04-22</created>
+/// </summary>
+public class SincronizarPagoRequest
+{
+    public string GuidOrdenPago { get; set; } = string.Empty;
+}

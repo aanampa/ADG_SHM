@@ -326,12 +326,17 @@
                                                     <span class="badge @EstadoDescripcion.Produccion.GetBadgeClass(det.Estado)">
                                                         @EstadoDescripcion.Produccion.GetDescripcion(det.Estado)
                                                     </span>
-                                                    @if (det.Estado == EstadoDescripcion.Produccion.FacturaPagada)
+                                                    @if (det.PagoFecha.HasValue || !string.IsNullOrEmpty(det.PagoNumeroOperacion))
                                                     {
-                                                        var nroOp = "20000015" + new Random().Next(10, 99).ToString();
                                                         <div style="margin-top: 0.25rem; font-size: 0.75rem; line-height: 1.4; color: #155724;">
-                                                            <div><span class="text-muted">F. Pago:</span> 10/04/2026</div>
-                                                            <div><span class="text-muted">Nro Op.:</span> @nroOp</div>
+                                                            @if (det.PagoFecha.HasValue)
+                                                            {
+                                                                <div><span class="text-muted">F. Pago:</span> @det.PagoFecha.Value.ToString("dd/MM/yyyy")</div>
+                                                            }
+                                                            @if (!string.IsNullOrEmpty(det.PagoNumeroOperacion))
+                                                            {
+                                                                <div><span class="text-muted">Nro Op.:</span> @det.PagoNumeroOperacion</div>
+                                                            }
                                                         </div>
                                                     }
                                                 </td>
@@ -384,18 +389,53 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>Sincronizando...';
 
-            setTimeout(() => {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("SincronizarPagoFacturas", "Tesoreria")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ guidOrdenPago: '@Model.GuidRegistro' })
+            })
+            .then(async res => {
+                const data = await res.json();
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Sincronizar con SAP';
+
+                if (!res.ok || !data.success) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al sincronizar',
+                        text: data.message || 'Error interno al sincronizar con SAP.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    return;
+                }
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Sincronización completada',
-                    text: 'Los estados de pago han sido sincronizados con SAP.',
-                    confirmButtonColor: '#28a745',
-                    timer: 3000,
-                    timerProgressBar: true
+                    html: `<ul class="text-left mb-0">
+                               <li>Total comprobantes: <b>${data.totalComprobantes}</b></li>
+                               <li>Consultados en SAP: <b>${data.consultadosEnSap}</b></li>
+                               <li>Sin comprobante: <b>${data.sinComprobante}</b></li>
+                               <li>Errores: <b>${data.errores}</b></li>
+                           </ul>`,
+                    confirmButtonColor: '#28a745'
+                }).then(() => { location.reload(); });
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Sincronizar con SAP';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo conectar al servidor.',
+                    confirmButtonColor: '#dc3545'
                 });
-            }, 3000);
+            });
         }
 
         // Filtrar filas por Cod. Liquidacion
