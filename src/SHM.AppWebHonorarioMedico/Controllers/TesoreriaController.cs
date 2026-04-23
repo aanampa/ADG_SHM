@@ -42,7 +42,7 @@ public class TesoreriaController : Controller
         ITablaDetalleService tablaDetalleService,
         IProduccionService produccionService,
         IOrdenPagoAprobacionService ordenPagoAprobacionService,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
         ISapApiService sapApiService,
         IOrdenPagoProduccionRepository ordenPagoProduccionRepository)
     {
