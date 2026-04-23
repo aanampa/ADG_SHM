@@ -614,36 +614,56 @@ public class ProduccionController : Controller
     /// <created>2026-04-17</created>
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> RenotificarFacturaMasivo([FromBody] List<string> guids)
+    public async Task<IActionResult> RenotificarFacturaMasivo([FromBody] RenotificarMasivoRequestDto solicitud)
     {
         try
         {
-            if (guids == null || !guids.Any())
+            if (solicitud == null || solicitud.Guids == null || !solicitud.Guids.Any())
                 return Json(new { success = false, message = "Debe seleccionar al menos un registro" });
 
             var idUsuario = GetCurrentUserId();
             int enviados = 0;
             int errores = 0;
 
-            foreach (var guid in guids)
+            // Si viene nueva fecha, validar que sea futura
+            DateTime? nuevaFechaLimite = null;
+            if (solicitud.ActualizaFecha)
+            {
+                if (!DateTime.TryParse($"{solicitud.Fecha}T{solicitud.Hora}", out var fechaParsed) || fechaParsed <= DateTime.Now)
+                    return Json(new { success = false, message = "La nueva fecha y hora límite debe ser mayor a la fecha y hora actual." });
+                nuevaFechaLimite = fechaParsed;
+            }
+
+            foreach (var guid in solicitud.Guids)
             {
                 try
                 {
+                    // Actualizar fecha limite si se proporcionó una nueva
+                    if (nuevaFechaLimite.HasValue)
+                        await _produccionService.SolicitarFacturaAsync(new SolicitarFacturaDto
+                        {
+                            GuidRegistro = guid,
+                            Fecha = nuevaFechaLimite.Value.ToString("yyyy-MM-dd"),
+                            Hora  = nuevaFechaLimite.Value.ToString("HH:mm")
+                        }, idUsuario);
+
                     var resultado = await _produccionService.RenotificarFacturaAsync(guid, idUsuario);
                     if (resultado)
                     {
                         var produccion = await _produccionService.GetProduccionByGuidAsync(guid);
                         if (produccion != null)
                         {
-                            var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                            var descripcion = nuevaFechaLimite.HasValue
+                                ? $"Renotificacion masiva con nueva fecha limite: {nuevaFechaLimite.Value:dd/MM/yyyy HH:mm}"
+                                : "Renotificacion masiva de solicitud de factura enviada por correo";
+                            await _bitacoraService.CreateBitacoraAsync(new AppDomain.DTOs.Bitacora.CreateBitacoraDto
                             {
                                 Entidad = "SHM_PRODUCCION",
                                 IdEntidad = produccion.IdProduccion,
                                 Accion = "RENOTIFICAR_FACTURA",
-                                Descripcion = "Renotificacion masiva de solicitud de factura enviada por correo",
+                                Descripcion = descripcion,
                                 FechaAccion = DateTime.Now
-                            };
-                            await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);
+                            }, idUsuario);
                         }
                         enviados++;
                     }

@@ -9,6 +9,7 @@ public class SedeListViewModel
 
 public class SedeItemViewModel
 {
+    public int IdSede { get; set; }
     public string GuidRegistro { get; set; } = string.Empty;
     public string? Codigo { get; set; }
     public string? Nombre { get; set; }

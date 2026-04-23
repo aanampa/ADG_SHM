@@ -345,6 +345,8 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 B.NOMBRE_BANCO AS NombreBanco,
                 T1.GUID_REGISTRO AS GuidRegistro,
                 T1.ESTADO AS Estado,
+                T1.PAGO_FECHA AS PagoFecha,
+                T1.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,
                 T1.TIPO_COMPROBANTE AS TipoComprobante,
                 T1.SERIE AS Serie,
                 T1.NUMERO AS Numero,

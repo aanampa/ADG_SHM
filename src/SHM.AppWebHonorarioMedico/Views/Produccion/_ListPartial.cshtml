@@ -25,7 +25,7 @@
                 <th class="align-middle">Cía Médica</th>
                 <th class="align-middle text-right" style="width: 100px;">Total S/.</th>
                 <th class="align-middle text-center" style="width: 120px;">Estado Factura</th>
-                <th class="align-middle" style="width: 130px;">Fecha Límite</th>
+                <th class="align-middle text-center" style="width: 100px;">Fecha Límite</th>
                 <th class="align-middle" style="width: 120px;">Comprobante</th>
             </tr>
         </thead>
@@ -61,7 +61,14 @@
                         <td class="text-center">
                             <span class="badge @badgeClass">@item.DesEstado</span>
                         </td>
-                        <td>@(item.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                        <td class="text-center">
+                            @if (item.FechaLimite.HasValue)
+                            {
+                                <span>@item.FechaLimite.Value.ToString("dd/MM/yyyy")</span>
+                                <br /><span class="text-muted">@item.FechaLimite.Value.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</span>
+                            }
+                            else { <span>-</span> }
+                        </td>
                         <td>@(item.ComprobanteFactura ?? "-")</td>
                     </tr>
                 }

@@ -1,4 +1,4 @@
-@model SHM.AppWebCompaniaMedica.Models.SubirFacturaViewModel
+﻿@model SHM.AppWebCompaniaMedica.Models.SubirFacturaViewModel
 @{
     ViewData["Title"] = "Enviar Factura";
     var tipoNombre = Model.TipoComprobante switch { "1" => "Factura", "22" => "Recibo por Honorarios", _ => Model.TipoComprobante ?? "-" };
@@ -766,7 +766,7 @@
 
             // === Formato de campos ===
             document.getElementById('serie').addEventListener('input', function () { this.value = this.value.toUpperCase(); });
-            document.getElementById('numero').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, ''); });
+            document.getElementById('numero').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').replace(/^0+(\d)/, '$1'); });
 
             // === Confirmar Envío ===
             var btnConfirmar = document.getElementById('btnConfirmarEnvio');
@@ -835,7 +835,9 @@
                 if (fe > hoy) errores.push('La fecha de emisi\u00f3n no puede ser futura');
             }
             if (!document.getElementById('serie').value.trim())  errores.push('Ingrese la serie');
-            if (!document.getElementById('numero').value.trim()) errores.push('Ingrese el n\u00famero');
+            var numeroVal = document.getElementById('numero').value.trim();
+            if (!numeroVal)                     errores.push('Ingrese el número');
+            else if (parseInt(numeroVal) === 0) errores.push('El número de factura no puede ser cero');
             if (!pdfInput || !pdfInput.files[0])  errores.push('Seleccione el archivo PDF');
             if (!xmlInput || !xmlInput.files[0])  errores.push('Seleccione el archivo XML');
             if (requiereCdr && cdrInput && !cdrInput.files[0]) errores.push('Seleccione el archivo CDR');

@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using QuestPDF.Fluent;
 using SHM.AppDomain.Constants;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 using SHM.AppWebHonorarioMedico.Reports;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -29,6 +31,8 @@ public class TesoreriaController : Controller
     private readonly IProduccionService _produccionService;
     private readonly IOrdenPagoAprobacionService _ordenPagoAprobacionService;
     private readonly IWebHostEnvironment _env;
+    private readonly ISapApiService _sapApiService;
+    private readonly IOrdenPagoProduccionRepository _ordenPagoProduccionRepository;
 
     public TesoreriaController(
         ILogger<TesoreriaController> logger,
@@ -39,6 +43,8 @@ public class TesoreriaController : Controller
         IProduccionService produccionService,
         IOrdenPagoAprobacionService ordenPagoAprobacionService,
         IWebHostEnvironment env)
+        ISapApiService sapApiService,
+        IOrdenPagoProduccionRepository ordenPagoProduccionRepository)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
@@ -48,6 +54,8 @@ public class TesoreriaController : Controller
         _produccionService = produccionService;
         _ordenPagoAprobacionService = ordenPagoAprobacionService;
         _env = env;
+        _sapApiService = sapApiService;
+        _ordenPagoProduccionRepository = ordenPagoProduccionRepository;
     }
 
     /// <summary>
@@ -652,6 +660,111 @@ public class TesoreriaController : Controller
         {
             _logger.LogError(ex, "Error al exportar tesoreria a Excel");
             return BadRequest("Error al generar el reporte");
+        }
+    }
+
+    /// <summary>
+    /// Sincroniza el estado de pago de las facturas de una orden de pago consultando SAP.
+    /// Replica la logica de SapInterfaceController.GetEstadoPagoOrden pero desde el portal web.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-22</created>
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SincronizarPagoFacturas([FromBody] SincronizarPagoRequest request)
+    {
+        try
+        {
+            if (request == null || string.IsNullOrEmpty(request.GuidOrdenPago))
+                return BadRequest(new { success = false, message = "GUID de orden de pago requerido." });
+
+            var idUsuario = GetCurrentUserId() ?? 1;
+
+            var comprobantes = (await _ordenPagoProduccionRepository
+                .GetComprobantesParaSapByOrdenPagoGuidAsync(request.GuidOrdenPago)).ToList();
+
+            if (comprobantes.Count == 0)
+                return NotFound(new { success = false, message = "No se encontro la orden de pago o no tiene producciones activas." });
+
+            int totalComprobantes = comprobantes.Count;
+            int consultadosEnSap  = 0;
+            int sinComprobante    = 0;
+            int errores           = 0;
+
+            foreach (var comp in comprobantes)
+            {
+                // Validar datos minimos para poder consultar SAP
+                if (string.IsNullOrWhiteSpace(comp.CodigoAcreedor))
+                {
+                    errores++;
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(comp.Serie) ||
+                    string.IsNullOrWhiteSpace(comp.Numero) ||
+                    comp.FechaEmision == null ||
+                    string.IsNullOrWhiteSpace(comp.TipoComprobante))
+                {
+                    sinComprobante++;
+                    continue;
+                }
+
+                // Consulta secuencial a SAP
+                var datos = await _sapApiService.GetDatosFacturaAsync(
+                    comp.CodigoAcreedor,
+                    comp.TipoComprobante,
+                    comp.Serie,
+                    comp.Numero,
+                    comp.FechaEmision.Value);
+
+                if (datos != null)
+                {
+                    consultadosEnSap++;
+
+                    // Parsear FechaPago y MontoPagado para persistir en DB
+                    DateTime? pagoFecha = DateTime.TryParse(datos.FechaPago, out var fechaParsed)
+                        ? fechaParsed : null;
+                    decimal? pagoMonto = decimal.TryParse(
+                        datos.MontoPagado,
+                        NumberStyles.Any,
+                        CultureInfo.InvariantCulture,
+                        out var montoParsed)
+                        ? montoParsed : null;
+
+                    await _produccionService.UpdateEstadoPagoAsync(
+                        idProduccion:        comp.IdProduccion,
+                        pagoEstado:          datos.EstadoPago,
+                        pagoFecha:           pagoFecha,
+                        pagoNumeroOperacion: datos.NumeroOperacion,
+                        pagoBanco:           datos.Banco,
+                        pagoCuentaDeposito:  datos.CtaBanDeposito,
+                        pagoMontoPagado:     pagoMonto,
+                        idModificador:       idUsuario);
+                }
+                else
+                {
+                    errores++;
+                }
+            }
+
+            _logger.LogInformation(
+                "SincronizarPagoFacturas: OrdenPago={Guid}, Total={Total}, SAP={Sap}, SinComprobante={Sin}, Errores={Err}",
+                request.GuidOrdenPago, totalComprobantes, consultadosEnSap, sinComprobante, errores);
+
+            return Ok(new
+            {
+                success          = true,
+                totalComprobantes,
+                consultadosEnSap,
+                sinComprobante,
+                errores
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en SincronizarPagoFacturas para orden {Guid}", request?.GuidOrdenPago);
+            return StatusCode(500, new { success = false, message = "Error interno al sincronizar con SAP." });
         }
     }
 

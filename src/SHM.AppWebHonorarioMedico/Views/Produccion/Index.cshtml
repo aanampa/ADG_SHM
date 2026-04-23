@@ -69,9 +69,6 @@
                                     <button type="button" class="btn btn-success btn-sm" onclick="abrirModalSolicitudMasiva()" title="Solicitar factura a múltiples producciones">
                                         <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
                                     </button>
-                                    <button type="button" class="btn btn-warning btn-sm" onclick="renotificarTodasSolicitadas()" title="Reenviar correo a todos los registros en estado Factura Solicitada">
-                                        <i class="fas fa-bell mr-1"></i>Renotificar Todas
-                                    </button>
                                     <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
                                         <i class="fas fa-file-excel mr-1"></i>Exportar
                                     </button>
@@ -317,49 +314,6 @@
                 .catch(() => {
                     Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el historial.', confirmButtonColor: '#dc3545' });
                 });
-        }
-
-        function renotificarTodasSolicitadas() {
-            Swal.fire({
-                title: '¿Reenviar notificaciones?',
-                html: 'Se reenviará el correo de solicitud de factura a <strong>todos</strong> los registros en estado <strong>Factura Solicitada</strong>, con la fecha límite ya establecida en cada uno.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#f26522',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-bell"></i> Renotificar Todas',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (!result.isConfirmed) return;
-
-                Swal.fire({
-                    title: 'Enviando notificaciones...',
-                    text: 'Procesando, por favor espere.',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => { Swal.showLoading(); }
-                });
-
-                fetch('@Url.Action("RenotificarTodasSolicitadas", "Produccion")', {
-                    method: 'POST',
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                    }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    Swal.fire({
-                        icon: data.success ? (data.errores > 0 ? 'warning' : 'success') : 'info',
-                        title: data.success ? 'Proceso completado' : 'Sin registros',
-                        text: data.message,
-                        confirmButtonColor: data.success && data.errores === 0 ? '#28a745' : '#f26522'
-                    });
-                })
-                .catch(() => {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
-                });
-            });
         }
 
         function abrirModalSolicitudMasiva() {

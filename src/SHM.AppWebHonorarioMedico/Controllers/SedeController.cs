@@ -37,6 +37,7 @@ public class SedeController : Controller
             {
                 Items = sedes.Select(s => new SedeItemViewModel
                 {
+                    IdSede = s.IdSede,
                     GuidRegistro = s.GuidRegistro ?? "",
                     Codigo = s.Codigo,
                     Nombre = s.Nombre,
