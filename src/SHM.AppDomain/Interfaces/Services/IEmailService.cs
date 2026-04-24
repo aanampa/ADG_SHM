@@ -74,4 +74,48 @@ public interface IEmailService
         decimal? montoTotal,
         string nombrePerfil,
         int idOrdenPago);
+
+    /// <summary>
+    /// Envia un correo electronico al creador de la orden de pago notificando que fue rechazada.
+    /// </summary>
+    /// <param name="email">Correo del creador</param>
+    /// <param name="nombreCreador">Nombre del creador</param>
+    /// <param name="numeroOrdenPago">Numero de la orden de pago</param>
+    /// <param name="fechaGeneracion">Fecha de generacion de la orden</param>
+    /// <param name="montoTotal">Monto total de la orden</param>
+    /// <param name="perfilRechazo">Nombre del perfil que rechazo</param>
+    /// <param name="nombreAprobador">Nombre del aprobador que rechazo</param>
+    /// <param name="comentario">Motivo del rechazo (opcional)</param>
+    /// <param name="idOrdenPago">ID de la orden de pago (para log)</param>
+    Task<bool> EnviarEmailNotificacionRechazoAsync(
+        string email,
+        string nombreCreador,
+        string numeroOrdenPago,
+        DateTime? fechaGeneracion,
+        decimal? montoTotal,
+        string perfilRechazo,
+        string nombreAprobador,
+        string? comentario,
+        int idOrdenPago);
+
+    /// <summary>
+    /// Envia un correo electronico al area de Tesoreria notificando que una orden de pago fue completamente aprobada.
+    /// </summary>
+    /// <param name="email">Correo del destinatario en Tesoreria</param>
+    /// <param name="numeroOrdenPago">Numero de la orden de pago</param>
+    /// <param name="nombreSede">Nombre de la sede</param>
+    /// <param name="nombreBanco">Nombre del banco</param>
+    /// <param name="fechaGeneracion">Fecha de generacion de la orden</param>
+    /// <param name="montoTotal">Monto total de la orden</param>
+    /// <param name="tablaAprobadoresHtml">HTML con las filas de la tabla de aprobadores</param>
+    /// <param name="idOrdenPago">ID de la orden de pago (para log)</param>
+    Task<bool> EnviarEmailNotificacionTesoreriaAsync(
+        string email,
+        string numeroOrdenPago,
+        string nombreSede,
+        string nombreBanco,
+        DateTime? fechaGeneracion,
+        decimal? montoTotal,
+        string tablaAprobadoresHtml,
+        int idOrdenPago);
 }

@@ -13,6 +13,7 @@ namespace SHM.AppApplication.Services;
 /// <author>ADG Antonio</author>
 /// <created>2026-02-03</created>
 /// <modified>ADG Antonio - 2026-02-15 - Notificacion por email al siguiente aprobador</modified>
+/// <modified>ADG Antonio - 2026-04-23 - Notificacion a Tesoreria cuando todos los niveles son aprobados</modified>
 /// </summary>
 public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
 {
@@ -21,6 +22,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
     private readonly IPerfilAprobacionUsuarioRepository _perfilAprobacionUsuarioRepository;
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IEmailService _emailService;
+    private readonly IParametroRepository _parametroRepository;
     private readonly ILogger<OrdenPagoAprobacionService> _logger;
 
     public OrdenPagoAprobacionService(
@@ -29,6 +31,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         IPerfilAprobacionUsuarioRepository perfilAprobacionUsuarioRepository,
         IUsuarioRepository usuarioRepository,
         IEmailService emailService,
+        IParametroRepository parametroRepository,
         ILogger<OrdenPagoAprobacionService> logger)
     {
         _repository = repository;
@@ -36,6 +39,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         _perfilAprobacionUsuarioRepository = perfilAprobacionUsuarioRepository;
         _usuarioRepository = usuarioRepository;
         _emailService = emailService;
+        _parametroRepository = parametroRepository;
         _logger = logger;
     }
 
@@ -119,8 +123,9 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
 
         if (!pendientesList.Any())
         {
-            // Todos los niveles aprobados: actualizar estado de la orden
+            // Todos los niveles aprobados: actualizar estado de la orden y notificar a Tesoreria
             await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, EstadoDescripcion.OrdenPago.Aprobado, idUsuario);
+            await NotificarTesoreriaAsync(idOrdenPago, aprobaciones.ToList());
             return (true, "Orden de pago aprobada exitosamente. Todos los niveles han sido completados.");
         }
 
@@ -177,6 +182,98 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
     }
 
     /// <summary>
+    /// Notifica por email al creador de la orden de pago que fue rechazada.
+    /// </summary>
+    private async Task NotificarCreadorRechazoAsync(int idOrdenPago, OrdenPagoAprobacion aprobacion, string? comentario)
+    {
+        try
+        {
+            var ordenPago = await _ordenPagoRepository.GetByIdAsync(idOrdenPago);
+            if (ordenPago == null) return;
+
+            var creador = await _usuarioRepository.GetByIdAsync(ordenPago.IdCreador);
+            if (creador == null || string.IsNullOrEmpty(creador.Email)) return;
+
+            var nombreCreador = $"{creador.Nombres} {creador.ApellidoPaterno} {creador.ApellidoMaterno}".Trim();
+
+            await _emailService.EnviarEmailNotificacionRechazoAsync(
+                creador.Email,
+                nombreCreador,
+                ordenPago.NumeroOrdenPago ?? "-",
+                ordenPago.FechaGeneracion,
+                ordenPago.MtoTotalAcum,
+                aprobacion.NombrePerfil ?? "-",
+                aprobacion.NombreAprobador ?? "-",
+                comentario,
+                idOrdenPago);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar al creador del rechazo para la orden de pago {IdOrdenPago}", idOrdenPago);
+        }
+    }
+
+    /// <summary>
+    /// Notifica al area de Tesoreria que una orden de pago ha sido completamente aprobada.
+    /// Lee los destinatarios desde el parametro TESORERIA_EMAILS (separados por punto y coma).
+    /// </summary>
+    private async Task NotificarTesoreriaAsync(int idOrdenPago, List<OrdenPagoAprobacion> aprobaciones)
+    {
+        try
+        {
+            var parametro = await _parametroRepository.GetByCodigoAsync("TESORERIA_EMAILS");
+            if (parametro == null || string.IsNullOrWhiteSpace(parametro.Valor))
+            {
+                _logger.LogWarning("Parametro TESORERIA_EMAILS no encontrado o vacio. No se enviara notificacion a Tesoreria.");
+                return;
+            }
+
+            var ordenPago = await _ordenPagoRepository.GetByIdAsync(idOrdenPago);
+            if (ordenPago == null) return;
+
+            // Construir filas HTML del historial de aprobaciones
+            var aprobadas = aprobaciones
+                .Where(a => a.Estado == EstadoDescripcion.Aprobacion.Aprobado && a.FechaAprobacion.HasValue)
+                .OrderBy(a => a.Orden)
+                .ToList();
+
+            var filasHtml = string.Join("", aprobadas.Select((a, i) =>
+            {
+                var bgFila = i % 2 == 0 ? "#f9f9f9" : "#ffffff";
+                return $"""
+                    <tr style="background-color: {bgFila};">
+                        <td style="padding: 9px 12px; border-bottom: 1px solid #eeeeee;">{System.Net.WebUtility.HtmlEncode(a.NombrePerfil ?? "-")}</td>
+                        <td style="padding: 9px 12px; border-bottom: 1px solid #eeeeee;">{System.Net.WebUtility.HtmlEncode(a.NombreAprobador ?? "-")}</td>
+                        <td style="padding: 9px 12px; border-bottom: 1px solid #eeeeee; text-align: center;">{a.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm") ?? "-"}</td>
+                    </tr>
+                    """;
+            }));
+
+            var emails = parametro.Valor
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(e => !string.IsNullOrEmpty(e))
+                .ToList();
+
+            foreach (var email in emails)
+            {
+                await _emailService.EnviarEmailNotificacionTesoreriaAsync(
+                    email,
+                    ordenPago.NumeroOrdenPago ?? "-",
+                    ordenPago.NombreSede ?? "-",
+                    ordenPago.NombreBanco ?? "-",
+                    ordenPago.FechaGeneracion,
+                    ordenPago.MtoTotalAcum,
+                    filasHtml,
+                    idOrdenPago);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar a Tesoreria para la orden de pago {IdOrdenPago}", idOrdenPago);
+        }
+    }
+
+    /// <summary>
     /// Notifica por email a los usuarios del primer nivel de aprobacion pendiente.
     /// Se invoca al generar una nueva Orden de Pago.
     ///
@@ -222,6 +319,8 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
             orden.IdModificador = idUsuario;
             await _ordenPagoRepository.UpdateAsync(orden);
         }
+
+        await NotificarCreadorRechazoAsync(idOrdenPago, aprobacion, comentario);
 
         return (true, "Orden de pago rechazada.");
     }
