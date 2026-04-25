@@ -15,4 +15,19 @@ public static class AppConstants
     // URL del Portal Administrativo (usuarios internos).
     // Reemplazado por AppSettings:UrlPortalAdministrativo en appsettings.json - 2026-04-11
     // public const string UrlPortalAdministrativo = "https://whm-admin.sanpablo.com.pe";
+
+    /// <summary>
+    /// Constantes relacionadas a la emision de comprobantes de pago de Cias Medicas.
+    /// </summary>
+    public static class Facturacion
+    {
+        public const string FormaPago            = "CREDITO";
+        public const int    NroCuotas            = 1;
+
+        public const string CodigoConceptoDetraccion = "037";
+        public const string DescConceptoDetraccion   = "Demás servicios gravados con el IGV";
+
+        public const string CodigoMedioPago      = "001";
+        public const string DescMedioPago         = "Depósito en cuenta";
+    }
 }
