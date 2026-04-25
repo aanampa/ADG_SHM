@@ -59,6 +59,7 @@ public class ProduccionListaResponseDto
     public DateTime? FacturaFechaEnvio { get; set; }
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
 
     // Produccion - Estado de Pago (sincronizados desde SAP)
     public string? PagoEstado { get; set; }

@@ -72,6 +72,7 @@ public class ProduccionRepository : IProduccionRepository
         FACTURA_FECHA_ENVIO as FacturaFechaEnvio,
         FACTURA_FECHA_ACEPTACION as FacturaFechaAceptacion,
         FACTURA_FECHA_PAGO as FacturaFechaPago,
+        FACTURA_FECHA_VENCIMIENTO as FacturaFechaVencimiento,
         NUMERO_LIQUIDACION as NumeroLiquidacion,
         CODIGO_LIQUIDACION as CodigoLiquidacion,
         PERIODO_LIQUIDACION as PeriodoLiquidacion,
@@ -235,6 +236,7 @@ public class ProduccionRepository : IProduccionRepository
                 FACTURA_FECHA_ENVIO,
                 FACTURA_FECHA_ACEPTACION,
                 FACTURA_FECHA_PAGO,
+                FACTURA_FECHA_VENCIMIENTO,
                 NUMERO_LIQUIDACION,
                 CODIGO_LIQUIDACION,
                 PERIODO_LIQUIDACION,
@@ -281,6 +283,7 @@ public class ProduccionRepository : IProduccionRepository
                 :FacturaFechaEnvio,
                 :FacturaFechaAceptacion,
                 :FacturaFechaPago,
+                :FacturaFechaVencimiento,
                 :NumeroLiquidacion,
                 :CodigoLiquidacion,
                 :PeriodoLiquidacion,
@@ -329,6 +332,7 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("FacturaFechaEnvio", produccion.FacturaFechaEnvio);
         parameters.Add("FacturaFechaAceptacion", produccion.FacturaFechaAceptacion);
         parameters.Add("FacturaFechaPago", produccion.FacturaFechaPago);
+        parameters.Add("FacturaFechaVencimiento", produccion.FacturaFechaVencimiento);
         parameters.Add("NumeroLiquidacion", produccion.NumeroLiquidacion);
         parameters.Add("CodigoLiquidacion", produccion.CodigoLiquidacion);
         parameters.Add("PeriodoLiquidacion", produccion.PeriodoLiquidacion);
@@ -388,6 +392,7 @@ public class ProduccionRepository : IProduccionRepository
                 FACTURA_FECHA_ENVIO = :FacturaFechaEnvio,
                 FACTURA_FECHA_ACEPTACION = :FacturaFechaAceptacion,
                 FACTURA_FECHA_PAGO = :FacturaFechaPago,
+                FACTURA_FECHA_VENCIMIENTO = :FacturaFechaVencimiento,
                 NUMERO_LIQUIDACION = :NumeroLiquidacion,
                 CODIGO_LIQUIDACION = :CodigoLiquidacion,
                 PERIODO_LIQUIDACION = :PeriodoLiquidacion,
@@ -443,6 +448,7 @@ public class ProduccionRepository : IProduccionRepository
             produccion.FacturaFechaEnvio,
             produccion.FacturaFechaAceptacion,
             produccion.FacturaFechaPago,
+            produccion.FacturaFechaVencimiento,
             produccion.NumeroLiquidacion,
             produccion.CodigoLiquidacion,
             produccion.PeriodoLiquidacion,
@@ -613,6 +619,7 @@ public class ProduccionRepository : IProduccionRepository
                         p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
                         p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
                         p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                        p.FACTURA_FECHA_VENCIMIENTO AS FacturaFechaVencimiento,
                         p.PAGO_ESTADO AS PagoEstado,
                         p.PAGO_FECHA AS PagoFecha,
                         p.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,
@@ -760,6 +767,7 @@ public class ProduccionRepository : IProduccionRepository
                 p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
                 p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
                 p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                p.FACTURA_FECHA_VENCIMIENTO AS FacturaFechaVencimiento,
                 p.PAGO_ESTADO AS PagoEstado,
                 p.PAGO_FECHA AS PagoFecha,
                 p.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,

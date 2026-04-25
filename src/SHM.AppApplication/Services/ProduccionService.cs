@@ -144,6 +144,7 @@ public class ProduccionService : IProduccionService
             FacturaFechaEnvio = createDto.FacturaFechaEnvio,
             FacturaFechaAceptacion = createDto.FacturaFechaAceptacion,
             FacturaFechaPago = createDto.FacturaFechaPago,
+            FacturaFechaVencimiento = createDto.FacturaFechaVencimiento,
             IdCreador = idCreador,
             Activo = 1
         };
@@ -255,6 +256,9 @@ public class ProduccionService : IProduccionService
 
         if (updateDto.FacturaFechaPago.HasValue)
             produccionExistente.FacturaFechaPago = updateDto.FacturaFechaPago;
+
+        if (updateDto.FacturaFechaVencimiento.HasValue)
+            produccionExistente.FacturaFechaVencimiento = updateDto.FacturaFechaVencimiento;
 
         if (updateDto.TipoLiquidacion != null)
             produccionExistente.TipoLiquidacion = updateDto.TipoLiquidacion;
@@ -671,6 +675,7 @@ public class ProduccionService : IProduccionService
             FacturaFechaEnvio = produccion.FacturaFechaEnvio,
             FacturaFechaAceptacion = produccion.FacturaFechaAceptacion,
             FacturaFechaPago = produccion.FacturaFechaPago,
+            FacturaFechaVencimiento = produccion.FacturaFechaVencimiento,
             NumeroLiquidacion = produccion.NumeroLiquidacion,
             CodigoLiquidacion = produccion.CodigoLiquidacion,
             PeriodoLiquidacion = produccion.PeriodoLiquidacion,
