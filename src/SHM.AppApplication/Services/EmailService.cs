@@ -248,6 +248,72 @@ public class EmailService : IEmailService
     }
 
     /// <summary>
+    /// Envia un correo electronico notificando a la Cia Medica que su factura fue devuelta.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-23</created>
+    /// </summary>
+    public async Task<bool> EnviarEmailFacturaDevueltaAsync(
+        string email,
+        string nombreDestinatario,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion)
+    {
+        var subject = $"Factura Devuelta - Producción {codigoProduccion}";
+        var montoFormateado = mtoTotal?.ToString("N2") ?? "0.00";
+        var fechaFormateada = fechaLimite.ToString("dd/MM/yyyy");
+        var horaFormateada  = fechaLimite.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture);
+        string body;
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("FacturaDevuelta.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+            body = body.Replace("{{NOMBRE_DESTINATARIO}}", nombreDestinatario)
+                       .Replace("{{CODIGO_PRODUCCION}}", codigoProduccion)
+                       .Replace("{{RAZON_SOCIAL}}", razonSocial)
+                       .Replace("{{MONTO_TOTAL}}", montoFormateado)
+                       .Replace("{{FECHA_LIMITE}}", fechaFormateada)
+                       .Replace("{{HORA_LIMITE}}", horaFormateada)
+                       .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? "")
+                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreDestinatario,
+                subject: subject,
+                body: body,
+                tipoEmail: "FACTURA_DEVUELTA",
+                isHtml: true,
+                idUsuario: null,
+                idEntidadMedica: idEntidadMedica,
+                entidadReferencia: "SHM_PRODUCCION",
+                idReferencia: idProduccion);
+
+            _logger.LogInformation("Email de factura devuelta enviado a: {Email}, Produccion: {Codigo}",
+                email, codigoProduccion);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de factura devuelta a: {Email}, Produccion: {Codigo}",
+                email, codigoProduccion);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Envia un correo electronico notificando al usuario que su clave fue restablecida por un administrador.
     /// <modified>ADG Vladimir D - 2026-04-10 - Usar URL de portal segun tipo de usuario</modified>
     /// </summary>

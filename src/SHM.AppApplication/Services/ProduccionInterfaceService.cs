@@ -310,6 +310,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     FechaProduccion = fechaProduccion,
                     EstadoProduccion = createDto.EstadoProduccion,
                     Estado = EstadoDescripcion.Produccion.FacturaPendiente,
+                    EstadoComprobante = EstadoDescripcion.EstadoComprobante.PorEnviar,
                     TipoComprobante = tipoComprobante,
                     Concepto = concepto,
                     MtoConsumo = createDto.MtoConsumo,

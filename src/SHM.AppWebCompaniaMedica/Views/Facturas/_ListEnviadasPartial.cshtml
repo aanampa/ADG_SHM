@@ -36,27 +36,7 @@
                             }
                         </td>
                         <td>
-                            @{
-                                var badgeClass = factura.EstadoComprobante?.ToUpper() switch
-                                {
-                                    "ENVIADO" => "badge-sent",
-                                    "APROBADO" => "badge-sent",
-                                    "PAGADO" => "bg-success",
-                                    "RECHAZADO" => "badge-rejected",
-                                    "EN REVISION" => "badge-pending",
-                                    _ => "badge-sent"
-                                };
-                                var estadoTexto = factura.EstadoComprobante?.ToUpper() switch
-                                {
-                                    "ENVIADO" => "Enviado",
-                                    "APROBADO" => "Aprobado",
-                                    "PAGADO" => "Pagado",
-                                    "RECHAZADO" => "Rechazado",
-                                    "EN REVISION" => "En Revision",
-                                    _ => factura.EstadoComprobante ?? "Enviado"
-                                };
-                            }
-                            <span class="badge @badgeClass">@estadoTexto</span>
+                                <span class="badge badge-sent">Enviado</span>
                         </td>
                         <td>
                             <a asp-controller="Facturas" asp-action="Detalle" asp-route-guid="@factura.GuidRegistro" class="btn-action" style="border-color: var(--text-secondary); color: var(--text-secondary);">
