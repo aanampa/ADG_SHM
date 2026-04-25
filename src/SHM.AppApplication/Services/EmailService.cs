@@ -478,6 +478,139 @@ public class EmailService : IEmailService
     }
 
     /// <summary>
+    /// Envia un correo electronico al creador de la orden de pago notificando que fue rechazada.
+    /// </summary>
+    public async Task<bool> EnviarEmailNotificacionRechazoAsync(
+        string email,
+        string nombreCreador,
+        string numeroOrdenPago,
+        DateTime? fechaGeneracion,
+        decimal? montoTotal,
+        string perfilRechazo,
+        string nombreAprobador,
+        string? comentario,
+        int idOrdenPago)
+    {
+        var subject = $"Orden de Pago {numeroOrdenPago} - Rechazada";
+        string body;
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("NotificacionRechazo.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+
+            var bloqueComentario = string.IsNullOrWhiteSpace(comentario)
+                ? ""
+                : $"""
+                    <div style="background-color: #fdf2f3; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; border-radius: 0 5px 5px 0;">
+                        <p style="margin: 0 0 6px 0; font-weight: 600; color: #a71c2a; font-size: 14px;">Motivo del rechazo:</p>
+                        <p style="margin: 0; color: #555555; font-size: 14px;">{System.Net.WebUtility.HtmlEncode(comentario)}</p>
+                    </div>
+                    """;
+
+            body = body.Replace("{{NOMBRE_USUARIO}}", nombreCreador)
+                      .Replace("{{NUMERO_ORDEN_PAGO}}", numeroOrdenPago ?? "-")
+                      .Replace("{{FECHA_GENERACION}}", fechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")
+                      .Replace("{{MONTO_TOTAL}}", montoTotal?.ToString("N2") ?? "0.00")
+                      .Replace("{{PERFIL_RECHAZO}}", perfilRechazo ?? "-")
+                      .Replace("{{NOMBRE_APROBADOR}}", nombreAprobador ?? "-")
+                      .Replace("{{BLOQUE_COMENTARIO}}", bloqueComentario)
+                      .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalAdministrativo"] ?? "")
+                      .Replace("{{FECHA_ENVIO}}", DateTime.Now.ToString("dd/MM/yyyy HH:mm"))
+                      .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: nombreCreador,
+                subject: subject,
+                body: body,
+                tipoEmail: "NOTIFICACION_RECHAZO",
+                isHtml: true,
+                idUsuario: null,
+                idEntidadMedica: null,
+                entidadReferencia: "SHM_ORDEN_PAGO",
+                idReferencia: idOrdenPago);
+
+            _logger.LogInformation("Email de rechazo enviado a: {Email}, OrdenPago: {NumeroOP}", email, numeroOrdenPago);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de rechazo a: {Email}, OrdenPago: {NumeroOP}", email, numeroOrdenPago);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Envia un correo electronico al area de Tesoreria notificando que una orden de pago fue completamente aprobada.
+    /// </summary>
+    public async Task<bool> EnviarEmailNotificacionTesoreriaAsync(
+        string email,
+        string numeroOrdenPago,
+        string nombreSede,
+        string nombreBanco,
+        DateTime? fechaGeneracion,
+        decimal? montoTotal,
+        string tablaAprobadoresHtml,
+        int idOrdenPago)
+    {
+        var subject = $"Orden de Pago {numeroOrdenPago} - Aprobada y Lista para Procesamiento";
+        string body;
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("NotificacionTesoreria.html");
+
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            body = await File.ReadAllTextAsync(templatePath);
+
+            body = body.Replace("{{NUMERO_ORDEN_PAGO}}", numeroOrdenPago ?? "-")
+                      .Replace("{{NOMBRE_SEDE}}", nombreSede ?? "-")
+                      .Replace("{{NOMBRE_BANCO}}", nombreBanco ?? "-")
+                      .Replace("{{FECHA_GENERACION}}", fechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")
+                      .Replace("{{MONTO_TOTAL}}", montoTotal?.ToString("N2") ?? "0.00")
+                      .Replace("{{TABLA_APROBADORES}}", tablaAprobadoresHtml)
+                      .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalAdministrativo"] ?? "")
+                      .Replace("{{FECHA_ENVIO}}", DateTime.Now.ToString("dd/MM/yyyy HH:mm"))
+                      .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailConLogAsync(
+                toEmail: email,
+                nombreDestino: "Tesorería",
+                subject: subject,
+                body: body,
+                tipoEmail: "NOTIFICACION_TESORERIA",
+                isHtml: true,
+                idUsuario: null,
+                idEntidadMedica: null,
+                entidadReferencia: "SHM_ORDEN_PAGO",
+                idReferencia: idOrdenPago);
+
+            _logger.LogInformation("Email de notificacion a Tesoreria enviado a: {Email}, OrdenPago: {NumeroOP}",
+                email, numeroOrdenPago);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email de notificacion a Tesoreria: {Email}, OrdenPago: {NumeroOP}",
+                email, numeroOrdenPago);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Obtiene la ruta completa de una plantilla HTML, buscando primero en el directorio actual
     /// (desarrollo) y luego en el directorio base de la aplicacion (publicado).
     /// </summary>

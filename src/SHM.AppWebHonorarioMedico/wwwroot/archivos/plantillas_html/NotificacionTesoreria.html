@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orden de Pago Aprobada - Tesorería</title>
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
+
+    <!-- Contenedor Principal -->
+    <div style="background-color: #ffffff; margin: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1a7a4a 0%, #27ae60 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">
+                Honorarios Médicos
+            </h1>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">
+                Grupo San Pablo
+            </p>
+        </div>
+
+        <!-- Contenido -->
+        <div style="padding: 40px 30px;">
+
+            <!-- Icono -->
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; width: 70px; height: 70px; background-color: #eafaf1; border-radius: 50%; line-height: 70px;">
+                    <span style="font-size: 32px; line-height: 70px;">&#9989;</span>
+                </div>
+            </div>
+
+            <!-- Titulo -->
+            <h2 style="color: #1a7a4a; margin: 0 0 20px 0; text-align: center; font-size: 22px; font-weight: 600;">
+                Orden de Pago Aprobada
+            </h2>
+
+            <!-- Mensaje -->
+            <p style="margin: 0 0 25px 0; color: #555555; font-size: 15px;">
+                Se informa al área de <strong style="color: #1a7a4a;">Tesorería</strong> que la siguiente
+                orden de pago ha completado todos los niveles de aprobación y se encuentra lista para su procesamiento.
+            </p>
+
+            <!-- Datos de la orden -->
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border-radius: 8px; overflow: hidden;">
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f0faf4; font-weight: 600; color: #1a7a4a; width: 40%; border-bottom: 1px solid #d5eede;">
+                        N&deg; Orden de Pago
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee; font-weight: 700; font-size: 16px; color: #1a7a4a;">
+                        {{NUMERO_ORDEN_PAGO}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f0faf4; font-weight: 600; color: #1a7a4a; border-bottom: 1px solid #d5eede;">
+                        Sede
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee;">
+                        {{NOMBRE_SEDE}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f0faf4; font-weight: 600; color: #1a7a4a; border-bottom: 1px solid #d5eede;">
+                        Banco
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee;">
+                        {{NOMBRE_BANCO}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f0faf4; font-weight: 600; color: #1a7a4a; border-bottom: 1px solid #d5eede;">
+                        Fecha de Generación
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; border-bottom: 1px solid #eeeeee;">
+                        {{FECHA_GENERACION}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; background-color: #f0faf4; font-weight: 600; color: #1a7a4a;">
+                        Monto Total
+                    </td>
+                    <td style="padding: 12px 15px; background-color: #fafafa; font-weight: 700; font-size: 17px; color: #f26522;">
+                        S/ {{MONTO_TOTAL}}
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Seccion aprobadores -->
+            <p style="margin: 30px 0 12px 0; font-size: 14px; font-weight: 600; color: #333;
+                      text-transform: uppercase; letter-spacing: 0.5px; border-left: 4px solid #27ae60; padding-left: 10px;">
+                Historial de Aprobaciones
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 30px;">
+                <thead>
+                    <tr style="background-color: #6c757d;">
+                        <th style="padding: 10px 12px; color: #ffffff; text-align: left; font-weight: 600; width: 30%;">
+                            Perfil
+                        </th>
+                        <th style="padding: 10px 12px; color: #ffffff; text-align: left; font-weight: 600; width: 40%;">
+                            Aprobador
+                        </th>
+                        <th style="padding: 10px 12px; color: #ffffff; text-align: center; font-weight: 600; width: 30%;">
+                            Fecha y Hora
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{TABLA_APROBADORES}}
+                </tbody>
+            </table>
+
+            <!-- Boton de acceso -->
+            <div style="text-align: center; margin: 10px 0 35px 0;">
+                <a href="{{URL_SISTEMA}}/Tesoreria"
+                   style="display: inline-block;
+                          background: linear-gradient(135deg, #1a7a4a 0%, #27ae60 100%);
+                          color: #ffffff;
+                          padding: 16px 40px;
+                          text-decoration: none;
+                          border-radius: 8px;
+                          font-weight: 600;
+                          font-size: 16px;
+                          box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);">
+                    Ir a Tesorería
+                </a>
+            </div>
+
+            <!-- Nota informativa -->
+            <div style="background-color: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; border-radius: 0 5px 5px 0;">
+                <p style="margin: 0; color: #1a6fa8; font-size: 14px;">
+                    <strong>Nota:</strong> Esta orden de pago está disponible en la bandeja de Tesorería para su procesamiento.
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f8f8; padding: 25px 30px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0 0 5px 0; color: #888888; font-size: 12px;">
+                Este es un correo automático, por favor no responda a este mensaje.
+            </p>
+            <p style="margin: 0 0 5px 0; color: #aaaaaa; font-size: 11px;">
+                Generado el {{FECHA_ENVIO}}
+            </p>
+            <p style="margin: 0; color: #aaaaaa; font-size: 11px;">
+                &copy; {{ANIO}} Grupo San Pablo. Todos los derechos reservados.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Pie de pagina externo -->
+    <div style="text-align: center; padding: 20px;">
+        <p style="margin: 0; color: #999999; font-size: 11px;">
+            Sistema de Honorarios Médicos - Portal Web
+        </p>
+    </div>
+
+</body>
+</html>
