@@ -10,6 +10,7 @@ namespace SHM.AppDomain.DTOs.Produccion;
 /// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
 /// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
 /// <modified>ADG Antonio - 2026-04-15 - Agregados campos de estado de pago SAP (PAGO_*)</modified>
+/// <modified>ADG Antonio - 2026-04-25 - Agregado campo FacturaFechaVencimiento</modified>
 /// </summary>
 public class ProduccionResponseDto
 {
@@ -47,6 +48,7 @@ public class ProduccionResponseDto
     public DateTime? FacturaFechaEnvio { get; set; }
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
 
     // Campos de Liquidacion
     public string? NumeroLiquidacion { get; set; }

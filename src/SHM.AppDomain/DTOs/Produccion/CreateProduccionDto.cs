@@ -87,6 +87,7 @@ public class CreateProduccionDto
     public DateTime? FacturaFechaEnvio { get; set; }
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
 
     // Campos de Liquidacion
     [MaxLength(10)]
