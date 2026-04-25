@@ -45,6 +45,11 @@ public interface IProduccionRepository
     Task<IEnumerable<Produccion>> GetByEntidadMedicaAsync(int idEntidadMedica);
 
     /// <summary>
+    /// Obtiene producciones de una entidad medica filtradas por estado comprobante en Oracle.
+    /// </summary>
+    Task<IEnumerable<Produccion>> GetByEntidadMedicaYEstadoComprobanteAsync(int idEntidadMedica, string estadoComprobante);
+
+    /// <summary>
     /// Obtiene todas las producciones de un periodo especifico.
     /// </summary>
     Task<IEnumerable<Produccion>> GetByPeriodoAsync(string periodo);
@@ -212,6 +217,14 @@ public interface IProduccionRepository
     /// <author>ADG Antonio</author>
     /// <created>2026-03-01</created>
     Task<bool> RevertComprobanteByIdAsync(int idProduccion, string estado, int idModificador);
+
+    /// <summary>
+    /// Devuelve una factura por GUID: limpia comprobante, asigna ESTADO_COMPROBANTE = POR_ENVIAR
+    /// y cambia el estado a FACTURA_DEVUELTA.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-23</created>
+    Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador);
 
     /// <summary>
     /// Actualiza los campos de estado de pago SAP de una produccion por su ID.

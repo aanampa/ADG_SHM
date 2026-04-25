@@ -67,83 +67,10 @@ public class FacturasController : BaseController
     }
 
     // GET: Facturas/Pendientes
-    public async Task<IActionResult> Pendientes(string? busqueda)
+    public IActionResult Pendientes(string? busqueda)
     {
         ViewData["Title"] = "Facturas Pendientes";
-
-        try
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdClaim, out var userId))
-            {
-                userId = 0;
-            }
-
-            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
-            if (!int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica))
-            {
-                idEntidadMedica = 0;
-            }
-
-            // Obtener todas las producciones (en produccion filtrar por IdEntidadMedica del usuario)
-            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
-
-            // Filtrar solo las pendientes (Estado = "PENDIENTE" o sin comprobante)
-            var pendientes = producciones
-                .Where(p => p.Activo == 1 &&
-                            (p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada  ||
-                             p.Estado == EstadoDescripcion.Produccion.FacturaDevuelta
-                            ))
-                .ToList();
-
-            // Obtener todas las sedes para el mapeo
-            var sedes = await _sedeService.GetAllSedesAsync();
-            var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
-
-            // Obtener tipos de produccion para calcular concepto cuando esta vacio
-            var tiposProduccion = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_PRODUCCION");
-            var tiposProdDict = tiposProduccion.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "");
-
-            // Mapear a ViewModel
-            var facturas = pendientes.Select(p => new FacturaPendienteViewModel
-            {
-                IdProduccion = p.IdProduccion,
-                CodigoProduccion = p.CodigoProduccion,
-                NumeroProduccion = p.NumeroProduccion,
-                NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
-                Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
-                    : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
-                MtoTotal = p.MtoTotal,
-                FechaLimite = p.FechaLimite,
-                Estado = p.Estado ?? EstadoDescripcion.Produccion.FacturaSolicitada,
-                GuidRegistro = p.GuidRegistro
-            }).ToList();
-
-            // Aplicar busqueda si existe
-            if (!string.IsNullOrWhiteSpace(busqueda))
-            {
-                var busquedaLower = busqueda.ToLower();
-                facturas = facturas.Where(f =>
-                    (f.CodigoProduccion?.ToLower().Contains(busquedaLower) ?? false) ||
-                    (f.NombreSede?.ToLower().Contains(busquedaLower) ?? false) ||
-                    (f.Concepto?.ToLower().Contains(busquedaLower) ?? false)
-                ).ToList();
-            }
-
-            var model = new FacturasPendientesViewModel
-            {
-                Facturas = facturas,
-                Busqueda = busqueda,
-                TotalRegistros = facturas.Count
-            };
-
-            return View(model);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener facturas pendientes");
-            return View(new FacturasPendientesViewModel());
-        }
+        return View(new FacturasPendientesViewModel { Busqueda = busqueda });
     }
 
     // GET: Facturas/GetListPendientes (AJAX)
@@ -158,13 +85,12 @@ public class FacturasController : BaseController
                 idEntidadMedica = 0;
             }
 
-            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
+            var producciones = await _produccionService.GetProduccionesByEntidadMedicaYEstadoComprobanteAsync(
+                idEntidadMedica, EstadoDescripcion.EstadoComprobante.PorEnviar);
 
             var pendientes = producciones
-                .Where(p => p.Activo == 1 &&
-                           (string.IsNullOrEmpty(p.EstadoComprobante) ||
-                            p.Estado == "PENDIENTE" ||
-                            p.EstadoComprobante == "PENDIENTE"))
+                .Where(p => p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ||
+                            p.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
                 .ToList();
 
             var sedes = await _sedeService.GetAllSedesAsync();
@@ -184,7 +110,7 @@ public class FacturasController : BaseController
                     : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
                 MtoTotal = p.MtoTotal,
                 FechaLimite = p.FechaLimite,
-                Estado = p.Estado ?? "PENDIENTE",
+                Estado = p.Estado!,
                 GuidRegistro = p.GuidRegistro
             }).ToList();
 
@@ -303,86 +229,10 @@ public class FacturasController : BaseController
     }
 
     // GET: Facturas/Enviadas
-    public async Task<IActionResult> Enviadas(string? busqueda, int pageNumber = 1, int pageSize = 10)
+    public IActionResult Enviadas(string? busqueda, int pageNumber = 1, int pageSize = 10)
     {
         ViewData["Title"] = "Facturas Enviadas";
-
-        try
-        {
-            var idEntidadMedicaClaim = User.FindFirstValue("IdEntidadMedica");
-            if (!int.TryParse(idEntidadMedicaClaim, out var idEntidadMedica))
-            {
-                idEntidadMedica = 0;
-            }
-
-            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
-
-            // Filtrar solo las que tienen comprobante enviado
-            var enviadas = producciones
-                .Where(p => p.Activo == 1 &&
-                           !string.IsNullOrEmpty(p.EstadoComprobante) &&
-                           p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaSolicitada &&
-                           p.EstadoComprobante != "PENDIENTE"
-                           )
-                .ToList();
-
-            var sedes = await _sedeService.GetAllSedesAsync();
-            var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
-
-            // Obtener tipos de produccion para calcular concepto cuando esta vacio
-            var tiposProduccion = await _tablaDetalleService.ListarPorCodigoTablaAsync("TIPO_PRODUCCION");
-            var tiposProdDict = tiposProduccion.ToDictionary(t => t.Codigo ?? "", t => t.Descripcion ?? "");
-
-            var facturas = enviadas.Select(p => new FacturaEnviadaViewModel
-            {
-                IdProduccion = p.IdProduccion,
-                CodigoProduccion = p.CodigoProduccion,
-                NumeroProduccion = p.NumeroProduccion,
-                NombreSede = sedesDict.TryGetValue(p.IdSede, out var nombreSede) ? nombreSede : $"Sede {p.IdSede}",
-                Concepto = !string.IsNullOrEmpty(p.Concepto) ? p.Concepto
-                    : $"PRODUCCION {p.CodigoProduccion} - {(tiposProdDict.TryGetValue(p.TipoProduccion ?? "", out var desTipoProd) ? desTipoProd.ToUpper() : p.TipoProduccion ?? "")}",
-                MtoTotal = p.MtoTotal,
-                FechaEmision = p.FechaEmision,
-                Serie = p.Serie,
-                Numero = p.Numero,
-                EstadoComprobante = p.EstadoComprobante,
-                GuidRegistro = p.GuidRegistro
-            }).ToList();
-
-            if (!string.IsNullOrWhiteSpace(busqueda))
-            {
-                var busquedaLower = busqueda.ToLower();
-                facturas = facturas.Where(f =>
-                    (f.CodigoProduccion?.ToLower().Contains(busquedaLower) ?? false) ||
-                    (f.NombreSede?.ToLower().Contains(busquedaLower) ?? false) ||
-                    (f.Concepto?.ToLower().Contains(busquedaLower) ?? false) ||
-                    (f.Serie?.ToLower().Contains(busquedaLower) ?? false) ||
-                    (f.Numero?.ToLower().Contains(busquedaLower) ?? false)
-                ).ToList();
-            }
-
-            var totalRegistros = facturas.Count;
-            var facturasPaginadas = facturas
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            var model = new FacturasEnviadasViewModel
-            {
-                Facturas = facturasPaginadas,
-                Busqueda = busqueda,
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                TotalRegistros = totalRegistros
-            };
-
-            return View(model);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener facturas enviadas");
-            return View(new FacturasEnviadasViewModel());
-        }
+        return View(new FacturasEnviadasViewModel { Busqueda = busqueda, PageNumber = pageNumber, PageSize = pageSize });
     }
 
     // GET: Facturas/GetListEnviadas (AJAX)
@@ -397,17 +247,8 @@ public class FacturasController : BaseController
                 idEntidadMedica = 0;
             }
 
-            var producciones = await _produccionService.GetProduccionesByEntidadMedicaAsync(idEntidadMedica);
-
-            // Filtrar solo las que tienen comprobante enviado
-            var enviadas = producciones
-                .Where(p => p.Activo == 1 &&
-                           !string.IsNullOrEmpty(p.EstadoComprobante) &&
-                           p.EstadoComprobante != "PENDIENTE" &&
-                           p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaPendiente &&
-                           p.EstadoComprobante != EstadoDescripcion.Produccion.FacturaSolicitada
-                           )
-                .ToList();
+            var enviadas = (await _produccionService.GetProduccionesByEntidadMedicaYEstadoComprobanteAsync(
+                idEntidadMedica, EstadoDescripcion.EstadoComprobante.Enviado)).ToList();
 
             var sedes = await _sedeService.GetAllSedesAsync();
             var sedesDict = sedes.ToDictionary(s => s.IdSede, s => s.Nombre);
@@ -1130,11 +971,11 @@ public class FacturasController : BaseController
                 _logger.LogInformation("Datos de factura XML extraidos y guardados en JSON: {JsonPath}", jsonPath);
             }
 
-            // Formatear numero del usuario a 8 digitos
+            // Quitar ceros a la izquierda del numero ingresado por el usuario
             var numeroUsuarioFormateado = numero;
             if (int.TryParse(numero, out var numUsuarioInt))
             {
-                numeroUsuarioFormateado = numUsuarioInt.ToString("D8");
+                numeroUsuarioFormateado = numUsuarioInt.ToString();
             }
 
             // Iniciar transaccion para operaciones de base de datos
@@ -1962,11 +1803,11 @@ public class FacturasController : BaseController
                 }
             }
 
-            // Formatear numero a 8 digitos
+            // Quitar ceros a la izquierda del numero
             var numeroFormateado = numeroUsuario;
             if (int.TryParse(numeroUsuario, out var numInt))
             {
-                numeroFormateado = numInt.ToString("D8");
+                numeroFormateado = numInt.ToString();
             }
 
             // Obtener produccion
@@ -2203,6 +2044,7 @@ public class FacturasController : BaseController
                 }
 
                 // Actualizar produccion con datos del formulario (ingresados por el usuario)
+                var glosaXml = facturaData.DetalleItems.FirstOrDefault()?.Descripcion;
                 var updateDto = new UpdateProduccionDto
                 {
                     TipoComprobante = tipoComprobanteUsuario,
@@ -2211,7 +2053,7 @@ public class FacturasController : BaseController
                     FechaEmision = fechaEmisionUsuario,
                     EstadoComprobante = "ENVIADO",
                     Estado = EstadoDescripcion.Produccion.FacturaEnviada,
-                    Glosa = produccion.Concepto,
+                    Glosa = !string.IsNullOrWhiteSpace(glosaXml) ? glosaXml : produccion.Concepto,
                     FacturaFechaEnvio = DateTime.Now,
                     IdCuentaBanco = idCuentaBanco
                 };

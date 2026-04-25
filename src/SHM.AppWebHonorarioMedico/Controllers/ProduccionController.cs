@@ -282,12 +282,15 @@ public class ProduccionController : Controller
                 return Json(new { success = false, message = "Datos de solicitud invalidos" });
             }
 
+            var idUsuario = GetCurrentUserId();
+
+            // Si no viene fecha/hora, es renotificacion manteniendo la fecha limite actual
             if (string.IsNullOrEmpty(solicitud.Fecha) || string.IsNullOrEmpty(solicitud.Hora))
             {
-                return Json(new { success = false, message = "La fecha y hora limite son requeridas" });
+                var resultadoRenotificar = await _produccionService.RenotificarFacturaAsync(solicitud.GuidRegistro, idUsuario);
+                return Json(new { success = resultadoRenotificar, message = resultadoRenotificar ? "Renotificacion enviada correctamente" : "Error al renotificar" });
             }
 
-            var idUsuario = GetCurrentUserId();
             var resultado = await _produccionService.SolicitarFacturaAsync(solicitud, idUsuario);
 
             if (resultado)
@@ -713,6 +716,14 @@ public class ProduccionController : Controller
             }
 
             var idUsuario = GetCurrentUserId();
+
+            // Leer comprobante ANTES de devolver porque DevolverFacturaAsync limpia Serie/Numero
+            var produccionPrevia = await _produccionService.GetProduccionByGuidAsync(request.GuidRegistro);
+            var comprobantePrevia = produccionPrevia?.ComprobanteFactura
+                ?? (!string.IsNullOrEmpty(produccionPrevia?.Serie) && !string.IsNullOrEmpty(produccionPrevia?.Numero)
+                    ? $"{produccionPrevia.Serie}-{produccionPrevia.Numero}"
+                    : "-");
+
             var resultado = await _produccionService.DevolverFacturaAsync(request.GuidRegistro, idUsuario);
 
             if (resultado)
@@ -721,13 +732,16 @@ public class ProduccionController : Controller
                 var produccion = await _produccionService.GetProduccionByGuidAsync(request.GuidRegistro);
                 if (produccion != null)
                 {
-                    var comprobante = produccion.ComprobanteFactura ?? $"{produccion.Serie}-{produccion.Numero}";
+                    var comprobante = comprobantePrevia;
+                    var motivo = !string.IsNullOrWhiteSpace(request.MotivoDevolucion)
+                        ? $" Motivo: {request.MotivoDevolucion.Trim()}"
+                        : "";
                     var bitacoraDto = new AppDomain.DTOs.Bitacora.CreateBitacoraDto
                     {
                         Entidad = "SHM_PRODUCCION",
                         IdEntidad = produccion.IdProduccion,
                         Accion = EstadoDescripcion.Produccion.FacturaDevuelta,
-                        Descripcion = $"Se devolvio el comprobante de pago electrónico: {comprobante} para su subsanacion",
+                        Descripcion = $"Se devolvio el comprobante de pago electrónico: {comprobante} para su subsanacion.{motivo}",
                         FechaAccion = DateTime.Now
                     };
                     await _bitacoraService.CreateBitacoraAsync(bitacoraDto, idUsuario);

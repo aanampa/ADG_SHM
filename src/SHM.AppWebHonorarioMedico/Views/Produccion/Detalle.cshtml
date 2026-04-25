@@ -948,25 +948,54 @@
 
         function devolverFactura() {
             var guid = document.getElementById('hdnGuidProduccion').value;
+            var btnDevolver = document.querySelector('.btn-danger[onclick="devolverFactura()"]');
+            var btnAceptar  = document.querySelector('.btn-success[onclick="aceptarFactura()"]');
+            if (btnDevolver) btnDevolver.disabled = true;
+            if (btnAceptar)  btnAceptar.disabled  = true;
 
             Swal.fire({
                 icon: 'warning',
                 title: 'Devolver Factura',
-                text: '¿Esta seguro que desea devolver esta factura?',
+                html: '<p style="margin-bottom:0.75rem;">¿Esta seguro que desea devolver esta factura?</p>' +
+                      '<label style="display:block;text-align:left;font-size:0.875rem;margin-bottom:0.3rem;">Ingrese Motivo de devolución <span style="color:#dc3545;">*</span></label>' +
+                      '<textarea id="swalMotivo" class="swal2-textarea" placeholder="Ingrese el motivo de devolución..." ' +
+                      'style="height:90px; resize:none; font-size:0.95rem; width:100%; box-sizing:border-box; margin:0;"></textarea>',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Si, Devolver',
-                cancelButtonText: 'Cancelar'
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    var motivo = document.getElementById('swalMotivo').value.trim();
+                    if (!motivo) {
+                        Swal.showValidationMessage('El motivo de devolución es requerido');
+                        return false;
+                    }
+                    if (motivo.length < 10) {
+                        Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+                        return false;
+                    }
+                    return motivo;
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    var motivo = result.value || '';
+                    Swal.fire({
+                        title: 'Procesando...',
+                        text: 'Por favor espere.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
                     fetch('@Url.Action("DevolverFactura", "Produccion")', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            guidRegistro: guid
+                            guidRegistro: guid,
+                            motivoDevolucion: motivo
                         })
                     })
                         .then(response => response.json())
@@ -981,6 +1010,8 @@
                                     location.reload();
                                 });
                             } else {
+                                if (btnDevolver) btnDevolver.disabled = false;
+                                if (btnAceptar)  btnAceptar.disabled  = false;
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error',
@@ -991,6 +1022,8 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
+                            if (btnDevolver) btnDevolver.disabled = false;
+                            if (btnAceptar)  btnAceptar.disabled  = false;
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
@@ -998,12 +1031,19 @@
                                 confirmButtonColor: '#dc3545'
                             });
                         });
+                } else {
+                    if (btnDevolver) btnDevolver.disabled = false;
+                    if (btnAceptar)  btnAceptar.disabled  = false;
                 }
             });
         }
 
         function aceptarFactura() {
             var guid = document.getElementById('hdnGuidProduccion').value;
+            var btnDevolver = document.querySelector('.btn-danger[onclick="devolverFactura()"]');
+            var btnAceptar  = document.querySelector('.btn-success[onclick="aceptarFactura()"]');
+            if (btnDevolver) btnDevolver.disabled = true;
+            if (btnAceptar)  btnAceptar.disabled  = true;
 
             Swal.fire({
                 icon: 'question',
@@ -1016,6 +1056,14 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando...',
+                        text: 'Por favor espere.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
                     fetch('@Url.Action("AceptarFactura", "Produccion")', {
                         method: 'POST',
                         headers: {
@@ -1037,6 +1085,8 @@
                                     location.reload();
                                 });
                             } else {
+                                if (btnDevolver) btnDevolver.disabled = false;
+                                if (btnAceptar)  btnAceptar.disabled  = false;
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error',
@@ -1047,6 +1097,8 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
+                            if (btnDevolver) btnDevolver.disabled = false;
+                            if (btnAceptar)  btnAceptar.disabled  = false;
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
@@ -1054,6 +1106,9 @@
                                 confirmButtonColor: '#dc3545'
                             });
                         });
+                } else {
+                    if (btnDevolver) btnDevolver.disabled = false;
+                    if (btnAceptar)  btnAceptar.disabled  = false;
                 }
             });
         }

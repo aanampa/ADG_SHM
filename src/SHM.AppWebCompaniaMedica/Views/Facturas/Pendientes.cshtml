@@ -109,6 +109,10 @@
     <script>
         let searchTimeout;
 
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
+
         // Search functionality con debounce
         document.getElementById('searchInput')?.addEventListener('input', function (e) {
             clearTimeout(searchTimeout);

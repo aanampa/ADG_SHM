@@ -165,6 +165,22 @@ public class ProduccionRepository : IProduccionRepository
     }
 
     /// <summary>
+    /// Obtiene los registros de produccion de una entidad medica filtrados por estado comprobante.
+    /// </summary>
+    public async Task<IEnumerable<Produccion>> GetByEntidadMedicaYEstadoComprobanteAsync(int idEntidadMedica, string estadoComprobante)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION
+                     WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+                       AND ESTADO_COMPROBANTE = :EstadoComprobante
+                       AND ACTIVO = 1
+                     ORDER BY ID_PRODUCCION DESC";
+
+        return await connection.QueryAsync<Produccion>(sql, new { IdEntidadMedica = idEntidadMedica, EstadoComprobante = estadoComprobante });
+    }
+
+    /// <summary>
     /// Obtiene los registros de produccion de un periodo especifico.
     /// </summary>
     public async Task<IEnumerable<Produccion>> GetByPeriodoAsync(string periodo)
@@ -1146,6 +1162,39 @@ public class ProduccionRepository : IProduccionRepository
         {
             IdProduccion = idProduccion,
             Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Devuelve una factura por GUID: limpia comprobante, asigna ESTADO_COMPROBANTE = POR_ENVIAR
+    /// y cambia el estado a FACTURA_DEVUELTA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-23</created>
+    /// </summary>
+    public async Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO              = 'FACTURA_DEVUELTA',
+                ESTADO_COMPROBANTE  = 'POR_ENVIAR',
+                SERIE               = NULL,
+                NUMERO              = NULL,
+                FECHA_EMISION       = NULL,
+                GLOSA               = NULL,
+                FACTURA_FECHA_ENVIO = NULL,
+                ID_MODIFICADOR      = :IdModificador,
+                FECHA_MODIFICACION  = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
             IdModificador = idModificador
         });
 

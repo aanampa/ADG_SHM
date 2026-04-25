@@ -35,6 +35,19 @@ public interface IEmailService
         int idProduccion);
 
     /// <summary>
+    /// Envia un correo electronico notificando a la Cia Medica que su factura fue devuelta.
+    /// </summary>
+    Task<bool> EnviarEmailFacturaDevueltaAsync(
+        string email,
+        string nombreDestinatario,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion);
+
+    /// <summary>
     /// Envia un correo electronico notificando al usuario que su clave fue restablecida.
     /// </summary>
     /// <param name="email">Correo del usuario</param>

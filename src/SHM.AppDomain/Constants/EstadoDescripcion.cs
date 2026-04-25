@@ -66,17 +66,17 @@ public static class EstadoDescripcion
     {
         public const string PorEnviar = "POR_ENVIAR";
         public const string Enviado   = "ENVIADO";
-        public const string Aceptado  = "ACEPTADO";
-        public const string Devuelto  = "DEVUELTO";
-        public const string Pagado    = "PAGADO";
+        // public const string Aceptado  = "ACEPTADO";
+        // public const string Devuelto  = "DEVUELTO";
+        // public const string Pagado    = "PAGADO";
 
         private static readonly Dictionary<string, EstadoInfo> _estados = new()
         {
             [PorEnviar] = new("Por Enviar", "badge-secondary", "bg-gradient-secondary", "text-secondary"),
             [Enviado]   = new("Enviado",    "badge-info",      "bg-gradient-info",      "text-info"),
-            [Aceptado]  = new("Aceptado",   "badge-success",   "bg-gradient-success",   "text-success"),
-            [Devuelto]  = new("Devuelto",   "badge-danger",    "bg-gradient-danger",    "text-danger"),
-            [Pagado]    = new("Pagado",     "badge-success",   "bg-gradient-success",   "text-success"),
+            // [Aceptado]  = new("Aceptado",   "badge-success",   "bg-gradient-success",   "text-success"),
+            // [Devuelto]  = new("Devuelto",   "badge-danger",    "bg-gradient-danger",    "text-danger"),
+            // [Pagado]    = new("Pagado",     "badge-success",   "bg-gradient-success",   "text-success"),
         };
 
         public static string GetDescripcion(string? estado) =>

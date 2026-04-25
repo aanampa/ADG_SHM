@@ -90,6 +90,15 @@ public class ProduccionService : IProduccionService
     }
 
     /// <summary>
+    /// Obtiene producciones de una entidad medica filtradas por estado comprobante en Oracle.
+    /// </summary>
+    public async Task<IEnumerable<ProduccionResponseDto>> GetProduccionesByEntidadMedicaYEstadoComprobanteAsync(int idEntidadMedica, string estadoComprobante)
+    {
+        var producciones = await _produccionRepository.GetByEntidadMedicaYEstadoComprobanteAsync(idEntidadMedica, estadoComprobante);
+        return producciones.Select(MapToResponseDto);
+    }
+
+    /// <summary>
     /// Obtiene las producciones de un periodo especifico
     /// </summary>
     public async Task<IEnumerable<ProduccionResponseDto>> GetProduccionesByPeriodoAsync(string periodo)
@@ -316,6 +325,10 @@ public class ProduccionService : IProduccionService
             return false;
         }
 
+        // Leer estado previo antes del UPDATE para elegir plantilla de correo
+        var produccionPrevia = await _produccionRepository.GetByGuidWithDetailsAsync(solicitudDto.GuidRegistro);
+        var estadoPrevio = produccionPrevia?.Estado;
+
         const string nuevoEstado = EstadoDescripcion.Produccion.FacturaSolicitada;
 
         var resultado = await _produccionRepository.UpdateFechaLimiteEstadoAsync(
@@ -338,22 +351,37 @@ public class ProduccionService : IProduccionService
                         if (!string.IsNullOrEmpty(usuario.Email))
                         {
                             var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
-                            await _emailService.EnviarEmailSolicitudFacturaAsync(
-                                email: usuario.Email,
-                                nombreDestinatario: nombreCompleto,
-                                codigoProduccion: produccion.NumeroProduccion ?? "",
-                                razonSocial: produccion.RazonSocial ?? "",
-                                mtoTotal: produccion.MtoTotal,
-                                fechaLimite: fechaLimite,
-                                idEntidadMedica: produccion.IdEntidadMedica,
-                                idProduccion: produccion.IdProduccion);
+
+                            if (estadoPrevio == EstadoDescripcion.Produccion.FacturaDevuelta)
+                            {
+                                await _emailService.EnviarEmailFacturaDevueltaAsync(
+                                    email:              usuario.Email,
+                                    nombreDestinatario: nombreCompleto,
+                                    codigoProduccion:   produccion.NumeroProduccion ?? "",
+                                    razonSocial:        produccion.RazonSocial ?? "",
+                                    mtoTotal:           produccion.MtoTotal,
+                                    fechaLimite:        fechaLimite,
+                                    idEntidadMedica:    produccion.IdEntidadMedica,
+                                    idProduccion:       produccion.IdProduccion);
+                            }
+                            else
+                            {
+                                await _emailService.EnviarEmailSolicitudFacturaAsync(
+                                    email:              usuario.Email,
+                                    nombreDestinatario: nombreCompleto,
+                                    codigoProduccion:   produccion.NumeroProduccion ?? "",
+                                    razonSocial:        produccion.RazonSocial ?? "",
+                                    mtoTotal:           produccion.MtoTotal,
+                                    fechaLimite:        fechaLimite,
+                                    idEntidadMedica:    produccion.IdEntidadMedica,
+                                    idProduccion:       produccion.IdProduccion);
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                // El error de envio de correo no debe impedir la operacion principal
                 _logger.LogError(ex, "Error al enviar notificacion de solicitud de factura. GUID: {Guid}", solicitudDto.GuidRegistro);
             }
         }
@@ -373,7 +401,8 @@ public class ProduccionService : IProduccionService
         var produccion = await _produccionRepository.GetByGuidWithDetailsAsync(guidRegistro);
 
         if (produccion == null
-            || produccion.Estado != EstadoDescripcion.Produccion.FacturaSolicitada
+            || (produccion.Estado != EstadoDescripcion.Produccion.FacturaSolicitada &&
+                produccion.Estado != EstadoDescripcion.Produccion.FacturaDevuelta)
             || !produccion.FechaLimite.HasValue
             || !produccion.IdEntidadMedica.HasValue)
         {
@@ -386,15 +415,31 @@ public class ProduccionService : IProduccionService
             if (!string.IsNullOrEmpty(usuario.Email))
             {
                 var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
-                await _emailService.EnviarEmailSolicitudFacturaAsync(
-                    email: usuario.Email,
-                    nombreDestinatario: nombreCompleto,
-                    codigoProduccion: produccion.NumeroProduccion ?? "",
-                    razonSocial: produccion.RazonSocial ?? "",
-                    mtoTotal: produccion.MtoTotal,
-                    fechaLimite: produccion.FechaLimite.Value,
-                    idEntidadMedica: produccion.IdEntidadMedica,
-                    idProduccion: produccion.IdProduccion);
+
+                if (produccion.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
+                {
+                    await _emailService.EnviarEmailFacturaDevueltaAsync(
+                        email:              usuario.Email,
+                        nombreDestinatario: nombreCompleto,
+                        codigoProduccion:   produccion.NumeroProduccion ?? "",
+                        razonSocial:        produccion.RazonSocial ?? "",
+                        mtoTotal:           produccion.MtoTotal,
+                        fechaLimite:        produccion.FechaLimite.Value,
+                        idEntidadMedica:    produccion.IdEntidadMedica,
+                        idProduccion:       produccion.IdProduccion);
+                }
+                else
+                {
+                    await _emailService.EnviarEmailSolicitudFacturaAsync(
+                        email:              usuario.Email,
+                        nombreDestinatario: nombreCompleto,
+                        codigoProduccion:   produccion.NumeroProduccion ?? "",
+                        razonSocial:        produccion.RazonSocial ?? "",
+                        mtoTotal:           produccion.MtoTotal,
+                        fechaLimite:        produccion.FechaLimite.Value,
+                        idEntidadMedica:    produccion.IdEntidadMedica,
+                        idProduccion:       produccion.IdProduccion);
+                }
             }
         }
 
@@ -448,8 +493,41 @@ public class ProduccionService : IProduccionService
     /// </summary>
     public async Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador)
     {
-        const string nuevoEstado = EstadoDescripcion.Produccion.FacturaDevuelta;
-        return await _produccionRepository.UpdateEstadoAsync(guidRegistro, nuevoEstado, idModificador);
+        var resultado = await _produccionRepository.DevolverFacturaAsync(guidRegistro, idModificador);
+
+        if (resultado)
+        {
+            try
+            {
+                var produccion = await _produccionRepository.GetByGuidWithDetailsAsync(guidRegistro);
+                if (produccion != null && produccion.IdEntidadMedica.HasValue && produccion.FechaLimite.HasValue)
+                {
+                    var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
+                    foreach (var usuario in usuarios)
+                    {
+                        if (!string.IsNullOrEmpty(usuario.Email))
+                        {
+                            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
+                            await _emailService.EnviarEmailFacturaDevueltaAsync(
+                                email:               usuario.Email,
+                                nombreDestinatario:  nombreCompleto,
+                                codigoProduccion:    produccion.NumeroProduccion ?? "",
+                                razonSocial:         produccion.RazonSocial ?? "",
+                                mtoTotal:            produccion.MtoTotal,
+                                fechaLimite:         produccion.FechaLimite.Value,
+                                idEntidadMedica:     produccion.IdEntidadMedica,
+                                idProduccion:        produccion.IdProduccion);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar notificacion de factura devuelta. GUID: {Guid}", guidRegistro);
+            }
+        }
+
+        return resultado;
     }
 
     /// <summary>

@@ -43,6 +43,11 @@ public interface IProduccionService
     Task<IEnumerable<ProduccionResponseDto>> GetProduccionesByEntidadMedicaAsync(int idEntidadMedica);
 
     /// <summary>
+    /// Obtiene producciones de una entidad medica filtradas por estado comprobante en Oracle.
+    /// </summary>
+    Task<IEnumerable<ProduccionResponseDto>> GetProduccionesByEntidadMedicaYEstadoComprobanteAsync(int idEntidadMedica, string estadoComprobante);
+
+    /// <summary>
     /// Obtiene todas las producciones de un periodo especifico.
     /// </summary>
     Task<IEnumerable<ProduccionResponseDto>> GetProduccionesByPeriodoAsync(string periodo);
