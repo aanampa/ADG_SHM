@@ -431,6 +431,9 @@ public class FacturasController : BaseController
                 Moneda = moneda,
                 RequiereValidacionCuenta = requiereValidacionCuenta,
                 RequiereCdr = requiereCdr,
+                FacturaFechaVencimiento = produccion.FacturaFechaVencimiento,
+                MtoDetraccion = produccion.MtoDetraccion,
+                PorcDetraccion = produccion.PorcDetraccion,
                 Bitacora = bitacora
             };
 
@@ -1480,6 +1483,8 @@ public class FacturasController : BaseController
                 CuentaCorriente = cuentaCorriente,
                 CuentaCci = cuentaCci,
                 Moneda = moneda,
+                MtoDetraccion = produccion.MtoDetraccion,
+                PorcDetraccion = produccion.PorcDetraccion,
                 PdfTempPath = $"/Facturas/ObtenerPdfTemporal?sessionId={sessionId}",
                 DatosXml = datosXml,
                 ValidaTipo = paramValidaTipo?.ToUpper() != "N",
@@ -1489,7 +1494,8 @@ public class FacturasController : BaseController
                 ValidaImporte = paramValidaImporte?.ToUpper() != "N",
                 ValidaConcepto = paramValidaConcepto?.ToUpper() == "S",
                 ValidaRucEmisor = paramValidaRucEmisor?.ToUpper() != "N",
-                ValidaRucReceptor = paramValidaRucReceptor?.ToUpper() != "N"
+                ValidaRucReceptor = paramValidaRucReceptor?.ToUpper() != "N",
+                ValidaDetraccion = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_DETRACCION"))?.ToUpper() != "N"
             };
 
             return View(model);
@@ -1652,6 +1658,8 @@ public class FacturasController : BaseController
                 EmisorRazonSocial = emisorRazonSocial,
                 ReceptorRuc = sede?.Ruc,
                 ReceptorNombre = sede?.Nombre,
+                MtoDetraccion = produccion.MtoDetraccion,
+                PorcDetraccion = produccion.PorcDetraccion,
                 DatosXml = datosXml,
                 ValidaTipo = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_TIPO"))?.ToUpper() != "N",
                 ValidaFechaEmision = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_FECHA_EMISION"))?.ToUpper() != "N",
@@ -1660,7 +1668,8 @@ public class FacturasController : BaseController
                 ValidaImporte = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_IMPORTE"))?.ToUpper() != "N",
                 ValidaConcepto = (await _parametroService.GetValorByCodigoAsync("SHM_VALIDA_FACTURA_CONCEPTO"))?.ToUpper() == "S",
                 ValidaRucEmisor = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_EMISOR"))?.ToUpper() != "N",
-                ValidaRucReceptor = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_RECEPTOR"))?.ToUpper() != "N"
+                ValidaRucReceptor = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_RUC_RECEPTOR"))?.ToUpper() != "N",
+                ValidaDetraccion = (await _parametroService.GetValorByCodigoAsync("SHM_COMPROBANTE_VALIDA_DETRACCION"))?.ToUpper() != "N"
             };
 
             return PartialView("_ValidacionPartial", model);

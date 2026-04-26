@@ -80,6 +80,7 @@ try
     builder.Services.AddScoped<ITablaRepository, TablaRepository>();
     builder.Services.AddScoped<ITablaDetalleRepository, TablaDetalleRepository>();
     builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
+    builder.Services.AddScoped<ISegAccesoRepository, SegAccesoRepository>();
 
     // Registrar servicios de aplicacion
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -94,6 +95,7 @@ try
     builder.Services.AddScoped<IParametroService, ParametroService>();
     builder.Services.AddScoped<ITablaService, TablaService>();
     builder.Services.AddScoped<ITablaDetalleService, TablaDetalleService>();
+    builder.Services.AddScoped<ISegAccesoService, SegAccesoService>();
 
     // Configurar SmtpSettings
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));

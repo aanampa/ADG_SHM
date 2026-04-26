@@ -201,7 +201,8 @@ public class FacturaXmlParserService
             Impuestos = ExtractImpuestos(root),
             DesgloseTotales = ExtractDesgloseTotales(root),
             DetalleItems = ExtractDetalleItems(root),
-            FirmaElectronica = ExtractFirmaElectronica(root)
+            FirmaElectronica = ExtractFirmaElectronica(root),
+            Detraccion = ExtractDetraccion(root)
         };
 
         return facturaData;
@@ -500,6 +501,37 @@ public class FacturaXmlParserService
         firma.CertificadoEmisor = x509IssuerName?.Value ?? string.Empty;
 
         return firma;
+    }
+
+    private Detraccion? ExtractDetraccion(XElement root)
+    {
+        var paymentMeans = root.Elements(cac + "PaymentMeans")
+            .FirstOrDefault(pm => pm.Element(cbc + "ID")?.Value == "Detraccion");
+
+        var paymentTerms = root.Elements(cac + "PaymentTerms")
+            .FirstOrDefault(pt => pt.Element(cbc + "ID")?.Value == "Detraccion");
+
+        if (paymentMeans == null && paymentTerms == null)
+            return null;
+
+        var detraccion = new Detraccion();
+
+        if (paymentMeans != null)
+        {
+            detraccion.CodigoMedioPago = paymentMeans.Element(cbc + "PaymentMeansCode")?.Value ?? string.Empty;
+            detraccion.NumeroCuenta    = paymentMeans
+                .Element(cac + "PayeeFinancialAccount")?
+                .Element(cbc + "ID")?.Value ?? string.Empty;
+        }
+
+        if (paymentTerms != null)
+        {
+            detraccion.CodigoBienServicio = paymentTerms.Element(cbc + "PaymentMeansID")?.Value ?? string.Empty;
+            detraccion.Porcentaje         = ParseDecimal(paymentTerms.Element(cbc + "PaymentPercent")?.Value);
+            detraccion.Monto              = ParseDecimal(paymentTerms.Element(cbc + "Amount")?.Value);
+        }
+
+        return detraccion;
     }
 
     private static decimal ParseDecimal(string? value)

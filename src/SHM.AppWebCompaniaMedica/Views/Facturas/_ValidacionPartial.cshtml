@@ -1,4 +1,5 @@
 @model SHM.AppWebCompaniaMedica.Models.VistaPreviaFacturaViewModel
+@using static SHM.AppDomain.Constants.AppConstants
 @{
     var numeroFacturaXml = Model.DatosXml?.DatosGenerales.NumeroFactura ?? "";
     var partesXml = numeroFacturaXml.Split('-');
@@ -40,233 +41,294 @@
     var conceptoProduccion = Model.Concepto ?? "";
     var conceptoCoincide   = string.Equals(conceptoProduccion.Trim(), conceptoXml.Trim(), StringComparison.OrdinalIgnoreCase);
 
+    // --- Detraccion ---
+    var xmlDetraccion       = Model.DatosXml?.Detraccion;
+    var prodTieneDetraccion = Model.MtoDetraccion.HasValue && Model.MtoDetraccion > 0;
+    var xmlTieneDetraccion  = xmlDetraccion != null;
+    var mostrarDetraccion   = prodTieneDetraccion || xmlTieneDetraccion;
+
+    var detMedioPagoCoincide = false;
+    var detConceptoCoincide  = false;
+    var detPorcCoincide      = false;
+    var detMontoCoincide     = false;
+
+    if (mostrarDetraccion && xmlTieneDetraccion)
+    {
+        detMedioPagoCoincide = xmlDetraccion!.CodigoMedioPago == FacturacionConstants.CodigoMedioPago;
+        detConceptoCoincide  = xmlDetraccion!.CodigoBienServicio == FacturacionConstants.CodigoConceptoDetraccion;
+        if (prodTieneDetraccion)
+        {
+            detPorcCoincide  = Math.Abs((Model.PorcDetraccion ?? 0) - xmlDetraccion!.Porcentaje) <= 0.01m;
+            detMontoCoincide = Math.Abs((Model.MtoDetraccion ?? 0) - xmlDetraccion!.Monto) <= 0.01m;
+        }
+    }
+
     var puedeEnviar       = true;
     var totalErrores      = 0;
     var totalAdvertencias = 0;
 
-    if (Model.ValidaTipo && !tipoCoincide)                    { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaTipo && !tipoCoincide)              { totalAdvertencias++; }
-    if (Model.ValidaFechaEmision && !fechaEmisionCoincide)    { puedeEnviar = false; totalErrores++; }
+    if (Model.ValidaTipo && !tipoCoincide)                       { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaTipo && !tipoCoincide)                 { totalAdvertencias++; }
+    if (Model.ValidaFechaEmision && !fechaEmisionCoincide)       { puedeEnviar = false; totalErrores++; }
     else if (!Model.ValidaFechaEmision && !fechaEmisionCoincide) { totalAdvertencias++; }
-    if (Model.ValidaSerie && !serieCoincide)                  { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaSerie && !serieCoincide)            { totalAdvertencias++; }
-    if (Model.ValidaNumero && !numeroCoincide)                { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaNumero && !numeroCoincide)          { totalAdvertencias++; }
-    if (Model.ValidaRucEmisor && !rucEmisorCoincide)          { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaRucEmisor && !rucEmisorCoincide)    { totalAdvertencias++; }
-    if (Model.ValidaRucReceptor && !rucReceptorCoincide)      { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaRucReceptor && !rucReceptorCoincide){ totalAdvertencias++; }
-    if (Model.ValidaImporte && !importeCoincide)              { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaImporte && !importeCoincide)        { totalAdvertencias++; }
-    if (Model.ValidaConcepto && !conceptoCoincide)            { puedeEnviar = false; totalErrores++; }
-    else if (!Model.ValidaConcepto && !conceptoCoincide)      { totalAdvertencias++; }
+    if (Model.ValidaSerie && !serieCoincide)                     { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaSerie && !serieCoincide)               { totalAdvertencias++; }
+    if (Model.ValidaNumero && !numeroCoincide)                   { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaNumero && !numeroCoincide)             { totalAdvertencias++; }
+    if (Model.ValidaRucEmisor && !rucEmisorCoincide)             { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaRucEmisor && !rucEmisorCoincide)       { totalAdvertencias++; }
+    if (Model.ValidaRucReceptor && !rucReceptorCoincide)         { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaRucReceptor && !rucReceptorCoincide)   { totalAdvertencias++; }
+    if (Model.ValidaImporte && !importeCoincide)                 { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaImporte && !importeCoincide)           { totalAdvertencias++; }
+    if (Model.ValidaConcepto && !conceptoCoincide)               { puedeEnviar = false; totalErrores++; }
+    else if (!Model.ValidaConcepto && !conceptoCoincide)         { totalAdvertencias++; }
+
+    if (mostrarDetraccion)
+    {
+        if (prodTieneDetraccion && !xmlTieneDetraccion)
+        {
+            if (Model.ValidaDetraccion) { puedeEnviar = false; totalErrores++; } else { totalAdvertencias++; }
+        }
+        if (xmlTieneDetraccion && !detMedioPagoCoincide)
+        {
+            if (Model.ValidaDetraccion) { puedeEnviar = false; totalErrores++; } else { totalAdvertencias++; }
+        }
+        if (xmlTieneDetraccion && !detConceptoCoincide)
+        {
+            if (Model.ValidaDetraccion) { puedeEnviar = false; totalErrores++; } else { totalAdvertencias++; }
+        }
+        if (xmlTieneDetraccion && prodTieneDetraccion && !detPorcCoincide)
+        {
+            if (Model.ValidaDetraccion) { puedeEnviar = false; totalErrores++; } else { totalAdvertencias++; }
+        }
+        if (xmlTieneDetraccion && prodTieneDetraccion && !detMontoCoincide)
+        {
+            if (Model.ValidaDetraccion) { puedeEnviar = false; totalErrores++; } else { totalAdvertencias++; }
+        }
+        if (xmlTieneDetraccion && !prodTieneDetraccion) { totalAdvertencias++; }
+    }
 }
 
 <style>
-    .val-panel { max-width: 860px; margin: 0 auto; }
-    .val-section {
-        background: #fff;
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
+    .cmp-panel { width: 100%; }
+
+    /* Banner resumen */
+    .cmp-banner {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.75rem 1.1rem; border-radius: 10px;
+        margin-bottom: 1.25rem; font-weight: 700; font-size: 0.92rem;
+    }
+    .cmp-banner.ok   { background: rgba(40,167,69,0.1);  border: 1.5px solid #28a745; color: #1a7a34; }
+    .cmp-banner.warn { background: rgba(255,193,7,0.12); border: 1.5px solid #e6a000; color: #7d5400; }
+    .cmp-banner.err  { background: rgba(220,53,69,0.09); border: 1.5px solid #dc3545; color: #a71c2a; }
+    .cmp-banner i    { font-size: 1.15rem; flex-shrink: 0; }
+    .cmp-banner .cmp-banner-pills { display: flex; gap: 0.5rem; margin-left: auto; }
+    .cmp-pill {
+        font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem;
+        border-radius: 20px; display: flex; align-items: center; gap: 0.25rem;
+    }
+    .cmp-pill.err  { background: #dc3545; color: #fff; }
+    .cmp-pill.warn { background: #e6a000; color: #fff; }
+    .cmp-pill.ok   { background: #28a745; color: #fff; }
+
+    /* Tabla de comparación */
+    .cmp-table {
+        width: 100%; border-collapse: separate; border-spacing: 0;
+        border-radius: 10px; overflow: hidden;
+        border: 1.5px solid var(--border);
         margin-bottom: 1.25rem;
-        border: 2px solid var(--border);
+        font-size: 0.83rem;
     }
-    .val-section.has-errors  { border-color: #dc3545; background: rgba(220,53,69,0.02); }
-    .val-section.has-warnings{ border-color: #e6a000; background: rgba(255,193,7,0.03); }
-    .val-section.all-valid   { border-color: #28a745; background: rgba(40,167,69,0.02); }
-
-    .val-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.875rem;
-        padding-bottom: 0.625rem;
-        border-bottom: 1px solid var(--border);
+    .cmp-table thead th {
+        background: var(--bg-main); padding: 0.55rem 0.85rem;
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.05em; color: var(--text-secondary);
+        border-bottom: 1.5px solid var(--border);
     }
-    .val-header.ok      { color: #28a745; }
-    .val-header.warn    { color: #e6a000; }
-    .val-header.error   { color: #dc3545; }
+    .cmp-table thead th:not(:last-child) { border-right: 1px solid var(--border); }
 
-    .val-list { display: flex; flex-direction: column; gap: 0.3rem; }
+    .cmp-table tbody tr { border-bottom: 1px solid var(--border); }
+    .cmp-table tbody tr:last-child { border-bottom: none; }
 
-    .val-item {
-        display: flex;
-        align-items: baseline;
-        gap: 0.5rem;
-        padding: 0.35rem 0.6rem;
-        border-radius: 7px;
-        font-size: 0.875rem;
-        line-height: 1.4;
+    .cmp-table tbody td {
+        padding: 0.55rem 0.85rem; vertical-align: middle;
+        background: #fff;
     }
-    .val-item.ok   { background: rgba(40,167,69,0.06); }
-    .val-item.warn { background: rgba(255,193,7,0.1); }
-    .val-item.err  { background: rgba(220,53,69,0.07); }
+    .cmp-table tbody td:not(:last-child) { border-right: 1px solid var(--border); }
 
-    .val-item i { font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
-    .val-item.ok   i { color: #28a745; }
-    .val-item.warn i { color: #e6a000; }
-    .val-item.err  i { color: #dc3545; }
+    /* Estados de fila */
+    .cmp-table tbody tr.row-ok   td { background: rgba(40,167,69,0.03); }
+    .cmp-table tbody tr.row-err  td { background: rgba(220,53,69,0.05); }
+    .cmp-table tbody tr.row-warn td { background: rgba(255,193,7,0.05); }
 
-    .val-name  { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
-    .val-diff  { color: var(--text-secondary); font-size: 0.82rem; }
-    .val-vals  { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
-    .val-vals .form-val { color: var(--text-primary); font-weight: 600; }
-    .val-vals .xml-val  { color: #3B82F6; font-weight: 600; }
+    .cmp-table tbody tr.row-err  td:first-child { border-left: 3px solid #dc3545; }
+    .cmp-table tbody tr.row-warn td:first-child { border-left: 3px solid #e6a000; }
+    .cmp-table tbody tr.row-ok   td:first-child { border-left: 3px solid #28a745; }
 
-    .val-error-alert {
+    /* Encabezado de sección dentro de la tabla */
+    .cmp-table tbody tr.row-section td {
+        background: #f0f4f8; font-size: 0.72rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--primary); padding: 0.4rem 0.85rem;
+        border-left: none !important;
+    }
+    .cmp-table tbody tr.row-section td i { margin-right: 0.35rem; }
+
+    /* Columna campo */
+    .cmp-campo { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+
+    /* Columna valores */
+    .cmp-val-sistema { color: var(--text-primary); font-weight: 600; }
+    .cmp-val-xml     { color: #3B82F6; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    .cmp-val-empty   { color: var(--text-secondary); font-style: italic; }
+
+    /* Badge estado */
+    .cmp-estado {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.6rem;
+        border-radius: 20px; white-space: nowrap;
+    }
+    .cmp-estado.ok   { background: rgba(40,167,69,0.12); color: #1a7a34; }
+    .cmp-estado.err  { background: rgba(220,53,69,0.13); color: #a71c2a; }
+    .cmp-estado.warn { background: rgba(255,193,7,0.2);  color: #7d5400; }
+
+    /* Alerta bloqueo */
+    .cmp-block-alert {
         display: flex; align-items: flex-start; gap: 0.75rem;
-        background: rgba(220,53,69,0.08); border: 1px solid rgba(220,53,69,0.25);
-        border-radius: 10px; padding: 0.875rem 1rem; margin-top: 0.75rem;
+        background: rgba(220,53,69,0.07); border: 1.5px solid rgba(220,53,69,0.3);
+        border-radius: 10px; padding: 0.875rem 1rem; margin-top: 0.5rem;
     }
-    .val-error-alert i { color: #dc3545; font-size: 1.2rem; margin-top: 1px; flex-shrink:0; }
-    .val-error-alert strong { color: #dc3545; display:block; margin-bottom:0.2rem; }
-    .val-error-alert p { margin:0; color: var(--text-secondary); font-size: 0.83rem; }
-
-    /* Sección datos XML */
-    .xml-section { margin-bottom: 1.25rem; }
-    .xml-section-title { font-weight:700; color:var(--primary); font-size:0.875rem; margin-bottom:0.75rem; padding-bottom:0.5rem; border-bottom:2px solid var(--accent); display:flex; align-items:center; gap:0.5rem; }
-    .xml-data-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
-    .xml-field { background:var(--bg-main); padding:0.5rem 0.75rem; border-radius:8px; }
-    .xml-label { font-size:0.72rem; color:var(--text-secondary); display:block; margin-bottom:0.15rem; }
-    .xml-value { font-weight:600; font-size:0.875rem; color:var(--text-primary); }
-    .xml-value.mono { font-family:'JetBrains Mono',monospace; }
-    .total-highlight { background:rgba(242,101,34,0.1); padding:0.75rem; border-radius:10px; margin-top:0.5rem; display:flex; justify-content:space-between; align-items:center; }
-    .total-amount { font-size:1.25rem; font-weight:700; color:var(--accent); }
-    .item-row { padding:0.5rem 0.75rem; border-radius:8px; margin-bottom:0.35rem; font-size:0.82rem; }
-    .item-row:nth-child(odd)  { background:var(--bg-main); }
-    .item-row:nth-child(even) { background:#fff; border:1px solid var(--border); }
+    .cmp-block-alert i    { color: #dc3545; font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+    .cmp-block-alert strong { color: #dc3545; display: block; margin-bottom: 0.2rem; }
+    .cmp-block-alert p    { margin: 0; color: var(--text-secondary); font-size: 0.83rem; }
 </style>
 
 <div id="validacionContent"
      data-puede-enviar="@puedeEnviar.ToString().ToLower()"
      data-session-id="@Model.SessionId">
 
-    <div class="val-panel">
+    <div class="cmp-panel">
 
-        <!-- ── Sección de validaciones ── -->
-        <div class="val-section @(totalErrores > 0 ? "has-errors" : totalAdvertencias > 0 ? "has-warnings" : "all-valid")">
-
-            <div class="val-header @(totalErrores > 0 ? "error" : totalAdvertencias > 0 ? "warn" : "ok")">
+        @* ── Banner resumen ── *@
+        <div class="cmp-banner @(totalErrores > 0 ? "err" : totalAdvertencias > 0 ? "warn" : "ok")">
+            @if (totalErrores > 0)
+            {
+                <i class="bi bi-x-circle-fill"></i>
+                <span>No puede enviar — hay errores que deben corregirse</span>
+            }
+            else if (totalAdvertencias > 0)
+            {
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>Puede continuar — revise las advertencias</span>
+            }
+            else
+            {
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Todas las validaciones son correctas</span>
+            }
+            <div class="cmp-banner-pills">
                 @if (totalErrores > 0)
                 {
-                    <i class="bi bi-x-circle-fill"></i>
-                    <span>@totalErrores error(es)@(totalAdvertencias > 0 ? $" y {totalAdvertencias} advertencia(s)" : "") — No puede enviar</span>
+                    <span class="cmp-pill err"><i class="bi bi-x-circle-fill"></i> @totalErrores error(es)</span>
                 }
-                else if (totalAdvertencias > 0)
+                @if (totalAdvertencias > 0)
                 {
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>@totalAdvertencias advertencia(s) — Puede continuar</span>
+                    <span class="cmp-pill warn"><i class="bi bi-exclamation-triangle-fill"></i> @totalAdvertencias aviso(s)</span>
                 }
-                else
+                @if (totalErrores == 0 && totalAdvertencias == 0)
                 {
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>Todas las validaciones correctas</span>
+                    <span class="cmp-pill ok"><i class="bi bi-check-circle-fill"></i> Todo correcto</span>
                 }
             </div>
+        </div>
 
-            <div class="val-list">
-                @{
-                    void FilaCompacta(string label, string valForm, string valXml, bool coincide, bool esError) {
-                        var cls  = coincide ? "ok"  : (esError ? "err" : "warn");
-                        var icon = coincide ? "bi-check-circle-fill" : (esError ? "bi-x-circle-fill" : "bi-exclamation-triangle-fill");
-                        <div class="val-item @cls">
-                            <i class="bi @icon"></i>
-                            <span class="val-name">@label</span>
-                            @if (!coincide)
-                            {
-                                <span class="val-diff">
-                                    &mdash; no coincide con el XML
-                                    <span class="val-vals">
-                                        (<span class="form-val">@valForm</span>
-                                        &nbsp;&rarr;&nbsp;XML:&nbsp;<span class="xml-val">@valXml</span>)
-                                    </span>
-                                </span>
-                            }
-                        </div>
+        @* ── Tabla de comparación ── *@
+        @{
+            void FilaTabla(string campo, string valSistema, string valXml, bool coincide, bool esError)
+            {
+                var rowCls    = coincide ? "row-ok" : (esError ? "row-err" : "row-warn");
+                var estCls    = coincide ? "ok"     : (esError ? "err"     : "warn");
+                var estIcon   = coincide ? "bi-check-circle-fill" : (esError ? "bi-x-circle-fill" : "bi-exclamation-triangle-fill");
+                var estTxt    = coincide ? "OK"     : (esError ? "Error"   : "Aviso");
+                <tr class="@rowCls">
+                    <td><span class="cmp-campo">@campo</span></td>
+                    <td><span class="cmp-val-sistema">@(string.IsNullOrEmpty(valSistema) ? "—" : valSistema)</span></td>
+                    <td><span class="cmp-val-xml @(string.IsNullOrEmpty(valXml) ? "cmp-val-empty" : "")">@(string.IsNullOrEmpty(valXml) ? "—" : valXml)</span></td>
+                    <td style="text-align:center;">
+                        <span class="cmp-estado @estCls">
+                            <i class="bi @estIcon"></i> @estTxt
+                        </span>
+                    </td>
+                </tr>
+            }
+        }
+
+        <table class="cmp-table">
+            <thead>
+                <tr>
+                    <th style="width:22%;">Campo</th>
+                    <th style="width:33%;">Sistema / Esperado</th>
+                    <th style="width:33%;">XML del Comprobante</th>
+                    <th style="width:12%; text-align:center;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row-section"><td colspan="4"><i class="bi bi-receipt"></i>Datos del Comprobante</td></tr>
+                @{ FilaTabla("Tipo",           tipoFormNombre, tipoXmlNombre, tipoCoincide, Model.ValidaTipo); }
+                @{ FilaTabla("Fecha Emisión",  Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-", fechaEmisionXmlDate != DateTime.MinValue ? fechaEmisionXmlDate.ToString("dd/MM/yyyy") : fechaEmisionXmlStr, fechaEmisionCoincide, Model.ValidaFechaEmision); }
+                @{ FilaTabla("Serie",          Model.Serie ?? "-", serieXml ?? "-", serieCoincide, Model.ValidaSerie); }
+                @{ FilaTabla("Número",         Model.Numero ?? "-", numeroXml ?? "-", numeroCoincide, Model.ValidaNumero); }
+                @{ FilaTabla("Importe Total",  $"S/ {importeProduccion:N2}", $"S/ {importeXml:N2}", importeCoincide, Model.ValidaImporte); }
+                @{ FilaTabla("Concepto",       string.IsNullOrEmpty(conceptoProduccion) ? "-" : conceptoProduccion, string.IsNullOrEmpty(conceptoXml) ? "-" : conceptoXml, conceptoCoincide, Model.ValidaConcepto); }
+
+                <tr class="row-section"><td colspan="4"><i class="bi bi-building"></i>Participantes</td></tr>
+                @{ FilaTabla("RUC Emisor",    string.IsNullOrEmpty(rucEmisorSistema) ? "-" : rucEmisorSistema, string.IsNullOrEmpty(rucEmisorXml) ? "-" : rucEmisorXml, rucEmisorCoincide, Model.ValidaRucEmisor); }
+                @{ FilaTabla("RUC Receptor",  string.IsNullOrEmpty(rucReceptorSistema) ? "-" : rucReceptorSistema, string.IsNullOrEmpty(rucReceptorXml) ? "-" : rucReceptorXml, rucReceptorCoincide, Model.ValidaRucReceptor); }
+
+                @if (mostrarDetraccion)
+                {
+                    <tr class="row-section"><td colspan="4"><i class="bi bi-bank"></i>Detracción</td></tr>
+
+                    @if (prodTieneDetraccion && !xmlTieneDetraccion)
+                    {
+                        <tr class="row-err">
+                            <td colspan="3"><span class="cmp-campo">Datos de Detracción</span> <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:0.5rem;">La producción requiere detracción pero el XML no la contiene</span></td>
+                            <td style="text-align:center;"><span class="cmp-estado err"><i class="bi bi-x-circle-fill"></i> Error</span></td>
+                        </tr>
+                    }
+                    else if (!prodTieneDetraccion && xmlTieneDetraccion)
+                    {
+                        <tr class="row-warn">
+                            <td colspan="3"><span class="cmp-campo">Datos de Detracción</span> <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:0.5rem;">El XML contiene detracción pero la producción no la requiere</span></td>
+                            <td style="text-align:center;"><span class="cmp-estado warn"><i class="bi bi-exclamation-triangle-fill"></i> Aviso</span></td>
+                        </tr>
+                    }
+
+                    @if (xmlTieneDetraccion)
+                    {
+                        FilaTabla("Medio de Pago",     FacturacionConstants.CodigoMedioPago + " – " + FacturacionConstants.DescMedioPago, xmlDetraccion!.CodigoMedioPago, detMedioPagoCoincide, Model.ValidaDetraccion);
+                        FilaTabla("Bien / Servicio",   FacturacionConstants.CodigoConceptoDetraccion + " – " + FacturacionConstants.DescConceptoDetraccion, xmlDetraccion!.CodigoBienServicio, detConceptoCoincide, Model.ValidaDetraccion);
+                        if (prodTieneDetraccion)
+                        {
+                            FilaTabla("Porcentaje",    $"{Model.PorcDetraccion:N2}%", $"{xmlDetraccion!.Porcentaje:N2}%", detPorcCoincide, Model.ValidaDetraccion);
+                            FilaTabla("Monto",         $"S/ {Model.MtoDetraccion:N2}", $"S/ {xmlDetraccion!.Monto:N2}", detMontoCoincide, Model.ValidaDetraccion);
+                        }
                     }
                 }
+            </tbody>
+        </table>
 
-                @{ FilaCompacta("Tipo de Comprobante",  tipoFormNombre, tipoXmlNombre, tipoCoincide, Model.ValidaTipo); }
-                @{ FilaCompacta("Fecha de Emisión",     Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "-", fechaEmisionXmlDate != DateTime.MinValue ? fechaEmisionXmlDate.ToString("dd/MM/yyyy") : fechaEmisionXmlStr, fechaEmisionCoincide, Model.ValidaFechaEmision); }
-                @{ FilaCompacta("Serie",                Model.Serie ?? "-", serieXml ?? "-", serieCoincide, Model.ValidaSerie); }
-                @{ FilaCompacta("Número",               Model.Numero ?? "-", numeroXml ?? "-", numeroCoincide, Model.ValidaNumero); }
-                @{ FilaCompacta("RUC Emisor",           string.IsNullOrEmpty(rucEmisorSistema) ? "-" : rucEmisorSistema, string.IsNullOrEmpty(rucEmisorXml) ? "-" : rucEmisorXml, rucEmisorCoincide, Model.ValidaRucEmisor); }
-                @{ FilaCompacta("RUC Receptor",         string.IsNullOrEmpty(rucReceptorSistema) ? "-" : rucReceptorSistema, string.IsNullOrEmpty(rucReceptorXml) ? "-" : rucReceptorXml, rucReceptorCoincide, Model.ValidaRucReceptor); }
-                @{ FilaCompacta("Importe Total",        $"S/ {importeProduccion:N2}", $"S/ {importeXml:N2}", importeCoincide, Model.ValidaImporte); }
-                @{ FilaCompacta("Concepto",             string.IsNullOrEmpty(conceptoProduccion) ? "-" : conceptoProduccion, string.IsNullOrEmpty(conceptoXml) ? "-" : conceptoXml, conceptoCoincide, Model.ValidaConcepto); }
-            </div>
-
-            @if (!puedeEnviar)
-            {
-                <div class="val-error-alert">
-                    <i class="bi bi-x-circle-fill"></i>
-                    <div>
-                        <strong>No puede enviar esta factura</strong>
-                        <p>Corrija los datos en el Paso 2 o suba el archivo correcto antes de continuar.</p>
-                    </div>
-                </div>
-            }
-        </div>
-
-        @* ── Datos del XML (comentado temporalmente) ──
-        <div class="xml-section">
-            <div class="xml-section-title"><i class="bi bi-receipt"></i> Datos del Comprobante (XML)</div>
-            <div class="xml-data-grid">
-                <div class="xml-field"><span class="xml-label">Tipo</span><span class="xml-value">@(Model.DatosXml?.DatosGenerales.TipoDocumento ?? "-")</span></div>
-                <div class="xml-field"><span class="xml-label">Número</span><span class="xml-value mono">@(Model.DatosXml?.DatosGenerales.NumeroFactura ?? "-")</span></div>
-                <div class="xml-field"><span class="xml-label">Fecha Emisión</span><span class="xml-value">@(fechaEmisionXmlDate != DateTime.MinValue ? fechaEmisionXmlDate.ToString("dd/MM/yyyy") : (Model.DatosXml?.DatosGenerales.FechaEmision ?? "-"))</span></div>
-                <div class="xml-field"><span class="xml-label">Moneda</span><span class="xml-value">@(Model.DatosXml?.DatosGenerales.Moneda ?? "-")</span></div>
-            </div>
-        </div>
-        <div class="xml-section">
-            <div class="xml-section-title"><i class="bi bi-building"></i> Emisor</div>
-            <div class="xml-data-grid">
-                <div class="xml-field"><span class="xml-label">RUC</span><span class="xml-value mono">@(Model.DatosXml?.Emisor.Ruc ?? "-")</span></div>
-                <div class="xml-field"><span class="xml-label">Razón Social</span><span class="xml-value">@(Model.DatosXml?.Emisor.RazonSocial ?? "-")</span></div>
-            </div>
-        </div>
-        <div class="xml-section">
-            <div class="xml-section-title"><i class="bi bi-person"></i> Cliente</div>
-            <div class="xml-data-grid">
-                <div class="xml-field"><span class="xml-label">RUC/DNI</span><span class="xml-value mono">@(Model.DatosXml?.Cliente.NumeroDocumento ?? "-")</span></div>
-                <div class="xml-field"><span class="xml-label">Razón Social</span><span class="xml-value">@(Model.DatosXml?.Cliente.RazonSocial ?? "-")</span></div>
-            </div>
-        </div>
-        <div class="xml-section">
-            <div class="xml-section-title"><i class="bi bi-calculator"></i> Totales</div>
-            <div class="xml-data-grid">
-                <div class="xml-field"><span class="xml-label">Valor Venta</span><span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.ValorVenta.ToString("N2") ?? "0.00")</span></div>
-                <div class="xml-field">
-                    @if (Model.TipoComprobante == "22")
-                    { <span class="xml-label">Retención</span><span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Retencion.ToString("N2") ?? "0.00")</span> }
-                    else
-                    { <span class="xml-label">IGV</span><span class="xml-value">S/ @(Model.DatosXml?.DesgloseTotales.Igv.ToString("N2") ?? "0.00")</span> }
-                </div>
-            </div>
-            <div class="total-highlight">
-                <span class="xml-label" style="font-size:0.8rem;">IMPORTE TOTAL</span>
-                <span class="total-amount">S/ @(Model.DatosXml?.DesgloseTotales.ImporteTotal.ToString("N2") ?? "0.00")</span>
-            </div>
-        </div>
-        @if (Model.DatosXml?.DetalleItems != null && Model.DatosXml.DetalleItems.Count > 0)
+        @if (!puedeEnviar)
         {
-            <div class="xml-section">
-                <div class="xml-section-title"><i class="bi bi-list-ul"></i> Items (@Model.DatosXml.DetalleItems.Count)</div>
-                @foreach (var item in Model.DatosXml.DetalleItems)
-                {
-                    <div class="item-row">
-                        <div style="font-weight:600;margin-bottom:0.15rem;">@item.Descripcion</div>
-                        <div style="display:flex;justify-content:space-between;color:var(--text-secondary);font-size:0.78rem;">
-                            <span>@item.Cantidad @item.UnidadMedida &times; S/ @item.PrecioUnitario.ToString("N2")</span>
-                            <span style="font-weight:600;color:var(--text-primary);">S/ @item.ValorVenta.ToString("N2")</span>
-                        </div>
-                    </div>
-                }
+            <div class="cmp-block-alert">
+                <i class="bi bi-x-circle-fill"></i>
+                <div>
+                    <strong>No puede enviar esta factura</strong>
+                    <p>Corrija los datos en el Paso 2 o suba el archivo correcto antes de continuar.</p>
+                </div>
             </div>
         }
-        *@
 
     </div>
 </div>

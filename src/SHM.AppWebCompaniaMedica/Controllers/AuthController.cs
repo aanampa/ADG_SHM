@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Services;
 
 namespace SHM.AppWebCompaniaMedica.Controllers;
@@ -12,6 +13,7 @@ public class AuthController : Controller
     private readonly IUsuarioService _usuarioService;
     private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IEmailService _emailService;
+    private readonly ISegAccesoService _segAccesoService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
 
@@ -19,12 +21,14 @@ public class AuthController : Controller
         IUsuarioService usuarioService,
         IEntidadMedicaService entidadMedicaService,
         IEmailService emailService,
+        ISegAccesoService segAccesoService,
         IConfiguration configuration,
         ILogger<AuthController> logger)
     {
         _usuarioService = usuarioService;
         _entidadMedicaService = entidadMedicaService;
         _emailService = emailService;
+        _segAccesoService = segAccesoService;
         _configuration = configuration;
         _logger = logger;
     }
@@ -81,12 +85,14 @@ public class AuthController : Controller
             if (usuario == null)
             {
                 _logger.LogWarning("Intento de login fallido para usuario: {Username}", username);
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, username, ObtenerIp(), ObtenerUserAgent(), null, "Credenciales incorrectas");
                 ViewBag.Error = "Usuario o contraseña incorrectos";
                 return View();
             }
 
             if (usuario.Activo != 1)
             {
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario, "Usuario inactivo");
                 ViewBag.Error = "Usuario inactivo";
                 return View();
             }
@@ -138,6 +144,7 @@ public class AuthController : Controller
                 authProperties);
 
             _logger.LogInformation("Login exitoso para usuario: {Username} (ID: {UserId})", username, usuario.IdUsuario);
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginOk, username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario);
 
             // Redirigir a cambiar clave si es temporal
             if (usuario.FlagPasswordTemporal == 1)
@@ -156,8 +163,11 @@ public class AuthController : Controller
     // GET: Auth/Logout
     public async Task<IActionResult> Logout()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userLogin = User.FindFirstValue(ClaimTypes.Name);
+        var userId    = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userLogin = User.FindFirstValue(ClaimTypes.Name) ?? "";
+
+        if (int.TryParse(userId, out var idUsuario))
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.Logout, userLogin, ObtenerIp(), ObtenerUserAgent(), idUsuario);
 
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
@@ -165,6 +175,17 @@ public class AuthController : Controller
 
         return RedirectToAction("Login");
     }
+
+    private string ObtenerIp()
+    {
+        var forwarded = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwarded))
+            return forwarded.Split(',')[0].Trim();
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
+    }
+
+    private string? ObtenerUserAgent() =>
+        HttpContext.Request.Headers["User-Agent"].FirstOrDefault();
 
     // GET: Auth/AccesoDenegado
     public IActionResult AccesoDenegado()

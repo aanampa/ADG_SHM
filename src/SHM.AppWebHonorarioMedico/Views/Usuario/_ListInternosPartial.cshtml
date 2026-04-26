@@ -18,6 +18,7 @@
                 <th class="align-middle" style="width: 150px;">Perfil de<br/>Aprobación</th>
                 <th class="align-middle" style="width: 60px;">Sedes</th>
                 <th class="align-middle" style="width: 150px;">Última Sede</th>
+                <th class="align-middle" style="width: 130px;">Último Acceso</th>
                 <th class="align-middle" style="width: 80px;">Estado</th>
                 <th class="align-middle" style="width: 170px;">Acciones</th>
             </tr>
@@ -37,6 +38,36 @@
                             <span class="badge badge-info">@item.CantidadSedes</span>
                         </td>
                         <td>@(item.UltimaSede ?? "-")</td>
+                        <td class="text-center">
+                            @if (item.UltimoAcceso.HasValue)
+                            {
+                                var hoy = DateTime.Today;
+                                var diff = (hoy - item.UltimoAcceso.Value.Date).Days;
+                                string color, titulo;
+                                if (diff == 0)
+                                {
+                                    color = "color:#28a745;font-weight:600;";
+                                    titulo = "Hoy";
+                                }
+                                else if (diff <= 7)
+                                {
+                                    color = "color:#007bff;";
+                                    titulo = "Últimos 7 días";
+                                }
+                                else
+                                {
+                                    color = "color:#6c757d;";
+                                    titulo = "Hace más de 7 días";
+                                }
+                                <span style="@color font-size:12px;" title="@titulo">
+                                    @item.UltimoAcceso.Value.ToString("dd/MM/yy HH:mm")
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color:#adb5bd;font-style:italic;font-size:12px;">Sin accesos</span>
+                            }
+                        </td>
                         <td class="text-center">
                             @if (item.Activo == 1)
                             {
@@ -71,7 +102,7 @@
             else
             {
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-4">
+                    <td colspan="10" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No se encontraron usuarios internos</p>
                     </td>

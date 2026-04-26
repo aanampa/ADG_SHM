@@ -94,6 +94,11 @@ public class SubirFacturaViewModel
     // Control de archivo CDR
     public bool RequiereCdr { get; set; } = true;
 
+    // Datos de pago y detraccion
+    public DateTime? FacturaFechaVencimiento { get; set; }
+    public decimal?  MtoDetraccion           { get; set; }
+    public decimal?  PorcDetraccion          { get; set; }
+
     // Bitacora de acciones
     public List<BitacoraItemViewModel> Bitacora { get; set; } = new();
 }
@@ -207,6 +212,10 @@ public class VistaPreviaFacturaViewModel
     public string? CuentaCci { get; set; }
     public string? Moneda { get; set; }
 
+    // Datos de detraccion y pago de la produccion
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
+
     // Rutas temporales de archivos
     public string? PdfTempPath { get; set; }
     public string? XmlTempPath { get; set; }
@@ -224,4 +233,5 @@ public class VistaPreviaFacturaViewModel
     public bool ValidaConcepto { get; set; } = true;
     public bool ValidaRucEmisor { get; set; } = true;
     public bool ValidaRucReceptor { get; set; } = true;
+    public bool ValidaDetraccion { get; set; } = true;
 }

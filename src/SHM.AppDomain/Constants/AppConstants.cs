@@ -19,8 +19,10 @@ public static class AppConstants
     /// <summary>
     /// Constantes relacionadas a la emision de comprobantes de pago de Cias Medicas.
     /// </summary>
-    public static class Facturacion
+    public static class FacturacionConstants
     {
+        public const string DescTipoOperacion = "Operación Sujeta al Sistema de Pago de Obligaciones Tributarias con el Gobierno Central";
+
         public const string FormaPago            = "CREDITO";
         public const int    NroCuotas            = 1;
 
