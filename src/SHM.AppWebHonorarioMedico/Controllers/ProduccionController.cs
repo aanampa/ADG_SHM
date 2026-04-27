@@ -141,6 +141,7 @@ public class ProduccionController : Controller
                     Numero = p.Numero,
                     FechaEmision = p.FechaEmision,
                     FechaLimite = p.FechaLimite,
+                    FacturaFechaVencimiento = p.FacturaFechaVencimiento,
                     Activo = p.Activo
                 }).ToList(),
                 TotalCount = totalCount,
@@ -257,6 +258,29 @@ public class ProduccionController : Controller
             }
             ViewBag.TieneUsuariosExternos = tieneUsuariosExternos;
 
+            // ViewModel para reutilizar el modal de Solicitud Masiva en modo individual
+            var solicitudIndividualVm = new SolicitudMasivaViewModel
+            {
+                EsModoIndividual = true,
+                Items = new List<SolicitudMasivaItemViewModel>
+                {
+                    new SolicitudMasivaItemViewModel
+                    {
+                        GuidRegistro       = produccion.GuidRegistro ?? "",
+                        NumeroProduccion   = produccion.NumeroProduccion,
+                        DesTipoProduccion  = produccion.DesTipoProduccion ?? produccion.TipoProduccion,
+                        RazonSocial        = produccion.RazonSocial,
+                        Periodo            = produccion.Periodo,
+                        MtoTotal           = produccion.MtoTotal,
+                        Estado             = produccion.Estado,
+                        DesEstado          = EstadoDescripcion.Produccion.GetDescripcion(produccion.Estado),
+                        FechaLimite        = produccion.FechaLimite,
+                        Habilitado         = true
+                    }
+                }
+            };
+            ViewBag.SolicitudIndividualVm = solicitudIndividualVm;
+
             return View(produccion);
         }
         catch (Exception ex)
@@ -290,6 +314,9 @@ public class ProduccionController : Controller
                 var resultadoRenotificar = await _produccionService.RenotificarFacturaAsync(solicitud.GuidRegistro, idUsuario);
                 return Json(new { success = resultadoRenotificar, message = resultadoRenotificar ? "Renotificacion enviada correctamente" : "Error al renotificar" });
             }
+
+            if (string.IsNullOrEmpty(solicitud.FechaVencimiento))
+                return Json(new { success = false, message = "La fecha de vencimiento de factura es requerida." });
 
             var resultado = await _produccionService.SolicitarFacturaAsync(solicitud, idUsuario);
 
@@ -334,24 +361,158 @@ public class ProduccionController : Controller
     }
 
     /// <summary>
-    /// Retorna el modal para solicitud masiva de facturas.
-    /// Lista todos los registros en estado FACTURA_PENDIENTE y FACTURA_SOLICITADA,
-    /// validando que cada uno cumpla con las condiciones para ser enviado.
+    /// Retorna el modal de Solicitud de Factura (FACTURA_PENDIENTE).
+    /// Con guidRegistro: filtra a un solo registro (modo individual desde el listado).
+    /// Sin guidRegistro: carga todos los FACTURA_PENDIENTE de la sede.
     ///
     /// <author>ADG Vladimir D</author>
-    /// <created>2026-04-03</created>
+    /// <created>2026-04-26</created>
+    /// <modified>ADG Vladimir D - 2026-04-26 - Soporte modo individual por guidRegistro</modified>
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetModalSolicitudMasiva()
+    public async Task<IActionResult> GetModalSolicitudFactura(string? guidRegistro = null)
     {
         try
         {
-            // Filtrar por sede del usuario logueado (igual que GetList)
-            var idSede = GetCurrentUserIdSede();
+            IEnumerable<ProduccionListaResponseDto> allItems;
 
-            // Una sola query: estados FACTURA_PENDIENTE/FACTURA_SOLICITADA +
-            // validacion (usuarios externos y cuentas bancarias) embebida como subqueries
-            var allItems = await _produccionService.GetListSolicitudMasivaAsync(idSede);
+            if (!string.IsNullOrEmpty(guidRegistro))
+            {
+                var item = await _produccionService.GetSolicitudMasivaByGuidAsync(guidRegistro);
+                allItems = item != null ? new[] { item } : Array.Empty<ProduccionListaResponseDto>();
+            }
+            else
+            {
+                var idSede = GetCurrentUserIdSede();
+                var lista  = await _produccionService.GetListSolicitudMasivaAsync(idSede);
+                allItems   = lista.Where(p => p.Estado == AppDomain.Constants.EstadoDescripcion.Produccion.FacturaPendiente);
+            }
+
+            // Solo FACTURA_PENDIENTE
+            var viewItems = allItems
+                .Where(p => p.Estado == AppDomain.Constants.EstadoDescripcion.Produccion.FacturaPendiente)
+                .Select(item =>
+                {
+                    bool habilitado = true;
+                    string? motivo = null;
+                    if (!item.IdEntidadMedica.HasValue)
+                    { habilitado = false; motivo = "Sin compañía médica asignada"; }
+                    else if (item.NroUsuariosExternos == 0)
+                    { habilitado = false; motivo = "Sin usuarios externos"; }
+                    else if (item.NroCuentasBancarias == 0)
+                    { habilitado = false; motivo = "Sin cuenta bancaria activa"; }
+                    else if (item.NroCuentasBancarias > 1)
+                    { habilitado = false; motivo = $"Tiene {item.NroCuentasBancarias} cuentas bancarias activas"; }
+
+                    return new Models.SolicitudMasivaItemViewModel
+                    {
+                        GuidRegistro        = item.GuidRegistro ?? string.Empty,
+                        NumeroProduccion    = item.NumeroProduccion,
+                        DesTipoProduccion   = item.DesTipoProduccion,
+                        DesTipoMedico       = item.DesTipoMedico,
+                        RazonSocial         = item.RazonSocial,
+                        Periodo             = item.Periodo,
+                        MtoTotal            = item.MtoTotal,
+                        Estado              = item.Estado,
+                        DesEstado           = item.DesEstado,
+                        Habilitado          = habilitado,
+                        MotivoDeshabilitado = motivo,
+                        FechaLimite         = item.FechaLimite,
+                        FechaVencimiento    = item.FacturaFechaVencimiento
+                    };
+                }).ToList();
+
+            ViewBag.GuidPreseleccionado = guidRegistro;
+            return PartialView("_SolicitudFacturaModal", viewItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar modal de solicitud de factura");
+            return StatusCode(500, "Error al cargar el modal");
+        }
+    }
+
+    /// <summary>
+    /// Graba fechas límite y vencimiento en producciones FACTURA_PENDIENTE
+    /// sin cambiar el estado. Corresponde al Paso 1 del flujo de solicitud.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-26</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> GrabarFechasProduccion([FromBody] GrabarFechasProduccionDto dto)
+    {
+        try
+        {
+            if (dto == null || dto.Guids == null || !dto.Guids.Any())
+                return Json(new { success = false, message = "Debe seleccionar al menos un registro" });
+
+            if (string.IsNullOrEmpty(dto.Fecha) || string.IsNullOrEmpty(dto.Hora))
+                return Json(new { success = false, message = "La fecha y hora límite son requeridas" });
+
+            if (string.IsNullOrEmpty(dto.FechaVencimiento))
+                return Json(new { success = false, message = "La fecha de vencimiento es requerida" });
+
+            if (!DateTime.TryParse($"{dto.Fecha}T{dto.Hora}", out var fechaLimite) || fechaLimite <= DateTime.Now)
+                return Json(new { success = false, message = "La fecha y hora límite debe ser mayor a la actual" });
+
+            if (!DateTime.TryParse(dto.FechaVencimiento, out var fechaVencimiento))
+                return Json(new { success = false, message = "La fecha de vencimiento no tiene formato válido" });
+
+            var idUsuario = GetCurrentUserId();
+            int actualizados = 0;
+            int errores = 0;
+
+            foreach (var guid in dto.Guids)
+            {
+                var ok = await _produccionService.GrabarFechasProduccionAsync(guid, fechaLimite, fechaVencimiento, idUsuario);
+                if (ok) actualizados++; else errores++;
+            }
+
+            return Json(new
+            {
+                success = errores == 0,
+                message = errores == 0
+                    ? $"Fechas grabadas en {actualizados} registro(s) correctamente"
+                    : $"Se grabaron {actualizados} registro(s). {errores} no pudieron actualizarse.",
+                actualizados,
+                errores
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al grabar fechas de producción");
+            return Json(new { success = false, message = "Error al procesar la solicitud" });
+        }
+    }
+
+    /// <summary>
+    /// Retorna el modal de solicitud de facturas.
+    /// Sin guidRegistro: modo masivo (todos los registros FACTURA_PENDIENTE / FACTURA_SOLICITADA).
+    /// Con guidRegistro: modo individual para el registro especificado.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-03</created>
+    /// <modified>ADG Vladimir D - 2026-04-25 - Soporte modo individual por guidRegistro</modified>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetModalSolicitudMasiva(string? guidRegistro = null)
+    {
+        try
+        {
+            IEnumerable<ProduccionListaResponseDto> allItems;
+            bool esModoIndividual = !string.IsNullOrEmpty(guidRegistro);
+
+            if (esModoIndividual)
+            {
+                var item = await _produccionService.GetSolicitudMasivaByGuidAsync(guidRegistro!);
+                allItems = item != null ? new[] { item } : Array.Empty<ProduccionListaResponseDto>();
+            }
+            else
+            {
+                var idSede = GetCurrentUserIdSede();
+                allItems = await _produccionService.GetListSolicitudMasivaAsync(idSede);
+            }
 
             var viewItems = allItems.Select(item =>
             {
@@ -392,16 +553,21 @@ public class ProduccionController : Controller
                     DesEstado = item.DesEstado,
                     Habilitado = habilitado,
                     MotivoDeshabilitado = motivo,
-                    FechaLimite = item.FechaLimite
+                    FechaLimite = item.FechaLimite,
+                    FechaVencimiento = item.FacturaFechaVencimiento
                 };
             }).ToList();
 
-            var model = new Models.SolicitudMasivaViewModel { Items = viewItems };
+            var model = new Models.SolicitudMasivaViewModel
+            {
+                Items = viewItems,
+                EsModoIndividual = esModoIndividual
+            };
             return PartialView("_SolicitudMasivaModal", model);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al cargar modal de solicitud masiva");
+            _logger.LogError(ex, "Error al cargar modal de solicitud masiva. Guid: {Guid}", guidRegistro);
             return StatusCode(500, "Error al cargar el modal");
         }
     }
@@ -423,6 +589,9 @@ public class ProduccionController : Controller
             if (string.IsNullOrEmpty(solicitud.Fecha) || string.IsNullOrEmpty(solicitud.Hora))
                 return Json(new { success = false, message = "La fecha y hora límite son requeridas" });
 
+            if (string.IsNullOrEmpty(solicitud.FechaVencimiento))
+                return Json(new { success = false, message = "La fecha de vencimiento de factura es requerida" });
+
             var idUsuario = GetCurrentUserId();
             int enviados = 0;
             int errores = 0;
@@ -434,9 +603,10 @@ public class ProduccionController : Controller
                 {
                     var dto = new AppDomain.DTOs.Produccion.SolicitarFacturaDto
                     {
-                        GuidRegistro = guid,
-                        Fecha = solicitud.Fecha,
-                        Hora = solicitud.Hora
+                        GuidRegistro     = guid,
+                        Fecha            = solicitud.Fecha,
+                        Hora             = solicitud.Hora,
+                        FechaVencimiento = solicitud.FechaVencimiento
                     };
 
                     var resultado = await _produccionService.SolicitarFacturaAsync(dto, idUsuario);
@@ -641,13 +811,14 @@ public class ProduccionController : Controller
             {
                 try
                 {
-                    // Actualizar fecha limite si se proporcionó una nueva
+                    // Actualizar fecha limite y vencimiento si se proporcionaron
                     if (nuevaFechaLimite.HasValue)
                         await _produccionService.SolicitarFacturaAsync(new SolicitarFacturaDto
                         {
-                            GuidRegistro = guid,
-                            Fecha = nuevaFechaLimite.Value.ToString("yyyy-MM-dd"),
-                            Hora  = nuevaFechaLimite.Value.ToString("HH:mm")
+                            GuidRegistro     = guid,
+                            Fecha            = nuevaFechaLimite.Value.ToString("yyyy-MM-dd"),
+                            Hora             = nuevaFechaLimite.Value.ToString("HH:mm"),
+                            FechaVencimiento = solicitud.FechaVencimiento ?? string.Empty
                         }, idUsuario);
 
                     var resultado = await _produccionService.RenotificarFacturaAsync(guid, idUsuario);
@@ -993,6 +1164,183 @@ public class ProduccionController : Controller
         {
             _logger.LogError(ex, "Error al exportar producciones a Excel");
             return BadRequest("Error al generar el reporte");
+        }
+    }
+
+    /// <summary>
+    /// Retorna el modal de ReNotificar Factura (FACTURA_SOLICITADA / FACTURA_DEVUELTA).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-26</created>
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetModalReNotificarFactura()
+    {
+        try
+        {
+            var idSede   = GetCurrentUserIdSede();
+            var lista    = await _produccionService.GetListSolicitudMasivaAsync(idSede);
+            var allItems = lista.Where(p =>
+                p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ||
+                p.Estado == EstadoDescripcion.Produccion.FacturaDevuelta);
+
+            var viewItems = allItems.Select(item =>
+            {
+                bool habilitado = true;
+                string? motivo  = null;
+
+                if (!item.FechaLimite.HasValue)
+                { habilitado = false; motivo = "Sin fecha límite asignada"; }
+                else if (!item.IdEntidadMedica.HasValue)
+                { habilitado = false; motivo = "Sin compañía médica asignada"; }
+                else if (item.NroUsuariosExternos == 0)
+                { habilitado = false; motivo = "Sin usuarios externos"; }
+                else if (item.NroCuentasBancarias == 0)
+                { habilitado = false; motivo = "Sin cuenta bancaria activa"; }
+                else if (item.NroCuentasBancarias > 1)
+                { habilitado = false; motivo = $"Tiene {item.NroCuentasBancarias} cuentas bancarias activas"; }
+
+                return new Models.SolicitudMasivaItemViewModel
+                {
+                    GuidRegistro        = item.GuidRegistro ?? string.Empty,
+                    NumeroProduccion    = item.NumeroProduccion,
+                    DesTipoProduccion   = item.DesTipoProduccion,
+                    RazonSocial         = item.RazonSocial,
+                    Periodo             = item.Periodo,
+                    MtoTotal            = item.MtoTotal,
+                    Estado              = item.Estado,
+                    DesEstado           = item.DesEstado,
+                    Habilitado          = habilitado,
+                    MotivoDeshabilitado = motivo,
+                    FechaLimite         = item.FechaLimite,
+                    FechaVencimiento    = item.FacturaFechaVencimiento
+                };
+            }).ToList();
+
+            return PartialView("_ReNotificarFacturaModal", viewItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar modal de ReNotificar Factura");
+            return StatusCode(500, "Error al cargar el modal");
+        }
+    }
+
+    /// <summary>
+    /// Ejecuta la acción de ReNotificar Factura para una lista de GUIDs.
+    /// Accion "solo": reenvía el correo con las fechas actuales.
+    /// Accion "cambiar": actualiza fecha límite y/o vencimiento, luego envía correo.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-26</created>
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> EjecutarReNotificarFactura([FromBody] ReNotificarModalRequestDto dto)
+    {
+        try
+        {
+            if (dto == null || dto.Guids == null || !dto.Guids.Any())
+                return Json(new { success = false, message = "Debe seleccionar al menos un registro" });
+
+            var idUsuario    = GetCurrentUserId();
+            bool tieneNuevaFL = !string.IsNullOrEmpty(dto.Fecha) && !string.IsNullOrEmpty(dto.Hora);
+            bool tieneNuevaFV = !string.IsNullOrEmpty(dto.FechaVencimiento);
+
+            // Validar fecha limite nueva si se proporcionó
+            if (tieneNuevaFL)
+            {
+                if (!DateTime.TryParse($"{dto.Fecha}T{dto.Hora}", out var fl) || fl <= DateTime.Now)
+                    return Json(new { success = false, message = "La nueva fecha y hora límite debe ser mayor a la fecha y hora actual." });
+            }
+
+            int enviados = 0;
+            int errores  = 0;
+
+            foreach (var guid in dto.Guids)
+            {
+                try
+                {
+                    bool ok;
+
+                    if (dto.Accion == "solo")
+                    {
+                        ok = await _produccionService.RenotificarFacturaAsync(guid, idUsuario);
+                    }
+                    else
+                    {
+                        // Determinar fechas a usar (nueva o la que ya tiene en DB)
+                        string useFecha = dto.Fecha ?? "";
+                        string useHora  = dto.Hora  ?? "";
+                        string useFV    = dto.FechaVencimiento ?? "";
+
+                        if (!tieneNuevaFL || !tieneNuevaFV)
+                        {
+                            var prod = await _produccionService.GetProduccionByGuidAsync(guid);
+                            if (!tieneNuevaFL && prod?.FechaLimite.HasValue == true)
+                            {
+                                useFecha = prod.FechaLimite.Value.ToString("yyyy-MM-dd");
+                                useHora  = prod.FechaLimite.Value.ToString("HH:mm");
+                            }
+                            if (!tieneNuevaFV && prod?.FacturaFechaVencimiento.HasValue == true)
+                                useFV = prod.FacturaFechaVencimiento.Value.ToString("yyyy-MM-dd");
+                        }
+
+                        // SolicitarFacturaAsync: actualiza fechas + estado(→SOLICITADA) + envía correo
+                        ok = await _produccionService.SolicitarFacturaAsync(new SolicitarFacturaDto
+                        {
+                            GuidRegistro     = guid,
+                            Fecha            = useFecha,
+                            Hora             = useHora,
+                            FechaVencimiento = useFV
+                        }, idUsuario);
+                    }
+
+                    if (ok)
+                    {
+                        var produccion = await _produccionService.GetProduccionByGuidAsync(guid);
+                        if (produccion != null)
+                        {
+                            var descripcion = dto.Accion == "solo"
+                                ? "Renotificación de solicitud de factura (sin cambio de fechas)"
+                                : $"ReNotificación con{(tieneNuevaFL ? $" nueva fecha límite: {dto.Fecha} {dto.Hora}" : " fecha límite sin cambio")}" +
+                                  $"{(tieneNuevaFV ? $", nueva F. Vencimiento: {dto.FechaVencimiento}" : ", F. Vencimiento sin cambio")}";
+                            await _bitacoraService.CreateBitacoraAsync(new AppDomain.DTOs.Bitacora.CreateBitacoraDto
+                            {
+                                Entidad     = "SHM_PRODUCCION",
+                                IdEntidad   = produccion.IdProduccion,
+                                Accion      = "RENOTIFICAR_FACTURA",
+                                Descripcion = descripcion,
+                                FechaAccion = DateTime.Now
+                            }, idUsuario);
+                        }
+                        enviados++;
+                    }
+                    else
+                    {
+                        errores++;
+                    }
+                }
+                catch (Exception exItem)
+                {
+                    _logger.LogError(exItem, "Error en ReNotificar para GUID: {Guid}", guid);
+                    errores++;
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                enviados,
+                errores,
+                message = errores == 0
+                    ? $"Se procesaron {enviados} registro(s) correctamente."
+                    : $"Se procesaron {enviados} correctamente y {errores} con error."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en EjecutarReNotificarFactura");
+            return Json(new { success = false, message = "Error al procesar la solicitud" });
         }
     }
 

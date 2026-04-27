@@ -677,7 +677,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var whereClause = "WHERE p.ACTIVO = 1 AND p.ESTADO IN ('FACTURA_PENDIENTE', 'FACTURA_SOLICITADA')";
+        var whereClause = "WHERE p.ACTIVO = 1 AND p.ESTADO IN ('FACTURA_PENDIENTE', 'FACTURA_SOLICITADA', 'FACTURA_DEVUELTA')";
         if (idSede.HasValue && idSede.Value > 0)
             whereClause += " AND p.ID_SEDE = :IdSede";
 
@@ -695,11 +695,12 @@ public class ProduccionRepository : IProduccionRepository
                 tm.DESCRIPCION        AS DesTipoMedico,
                 p.ESTADO              AS Estado,
                 ep.DESCRIPCION        AS DesEstado,
-                p.PERIODO             AS Periodo,
-                p.MTO_TOTAL           AS MtoTotal,
-                p.FECHA_LIMITE        AS FechaLimite,
-                em.RAZON_SOCIAL       AS RazonSocial,
-                em.RUC                AS Ruc,
+                p.PERIODO                    AS Periodo,
+                p.MTO_TOTAL                  AS MtoTotal,
+                p.FECHA_LIMITE               AS FechaLimite,
+                p.FACTURA_FECHA_VENCIMIENTO  AS FacturaFechaVencimiento,
+                em.RAZON_SOCIAL              AS RazonSocial,
+                em.RUC                       AS Ruc,
                 (SELECT COUNT(1) FROM SHM_SEG_USUARIO u
                  WHERE u.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
                    AND u.TIPO_USUARIO = 'E' AND u.ACTIVO = 1) AS NroUsuariosExternos,
@@ -715,6 +716,56 @@ public class ProduccionRepository : IProduccionRepository
             ORDER BY p.CODIGO_PRODUCCION DESC";
 
         return await connection.QueryAsync<ProduccionListaResponseDto>(sql, new { IdSede = idSede });
+    }
+
+    /// <summary>
+    /// Obtiene un único registro para el modal de solicitud individual.
+    /// Incluye conteo de usuarios externos y cuentas bancarias para validación.
+    /// Acepta estados FACTURA_PENDIENTE, FACTURA_SOLICITADA y FACTURA_DEVUELTA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-25</created>
+    /// </summary>
+    public async Task<ProduccionListaResponseDto?> GetSolicitudMasivaByGuidAsync(string guidRegistro)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                p.ID_PRODUCCION       AS IdProduccion,
+                p.GUID_REGISTRO       AS GuidRegistro,
+                p.ID_SEDE             AS IdSede,
+                p.ID_ENTIDAD_MEDICA   AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION   AS CodigoProduccion,
+                p.NUMERO_PRODUCCION   AS NumeroProduccion,
+                p.TIPO_PRODUCCION     AS TipoProduccion,
+                tp.DESCRIPCION        AS DesTipoProduccion,
+                p.TIPO_MEDICO         AS TipoMedico,
+                tm.DESCRIPCION        AS DesTipoMedico,
+                p.ESTADO              AS Estado,
+                ep.DESCRIPCION        AS DesEstado,
+                p.PERIODO                    AS Periodo,
+                p.MTO_TOTAL                  AS MtoTotal,
+                p.FECHA_LIMITE               AS FechaLimite,
+                p.FACTURA_FECHA_VENCIMIENTO  AS FacturaFechaVencimiento,
+                em.RAZON_SOCIAL              AS RazonSocial,
+                em.RUC                       AS Ruc,
+                (SELECT COUNT(1) FROM SHM_SEG_USUARIO u
+                 WHERE u.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND u.TIPO_USUARIO = 'E' AND u.ACTIVO = 1) AS NroUsuariosExternos,
+                (SELECT COUNT(1) FROM SHM_ENTIDAD_CUENTA_BANCO ecb
+                 WHERE ecb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND ecb.ACTIVO = 1)                         AS NroCuentasBancarias
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_ENTIDAD_MEDICA em    ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp  ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm  ON tm.CODIGO_TABLA = 'TIPO_MEDICO'     AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW ep  ON ep.CODIGO_TABLA = 'ESTADO_PROCESO'  AND ep.CODIGO = p.ESTADO
+            WHERE p.GUID_REGISTRO = :GuidRegistro
+              AND p.ACTIVO = 1
+              AND p.ESTADO IN ('FACTURA_PENDIENTE', 'FACTURA_SOLICITADA', 'FACTURA_DEVUELTA')";
+
+        return await connection.QueryFirstOrDefaultAsync<ProduccionListaResponseDto>(sql, new { GuidRegistro = guidRegistro });
     }
 
     /// <summary>
@@ -805,25 +856,27 @@ public class ProduccionRepository : IProduccionRepository
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-21</created>
     /// </summary>
-    public async Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador)
+    public async Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador, DateTime? fechaVencimiento = null)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = @"
             UPDATE SHM_PRODUCCION
-            SET FECHA_LIMITE = :FechaLimite,
-                FACTURA_FECHA_SOLICITUD = SYSDATE,
-                ESTADO = :Estado,
-                ID_MODIFICADOR = :IdModificador,
-                FECHA_MODIFICACION = SYSDATE
+            SET FECHA_LIMITE               = :FechaLimite,
+                FACTURA_FECHA_SOLICITUD    = SYSDATE,
+                FACTURA_FECHA_VENCIMIENTO  = :FechaVencimiento,
+                ESTADO                     = :Estado,
+                ID_MODIFICADOR             = :IdModificador,
+                FECHA_MODIFICACION         = SYSDATE
             WHERE GUID_REGISTRO = :GuidRegistro";
 
         var rowsAffected = await connection.ExecuteAsync(sql, new
         {
-            GuidRegistro = guidRegistro,
-            FechaLimite = fechaLimite,
-            Estado = estado,
-            IdModificador = idModificador
+            GuidRegistro     = guidRegistro,
+            FechaLimite      = fechaLimite,
+            FechaVencimiento = fechaVencimiento,
+            Estado           = estado,
+            IdModificador    = idModificador
         });
 
         return rowsAffected > 0;
@@ -1204,6 +1257,38 @@ public class ProduccionRepository : IProduccionRepository
         {
             GuidRegistro = guidRegistro,
             IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza FECHA_LIMITE y FACTURA_FECHA_VENCIMIENTO sin cambiar el estado.
+    /// Usado en el Paso 1 del flujo de Solicitud de Factura.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-26</created>
+    /// </summary>
+    public async Task<bool> UpdateFechasProduccionAsync(string guidRegistro, DateTime fechaLimite, DateTime fechaVencimiento, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET FECHA_LIMITE              = :FechaLimite,
+                FACTURA_FECHA_VENCIMIENTO = :FechaVencimiento,
+                ID_MODIFICADOR            = :IdModificador,
+                FECHA_MODIFICACION        = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro
+              AND ESTADO = 'FACTURA_PENDIENTE'
+              AND ACTIVO = 1";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro     = guidRegistro,
+            FechaLimite      = fechaLimite,
+            FechaVencimiento = fechaVencimiento,
+            IdModificador    = idModificador
         });
 
         return rowsAffected > 0;

@@ -105,6 +105,13 @@ public interface IProduccionRepository
     Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede);
 
     /// <summary>
+    /// Obtiene un único registro para el modal de solicitud individual,
+    /// incluyendo conteo de usuarios externos y cuentas bancarias.
+    /// Acepta estados FACTURA_PENDIENTE, FACTURA_SOLICITADA y FACTURA_DEVUELTA.
+    /// </summary>
+    Task<ProduccionListaResponseDto?> GetSolicitudMasivaByGuidAsync(string guidRegistro);
+
+    /// <summary>
     /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
     /// </summary>
     /// <param name="guidRegistro">GUID del registro de produccion</param>
@@ -119,7 +126,7 @@ public interface IProduccionRepository
     /// <param name="estado">Nuevo estado de la produccion</param>
     /// <param name="idModificador">ID del usuario que realiza la modificacion</param>
     /// <returns>True si se actualizo correctamente</returns>
-    Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador);
+    Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador, DateTime? fechaVencimiento = null);
 
     /// <summary>
     /// Actualiza solo el estado de una produccion.
@@ -225,6 +232,12 @@ public interface IProduccionRepository
     /// <author>ADG Vladimir D</author>
     /// <created>2026-04-23</created>
     Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador);
+
+    /// <summary>
+    /// Actualiza FECHA_LIMITE y FACTURA_FECHA_VENCIMIENTO de una lista de producciones
+    /// sin cambiar el estado (permanece FACTURA_PENDIENTE). Paso 1 del flujo de solicitud.
+    /// </summary>
+    Task<bool> UpdateFechasProduccionAsync(string guidRegistro, DateTime fechaLimite, DateTime fechaVencimiento, int idModificador);
 
     /// <summary>
     /// Actualiza los campos de estado de pago SAP de una produccion por su ID.

@@ -95,6 +95,16 @@ public interface IProduccionService
     Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede);
 
     /// <summary>
+    /// Obtiene un único registro para el modal de solicitud individual por GUID.
+    /// </summary>
+    Task<ProduccionListaResponseDto?> GetSolicitudMasivaByGuidAsync(string guidRegistro);
+
+    /// <summary>
+    /// Graba fechas límite y vencimiento en producciones FACTURA_PENDIENTE sin cambiar estado.
+    /// </summary>
+    Task<bool> GrabarFechasProduccionAsync(string guidRegistro, DateTime fechaLimite, DateTime fechaVencimiento, int idModificador);
+
+    /// <summary>
     /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
     /// </summary>
     /// <param name="solicitudDto">Datos de la solicitud (GUID, fecha y hora)</param>

@@ -52,6 +52,7 @@ public class ProduccionItemViewModel
         : null;
     public DateTime? FechaEmision { get; set; }
     public DateTime? FechaLimite { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
     public int Activo { get; set; }
 }
 
@@ -70,6 +71,7 @@ public class ProduccionItemViewModel
 public class SolicitudMasivaViewModel
 {
     public List<SolicitudMasivaItemViewModel> Items { get; set; } = new();
+    public bool EsModoIndividual { get; set; }
 }
 
 /// <summary>
@@ -92,6 +94,7 @@ public class SolicitudMasivaItemViewModel
     public bool Habilitado { get; set; }
     public string? MotivoDeshabilitado { get; set; }
     public DateTime? FechaLimite { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
 }
 
 public class ArchivoAdjuntoViewModel

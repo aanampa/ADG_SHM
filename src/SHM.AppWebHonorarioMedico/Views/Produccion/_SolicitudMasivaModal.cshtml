@@ -2,16 +2,18 @@
 @model SHM.AppWebHonorarioMedico.Models.SolicitudMasivaViewModel
 
 @{
-    var habilitados   = Model.Items.Where(i => i.Habilitado).ToList();
+    var habilitados    = Model.Items.Where(i => i.Habilitado).ToList();
     var deshabilitados = Model.Items.Where(i => !i.Habilitado).ToList();
+    var esIndividual   = Model.EsModoIndividual;
+    var itemIndividual = esIndividual ? Model.Items.FirstOrDefault() : null;
 }
 
 <div class="modal fade" id="modalSolicitudMasiva" tabindex="-1" role="dialog" aria-labelledby="modalSolicitudMasivaLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header" style="background-color: #6c757d; color: #fff;">
+            <div class="modal-header" style="background-color: #28a745; color: #fff;">
                 <h5 class="modal-title" id="modalSolicitudMasivaLabel">
-                    <i class="fas fa-paper-plane mr-2"></i>Solicitud Masiva de Facturas
+                    <i class="fas fa-paper-plane mr-2"></i>Solicitud de Factura(s)
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
@@ -41,31 +43,31 @@
                         </div>
                     </div>
 
-                    <!-- ═══════════════════════════════════════
-                         PASO 1 — Filtrar y seleccionar
-                    ════════════════════════════════════════ -->
+                    <!-- ══════════════════════════════════════
+                         PASO 1 — Seleccionar registro(s)
+                    ══════════════════════════════════════ -->
                     <div id="smPaso1">
+
+                        @if (!esIndividual)
+                        {
                         <div class="row mb-2">
                             <div class="col-md-12 d-flex align-items-center">
                                 <span class="font-weight-bold small mr-2" style="white-space:nowrap;">Filtrar por estado:</span>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-secondary" id="smFiltroTodos"
-                                            onclick="smFiltrarEstado('')">
-                                        Todos <span class="badge badge-light ml-1">@Model.Items.Count</span>
-                                    </button>
                                     <button type="button" class="btn btn-outline-secondary" id="smFiltroPendiente"
-                                            onclick="smFiltrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente')">
+                                            onclick="smFiltrarTipo('pendiente')">
                                         Factura Pendiente
                                         <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaPendiente)</span>
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary" id="smFiltroSolicitada"
-                                            onclick="smFiltrarEstado('@EstadoDescripcion.Produccion.FacturaSolicitada')">
-                                        Factura Solicitada
-                                        <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada)</span>
+                                            onclick="smFiltrarTipo('solicitada')">
+                                        Solicitada / Devuelta
+                                        <span class="badge badge-light ml-1">@Model.Items.Count(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || i.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
+                        }
 
                         <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
                             <table class="table table-sm table-bordered mb-0" style="font-size: 13px;">
@@ -81,14 +83,15 @@
                                         <th class="align-middle" style="width: 80px;">Periodo</th>
                                         <th class="align-middle text-right" style="width: 100px;">Total S/.</th>
                                         <th class="align-middle text-center" style="width: 110px;">Estado</th>
-                                        <th class="align-middle text-center" style="width: 130px;">Fecha Límite</th>
+                                        <th class="align-middle text-center" style="width: 110px;">Fecha Límite</th>
+                                        <th class="align-middle text-center" style="width: 110px;">F. Vencimiento</th>
                                         <th class="align-middle" style="width: 160px;">Observación</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var item in Model.Items)
                                     {
-                                        var rowClass  = item.Habilitado ? "" : "table-light text-muted";
+                                        var rowClass   = item.Habilitado ? "" : "table-light text-muted";
                                         var badgeClass = EstadoDescripcion.Produccion.GetBadgeClass(item.Estado);
                                         <tr class="sm-row @rowClass" data-estado="@item.Estado">
                                             <td class="text-center">
@@ -118,10 +121,14 @@
                                                     <span>@item.FechaLimite.Value.ToString("dd/MM/yyyy")</span>
                                                     <br /><span class="text-muted">@item.FechaLimite.Value.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</span>
                                                 }
-                                                else
+                                                else { <span class="text-muted">—</span> }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (item.FechaVencimiento.HasValue)
                                                 {
-                                                    <span class="text-muted">—</span>
+                                                    <span>@item.FechaVencimiento.Value.ToString("dd/MM/yyyy")</span>
                                                 }
+                                                else { <span class="text-muted">—</span> }
                                             </td>
                                             <td>
                                                 @if (!item.Habilitado)
@@ -145,72 +152,55 @@
                         </div>
                     </div>
 
-                    <!-- ═══════════════════════════════════════
-                         PASO 2 — Fecha y confirmar
-                    ════════════════════════════════════════ -->
+                    <!-- ══════════════════════════════════════
+                         PASO 2 — Acción y fechas
+                    ══════════════════════════════════════ -->
                     <div id="smPaso2" style="display:none;">
 
                         <!-- Resumen de selección -->
-                        <div id="smResumenSeleccion" class="mb-3 p-2 rounded" style="background:#f8f9fa; border:1px solid #dee2e6; font-size:13px;"></div>
+                        <div id="smResumenSeleccion" class="mb-2 p-2 rounded" style="background:#f8f9fa; border:1px solid #dee2e6; font-size:13px;"></div>
 
-                        <!-- VARIANTE A: fecha obligatoria (hay pendientes) -->
-                        <div id="smFechaObligatoria" style="display:none;">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <label class="small font-weight-bold">Fecha Límite <span class="text-danger">*</span></label>
-                                    <input type="date" id="smFechaObl" class="form-control form-control-sm" />
+                        <!-- VARIANTE B: Solicitadas/Devueltas — 2 opciones de acción -->
+                        <div id="smAccionSolicitada" style="display:none;">
+                            <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
+                                <div class="small font-weight-bold mb-2 text-secondary">
+                                    <i class="fas fa-tasks mr-1"></i>Acción a realizar
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="small font-weight-bold">Hora Límite <span class="text-danger">*</span></label>
-                                    <select id="smHoraObl" class="form-control form-control-sm">
-                                        <option value="">-- Hora --</option>
-                                        @foreach (var h in Enumerable.Range(8, 15))
-                                        {
-                                            foreach (var m in new[] { 0, 15, 30, 45 })
-                                            {
-                                                var val = $"{h:D2}:{m:D2}";
-                                                <option value="@val">@val</option>
-                                            }
-                                        }
-                                    </select>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="smAccion"
+                                           id="smRadioSoloRenotificar" value="renotificar" checked
+                                           onchange="smToggleAccionSolicitada()" />
+                                    <label class="form-check-label" for="smRadioSoloRenotificar">
+                                        <strong>Solo Renotificar</strong>
+                                        <small class="text-muted d-block">Reenvía el correo de solicitud sin cambiar fechas</small>
+                                    </label>
                                 </div>
-                                <div class="col-md-7 d-flex align-items-end">
-                                    <small class="text-muted">
-                                        <i class="fas fa-info-circle mr-1"></i>Se aplicará a todos los registros seleccionados.
-                                    </small>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="smAccion"
+                                           id="smRadioCambiarFecha" value="cambiar"
+                                           onchange="smToggleAccionSolicitada()" />
+                                    <label class="form-check-label" for="smRadioCambiarFecha">
+                                        <strong>Cambiar Fecha Límite y Renotificar</strong>
+                                        <small class="text-muted d-block">Actualiza la fecha límite, la fecha de vencimiento y reenvía el correo</small>
+                                    </label>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- VARIANTE B: fecha opcional con radio (solo solicitadas) -->
-                        <div id="smFechaOpcional" style="display:none;">
-                            <div class="mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="smOpcionFecha"
-                                           id="smRadioMantener" value="mantener" checked
-                                           onchange="smToggleNuevaFecha()" />
-                                    <label class="form-check-label small" for="smRadioMantener">
-                                        Mantener la fecha límite registrada de cada registro
-                                    </label>
+                        <!-- VARIANTE A: Pendientes / Solicitadas opción "cambiar" — Fecha Límite obligatoria -->
+                        <div id="smFechaObligatoria" style="display:none;">
+                            <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
+                                <div class="small font-weight-bold mb-2 text-secondary">
+                                    <i class="fas fa-clock mr-1"></i>Plazo de entrega
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="smOpcionFecha"
-                                           id="smRadioNueva" value="nueva"
-                                           onchange="smToggleNuevaFecha()" />
-                                    <label class="form-check-label small" for="smRadioNueva">
-                                        Ingresar nueva fecha límite
-                                    </label>
-                                </div>
-                            </div>
-                            <div id="smNuevaFechaFields" style="display:none;">
                                 <div class="row">
                                     <div class="col-md-3">
-                                        <label class="small font-weight-bold">Nueva Fecha Límite <span class="text-danger">*</span></label>
-                                        <input type="date" id="smFechaOpc" class="form-control form-control-sm" />
+                                        <label class="small font-weight-bold">Fecha Límite <span class="text-danger">*</span></label>
+                                        <input type="date" id="smFechaObl" class="form-control form-control-sm" />
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="small font-weight-bold">Nueva Hora <span class="text-danger">*</span></label>
-                                        <select id="smHoraOpc" class="form-control form-control-sm">
+                                        <label class="small font-weight-bold">Hora Límite <span class="text-danger">*</span></label>
+                                        <select id="smHoraObl" class="form-control form-control-sm">
                                             <option value="">-- Hora --</option>
                                             @foreach (var h in Enumerable.Range(8, 15))
                                             {
@@ -222,11 +212,36 @@
                                             }
                                         </select>
                                     </div>
+                                    @if (!esIndividual)
+                                    {
                                     <div class="col-md-7 d-flex align-items-end">
+                                        <small class="text-muted"><i class="fas fa-info-circle mr-1"></i>Se aplicará a todos los registros seleccionados.</small>
+                                    </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fecha Vencimiento Factura (visible en Pendientes y en Solicitadas opción "cambiar") -->
+                        <div id="smFechaVencimientoSection" style="display:none;">
+                            <div class="border rounded p-2" style="background:#fff;">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="small font-weight-bold">
+                                            Fecha Vencimiento Factura <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" id="smFechaVencimiento" class="form-control form-control-sm" />
+                                        <small class="text-muted">Dato a consignar en la factura emitida.</small>
+                                    </div>
+                                    @if (!esIndividual)
+                                    {
+                                    <div class="col-md-8 d-flex align-items-center">
                                         <small class="text-muted">
-                                            <i class="fas fa-info-circle mr-1"></i>Se aplicará a todos los registros seleccionados.
+                                            <i class="fas fa-info-circle mr-1 text-info"></i>
+                                            Se aplicará la misma fecha a todos los registros seleccionados.
                                         </small>
                                     </div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -237,7 +252,6 @@
 
             @if (Model.Items.Any())
             {
-                <!-- display:block evita que Bootstrap flex del modal-footer anule los display:none internos -->
                 <div class="modal-footer py-2" style="display:block;">
                     <div id="smFooterPaso1" style="display:flex; justify-content:space-between; align-items:center;">
                         <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
@@ -264,8 +278,25 @@
 </div>
 
 <script>
+var smEsModoIndividual    = @(esIndividual ? "true" : "false");
+var smGuidIndividual      = '@(itemIndividual?.GuidRegistro ?? "")';
+var smEstadoIndividual    = '@(itemIndividual?.Estado ?? "")';
+var smNumeroIndividual    = '@(itemIndividual?.NumeroProduccion ?? "")';
+var smCiaIndividual       = '@(itemIndividual?.RazonSocial ?? "")';
+var smMtoIndividual       = '@(itemIndividual?.MtoTotal?.ToString("N2") ?? "")';
+var smDesEstadoIndividual = '@(itemIndividual?.DesEstado ?? "")';
+var smBadgeIndividual     = '@(itemIndividual != null ? EstadoDescripcion.Produccion.GetBadgeClass(itemIndividual.Estado) : "")';
+
+var SM_ESTADO_PENDIENTE  = '@EstadoDescripcion.Produccion.FacturaPendiente';
+var SM_ESTADO_SOLICITADA = '@EstadoDescripcion.Produccion.FacturaSolicitada';
+var SM_ESTADO_DEVUELTA   = '@EstadoDescripcion.Produccion.FacturaDevuelta';
+
+var smFiltroActivo = 'pendiente'; // 'pendiente' | 'solicitada'
+
 (function () {
+    var modal  = document.getElementById('modalSolicitudMasiva');
     var chkAll = document.getElementById('smChkSelectAll');
+
     if (chkAll) {
         chkAll.addEventListener('change', function () {
             document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item')
@@ -274,7 +305,7 @@
         });
     }
 
-    document.getElementById('modalSolicitudMasiva').addEventListener('change', function (e) {
+    modal.addEventListener('change', function (e) {
         if (e.target.classList.contains('sm-chk-item')) {
             smActualizarContador();
             var visibles = document.querySelectorAll('.sm-row:not([style*="display: none"]) .sm-chk-item');
@@ -283,31 +314,75 @@
         }
     });
 
-    $('#modalSolicitudMasiva').modal('show');
-
-    // Inicio: filtro Factura Pendiente por defecto
-    smFiltrarEstado('@EstadoDescripcion.Produccion.FacturaPendiente');
-})();
-
-// ─── Paso 1 ───────────────────────────────────────────────────────────────────
-
-function smFiltrarEstado(estado) {
-    var PENDIENTE  = '@EstadoDescripcion.Produccion.FacturaPendiente';
-    var SOLICITADA = '@EstadoDescripcion.Produccion.FacturaSolicitada';
-    var mapa = { '': 'smFiltroTodos' };
-    mapa[PENDIENTE]  = 'smFiltroPendiente';
-    mapa[SOLICITADA] = 'smFiltroSolicitada';
-
-    Object.keys(mapa).forEach(function (e) {
-        var btn = document.getElementById(mapa[e]);
-        var activo = (estado === e);
-        btn.classList.toggle('active',                activo);
-        btn.classList.toggle('btn-secondary',         activo);
-        btn.classList.toggle('btn-outline-secondary', !activo);
+    // Re-inicializar cada vez que se abre (para el caso Detalle con botón)
+    modal.addEventListener('show.bs.modal', function () {
+        smResetPaso1();
     });
 
+    // Para Index (inyección AJAX): el script se ejecuta después de cargar la página,
+    // aplicar el reset inmediatamente y luego mostrar el modal
+    if (document.readyState !== 'loading') {
+        smResetPaso1();
+        $('#modalSolicitudMasiva').modal('show');
+    }
+})();
+
+// ─── Reset al Paso 1 ─────────────────────────────────────────────────────────
+
+function smResetPaso1() {
+    document.getElementById('smPaso1').style.display       = '';
+    document.getElementById('smPaso2').style.display       = 'none';
+    document.getElementById('smFooterPaso1').style.display = 'flex';
+    document.getElementById('smFooterPaso2').style.display = 'none';
+
+    var c1 = document.getElementById('smStepCircle1');
+    var c2 = document.getElementById('smStepCircle2');
+    if (c1) { c1.style.background = '#007bff'; c1.style.color = '#fff'; }
+    if (c2) { c2.style.background = '#dee2e6'; c2.style.color = '#6c757d'; }
+    var l1 = document.getElementById('smStepLabel1');
+    var l2 = document.getElementById('smStepLabel2');
+    if (l1) l1.className = 'mt-1 font-weight-bold text-primary small';
+    if (l2) l2.className = 'mt-1 text-muted small';
+
+    if (smEsModoIndividual) {
+        smFiltroActivo = (smEstadoIndividual === SM_ESTADO_PENDIENTE) ? 'pendiente' : 'solicitada';
+        var chk = document.querySelector('.sm-chk-item[data-guid="' + smGuidIndividual + '"]');
+        if (chk) { chk.checked = true; smActualizarContador(); }
+    } else {
+        smFiltrarTipo('pendiente');
+    }
+
+    // Limpiar campos Paso 2
+    document.getElementById('smFechaObl').value       = '';
+    document.getElementById('smHoraObl').value        = '';
+    document.getElementById('smFechaVencimiento').value = '';
+}
+
+// ─── Paso 1: Filtros ──────────────────────────────────────────────────────────
+
+function smFiltrarTipo(tipo) {
+    smFiltroActivo = tipo;
+
+    var btnPend = document.getElementById('smFiltroPendiente');
+    var btnSoli = document.getElementById('smFiltroSolicitada');
+
+    if (btnPend) {
+        btnPend.classList.remove('active', 'btn-secondary', 'btn-outline-secondary');
+        btnPend.classList.add(tipo === 'pendiente' ? 'active' : 'btn-outline-secondary');
+        if (tipo === 'pendiente') btnPend.classList.add('btn-secondary');
+    }
+    if (btnSoli) {
+        btnSoli.classList.remove('active', 'btn-secondary', 'btn-outline-secondary');
+        btnSoli.classList.add(tipo === 'solicitada' ? 'active' : 'btn-outline-secondary');
+        if (tipo === 'solicitada') btnSoli.classList.add('btn-secondary');
+    }
+
     document.querySelectorAll('.sm-row').forEach(function (row) {
-        row.style.display = (estado === '' || row.dataset.estado === estado) ? '' : 'none';
+        var est = row.dataset.estado;
+        var visible = tipo === 'pendiente'
+            ? est === SM_ESTADO_PENDIENTE
+            : est === SM_ESTADO_SOLICITADA || est === SM_ESTADO_DEVUELTA;
+        row.style.display = visible ? '' : 'none';
     });
 
     document.querySelectorAll('.sm-chk-item').forEach(function (cb) { cb.checked = false; });
@@ -325,58 +400,48 @@ function smActualizarContador() {
 
 // ─── Transiciones entre pasos ─────────────────────────────────────────────────
 
-function smGetSeleccion() {
-    var PENDIENTE  = '@EstadoDescripcion.Produccion.FacturaPendiente';
-    var SOLICITADA = '@EstadoDescripcion.Produccion.FacturaSolicitada';
-    var checked    = Array.from(document.querySelectorAll('.sm-chk-item:checked'));
-    return {
-        pendientes:  checked.filter(function (cb) { return cb.dataset.estado === PENDIENTE;  }).map(function (cb) { return cb.dataset.guid; }),
-        solicitadas: checked.filter(function (cb) { return cb.dataset.estado === SOLICITADA; }).map(function (cb) { return cb.dataset.guid; }),
-        total: checked.length
-    };
+function smGetGuids() {
+    if (smEsModoIndividual) return [smGuidIndividual];
+    return Array.from(document.querySelectorAll('.sm-chk-item:checked')).map(function (cb) { return cb.dataset.guid; });
 }
 
 function smIrPaso2() {
-    var sel = smGetSeleccion();
-    if (sel.total === 0) return;
-
-    var hayPendientes  = sel.pendientes.length > 0;
-    var haySolicitadas = sel.solicitadas.length > 0;
+    var guids = smGetGuids();
+    if (guids.length === 0) return;
 
     // Resumen
     var html = '';
-    if (hayPendientes)  html += '<div><i class="fas fa-file-invoice text-warning mr-1"></i><strong>' + sel.pendientes.length  + '</strong> factura(s) pendiente(s) &mdash; se enviará la solicitud de factura</div>';
-    if (haySolicitadas) html += '<div><i class="fas fa-bell text-info mr-1"></i><strong>'             + sel.solicitadas.length + '</strong> factura(s) solicitada(s) &mdash; se renotificará el correo</div>';
-    if (hayPendientes && haySolicitadas) {
-        html += '<div class="mt-1"><small class="text-info"><i class="fas fa-info-circle mr-1"></i>La fecha límite indicada se aplicará a todos los registros seleccionados.</small></div>';
+    if (smEsModoIndividual) {
+        html = '<div><i class="fas fa-file-invoice mr-1 text-primary"></i>' +
+               '<strong>' + smNumeroIndividual + '</strong> &mdash; ' + smCiaIndividual +
+               ' &mdash; S/. ' + smMtoIndividual +
+               ' &mdash; <span class="badge ' + smBadgeIndividual + '">' + smDesEstadoIndividual + '</span></div>';
+    } else {
+        var tipo = smFiltroActivo === 'pendiente' ? 'pendiente(s)' : 'solicitada(s) / devuelta(s)';
+        html = '<div><i class="fas fa-check-square text-success mr-1"></i>' +
+               '<strong>' + guids.length + '</strong> registro(s) ' + tipo + ' seleccionado(s)</div>';
     }
     document.getElementById('smResumenSeleccion').innerHTML = html;
 
-    // Mostrar variante de fecha correcta y limpiar
-    if (hayPendientes) {
-        // Fecha obligatoria (pendientes o mezcla)
-        document.getElementById('smFechaObligatoria').style.display = '';
-        document.getElementById('smFechaOpcional').style.display    = 'none';
-        document.getElementById('smFechaObl').value = '';
-        document.getElementById('smHoraObl').value  = '';
+    // Mostrar variante correcta y limpiar
+    if (smFiltroActivo === 'pendiente') {
+        document.getElementById('smFechaObligatoria').style.display    = '';
+        document.getElementById('smFechaVencimientoSection').style.display = '';
+        document.getElementById('smAccionSolicitada').style.display    = 'none';
+        document.getElementById('smFechaObl').value        = '';
+        document.getElementById('smHoraObl').value         = '';
+        document.getElementById('smFechaVencimiento').value = '';
+        document.getElementById('smBtnEjecutarLabel').textContent =
+            smEsModoIndividual ? 'Solicitar Factura' : 'Solicitar Seleccionados';
     } else {
-        // Solo solicitadas — fecha opcional con radio
-        document.getElementById('smFechaObligatoria').style.display = 'none';
-        document.getElementById('smFechaOpcional').style.display    = '';
-        document.getElementById('smRadioMantener').checked = true;
-        document.getElementById('smNuevaFechaFields').style.display = 'none';
-        document.getElementById('smFechaOpc').value = '';
-        document.getElementById('smHoraOpc').value  = '';
+        document.getElementById('smFechaObligatoria').style.display    = 'none';
+        document.getElementById('smFechaVencimientoSection').style.display = 'none';
+        document.getElementById('smAccionSolicitada').style.display    = '';
+        document.getElementById('smRadioSoloRenotificar').checked = true;
+        smToggleAccionSolicitada();
     }
 
-    // Etiqueta botón Ejecutar
-    var label;
-    if (hayPendientes && !haySolicitadas)      label = 'Solicitar Seleccionados';
-    else if (!hayPendientes && haySolicitadas) label = 'Renotificar Seleccionados';
-    else                                        label = 'Solicitar y Renotificar';
-    document.getElementById('smBtnEjecutarLabel').textContent = label;
-
-    // Indicador: paso 1 completado (verde), paso 2 activo (azul)
+    // Indicadores paso
     document.getElementById('smStepCircle1').style.background = '#28a745';
     document.getElementById('smStepCircle1').style.color      = '#fff';
     document.getElementById('smStepLabel1').className = 'mt-1 text-success small';
@@ -404,13 +469,16 @@ function smIrPaso1() {
     document.getElementById('smFooterPaso1').style.display = 'flex';
 }
 
-function smToggleNuevaFecha() {
-    var nueva = document.getElementById('smRadioNueva').checked;
-    document.getElementById('smNuevaFechaFields').style.display = nueva ? '' : 'none';
-    if (!nueva) {
-        document.getElementById('smFechaOpc').value = '';
-        document.getElementById('smHoraOpc').value  = '';
+function smToggleAccionSolicitada() {
+    var esCambiar = document.getElementById('smRadioCambiarFecha').checked;
+    document.getElementById('smFechaObligatoria').style.display       = esCambiar ? '' : 'none';
+    document.getElementById('smFechaVencimientoSection').style.display = esCambiar ? '' : 'none';
+    if (esCambiar) {
+        document.getElementById('smFechaObl').value        = '';
+        document.getElementById('smHoraObl').value         = '';
+        document.getElementById('smFechaVencimiento').value = '';
     }
+    document.getElementById('smBtnEjecutarLabel').textContent = esCambiar ? 'Cambiar y Renotificar' : 'Renotificar';
 }
 
 // ─── Paso 2: Ejecutar ─────────────────────────────────────────────────────────
@@ -421,115 +489,138 @@ function smFormatearHoraAmPm(hora) {
     return String(h12).padStart(2, '0') + ':' + m + ' ' + sfx;
 }
 
+function smMostrarErrores(errores) {
+    Swal.fire({
+        icon: 'warning', title: 'Atención',
+        html: '<ul style="text-align:left;">' + errores.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul>',
+        confirmButtonColor: '#f26522'
+    });
+}
+
 function smEjecutar() {
-    var sel = smGetSeleccion();
-    var hayPendientes  = sel.pendientes.length > 0;
-    var haySolicitadas = sel.solicitadas.length > 0;
+    var guids = smGetGuids();
+    if (guids.length === 0) return;
 
-    // Obtener fecha/hora según variante activa
-    var fecha = '', hora = '';
-    if (hayPendientes) {
-        fecha = document.getElementById('smFechaObl').value;
-        hora  = document.getElementById('smHoraObl').value;
-    } else {
-        var usaNueva = document.getElementById('smRadioNueva').checked;
-        if (usaNueva) {
-            fecha = document.getElementById('smFechaOpc').value;
-            hora  = document.getElementById('smHoraOpc').value;
-        }
-    }
+    var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
 
-    // Validaciones
-    var errores = [];
-    if (hayPendientes) {
+    if (smFiltroActivo === 'pendiente') {
+        // ── Solicitar factura(s) pendiente(s) ──
+        var fecha            = document.getElementById('smFechaObl').value;
+        var hora             = document.getElementById('smHoraObl').value;
+        var fechaVencimiento = document.getElementById('smFechaVencimiento').value;
+
+        var errores = [];
         if (!fecha) errores.push('La fecha límite es requerida');
         if (!hora)  errores.push('La hora límite es requerida');
-    } else if (document.getElementById('smRadioNueva').checked) {
-        if (!fecha) errores.push('La nueva fecha límite es requerida');
-        if (!hora)  errores.push('La nueva hora límite es requerida');
-    }
-    if (fecha && hora) {
-        if (new Date(fecha + 'T' + hora) <= new Date())
+        if (fecha && hora && new Date(fecha + 'T' + hora) <= new Date())
             errores.push('La fecha y hora límite debe ser mayor a la actual');
-    }
+        if (!fechaVencimiento) errores.push('La fecha de vencimiento de factura es requerida');
+        if (errores.length > 0) { smMostrarErrores(errores); return; }
 
-    if (errores.length > 0) {
+        var confirmHtml = '<div><i class="fas fa-file-invoice text-warning mr-1"></i>Solicitar factura a <strong>' + guids.length + '</strong> registro(s)</div>' +
+                          '<div class="mt-1"><small>Fecha límite: <strong>' + fecha.split('-').reverse().join('/') + ' ' + smFormatearHoraAmPm(hora) + '</strong></small></div>';
+
         Swal.fire({
-            icon: 'warning', title: 'Atención',
-            html: '<ul style="text-align:left;">' + errores.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul>',
-            confirmButtonColor: '#f26522'
-        });
-        return;
-    }
+            icon: 'question', title: 'Confirmar operación', html: confirmHtml,
+            showCancelButton: true,
+            confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check"></i> Confirmar', cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            smMostrarProcesando();
 
-    // Confirmación
-    var confirmHtml = '';
-    if (hayPendientes)  confirmHtml += '<div><i class="fas fa-file-invoice text-warning mr-1"></i>Solicitar factura a <strong>' + sel.pendientes.length  + '</strong> registro(s) pendiente(s)</div>';
-    if (haySolicitadas) confirmHtml += '<div><i class="fas fa-bell text-info mr-1"></i>Renotificar a <strong>'                  + sel.solicitadas.length + '</strong> registro(s) solicitado(s)</div>';
-    if (fecha && hora) {
-        confirmHtml += '<div class="mt-1"><small>Fecha límite: <strong>' + fecha.split('-').reverse().join('/') + ' ' + smFormatearHoraAmPm(hora) + '</strong></small></div>';
+            fetch('@Url.Action("SolicitarFacturaMasivo", "Produccion")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ guids: guids, fecha: fecha, hora: hora, fechaVencimiento: fechaVencimiento })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { smMostrarResultado(d); })
+            .catch(function ()  { smMostrarResultado({ success: false, message: 'Error al procesar la solicitud.' }); });
+        });
+
     } else {
-        confirmHtml += '<div class="mt-1"><small class="text-muted">Se mantendrá la fecha límite actual de cada registro</small></div>';
-    }
+        // ── Renotificar solicitadas / devueltas ──
+        var esCambiar = document.getElementById('smRadioCambiarFecha').checked;
 
-    Swal.fire({
-        icon: 'question', title: 'Confirmar operación',
-        html: confirmHtml,
-        showCancelButton: true,
-        confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fas fa-check"></i> Confirmar',
-        cancelButtonText: 'Cancelar'
-    }).then(function (result) {
-        if (!result.isConfirmed) return;
+        if (esCambiar) {
+            var fecha            = document.getElementById('smFechaObl').value;
+            var hora             = document.getElementById('smHoraObl').value;
+            var fechaVencimiento = document.getElementById('smFechaVencimiento').value;
 
-        Swal.fire({
-            title: 'Procesando...', text: 'Por favor espere.',
-            allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false,
-            didOpen: function () { Swal.showLoading(); }
-        });
+            var errores = [];
+            if (!fecha) errores.push('La fecha límite es requerida');
+            if (!hora)  errores.push('La hora límite es requerida');
+            if (fecha && hora && new Date(fecha + 'T' + hora) <= new Date())
+                errores.push('La fecha y hora límite debe ser mayor a la actual');
+            if (!fechaVencimiento) errores.push('La fecha de vencimiento de factura es requerida');
+            if (errores.length > 0) { smMostrarErrores(errores); return; }
 
-        var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
-        var promesas = [];
-        var resultados = [];
+            var confirmHtml = '<div><i class="fas fa-bell text-info mr-1"></i>Cambiar fecha límite y renotificar <strong>' + guids.length + '</strong> registro(s)</div>' +
+                              '<div class="mt-1"><small>Nueva fecha límite: <strong>' + fecha.split('-').reverse().join('/') + ' ' + smFormatearHoraAmPm(hora) + '</strong></small></div>';
 
-        if (sel.pendientes.length > 0) {
-            promesas.push(
-                fetch('@Url.Action("SolicitarFacturaMasivo", "Produccion")', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-                    body: JSON.stringify({ guids: sel.pendientes, fecha: fecha, hora: hora })
-                })
-                .then(function (r) { return r.json(); })
-                .then(function (d) { resultados.push(d); })
-                .catch(function ()  { resultados.push({ success: false, message: 'Error al solicitar facturas pendientes.', errores: sel.pendientes.length }); })
-            );
-        }
+            Swal.fire({
+                icon: 'question', title: 'Confirmar operación', html: confirmHtml,
+                showCancelButton: true,
+                confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check"></i> Confirmar', cancelButtonText: 'Cancelar'
+            }).then(function (result) {
+                if (!result.isConfirmed) return;
+                smMostrarProcesando();
 
-        if (sel.solicitadas.length > 0) {
-            promesas.push(
                 fetch('@Url.Action("RenotificarFacturaMasivo", "Produccion")', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-                    body: JSON.stringify({ guids: sel.solicitadas, fecha: fecha || null, hora: hora || null })
+                    body: JSON.stringify({ guids: guids, fecha: fecha, hora: hora, fechaVencimiento: fechaVencimiento })
                 })
                 .then(function (r) { return r.json(); })
-                .then(function (d) { resultados.push(d); })
-                .catch(function ()  { resultados.push({ success: false, message: 'Error al renotificar facturas solicitadas.', errores: sel.solicitadas.length }); })
-            );
-        }
+                .then(function (d) { smMostrarResultado(d); })
+                .catch(function ()  { smMostrarResultado({ success: false, message: 'Error al procesar.' }); });
+            });
 
-        Promise.all(promesas).then(function () {
-            Swal.close();
-            var totalErrores = resultados.reduce(function (s, d) { return s + (d.errores || 0); }, 0);
-            var mensajes     = resultados.map(function (d) { return d.message; }).join(' | ');
-            $('#modalSolicitudMasiva').modal('hide');
+        } else {
+            // Solo renotificar
+            var confirmHtml = '<div><i class="fas fa-bell text-info mr-1"></i>Renotificar <strong>' + guids.length + '</strong> registro(s) sin cambiar fechas</div>';
+
             Swal.fire({
-                icon: totalErrores > 0 ? 'warning' : 'success',
-                title: 'Proceso completado',
-                text: mensajes,
-                confirmButtonColor: '#28a745'
-            }).then(function () { refreshList(); });
-        });
+                icon: 'question', title: 'Confirmar operación', html: confirmHtml,
+                showCancelButton: true,
+                confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check"></i> Confirmar', cancelButtonText: 'Cancelar'
+            }).then(function (result) {
+                if (!result.isConfirmed) return;
+                smMostrarProcesando();
+
+                fetch('@Url.Action("RenotificarFacturaMasivo", "Produccion")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ guids: guids })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { smMostrarResultado(d); })
+                .catch(function ()  { smMostrarResultado({ success: false, message: 'Error al procesar.' }); });
+            });
+        }
+    }
+}
+
+function smMostrarProcesando() {
+    Swal.fire({
+        title: 'Procesando...', text: 'Por favor espere.',
+        allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false,
+        didOpen: function () { Swal.showLoading(); }
     });
+}
+
+function smMostrarResultado(d) {
+    Swal.close();
+    var totalErrores = d.errores || (d.success ? 0 : 1);
+    $('#modalSolicitudMasiva').modal('hide');
+    Swal.fire({
+        icon: totalErrores > 0 ? 'warning' : 'success',
+        title: 'Proceso completado',
+        text: d.message,
+        confirmButtonColor: '#28a745'
+    }).then(function () { refreshList(); });
 }
 </script>

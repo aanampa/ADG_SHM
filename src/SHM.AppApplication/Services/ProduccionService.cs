@@ -313,6 +313,16 @@ public class ProduccionService : IProduccionService
         return await _produccionRepository.GetListSolicitudMasivaAsync(idSede);
     }
 
+    public async Task<ProduccionListaResponseDto?> GetSolicitudMasivaByGuidAsync(string guidRegistro)
+    {
+        return await _produccionRepository.GetSolicitudMasivaByGuidAsync(guidRegistro);
+    }
+
+    public async Task<bool> GrabarFechasProduccionAsync(string guidRegistro, DateTime fechaLimite, DateTime fechaVencimiento, int idModificador)
+    {
+        return await _produccionRepository.UpdateFechasProduccionAsync(guidRegistro, fechaLimite, fechaVencimiento, idModificador);
+    }
+
     /// <summary>
     /// Solicita factura actualizando la fecha limite y cambiando el estado a FACTURA_SOLICITADA.
     /// Envia notificacion por correo a los usuarios de la Cia Medica asociada.
@@ -335,11 +345,19 @@ public class ProduccionService : IProduccionService
 
         const string nuevoEstado = EstadoDescripcion.Produccion.FacturaSolicitada;
 
+        DateTime? fechaVencimiento = null;
+        if (!string.IsNullOrEmpty(solicitudDto.FechaVencimiento) &&
+            DateTime.TryParse(solicitudDto.FechaVencimiento, out var fv))
+        {
+            fechaVencimiento = fv;
+        }
+
         var resultado = await _produccionRepository.UpdateFechaLimiteEstadoAsync(
             solicitudDto.GuidRegistro,
             fechaLimite,
             nuevoEstado,
-            idModificador);
+            idModificador,
+            fechaVencimiento);
 
         // Enviar notificacion por correo a la Cia Medica
         if (resultado)
