@@ -25,6 +25,7 @@ public class UsuarioInternoItemViewModel
     public string? PerfilAprobacion { get; set; }
     public int CantidadSedes { get; set; }
     public string? UltimaSede { get; set; }
+    public DateTime? UltimoAcceso { get; set; }
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

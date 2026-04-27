@@ -23,6 +23,7 @@ public class UsuarioExternoItemViewModel
     public string? Celular { get; set; }
     public string? EntidadMedicaNombre { get; set; }
     public string? RolDescripcion { get; set; }
+    public DateTime? UltimoAcceso { get; set; }
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

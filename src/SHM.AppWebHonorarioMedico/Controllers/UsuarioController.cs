@@ -21,6 +21,7 @@ public class UsuarioController : Controller
     private readonly IPerfilAprobacionService _perfilAprobacionService;
     private readonly IPerfilAprobacionUsuarioService _perfilAprobacionUsuarioService;
     private readonly IUsuarioSedeRepository _usuarioSedeRepository;
+    private readonly ISegAccesoRepository _segAccesoRepository;
 
     public UsuarioController(
         ILogger<UsuarioController> logger,
@@ -30,7 +31,8 @@ public class UsuarioController : Controller
         ISedeService sedeService,
         IPerfilAprobacionService perfilAprobacionService,
         IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService,
-        IUsuarioSedeRepository usuarioSedeRepository)
+        IUsuarioSedeRepository usuarioSedeRepository,
+        ISegAccesoRepository segAccesoRepository)
     {
         _logger = logger;
         _usuarioService = usuarioService;
@@ -40,6 +42,7 @@ public class UsuarioController : Controller
         _perfilAprobacionService = perfilAprobacionService;
         _perfilAprobacionUsuarioService = perfilAprobacionUsuarioService;
         _usuarioSedeRepository = usuarioSedeRepository;
+        _segAccesoRepository = segAccesoRepository;
     }
 
     /// <summary>
@@ -72,6 +75,11 @@ public class UsuarioController : Controller
             var roles = await _rolService.GetAllRolesAsync();
             var rolesDict = roles.ToDictionary(r => r.IdRol, r => r.Descripcion ?? "");
 
+            var itemsList = items.ToList();
+
+            // Obtener fecha del ultimo acceso exitoso para todos los usuarios en una sola consulta
+            var ultimosAccesos = await _segAccesoRepository.GetUltimosAccesosAsync(itemsList.Select(u => u.IdUsuario));
+
             var model = new UsuarioExternoListViewModel
             {
                 Items = new List<UsuarioExternoItemViewModel>(),
@@ -81,7 +89,7 @@ public class UsuarioController : Controller
                 SearchTerm = searchTerm
             };
 
-            foreach (var u in items)
+            foreach (var u in itemsList)
             {
                 string? entidadNombre = null;
                 if (u.IdEntidadMedica.HasValue)
@@ -100,6 +108,7 @@ public class UsuarioController : Controller
                     Celular = u.Celular,
                     EntidadMedicaNombre = entidadNombre,
                     RolDescripcion = u.IdRol.HasValue && rolesDict.TryGetValue(u.IdRol.Value, out var rol) ? rol : "",
+                    UltimoAcceso = ultimosAccesos.TryGetValue(u.IdUsuario, out var ua) ? ua : null,
                     Activo = u.Activo,
                     FechaCreacion = u.FechaCreacion
                 });
@@ -502,6 +511,9 @@ public class UsuarioController : Controller
                 sedesInfoDict[u.IdUsuario] = (sedesList.Count, nombreUltimaSede);
             }
 
+            // Obtener fecha del ultimo acceso exitoso para todos los usuarios en una sola consulta
+            var ultimosAccesos = await _segAccesoRepository.GetUltimosAccesosAsync(itemsList.Select(u => u.IdUsuario));
+
             var model = new UsuarioInternoListViewModel
             {
                 Items = new List<UsuarioInternoItemViewModel>(),
@@ -534,6 +546,7 @@ public class UsuarioController : Controller
                     PerfilAprobacion = perfilDescripcion,
                     CantidadSedes = sedesInfo.Cantidad,
                     UltimaSede = sedesInfo.UltimaSede,
+                    UltimoAcceso = ultimosAccesos.TryGetValue(u.IdUsuario, out var ua) ? ua : null,
                     Activo = u.Activo,
                     FechaCreacion = u.FechaCreacion
                 });

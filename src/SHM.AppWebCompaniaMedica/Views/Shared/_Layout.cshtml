@@ -4,11 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Portal de Honorarios Médicos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="~/lib/sweetalert2/sweetalert2.min.css" asp-append-version="true">
 </head>
 <body>
     <div class="bg-pattern"></div>
@@ -76,6 +76,12 @@
                     <span>Mi Perfil</span>
                 </a>
             </li>
+            <li>
+                <a asp-controller="Manual" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Manual" ? "active" : "")">
+                    <i class="bi bi-book-fill"></i>
+                    <span>Manual de Usuario</span>
+                </a>
+            </li>
             @*
             <li>
                 <a asp-controller="Usuario" asp-action="Configuracion" class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Configuracion" ? "active" : "")">
@@ -119,8 +125,8 @@
         @RenderBody()
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.all.min.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
         // Menu toggle

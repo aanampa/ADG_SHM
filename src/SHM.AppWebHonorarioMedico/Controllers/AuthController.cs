@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
@@ -17,19 +18,22 @@ public class AuthController : Controller
     private readonly IUsuarioService _usuarioService;
     private readonly IEmailService _emailService;
     private readonly IUsuarioSedeRepository _usuarioSedeRepository;
+    private readonly ISegAccesoService _segAccesoService;
 
     public AuthController(
         ILogger<AuthController> logger,
         IConfiguration configuration,
         IUsuarioService usuarioService,
         IEmailService emailService,
-        IUsuarioSedeRepository usuarioSedeRepository)
+        IUsuarioSedeRepository usuarioSedeRepository,
+        ISegAccesoService segAccesoService)
     {
         _logger = logger;
         _configuration = configuration;
         _usuarioService = usuarioService;
         _emailService = emailService;
         _usuarioSedeRepository = usuarioSedeRepository;
+        _segAccesoService = segAccesoService;
     }
 
     [HttpGet]
@@ -121,6 +125,7 @@ public class AuthController : Controller
                 if (usuarioDev == null)
                 {
                     _logger.LogWarning("Usuario no encontrado en modo {Instancia}: {Username}", instancia, model.Username);
+                    await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), null, $"Usuario no encontrado [{instancia}]");
                     SetModelView(model);
                     ViewBag.LoginMessage = "Usuario no encontrado";
                     return View(model);
@@ -128,6 +133,7 @@ public class AuthController : Controller
 
                 if (usuarioDev.Activo != 1)
                 {
+                    await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), usuarioDev.IdUsuario, $"Usuario inactivo [{instancia}]");
                     SetModelView(model);
                     ViewBag.LoginMessage = "Usuario inactivo";
                     return View(model);
@@ -180,6 +186,7 @@ public class AuthController : Controller
 
                 _logger.LogInformation("Login {Instancia} exitoso para usuario: {Username} (ID: {UserId})",
                     instancia, model.Username, usuarioDev.IdUsuario);
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginOk, model.Username, ObtenerIp(), ObtenerUserAgent(), usuarioDev.IdUsuario, $"[{instancia}]");
 
                 // Redirigir a cambiar clave si es temporal
                 if (usuarioDev.FlagPasswordTemporal == 1)
@@ -194,6 +201,7 @@ public class AuthController : Controller
             if (usuario == null)
             {
                 _logger.LogWarning("Intento de login fallido para usuario: {Username}", model.Username);
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), null, "Credenciales incorrectas");
                 SetModelView(model);
                 ViewBag.LoginMessage = "Credenciales ingresadas son inválidas";
                 return View(model);
@@ -201,6 +209,7 @@ public class AuthController : Controller
 
             if (usuario.Activo != 1)
             {
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario, "Usuario inactivo");
                 SetModelView(model);
                 ViewBag.LoginMessage = "Usuario inactivo";
                 return View(model);
@@ -253,6 +262,7 @@ public class AuthController : Controller
             );
 
             _logger.LogInformation("Login exitoso para usuario: {Username} (ID: {UserId})", model.Username, usuario.IdUsuario);
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginOk, model.Username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario);
 
             // Redirigir a cambiar clave si es temporal
             if (usuario.FlagPasswordTemporal == 1)
@@ -326,8 +336,11 @@ public class AuthController : Controller
     [Authorize]
     public async Task<IActionResult> Logout()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userLogin = User.FindFirstValue(ClaimTypes.Name);
+        var userId    = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userLogin = User.FindFirstValue(ClaimTypes.Name) ?? "";
+
+        if (int.TryParse(userId, out var idUsuario))
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.Logout, userLogin, ObtenerIp(), ObtenerUserAgent(), idUsuario);
 
         // Limpiar la sesion (incluye cache del menu)
         HttpContext.Session.Clear();
@@ -338,6 +351,17 @@ public class AuthController : Controller
 
         return RedirectToAction("Login", "Auth");
     }
+
+    private string ObtenerIp()
+    {
+        var forwarded = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwarded))
+            return forwarded.Split(',')[0].Trim();
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
+    }
+
+    private string? ObtenerUserAgent() =>
+        HttpContext.Request.Headers["User-Agent"].FirstOrDefault();
 
     [HttpGet]
     public IActionResult RecuperarClave()
