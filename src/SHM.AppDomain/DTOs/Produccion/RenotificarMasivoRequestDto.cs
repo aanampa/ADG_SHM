@@ -25,6 +25,12 @@ public class RenotificarMasivoRequestDto
     public string? Hora { get; set; }
 
     /// <summary>
+    /// Nueva fecha de vencimiento de pago (formato: yyyy-MM-dd).
+    /// Solo aplica cuando ActualizaFecha es true.
+    /// </summary>
+    public string? FechaVencimiento { get; set; }
+
+    /// <summary>
     /// Indica si se debe actualizar la fecha limite antes de renotificar.
     /// </summary>
     public bool ActualizaFecha => !string.IsNullOrEmpty(Fecha) && !string.IsNullOrEmpty(Hora);

@@ -1,15 +1,16 @@
 namespace SHM.AppDomain.DTOs.Produccion;
 
 /// <summary>
-/// DTO para la solicitud masiva de facturas.
+/// DTO para grabar fechas límite y vencimiento en producciones FACTURA_PENDIENTE
+/// sin cambiar el estado. Paso 1 del flujo de Solicitud de Factura.
 ///
 /// <author>ADG Vladimir D</author>
-/// <created>2026-04-03</created>
+/// <created>2026-04-26</created>
 /// </summary>
-public class SolicitudMasivaRequestDto
+public class GrabarFechasProduccionDto
 {
     /// <summary>
-    /// Lista de GUIDs de producciones a procesar.
+    /// Lista de GUIDs de producciones a actualizar.
     /// </summary>
     public List<string> Guids { get; set; } = new();
 
@@ -24,7 +25,7 @@ public class SolicitudMasivaRequestDto
     public string Hora { get; set; } = string.Empty;
 
     /// <summary>
-    /// Fecha de vencimiento de pago que debe figurar en la factura (formato: yyyy-MM-dd).
+    /// Fecha de vencimiento de pago que figurará en la factura (formato: yyyy-MM-dd).
     /// </summary>
     public string FechaVencimiento { get; set; } = string.Empty;
 }

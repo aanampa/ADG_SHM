@@ -66,10 +66,13 @@
                                 </div>
                                 <!-- Acciones -->
                                 <div>
-                                    <button type="button" class="btn btn-success btn-sm" onclick="abrirModalSolicitudMasiva()" title="Solicitar factura a múltiples producciones">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="abrirModalSolicitudFactura()" title="Solicitar factura — registros en estado Factura Pendiente">
                                         <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
                                     </button>
-                                    <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
+                                    <button type="button" class="btn btn-primary btn-sm ml-1" onclick="abrirModalReNotificarFactura()" title="ReNotificar — registros en estado Factura Solicitada o Devuelta">
+                                        <i class="fas fa-bell mr-1"></i>ReNotificar Factura
+                                    </button>
+                                    <button type="button" class="btn btn-success btn-sm ml-1" onclick="exportToExcel()">
                                         <i class="fas fa-file-excel mr-1"></i>Exportar
                                     </button>
                                 </div>
@@ -100,8 +103,10 @@
     </div>
 </div>
 
-<!-- Modal Container -->
+<!-- Modal Containers -->
 <div id="modalContainer"></div>
+<div id="modalContainer2"></div>
+<div id="modalContainer3"></div>
 
 @section Scripts {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -313,6 +318,98 @@
                 })
                 .catch(() => {
                     Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el historial.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalSolicitudFacturaIndividual(guid) {
+            const container = document.getElementById('modalContainer2');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")?guidRegistro=' + encodeURIComponent(guid))
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalSolicitudFactura() {
+            const container = document.getElementById('modalContainer2');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")')
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalReNotificarFactura() {
+            const container = document.getElementById('modalContainer3');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalReNotificarFactura", "Produccion")')
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalSolicitudIndividual(guid) {
+            const container = document.getElementById('modalContainer');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalSolicitudMasiva", "Produccion")?guidRegistro=' + encodeURIComponent(guid))
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
                 });
         }
 

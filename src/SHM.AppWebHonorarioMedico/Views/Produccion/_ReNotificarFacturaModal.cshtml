@@ -1,0 +1,688 @@
+@using SHM.AppDomain.Constants
+@model List<SHM.AppWebHonorarioMedico.Models.SolicitudMasivaItemViewModel>
+
+@{
+    var solicitadas = Model.Where(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada).ToList();
+    var devueltas   = Model.Where(i => i.Estado == EstadoDescripcion.Produccion.FacturaDevuelta).ToList();
+    var habilitados = Model.Where(i => i.Habilitado).ToList();
+}
+
+<div class="modal fade" id="modalReNotificarFactura" tabindex="-1" role="dialog" aria-labelledby="modalRnLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #007bff; color: #fff;">
+                <h5 class="modal-title" id="modalRnLabel">
+                    <i class="fas fa-bell mr-2"></i>ReNotificar Factura
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body py-2">
+                @if (!Model.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No hay producciones en estado Factura Solicitada o Factura Devuelta</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Indicador de pasos -->
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <div class="d-flex flex-column align-items-center" style="min-width:140px;">
+                            <div id="rnStepCircle1" style="width:32px;height:32px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">1</div>
+                            <small id="rnStepLabel1" class="mt-1 font-weight-bold text-primary">Seleccionar</small>
+                        </div>
+                        <div style="flex:1;height:2px;background:#dee2e6;margin-bottom:18px;max-width:80px;"></div>
+                        <div class="d-flex flex-column align-items-center" style="min-width:140px;">
+                            <div id="rnStepCircle2" style="width:32px;height:32px;border-radius:50%;background:#dee2e6;color:#6c757d;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">2</div>
+                            <small id="rnStepLabel2" class="mt-1 text-muted">Acción y Confirmar</small>
+                        </div>
+                    </div>
+
+                    <!-- ══ PASO 1 ══ -->
+                    <div id="rnPaso1">
+
+                        <!-- Filtros + Búsqueda -->
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-secondary active" id="rnBtnTodos" onclick="rnFiltrar('todos')">
+                                    Todos <span class="badge badge-light ml-1" id="rnCntTodos">@Model.Count</span>
+                                </button>
+                                <button class="btn btn-outline-secondary" id="rnBtnSolicitada" onclick="rnFiltrar('solicitada')">
+                                    Factura Solicitada <span class="badge badge-light ml-1" id="rnCntSolicitada">@solicitadas.Count</span>
+                                </button>
+                                <button class="btn btn-outline-secondary" id="rnBtnDevuelta" onclick="rnFiltrar('devuelta')">
+                                    Factura Devuelta <span class="badge badge-light ml-1" id="rnCntDevuelta">@devueltas.Count</span>
+                                </button>
+                            </div>
+                            <div class="input-group input-group-sm" style="max-width:280px;">
+                                <span class="input-group-text" style="background:#fff;">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" id="rnInputBusqueda" class="form-control form-control-sm"
+                                       placeholder="Buscar por Cía Médica, código..."
+                                       oninput="rnBuscar()">
+                                <button class="btn btn-outline-secondary btn-sm" type="button"
+                                        onclick="document.getElementById('rnInputBusqueda').value=''; rnBuscar();">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabla -->
+                        <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+                                <thead style="background-color:#6c757d; color:#fff; position:sticky; top:0; z-index:1;">
+                                    <tr>
+                                        <th class="text-center align-middle" style="width:36px;">
+                                            <input type="checkbox" id="rnChkAll" title="Seleccionar todos los habilitados" />
+                                        </th>
+                                        <th class="rn-th-sort align-middle" style="width:80px;" onclick="rnOrdenar('numero')">Producción <span class="rn-sort-icon" id="rnsi-numero"></span></th>
+                                        <th class="rn-th-sort align-middle" style="width:120px;" onclick="rnOrdenar('tipo')">Tipo Producción <span class="rn-sort-icon" id="rnsi-tipo"></span></th>
+                                        <th class="rn-th-sort align-middle" onclick="rnOrdenar('cia')">Cía Médica <span class="rn-sort-icon" id="rnsi-cia"></span></th>
+                                        <th class="rn-th-sort align-middle" style="width:75px;" onclick="rnOrdenar('periodo')">Periodo <span class="rn-sort-icon" id="rnsi-periodo"></span></th>
+                                        <th class="rn-th-sort align-middle text-right" style="width:80px;" onclick="rnOrdenar('total')">Total S/. <span class="rn-sort-icon" id="rnsi-total"></span></th>
+                                        <th class="rn-th-sort align-middle text-center" style="width:115px;" onclick="rnOrdenar('estado')">Estado <span class="rn-sort-icon" id="rnsi-estado"></span></th>
+                                        <th class="rn-th-sort align-middle text-center" style="width:105px;" onclick="rnOrdenar('fechaLimite')">Fecha Límite <span class="rn-sort-icon" id="rnsi-fechaLimite"></span></th>
+                                        <th class="rn-th-sort align-middle text-center" style="width:100px;" onclick="rnOrdenar('fechaVenc')">F. Vencimiento <span class="rn-sort-icon" id="rnsi-fechaVenc"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rnTbody">
+                                    @foreach (var item in Model)
+                                    {
+                                        var rowCss   = item.Habilitado ? "" : "table-light text-muted";
+                                        var badgeCss = item.Estado == EstadoDescripcion.Produccion.FacturaSolicitada
+                                                       ? "badge-primary" : "badge-danger";
+                                        <tr class="rn-row @rowCss"
+                                            data-guid="@item.GuidRegistro"
+                                            data-numero="@item.NumeroProduccion"
+                                            data-tipo="@item.DesTipoProduccion"
+                                            data-cia="@item.RazonSocial"
+                                            data-periodo="@item.Periodo"
+                                            data-total="@item.MtoTotal"
+                                            data-estado="@item.Estado"
+                                            data-fechalimite="@item.FechaLimite?.ToString("yyyy-MM-dd")"
+                                            data-horalimite="@item.FechaLimite?.ToString("HH:mm")"
+                                            data-fechavenc="@item.FechaVencimiento?.ToString("yyyy-MM-dd")"
+                                            data-habilitado="@(item.Habilitado ? "1" : "0")">
+                                            <td class="text-center">
+                                                @if (item.Habilitado)
+                                                {
+                                                    <input type="checkbox" class="rn-chk" data-guid="@item.GuidRegistro" />
+                                                }
+                                                else
+                                                {
+                                                    <input type="checkbox" disabled title="@item.MotivoDeshabilitado" />
+                                                }
+                                            </td>
+                                            <td>@(item.NumeroProduccion ?? "-")</td>
+                                            <td>@(item.DesTipoProduccion ?? "-")</td>
+                                            <td>@(item.RazonSocial ?? "-")</td>
+                                            <td>@(item.Periodo ?? "-")</td>
+                                            <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                                            <td class="text-center">
+                                                <span class="badge @badgeCss">@item.DesEstado</span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if (item.FechaLimite.HasValue)
+                                                {
+                                                    <span>@item.FechaLimite.Value.ToString("dd/MM/yyyy")</span>
+                                                    <br /><span class="text-muted" style="font-size:11px;">@item.FechaLimite.Value.ToString("HH:mm")</span>
+                                                }
+                                                else { <span class="text-muted">—</span> }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (item.FechaVencimiento.HasValue)
+                                                {
+                                                    <span>@item.FechaVencimiento.Value.ToString("dd/MM/yyyy")</span>
+                                                }
+                                                else { <span class="text-muted">—</span> }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-1 mb-1">
+                            <small class="text-muted">
+                                Total: <strong id="rnLblTotal">@Model.Count</strong> |
+                                Habilitados: <strong class="text-success">@habilitados.Count</strong> |
+                                Seleccionados: <strong id="rnContador">0</strong>
+                            </small>
+                        </div>
+
+                    </div><!-- /rnPaso1 -->
+
+                    <!-- ══ PASO 2 ══ -->
+                    <div id="rnPaso2" style="display:none;">
+
+                        <!-- Resumen -->
+                        <div id="rnResumen" class="mb-2 p-2 rounded border" style="font-size:13px; background:#f8f9fa;"></div>
+
+                        <!-- Opciones de acción -->
+                        <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
+                            <div class="small font-weight-bold text-secondary mb-2" style="text-transform:uppercase; letter-spacing:.5px; font-size:11px;">
+                                <i class="fas fa-tasks mr-1"></i>Seleccione la acción a realizar
+                            </div>
+
+                            <!-- Opción A: Solo Renotificar -->
+                            <div class="rn-opcion-accion selected mb-2" id="rnCardSolo" onclick="rnSeleccionarAccion('solo')">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="rnRdoAccion" id="rnRdoSolo" value="solo" checked onchange="rnSeleccionarAccion('solo')">
+                                    <label class="form-check-label font-weight-bold" for="rnRdoSolo">
+                                        <i class="fas fa-bell text-primary mr-1"></i>Solo Renotificar
+                                    </label>
+                                    <div class="text-muted mt-1" style="font-size:11px;">
+                                        Reenvía el correo de solicitud con las fechas actuales registradas. No modifica ningún dato.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Opción B: Cambiar Fechas y Renotificar -->
+                            <div class="rn-opcion-accion" id="rnCardCambiar" onclick="rnSeleccionarAccion('cambiar')">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="rnRdoAccion" id="rnRdoCambiar" value="cambiar" onchange="rnSeleccionarAccion('cambiar')">
+                                    <label class="form-check-label font-weight-bold" for="rnRdoCambiar">
+                                        <i class="fas fa-calendar-alt text-warning mr-1"></i>Cambiar Fechas y Renotificar
+                                    </label>
+                                    <div class="text-muted mt-1" style="font-size:11px;">
+                                        Actualiza Fecha Límite y/o F. Vencimiento, luego reenvía el correo. Las fechas se aplican a todos los seleccionados.
+                                    </div>
+                                </div>
+
+                                <!-- Campos de fecha -->
+                                <div class="rn-campos-fecha mt-2" id="rnDivCamposFecha" onclick="event.stopPropagation()">
+                                    <div class="d-flex border rounded overflow-hidden" style="background:#fff;">
+
+                                        <!-- Fecha Límite -->
+                                        <div class="p-2" style="width:46%; background:#f8f9fa; border-right:2px solid #dee2e6;">
+                                            <div class="d-flex align-items-center mb-2" style="height:20px; gap:12px;">
+                                                <span class="small font-weight-bold text-muted">
+                                                    <i class="fas fa-clock mr-1"></i>Plazo de Entrega
+                                                </span>
+                                                <div class="form-check form-check-inline mb-0 ml-2">
+                                                    <input class="form-check-input" type="radio" name="rnRdoLimite" id="rnRdoNuevaLimite" value="nueva" checked onchange="rnToggleFechaLimite()">
+                                                    <label class="form-check-label small font-weight-bold" for="rnRdoNuevaLimite">Nueva fecha</label>
+                                                </div>
+                                                <div class="form-check form-check-inline mb-0">
+                                                    <input class="form-check-input" type="radio" name="rnRdoLimite" id="rnRdoMantenerLimite" value="mantener" onchange="rnToggleFechaLimite()">
+                                                    <label class="form-check-label small font-weight-bold" for="rnRdoMantenerLimite">Mantener actual</label>
+                                                </div>
+                                            </div>
+                                            <div id="rnDivNuevaLimite">
+                                                <div class="d-flex" style="gap:8px;">
+                                                    <div style="flex:1;">
+                                                        <label class="small font-weight-bold">Fecha Límite <span class="text-danger">*</span></label>
+                                                        <input type="date" id="rnFechaLimite" class="form-control form-control-sm" />
+                                                    </div>
+                                                    <div style="width:95px;">
+                                                        <label class="small font-weight-bold">Hora <span class="text-danger">*</span></label>
+                                                        <select id="rnHoraLimite" class="form-control form-control-sm">
+                                                            <option value="">--</option>
+                                                            @foreach (var h in Enumerable.Range(8, 15))
+                                                            {
+                                                                foreach (var m in new[] { 0, 15, 30, 45 })
+                                                                {
+                                                                    var val = $"{h:D2}:{m:D2}";
+                                                                    <option value="@val">@val</option>
+                                                                }
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="rnDivMantenerLimite" style="display:none;">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lock mr-1"></i>Se conservará la Fecha Límite de cada producción.
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <!-- F. Vencimiento -->
+                                        <div class="p-2" style="flex:1;">
+                                            <div class="d-flex align-items-center mb-2" style="height:20px; gap:12px;">
+                                                <span class="small font-weight-bold text-muted">
+                                                    <i class="fas fa-file-invoice mr-1"></i>F. Vencimiento Factura
+                                                </span>
+                                                <div class="form-check form-check-inline mb-0 ml-2">
+                                                    <input class="form-check-input" type="radio" name="rnRdoVenc" id="rnRdoNuevaVenc" value="nueva" checked onchange="rnToggleFechaVenc()">
+                                                    <label class="form-check-label small font-weight-bold" for="rnRdoNuevaVenc">Nueva fecha</label>
+                                                </div>
+                                                <div class="form-check form-check-inline mb-0">
+                                                    <input class="form-check-input" type="radio" name="rnRdoVenc" id="rnRdoMantenerVenc" value="mantener" onchange="rnToggleFechaVenc()">
+                                                    <label class="form-check-label small font-weight-bold" for="rnRdoMantenerVenc">Mantener actual</label>
+                                                </div>
+                                            </div>
+                                            <div id="rnDivNuevaVenc">
+                                                <label class="small font-weight-bold">Fecha <span class="text-danger">*</span></label>
+                                                <input type="date" id="rnFechaVenc" class="form-control form-control-sm" style="max-width:180px;" />
+                                            </div>
+                                            <div id="rnDivMantenerVenc" style="display:none;">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lock mr-1"></i>Se conservará la F. Vencimiento de cada producción.
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div><!-- /opciones -->
+
+                        <!-- Tabla resumen -->
+                        <div class="table-responsive" style="max-height:220px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+                                <thead style="background-color:#6c757d; color:#fff; position:sticky; top:0; z-index:1;">
+                                    <tr>
+                                        <th style="width:80px;">Producción</th>
+                                        <th>Cía Médica</th>
+                                        <th style="width:75px;">Periodo</th>
+                                        <th class="text-right" style="width:80px;">Total S/.</th>
+                                        <th class="text-center" style="width:115px;">Estado</th>
+                                        <th class="text-center" style="width:105px;">Fecha Límite</th>
+                                        <th class="text-center" style="width:100px;">F. Vencimiento</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rnTbodyResumen"></tbody>
+                            </table>
+                        </div>
+
+                    </div><!-- /rnPaso2 -->
+                }
+            </div>
+
+            @if (Model.Any())
+            {
+                <div class="modal-footer py-2" style="display:block;">
+                    <div id="rnFooterPaso1" style="display:flex; justify-content:space-between; align-items:center;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                            <i class="fas fa-times mr-1"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="rnBtnSiguiente" onclick="rnIrPaso2()" disabled>
+                            Siguiente <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                    <div id="rnFooterPaso2" style="display:none; justify-content:space-between; align-items:center;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="rnIrPaso1()">
+                            <i class="fas fa-arrow-left mr-1"></i>Anterior
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="rnBtnEjecutar" onclick="rnEjecutar()">
+                            <i class="fas fa-bell mr-1"></i><span id="rnLblBtnEjecutar">Renotificar</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .rn-th-sort { cursor:pointer; user-select:none; white-space:nowrap; }
+    .rn-th-sort:hover { background:#5a6268 !important; }
+    .rn-sort-icon { font-style:normal; font-size:10px; margin-left:3px; opacity:.7; }
+    .rn-opcion-accion { border:2px solid #dee2e6; border-radius:8px; padding:10px 14px; cursor:pointer; transition:border-color .2s, background .2s; }
+    .rn-opcion-accion:hover { border-color:#adb5bd; background:#f0f4f8; }
+    .rn-opcion-accion.selected { border-color:#007bff; background:#e8f0fe; }
+    .rn-campos-fecha { opacity:.4; pointer-events:none; transition:opacity .3s; }
+    .rn-campos-fecha.activo { opacity:1; pointer-events:all; }
+    #modalReNotificarFactura thead th { vertical-align:middle !important; text-align:center !important; }
+    #modalReNotificarFactura thead th.text-right { text-align:right !important; }
+</style>
+
+<script>
+var rnSortCol = null;
+var rnSortAsc = true;
+var rnFiltroActivo = 'todos';
+var rnAccionActiva = 'solo';
+
+(function () {
+    var modal  = document.getElementById('modalReNotificarFactura');
+    var chkAll = document.getElementById('rnChkAll');
+
+    if (chkAll) {
+        chkAll.addEventListener('change', function () {
+            document.querySelectorAll('#rnTbody .rn-row:not([style*="display: none"]) .rn-chk')
+                    .forEach(function (cb) { cb.checked = chkAll.checked; });
+            rnActualizarContador();
+        });
+    }
+
+    modal.addEventListener('change', function (e) {
+        if (e.target.classList.contains('rn-chk')) {
+            rnActualizarContador();
+            var vis  = document.querySelectorAll('#rnTbody .rn-row:not([style*="display: none"]) .rn-chk');
+            var marc = document.querySelectorAll('#rnTbody .rn-row:not([style*="display: none"]) .rn-chk:checked');
+            if (chkAll) chkAll.checked = (vis.length > 0 && vis.length === marc.length);
+        }
+    });
+
+    modal.addEventListener('show.bs.modal', rnReset);
+    if (document.readyState !== 'loading') {
+        rnReset();
+        $('#modalReNotificarFactura').modal('show');
+    }
+})();
+
+function rnReset() {
+    rnFiltroActivo = 'todos';
+    rnFiltrar('todos');
+    document.getElementById('rnPaso1').style.display       = '';
+    document.getElementById('rnPaso2').style.display       = 'none';
+    document.getElementById('rnFooterPaso1').style.display = 'flex';
+    document.getElementById('rnFooterPaso2').style.display = 'none';
+    document.getElementById('rnInputBusqueda').value       = '';
+    document.querySelectorAll('.rn-chk').forEach(function (cb) { cb.checked = false; });
+    var chkAll = document.getElementById('rnChkAll');
+    if (chkAll) chkAll.checked = false;
+    rnActualizarContador();
+    rnSetStep(1);
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+
+function rnFiltrar(tipo) {
+    rnFiltroActivo = tipo;
+    var btns = { todos: 'rnBtnTodos', solicitada: 'rnBtnSolicitada', devuelta: 'rnBtnDevuelta' };
+    Object.keys(btns).forEach(function (k) {
+        var btn = document.getElementById(btns[k]);
+        btn.classList.remove('active', 'btn-secondary', 'btn-outline-secondary');
+        btn.classList.add(k === tipo ? 'btn-secondary' : 'btn-outline-secondary');
+        if (k === tipo) btn.classList.add('active');
+    });
+
+    var termino = (document.getElementById('rnInputBusqueda').value || '').trim().toUpperCase();
+    document.querySelectorAll('#rnTbody .rn-row').forEach(function (row) {
+        var est = row.dataset.estado;
+        var matchEstado = tipo === 'todos'
+            || (tipo === 'solicitada' && est === 'FACTURA_SOLICITADA')
+            || (tipo === 'devuelta'   && est === 'FACTURA_DEVUELTA');
+        var matchBusqueda = !termino || row.innerText.toUpperCase().includes(termino);
+        var visible = matchEstado && matchBusqueda;
+        row.style.display = visible ? '' : 'none';
+        if (!visible) {
+            var cb = row.querySelector('.rn-chk');
+            if (cb) cb.checked = false;
+        }
+    });
+    rnActualizarContador();
+}
+
+// ── Búsqueda ──────────────────────────────────────────────────────────────────
+
+function rnBuscar() {
+    var t = (document.getElementById('rnInputBusqueda').value || '').trim().toUpperCase();
+    document.querySelectorAll('#rnTbody .rn-row').forEach(function (row) {
+        var est = row.dataset.estado;
+        var matchEstado = rnFiltroActivo === 'todos'
+            || (rnFiltroActivo === 'solicitada' && est === 'FACTURA_SOLICITADA')
+            || (rnFiltroActivo === 'devuelta'   && est === 'FACTURA_DEVUELTA');
+        var matchBusqueda = !t || row.innerText.toUpperCase().includes(t);
+        row.style.display = (matchEstado && matchBusqueda) ? '' : 'none';
+    });
+    rnActualizarContador();
+}
+
+// ── Ordenamiento ──────────────────────────────────────────────────────────────
+
+var rnGetters = {
+    numero:      function (r) { return r.dataset.numero     || ''; },
+    tipo:        function (r) { return r.dataset.tipo       || ''; },
+    cia:         function (r) { return r.dataset.cia        || ''; },
+    periodo:     function (r) { return r.dataset.periodo    || ''; },
+    total:       function (r) { return parseFloat(r.dataset.total || '0'); },
+    estado:      function (r) { return r.dataset.estado     || ''; },
+    fechaLimite: function (r) { return r.dataset.fechalimite || ''; },
+    fechaVenc:   function (r) { return r.dataset.fechavenc  || ''; }
+};
+
+function rnOrdenar(col) {
+    rnSortAsc = (rnSortCol === col) ? !rnSortAsc : true;
+    rnSortCol = col;
+    Object.keys(rnGetters).forEach(function (c) {
+        var el = document.getElementById('rnsi-' + c);
+        if (el) el.textContent = c === rnSortCol ? (rnSortAsc ? ' ▲' : ' ▼') : '';
+    });
+    var tbody  = document.getElementById('rnTbody');
+    var rows   = Array.from(tbody.querySelectorAll('.rn-row'));
+    var getter = rnGetters[col];
+    rows.sort(function (a, b) {
+        var va = getter(a), vb = getter(b);
+        if (va < vb) return rnSortAsc ? -1 :  1;
+        if (va > vb) return rnSortAsc ?  1 : -1;
+        return 0;
+    });
+    rows.forEach(function (r) { tbody.appendChild(r); });
+    rnBuscar();
+}
+
+// ── Selección ─────────────────────────────────────────────────────────────────
+
+function rnActualizarContador() {
+    var n = document.querySelectorAll('.rn-chk:checked').length;
+    document.getElementById('rnContador').textContent    = n;
+    document.getElementById('rnBtnSiguiente').disabled   = (n === 0);
+}
+
+// ── Paso 1 → Paso 2 ──────────────────────────────────────────────────────────
+
+function rnIrPaso2() {
+    var guids = Array.from(document.querySelectorAll('.rn-chk:checked')).map(function (cb) { return cb.dataset.guid; });
+    if (guids.length === 0) return;
+
+    // Resumen header
+    var nSol = 0, nDev = 0;
+    guids.forEach(function (guid) {
+        var row = document.querySelector('#rnTbody .rn-row[data-guid="' + guid + '"]');
+        if (!row) return;
+        if (row.dataset.estado === 'FACTURA_SOLICITADA') nSol++;
+        else nDev++;
+    });
+    var txt = '';
+    if (nSol > 0) txt += '<span class="badge badge-primary mr-1">' + nSol + ' Solicitada(s)</span>';
+    if (nDev > 0) txt += '<span class="badge badge-danger mr-1">'   + nDev + ' Devuelta(s)</span>';
+    document.getElementById('rnResumen').innerHTML =
+        '<i class="fas fa-check-square text-primary mr-1"></i>' +
+        '<strong>' + guids.length + '</strong> registro(s) seleccionado(s): ' + txt;
+
+    // Tabla resumen
+    var tbody = document.getElementById('rnTbodyResumen');
+    tbody.innerHTML = '';
+    guids.forEach(function (guid) {
+        var row = document.querySelector('#rnTbody .rn-row[data-guid="' + guid + '"]');
+        if (!row) return;
+        var est     = row.dataset.estado;
+        var badge   = est === 'FACTURA_SOLICITADA'
+            ? '<span class="badge badge-primary">Factura Solicitada</span>'
+            : '<span class="badge badge-danger">Factura Devuelta</span>';
+        var fl  = row.dataset.fechalimite;
+        var hl  = row.dataset.horalimite;
+        var fv  = row.dataset.fechavenc;
+        var flTxt = fl ? rnFmtDate(fl) + ' <span class="text-muted" style="font-size:11px;">' + (hl || '') + '</span>' : '<span class="text-muted">—</span>';
+        var fvTxt = fv ? rnFmtDate(fv) : '<span class="text-muted">—</span>';
+        tbody.innerHTML +=
+            '<tr>' +
+            '<td>' + (row.dataset.numero  || '-') + '</td>' +
+            '<td>' + (row.dataset.cia     || '-') + '</td>' +
+            '<td>' + (row.dataset.periodo || '-') + '</td>' +
+            '<td class="text-right font-weight-bold">' +
+                (row.dataset.total ? parseFloat(row.dataset.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-') +
+            '</td>' +
+            '<td class="text-center">' + badge   + '</td>' +
+            '<td class="text-center">' + flTxt   + '</td>' +
+            '<td class="text-center">' + fvTxt   + '</td>' +
+            '</tr>';
+    });
+
+    rnSeleccionarAccion('solo');
+
+    document.getElementById('rnPaso1').style.display       = 'none';
+    document.getElementById('rnPaso2').style.display       = '';
+    document.getElementById('rnFooterPaso1').style.display = 'none';
+    document.getElementById('rnFooterPaso2').style.display = 'flex';
+    rnSetStep(2);
+}
+
+function rnIrPaso1() {
+    document.getElementById('rnPaso2').style.display       = 'none';
+    document.getElementById('rnPaso1').style.display       = '';
+    document.getElementById('rnFooterPaso2').style.display = 'none';
+    document.getElementById('rnFooterPaso1').style.display = 'flex';
+    rnSetStep(1);
+}
+
+// ── Acción ────────────────────────────────────────────────────────────────────
+
+function rnSeleccionarAccion(accion) {
+    rnAccionActiva = accion;
+    document.getElementById('rnRdoSolo').checked    = (accion === 'solo');
+    document.getElementById('rnRdoCambiar').checked = (accion === 'cambiar');
+    document.getElementById('rnCardSolo').classList.toggle('selected',    accion === 'solo');
+    document.getElementById('rnCardCambiar').classList.toggle('selected', accion === 'cambiar');
+
+    var divCampos = document.getElementById('rnDivCamposFecha');
+    if (accion === 'cambiar') {
+        divCampos.classList.add('activo');
+        document.getElementById('rnRdoNuevaLimite').checked  = true;
+        document.getElementById('rnRdoMantenerLimite').checked = false;
+        rnToggleFechaLimite();
+        document.getElementById('rnRdoNuevaVenc').checked    = true;
+        document.getElementById('rnRdoMantenerVenc').checked = false;
+        rnToggleFechaVenc();
+    } else {
+        divCampos.classList.remove('activo');
+    }
+
+    document.getElementById('rnLblBtnEjecutar').textContent =
+        accion === 'solo' ? 'Renotificar' : 'Cambiar Fechas y Renotificar';
+}
+
+function rnToggleFechaLimite() {
+    var esNueva = document.getElementById('rnRdoNuevaLimite').checked;
+    document.getElementById('rnDivNuevaLimite').style.display    = esNueva ? '' : 'none';
+    document.getElementById('rnDivMantenerLimite').style.display = esNueva ? 'none' : '';
+    if (!esNueva) {
+        document.getElementById('rnFechaLimite').value = '';
+        document.getElementById('rnHoraLimite').value  = '';
+    }
+}
+
+function rnToggleFechaVenc() {
+    var esNueva = document.getElementById('rnRdoNuevaVenc').checked;
+    document.getElementById('rnDivNuevaVenc').style.display    = esNueva ? '' : 'none';
+    document.getElementById('rnDivMantenerVenc').style.display = esNueva ? 'none' : '';
+    if (!esNueva) document.getElementById('rnFechaVenc').value = '';
+}
+
+// ── Ejecutar ──────────────────────────────────────────────────────────────────
+
+function rnEjecutar() {
+    var guids = Array.from(document.querySelectorAll('.rn-chk:checked')).map(function (cb) { return cb.dataset.guid; });
+    if (guids.length === 0) return;
+
+    var fecha = null, hora = null, fechaVenc = null;
+
+    if (rnAccionActiva === 'cambiar') {
+        var esNuevaLimite = document.getElementById('rnRdoNuevaLimite').checked;
+        var esNuevaVenc   = document.getElementById('rnRdoNuevaVenc').checked;
+        var errores       = [];
+
+        if (!esNuevaLimite && !esNuevaVenc)
+            errores.push('Debe indicar al menos una fecha a cambiar (Nueva Fecha Límite o Nueva F. Vencimiento)');
+
+        if (esNuevaLimite) {
+            fecha = document.getElementById('rnFechaLimite').value;
+            hora  = document.getElementById('rnHoraLimite').value;
+            if (!fecha) errores.push('La Nueva Fecha Límite es requerida');
+            if (!hora)  errores.push('La Hora Límite es requerida');
+            if (fecha && hora && new Date(fecha + 'T' + hora) <= new Date())
+                errores.push('La nueva fecha y hora límite debe ser mayor a la actual');
+        }
+
+        if (esNuevaVenc) {
+            fechaVenc = document.getElementById('rnFechaVenc').value;
+            if (!fechaVenc) errores.push('La Nueva F. Vencimiento es requerida');
+        }
+
+        if (errores.length > 0) {
+            Swal.fire({
+                icon: 'warning', title: 'Atención',
+                html: '<ul style="text-align:left;">' + errores.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul>',
+                confirmButtonColor: '#f26522'
+            });
+            return;
+        }
+    }
+
+    var btnLabel = rnAccionActiva === 'solo' ? 'Renotificar' : 'Cambiar Fechas y Renotificar';
+    Swal.fire({
+        icon: 'question', title: 'Confirmar',
+        html: '<i class="fas fa-bell text-primary mr-1"></i> <strong>' + btnLabel + '</strong> a ' +
+              '<strong>' + guids.length + '</strong> registro(s)',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff', cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check"></i> Confirmar', cancelButtonText: 'Cancelar'
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Procesando...', text: 'Por favor espere.',
+            allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false,
+            didOpen: function () { Swal.showLoading(); }
+        });
+
+        fetch('@Url.Action("EjecutarReNotificarFactura", "Produccion")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                guids:           guids,
+                accion:          rnAccionActiva,
+                fecha:           fecha,
+                hora:            hora,
+                fechaVencimiento: fechaVenc
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            Swal.close();
+            $('#modalReNotificarFactura').modal('hide');
+            Swal.fire({
+                icon: (d.errores || 0) > 0 ? 'warning' : 'success',
+                title: 'Proceso completado',
+                text: d.message,
+                confirmButtonColor: '#28a745'
+            }).then(function () { refreshList(); });
+        })
+        .catch(function () {
+            Swal.close();
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+        });
+    });
+}
+
+// ── Indicador de pasos ────────────────────────────────────────────────────────
+
+function rnSetStep(paso) {
+    var c1 = document.getElementById('rnStepCircle1'), l1 = document.getElementById('rnStepLabel1');
+    var c2 = document.getElementById('rnStepCircle2'), l2 = document.getElementById('rnStepLabel2');
+    if (paso === 1) {
+        c1.style.background = '#007bff'; c1.style.color = '#fff'; l1.className = 'mt-1 font-weight-bold text-primary';
+        c2.style.background = '#dee2e6'; c2.style.color = '#6c757d'; l2.className = 'mt-1 text-muted';
+    } else {
+        c1.style.background = '#28a745'; c1.style.color = '#fff'; l1.className = 'mt-1 text-success';
+        c2.style.background = '#007bff'; c2.style.color = '#fff'; l2.className = 'mt-1 font-weight-bold text-primary';
+    }
+}
+
+// ── Utilidades ────────────────────────────────────────────────────────────────
+
+function rnFmtDate(iso) {
+    if (!iso) return '—';
+    var p = iso.split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+</script>
