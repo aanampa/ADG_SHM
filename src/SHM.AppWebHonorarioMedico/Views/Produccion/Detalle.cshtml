@@ -481,14 +481,6 @@
 
 <input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
 
-@{
-    var solicitudVm = ViewBag.SolicitudIndividualVm as SHM.AppWebHonorarioMedico.Models.SolicitudMasivaViewModel;
-}
-@if (solicitudVm != null)
-{
-    @await Html.PartialAsync("_SolicitudMasivaModal", solicitudVm)
-}
-
 <div id="sfModalContainer"></div>
 <div id="rnModalContainer"></div>
 

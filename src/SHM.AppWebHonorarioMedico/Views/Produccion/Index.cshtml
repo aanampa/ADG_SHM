@@ -413,54 +413,6 @@
                 });
         }
 
-        function abrirModalSolicitudIndividual(guid) {
-            const container = document.getElementById('modalContainer');
-            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-            fetch('@Url.Action("GetModalSolicitudMasiva", "Produccion")?guidRegistro=' + encodeURIComponent(guid))
-                .then(r => {
-                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
-                    return r.text();
-                })
-                .then(html => {
-                    container.innerHTML = html;
-                    container.querySelectorAll('script').forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        newScript.textContent = oldScript.textContent;
-                        document.body.appendChild(newScript);
-                        document.body.removeChild(newScript);
-                    });
-                })
-                .catch(err => {
-                    container.innerHTML = '';
-                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
-                });
-        }
-
-        function abrirModalSolicitudMasiva() {
-            const container = document.getElementById('modalContainer');
-            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-            fetch('@Url.Action("GetModalSolicitudMasiva", "Produccion")')
-                .then(r => {
-                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
-                    return r.text();
-                })
-                .then(html => {
-                    container.innerHTML = html;
-                    // Los scripts dentro de innerHTML no se ejecutan automaticamente
-                    container.querySelectorAll('script').forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        newScript.textContent = oldScript.textContent;
-                        document.body.appendChild(newScript);
-                        document.body.removeChild(newScript);
-                    });
-                })
-                .catch(err => {
-                    container.innerHTML = '';
-                    console.error('Error al cargar modal solicitud masiva:', err);
-                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
-                });
-        }
-
         function exportToExcel() {
             const produccion = document.getElementById('txtProduccion').value.trim();
             const estado = document.getElementById('cboEstado').value;
