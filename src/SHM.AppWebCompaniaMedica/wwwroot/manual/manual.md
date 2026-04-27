@@ -2,7 +2,7 @@
 ## Portal de Honorarios Médicos – Compañías Médicas
 ### SHM.AppWebCompaniaMedica
 
-**Versión:** 2.0
+**Versión:** 1.0
 **Fecha:** Abril 2026
 **Cliente:** Grupo San Pablo
 
@@ -65,8 +65,6 @@ Ingrese a la URL proporcionada por el administrador del sistema. La pantalla de 
 | **Usuario** | Nombre de usuario asignado por el administrador |
 | **Contraseña** | Su contraseña personal |
 | **Código de Verificación** | Código CAPTCHA de 6 caracteres alfanuméricos |
-
-> **Nota:** El campo CAPTCHA solo es obligatorio en el entorno de producción.
 
 ### 2.3 Pasos para Iniciar Sesión
 

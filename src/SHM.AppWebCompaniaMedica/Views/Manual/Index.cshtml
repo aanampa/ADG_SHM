@@ -1,0 +1,439 @@
+@{
+    ViewData["Title"] = "Manual de Usuario";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    /* ── Layout ── */
+    .manual-wrapper {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-start;
+        padding: 1.5rem;
+    }
+
+    /* ── TOC sidebar ── */
+    .manual-toc {
+        width: 260px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 80px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+        background: var(--bg-card, #1e2535);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .manual-toc h6 {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--text-secondary, #8892a4);
+        margin-bottom: .75rem;
+    }
+
+    .toc-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .toc-list li a {
+        display: block;
+        padding: .3rem .6rem;
+        border-radius: 6px;
+        font-size: .82rem;
+        color: var(--text-secondary, #8892a4);
+        text-decoration: none;
+        transition: all .2s;
+        line-height: 1.4;
+    }
+
+    .toc-list li a:hover,
+    .toc-list li a.active {
+        background: rgba(242,101,34,.12);
+        color: var(--accent, #f26522);
+    }
+
+    .toc-list li.toc-h3 a {
+        padding-left: 1.25rem;
+        font-size: .78rem;
+    }
+
+    /* ── Content area ── */
+    .manual-content {
+        flex: 1;
+        min-width: 0;
+        background: var(--bg-card, #1e2535);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        border-radius: 12px;
+        padding: 2.5rem;
+    }
+
+    /* ── Markdown styles ── */
+    .md-body h1 {
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: var(--text-primary, #e8eaf0);
+        border-bottom: 2px solid var(--accent, #f26522);
+        padding-bottom: .5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Offset para compensar el navbar fijo al navegar con anclas */
+    .md-body h2,
+    .md-body h3,
+    .md-body h4 {
+        scroll-margin-top: 80px;
+    }
+
+    .md-body h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--text-primary, #e8eaf0);
+        margin-top: 2.5rem;
+        margin-bottom: 1rem;
+        padding: .5rem .75rem;
+        background: rgba(242,101,34,.08);
+        border-left: 3px solid var(--accent, #f26522);
+        border-radius: 0 8px 8px 0;
+    }
+
+    .md-body h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary, #e8eaf0);
+        margin-top: 1.75rem;
+        margin-bottom: .75rem;
+    }
+
+    .md-body h4 {
+        font-size: .95rem;
+        font-weight: 600;
+        color: var(--accent, #f26522);
+        margin-top: 1.25rem;
+        margin-bottom: .5rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-size: .8rem;
+    }
+
+    .md-body p {
+        color: var(--text-secondary, #8892a4);
+        line-height: 1.75;
+        margin-bottom: .85rem;
+    }
+
+    .md-body a {
+        color: var(--accent, #f26522);
+        text-decoration: none;
+    }
+
+    .md-body a:hover { text-decoration: underline; }
+
+    .md-body ul, .md-body ol {
+        color: var(--text-secondary, #8892a4);
+        padding-left: 1.5rem;
+        margin-bottom: .85rem;
+        line-height: 1.75;
+    }
+
+    .md-body li { margin-bottom: .3rem; }
+
+    .md-body strong {
+        color: var(--text-primary, #e8eaf0);
+        font-weight: 600;
+    }
+
+    .md-body hr {
+        border: none;
+        border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+        margin: 2rem 0;
+    }
+
+    /* Tables */
+    .md-body table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0 1.5rem;
+        font-size: .88rem;
+    }
+
+    .md-body th {
+        background: rgba(242,101,34,.15);
+        color: var(--text-primary, #e8eaf0);
+        font-weight: 600;
+        padding: .6rem .85rem;
+        text-align: left;
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+    }
+
+    .md-body td {
+        padding: .55rem .85rem;
+        color: var(--text-secondary, #8892a4);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        vertical-align: top;
+    }
+
+    .md-body tr:nth-child(even) td {
+        background: rgba(255,255,255,.03);
+    }
+
+    /* Blockquotes */
+    .md-body blockquote {
+        border-left: 3px solid #3b82f6;
+        background: rgba(59,130,246,.08);
+        border-radius: 0 8px 8px 0;
+        padding: .75rem 1rem;
+        margin: 1rem 0;
+        color: var(--text-secondary, #8892a4);
+        font-size: .9rem;
+    }
+
+    .md-body blockquote strong {
+        color: #60a5fa;
+    }
+
+    /* Code */
+    .md-body code {
+        background: rgba(255,255,255,.07);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        border-radius: 4px;
+        padding: .15rem .4rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: .82rem;
+        color: #f472b6;
+    }
+
+    .md-body pre {
+        background: rgba(0,0,0,.3);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+    }
+
+    .md-body pre code {
+        background: transparent;
+        border: none;
+        padding: 0;
+        color: #e2e8f0;
+        font-size: .85rem;
+    }
+
+    /* Loading skeleton */
+    .manual-loading {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem 0;
+    }
+
+    .skeleton-line {
+        height: 14px;
+        background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.05) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+    }
+
+    @@keyframes shimmer {
+        0%   { background-position: -200% 0; }
+        100% { background-position:  200% 0; }
+    }
+
+    /* Print */
+    @@media print {
+        .manual-toc, .top-navbar, .sidebar { display: none !important; }
+        .manual-content { border: none; padding: 0; }
+        .md-body h2 { background: none; border-left: 3px solid #333; }
+    }
+
+    @@media (max-width: 768px) {
+        .manual-wrapper { flex-direction: column; padding: 1rem; }
+        .manual-toc { width: 100%; position: static; max-height: 250px; }
+        .manual-content { padding: 1.25rem; }
+    }
+</style>
+
+<div class="manual-wrapper">
+
+    <!-- TOC -->
+    <nav class="manual-toc" id="manualToc">
+        <h6><i class="bi bi-list-ul me-1"></i>Contenido</h6>
+        <ul class="toc-list" id="tocList">
+            <li><a href="#">Cargando...</a></li>
+        </ul>
+    </nav>
+
+    <!-- Content -->
+    <div class="manual-content">
+        <!-- Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:.75rem;">
+            <div style="display:flex; align-items:center; gap:.75rem;">
+                <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--accent,#f26522),#e55a1a);display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-book-fill" style="color:#fff;font-size:1.2rem;"></i>
+                </div>
+                <div>
+                    <h5 style="margin:0;font-weight:700;color:var(--text-primary,#e8eaf0);">Manual de Usuario</h5>
+                    <small style="color:var(--text-secondary,#8892a4);">Portal de Honorarios Médicos – Compañías Médicas</small>
+                </div>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <button onclick="window.print()" class="btn btn-sm"
+                        style="border:1px solid var(--border,rgba(255,255,255,.08));background:transparent;color:var(--text-secondary,#8892a4);border-radius:8px;padding:.35rem .75rem;font-size:.82rem;">
+                    <i class="bi bi-printer me-1"></i>Imprimir
+                </button>
+                <button id="btnDescargarPdf" onclick="descargarPDF()" class="btn btn-sm"
+                        style="border:1px solid rgba(242,101,34,.4);background:rgba(242,101,34,.1);color:var(--accent,#f26522);border-radius:8px;padding:.35rem .75rem;font-size:.82rem;">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+                </button>
+                <a href="/manual/manual.md" download="Manual_Portal_Companias.md"
+                   class="btn btn-sm"
+                   style="border:1px solid var(--border,rgba(255,255,255,.08));background:transparent;color:var(--text-secondary,#8892a4);border-radius:8px;padding:.35rem .75rem;font-size:.82rem;">
+                    <i class="bi bi-download me-1"></i>Descargar .md
+                </a>
+            </div>
+        </div>
+
+        <!-- Rendered markdown -->
+        <div class="md-body" id="mdBody">
+            <div class="manual-loading">
+                <div class="skeleton-line" style="width:60%"></div>
+                <div class="skeleton-line" style="width:40%"></div>
+                <div class="skeleton-line" style="width:80%"></div>
+                <div class="skeleton-line" style="width:55%"></div>
+                <div class="skeleton-line" style="width:70%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/marked/marked.min.js" asp-append-version="true"></script>
+<script src="~/lib/html2pdf.js/html2pdf.bundle.min.js" asp-append-version="true"></script>
+<script>
+(function () {
+    function slugify(text) {
+        return text.toLowerCase()
+            .replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e')
+            .replace(/[íìïî]/g, 'i').replace(/[óòöô]/g, 'o')
+            .replace(/[úùüû]/g, 'u').replace(/ñ/g, 'n')
+            .replace(/[^a-z0-9\s-]/g, '').trim()
+            .replace(/\s+/g, '-');
+    }
+
+    fetch('/manual/manual.md')
+        .then(r => {
+            if (!r.ok) throw new Error('No se pudo cargar el manual');
+            return r.text();
+        })
+        .then(md => {
+            // Renderizar markdown sin renderer personalizado
+            marked.use({ gfm: true, breaks: false });
+            document.getElementById('mdBody').innerHTML = marked.parse(md);
+
+            // Asignar IDs a los h2 y construir TOC desde el DOM
+            const toc     = [];
+            const tocList = document.getElementById('tocList');
+            tocList.innerHTML = '';
+
+            document.querySelectorAll('.md-body h2').forEach(h => {
+                const text = h.textContent.trim();
+                const id   = slugify(text);
+                h.id = id;
+                toc.push({ text, id });
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="#${id}">${text}</a>`;
+                tocList.appendChild(li);
+            });
+
+            // Resaltar item activo según scroll
+            const tocLinks = tocList.querySelectorAll('a');
+            const headings = document.querySelectorAll('.md-body h2');
+
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.remove('active'));
+                        const active = tocList.querySelector(`a[href="#${entry.target.id}"]`);
+                        if (active) active.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '0px 0px -85% 0px', threshold: 0 });
+
+            headings.forEach(h => observer.observe(h));
+        })
+        .catch(err => {
+            document.getElementById('mdBody').innerHTML =
+                `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>${err.message}</div>`;
+        });
+})();
+
+function descargarPDF() {
+    const btn = document.getElementById('btnDescargarPdf');
+    const source = document.getElementById('mdBody');
+    if (!source || !source.innerHTML.trim()) {
+        alert('El manual aún no ha terminado de cargar. Intente en unos segundos.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Generando...';
+
+    // Clonar contenido aplicando tema claro para el PDF
+    const clone = source.cloneNode(true);
+
+    // Estilos base del clon
+    clone.style.cssText = 'font-family:Arial,sans-serif;font-size:11pt;color:#1a1a1a;background:#fff;padding:0;';
+
+    // Headings
+    clone.querySelectorAll('h1').forEach(el => Object.assign(el.style, { color:'#1a1a1a', fontSize:'20pt', fontWeight:'700', borderBottom:'2px solid #f26522', paddingBottom:'4px', marginBottom:'12px' }));
+    clone.querySelectorAll('h2').forEach(el => Object.assign(el.style, { color:'#1a1a1a', fontSize:'14pt', fontWeight:'700', background:'#fff3ec', borderLeft:'3px solid #f26522', padding:'4px 8px', marginTop:'20px', borderRadius:'0 4px 4px 0' }));
+    clone.querySelectorAll('h3').forEach(el => Object.assign(el.style, { color:'#222', fontSize:'12pt', fontWeight:'600', marginTop:'14px' }));
+    clone.querySelectorAll('h4').forEach(el => Object.assign(el.style, { color:'#f26522', fontSize:'9pt', fontWeight:'700', textTransform:'uppercase', marginTop:'10px' }));
+
+    // Párrafos y listas
+    clone.querySelectorAll('p,li').forEach(el => Object.assign(el.style, { color:'#333', lineHeight:'1.65' }));
+
+    // Tablas
+    clone.querySelectorAll('table').forEach(el => Object.assign(el.style, { width:'100%', borderCollapse:'collapse', fontSize:'10pt', marginBottom:'12px' }));
+    clone.querySelectorAll('th').forEach(el => Object.assign(el.style, { background:'#fff3ec', color:'#1a1a1a', fontWeight:'600', padding:'5px 8px', border:'1px solid #e0c8ba', textAlign:'left' }));
+    clone.querySelectorAll('td').forEach(el => Object.assign(el.style, { color:'#333', padding:'4px 8px', border:'1px solid #e8e8e8', verticalAlign:'top' }));
+
+    // Blockquotes
+    clone.querySelectorAll('blockquote').forEach(el => Object.assign(el.style, { background:'#f0f7ff', borderLeft:'3px solid #3b82f6', padding:'6px 10px', color:'#333', margin:'10px 0', borderRadius:'0 6px 6px 0' }));
+
+    // Code
+    clone.querySelectorAll('code').forEach(el => Object.assign(el.style, { background:'#f5f5f5', color:'#d63384', border:'1px solid #ddd', borderRadius:'3px', padding:'1px 4px', fontSize:'9pt' }));
+    clone.querySelectorAll('pre').forEach(el => Object.assign(el.style, { background:'#f8f8f8', border:'1px solid #ddd', borderRadius:'6px', padding:'10px 14px', overflow:'hidden' }));
+    clone.querySelectorAll('pre code').forEach(el => Object.assign(el.style, { background:'transparent', border:'none', color:'#333', fontSize:'9pt' }));
+
+    // hr
+    clone.querySelectorAll('hr').forEach(el => Object.assign(el.style, { border:'none', borderTop:'1px solid #e0e0e0', margin:'16px 0' }));
+
+    // Contenedor temporal fuera de pantalla
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;background:#fff;';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    html2pdf().set({
+        margin:           [14, 18, 14, 18],
+        filename:         'Manual_Portal_Companias_Medicas.pdf',
+        image:            { type: 'jpeg', quality: 0.97 },
+        html2canvas:      { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+        jsPDF:            { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:        { mode: ['avoid-all', 'css'] }
+    }).from(clone).save().finally(() => {
+        document.body.removeChild(wrapper);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF';
+    });
+}
+</script>
+}
