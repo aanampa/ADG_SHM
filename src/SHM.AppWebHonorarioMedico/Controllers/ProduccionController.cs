@@ -675,7 +675,7 @@ public class ProduccionController : Controller
                 return StatusCode(404, "Produccion no encontrada");
 
             var logs = await _emailLogRepository.GetByReferenciaAsync(
-                "SHM_PRODUCCION", produccion.IdProduccion, "SOLICITUD_FACTURA");
+                "SHM_PRODUCCION", produccion.IdProduccion);
 
             ViewBag.GuidRegistro      = guidRegistro;
             ViewBag.NumeroProduccion  = produccion.NumeroProduccion;
@@ -1169,18 +1169,35 @@ public class ProduccionController : Controller
 
     /// <summary>
     /// Retorna el modal de ReNotificar Factura (FACTURA_SOLICITADA / FACTURA_DEVUELTA).
+    /// Con guidRegistro: filtra a un solo registro (modo individual desde Detalle).
+    /// Sin guidRegistro: carga todos los SOLICITADA/DEVUELTA de la sede (modo masivo desde Index).
     ///
     /// <author>ADG Vladimir D</author>
     /// <created>2026-04-26</created>
+    /// <modified>ADG Vladimir D - 2026-04-27 - Soporte modo individual por guidRegistro</modified>
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetModalReNotificarFactura()
+    public async Task<IActionResult> GetModalReNotificarFactura(string? guidRegistro = null)
     {
         try
         {
-            var idSede   = GetCurrentUserIdSede();
-            var lista    = await _produccionService.GetListSolicitudMasivaAsync(idSede);
-            var allItems = lista.Where(p =>
+            IEnumerable<ProduccionListaResponseDto> allItems;
+
+            if (!string.IsNullOrEmpty(guidRegistro))
+            {
+                var item = await _produccionService.GetSolicitudMasivaByGuidAsync(guidRegistro);
+                allItems = item != null ? new[] { item } : Array.Empty<ProduccionListaResponseDto>();
+            }
+            else
+            {
+                var idSede = GetCurrentUserIdSede();
+                var lista  = await _produccionService.GetListSolicitudMasivaAsync(idSede);
+                allItems   = lista.Where(p =>
+                    p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ||
+                    p.Estado == EstadoDescripcion.Produccion.FacturaDevuelta);
+            }
+
+            allItems = allItems.Where(p =>
                 p.Estado == EstadoDescripcion.Produccion.FacturaSolicitada ||
                 p.Estado == EstadoDescripcion.Produccion.FacturaDevuelta);
 
@@ -1217,6 +1234,7 @@ public class ProduccionController : Controller
                 };
             }).ToList();
 
+            ViewBag.GuidPreseleccionado = guidRegistro;
             return PartialView("_ReNotificarFacturaModal", viewItems);
         }
         catch (Exception ex)

@@ -44,7 +44,7 @@
                                           : "Renotificar Factura";
                     var fnSolicitar = item.Estado == EstadoDescripcion.Produccion.FacturaPendiente
                                     ? $"abrirModalSolicitudFacturaIndividual('{item.GuidRegistro}')"
-                                    : $"abrirModalSolicitudIndividual('{item.GuidRegistro}')";
+                                    : $"abrirModalReNotificarFacturaIndividual('{item.GuidRegistro}')";
                     <tr>
                         <td class="text-center">
                             <button type="button" class="btn btn-info btn-xs" onclick="verDetalle('@item.GuidRegistro')"
@@ -63,7 +63,7 @@
                             {
                                 <button type="button" class="btn btn-warning btn-xs ml-1"
                                     onclick="abrirHistorialNotificaciones('@item.GuidRegistro')"
-                                    title="Ver correo de Solicitud de Factura">
+                                    title="Ver correos enviados">
                                     <i class="fas fa-envelope"></i>
                                 </button>
                             }

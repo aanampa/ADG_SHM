@@ -339,10 +339,6 @@ public class ProduccionService : IProduccionService
             return false;
         }
 
-        // Leer estado previo antes del UPDATE para elegir plantilla de correo
-        var produccionPrevia = await _produccionRepository.GetByGuidWithDetailsAsync(solicitudDto.GuidRegistro);
-        var estadoPrevio = produccionPrevia?.Estado;
-
         const string nuevoEstado = EstadoDescripcion.Produccion.FacturaSolicitada;
 
         DateTime? fechaVencimiento = null;
@@ -374,30 +370,15 @@ public class ProduccionService : IProduccionService
                         {
                             var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
 
-                            if (estadoPrevio == EstadoDescripcion.Produccion.FacturaDevuelta)
-                            {
-                                await _emailService.EnviarEmailFacturaDevueltaAsync(
-                                    email:              usuario.Email,
-                                    nombreDestinatario: nombreCompleto,
-                                    codigoProduccion:   produccion.NumeroProduccion ?? "",
-                                    razonSocial:        produccion.RazonSocial ?? "",
-                                    mtoTotal:           produccion.MtoTotal,
-                                    fechaLimite:        fechaLimite,
-                                    idEntidadMedica:    produccion.IdEntidadMedica,
-                                    idProduccion:       produccion.IdProduccion);
-                            }
-                            else
-                            {
-                                await _emailService.EnviarEmailSolicitudFacturaAsync(
-                                    email:              usuario.Email,
-                                    nombreDestinatario: nombreCompleto,
-                                    codigoProduccion:   produccion.NumeroProduccion ?? "",
-                                    razonSocial:        produccion.RazonSocial ?? "",
-                                    mtoTotal:           produccion.MtoTotal,
-                                    fechaLimite:        fechaLimite,
-                                    idEntidadMedica:    produccion.IdEntidadMedica,
-                                    idProduccion:       produccion.IdProduccion);
-                            }
+                            await _emailService.EnviarEmailSolicitudFacturaAsync(
+                                email:              usuario.Email,
+                                nombreDestinatario: nombreCompleto,
+                                codigoProduccion:   produccion.NumeroProduccion ?? "",
+                                razonSocial:        produccion.RazonSocial ?? "",
+                                mtoTotal:           produccion.MtoTotal,
+                                fechaLimite:        fechaLimite,
+                                idEntidadMedica:    produccion.IdEntidadMedica,
+                                idProduccion:       produccion.IdProduccion);
                         }
                     }
                 }

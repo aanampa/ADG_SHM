@@ -2,9 +2,10 @@
 @model List<SHM.AppWebHonorarioMedico.Models.SolicitudMasivaItemViewModel>
 
 @{
-    var solicitadas = Model.Where(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada).ToList();
-    var devueltas   = Model.Where(i => i.Estado == EstadoDescripcion.Produccion.FacturaDevuelta).ToList();
-    var habilitados = Model.Where(i => i.Habilitado).ToList();
+    var solicitadas         = Model.Where(i => i.Estado == EstadoDescripcion.Produccion.FacturaSolicitada).ToList();
+    var devueltas           = Model.Where(i => i.Estado == EstadoDescripcion.Produccion.FacturaDevuelta).ToList();
+    var habilitados         = Model.Where(i => i.Habilitado).ToList();
+    var guidPreseleccionado = ViewBag.GuidPreseleccionado as string ?? string.Empty;
 }
 
 <div class="modal fade" id="modalReNotificarFactura" tabindex="-1" role="dialog" aria-labelledby="modalRnLabel" aria-hidden="true">
@@ -38,7 +39,7 @@
                         <div style="flex:1;height:2px;background:#dee2e6;margin-bottom:18px;max-width:80px;"></div>
                         <div class="d-flex flex-column align-items-center" style="min-width:140px;">
                             <div id="rnStepCircle2" style="width:32px;height:32px;border-radius:50%;background:#dee2e6;color:#6c757d;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">2</div>
-                            <small id="rnStepLabel2" class="mt-1 text-muted">Acción y Confirmar</small>
+                            <small id="rnStepLabel2" class="mt-1 text-muted">Renotificar</small>
                         </div>
                     </div>
 
@@ -58,10 +59,7 @@
                                     Factura Devuelta <span class="badge badge-light ml-1" id="rnCntDevuelta">@devueltas.Count</span>
                                 </button>
                             </div>
-                            <div class="input-group input-group-sm" style="max-width:280px;">
-                                <span class="input-group-text" style="background:#fff;">
-                                    <i class="fas fa-search text-muted"></i>
-                                </span>
+                            <div class="input-group input-group-sm" style="max-width:320px;">
                                 <input type="text" id="rnInputBusqueda" class="form-control form-control-sm"
                                        placeholder="Buscar por Cía Médica, código..."
                                        oninput="rnBuscar()">
@@ -259,7 +257,14 @@
                                             </div>
                                             <div id="rnDivNuevaVenc">
                                                 <label class="small font-weight-bold">Fecha <span class="text-danger">*</span></label>
-                                                <input type="date" id="rnFechaVenc" class="form-control form-control-sm" style="max-width:180px;" />
+                                                <div class="d-flex align-items-end" style="gap:10px;">
+                                                    <div style="width:240px;">
+                                                        <input type="date" id="rnFechaVenc" class="form-control form-control-sm" onchange="rnCalcularDias()" />
+                                                    </div>
+                                                    <div class="pb-1">
+                                                        <span id="rnLblDias" class="small font-weight-bold"></span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div id="rnDivMantenerVenc" style="display:none;">
                                                 <small class="text-muted">
@@ -339,6 +344,7 @@ var rnSortCol = null;
 var rnSortAsc = true;
 var rnFiltroActivo = 'todos';
 var rnAccionActiva = 'solo';
+var rnGuidPreseleccionado = '@guidPreseleccionado';
 
 (function () {
     var modal  = document.getElementById('modalReNotificarFactura');
@@ -369,6 +375,7 @@ var rnAccionActiva = 'solo';
 })();
 
 function rnReset() {
+    if (!document.getElementById('rnPaso1')) return;
     rnFiltroActivo = 'todos';
     rnFiltrar('todos');
     document.getElementById('rnPaso1').style.display       = '';
@@ -379,6 +386,13 @@ function rnReset() {
     document.querySelectorAll('.rn-chk').forEach(function (cb) { cb.checked = false; });
     var chkAll = document.getElementById('rnChkAll');
     if (chkAll) chkAll.checked = false;
+
+    // Pre-marcar el registro si viene de modo individual
+    if (rnGuidPreseleccionado) {
+        var chk = document.querySelector('#rnTbody .rn-chk[data-guid="' + rnGuidPreseleccionado + '"]');
+        if (chk) chk.checked = true;
+    }
+
     rnActualizarContador();
     rnSetStep(1);
 }
@@ -575,7 +589,31 @@ function rnToggleFechaVenc() {
     var esNueva = document.getElementById('rnRdoNuevaVenc').checked;
     document.getElementById('rnDivNuevaVenc').style.display    = esNueva ? '' : 'none';
     document.getElementById('rnDivMantenerVenc').style.display = esNueva ? 'none' : '';
-    if (!esNueva) document.getElementById('rnFechaVenc').value = '';
+    if (!esNueva) {
+        document.getElementById('rnFechaVenc').value = '';
+        document.getElementById('rnLblDias').textContent = '';
+    }
+}
+
+function rnCalcularDias() {
+    var lbl = document.getElementById('rnLblDias');
+    var fl  = document.getElementById('rnFechaLimite').value;
+    var fv  = document.getElementById('rnFechaVenc').value;
+    if (!fv) { lbl.textContent = ''; lbl.style.color = ''; return; }
+    if (!fl) { lbl.textContent = ''; lbl.style.color = ''; return; }
+    var limite      = new Date(fl + 'T00:00:00');
+    var vencimiento = new Date(fv + 'T00:00:00');
+    var dias = Math.round((vencimiento - limite) / (1000 * 60 * 60 * 24));
+    if (dias > 0) {
+        lbl.textContent = dias + ' día' + (dias !== 1 ? 's' : '') + ' después de la fecha límite';
+        lbl.style.color = '#28a745';
+    } else if (dias === 0) {
+        lbl.textContent = 'Mismo día que la fecha límite';
+        lbl.style.color = '#6c757d';
+    } else {
+        lbl.textContent = Math.abs(dias) + ' día' + (Math.abs(dias) !== 1 ? 's' : '') + ' antes de la fecha límite';
+        lbl.style.color = '#dc3545';
+    }
 }
 
 // ── Ejecutar ──────────────────────────────────────────────────────────────────

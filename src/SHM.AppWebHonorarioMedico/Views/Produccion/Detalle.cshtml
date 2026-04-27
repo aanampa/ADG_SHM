@@ -372,7 +372,7 @@
                                     var btnLabel = (Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta) ? "Renotificar Solicitud de Factura" : "Solicitar Factura";
                                     var fnOnClick = Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente
                                         ? $"abrirModalSolicitudFactura('{Model.GuidRegistro}')"
-                                        : "$('#modalSolicitudMasiva').modal('show')";
+                                        : $"abrirModalReNotificarFactura('{Model.GuidRegistro}')";
 
                                     string? motivoDeshabilitado = null;
                                     if (!tieneUsuarios)
@@ -479,6 +479,8 @@
     </div>
 </div>
 
+<input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
+
 @{
     var solicitudVm = ViewBag.SolicitudIndividualVm as SHM.AppWebHonorarioMedico.Models.SolicitudMasivaViewModel;
 }
@@ -488,11 +490,27 @@
 }
 
 <div id="sfModalContainer"></div>
+<div id="rnModalContainer"></div>
 
 @section Scripts {
     <script>
         // refreshList: en Detalle recarga la página (usado por los modales de solicitud)
         function refreshList() { location.reload(); }
+
+        function abrirModalReNotificarFactura(guid) {
+            fetch('@Url.Action("GetModalReNotificarFactura", "Produccion")' + '?guidRegistro=' + guid)
+                .then(r => r.text())
+                .then(html => {
+                    var container = document.getElementById('rnModalContainer');
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        oldScript.parentNode.removeChild(oldScript);
+                    });
+                });
+        }
 
         function abrirModalSolicitudFactura(guid) {
             fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")' + '?guidRegistro=' + guid)
