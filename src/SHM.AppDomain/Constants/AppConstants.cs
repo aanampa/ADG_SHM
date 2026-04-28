@@ -32,4 +32,20 @@ public static class AppConstants
         public const string CodigoMedioPago      = "001";
         public const string DescMedioPago         = "Depósito en cuenta";
     }
+
+    /// <summary>
+    /// Constantes para la descripcion de monedas a partir de su codigo ISO 4217.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-28</created>
+    public static class MonedaConstants
+    {
+        public static string GetDescripcion(string? codigo) => codigo switch
+        {
+            "PEN" => "Soles",
+            "USD" => "Dólares",
+            "EUR" => "Euros",
+            _     => codigo ?? "-"
+        };
+    }
 }

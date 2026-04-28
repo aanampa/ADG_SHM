@@ -187,7 +187,7 @@
                                         <div class="col-6">
                                             <div class="form-group-sm">
                                                 <label>Moneda</label>
-                                                <input type="text" class="form-control form-control-sm" value="@(moneda == "S" ? "Soles" : moneda ?? "-")" readonly style="background-color: #e9ecef;">
+                                                <input type="text" class="form-control form-control-sm" value="@AppConstants.MonedaConstants.GetDescripcion(moneda)" readonly style="background-color: #e9ecef;">
                                             </div>
                                         </div>
                                     </div>

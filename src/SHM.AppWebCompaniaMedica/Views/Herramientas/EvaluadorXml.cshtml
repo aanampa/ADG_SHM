@@ -8,9 +8,7 @@
         margin: 0 auto;
         padding: 1.5rem;
     }
-    .page-header {
-        margin-bottom: 1.5rem;
-    }
+    .page-header { margin-bottom: 1.5rem; }
     .page-title {
         font-size: 1.6rem;
         font-weight: 700;
@@ -81,7 +79,6 @@
         transition: opacity 0.2s;
     }
     .btn-evaluar:hover { opacity: 0.88; }
-    /* Estado validacion */
     .estado-valid {
         display: flex;
         align-items: center;
@@ -94,64 +91,6 @@
     }
     .estado-ok   { background: #d4edda; color: #155724; }
     .estado-fail { background: #f8d7da; color: #721c24; }
-    /* Seccion de datos */
-    .data-section { margin-bottom: 1.25rem; }
-    .data-section-title {
-        font-weight: 700;
-        color: var(--primary, #5a1160);
-        font-size: 0.88rem;
-        border-bottom: 2px solid var(--accent, #f26522);
-        padding-bottom: 0.4rem;
-        margin-bottom: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-    .data-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem 1.5rem;
-    }
-    .data-field {
-        display: flex;
-        flex-direction: column;
-    }
-    .data-label {
-        font-size: 0.75rem;
-        color: var(--text-secondary, #888);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-    .data-value {
-        font-size: 0.9rem;
-        color: var(--text-primary, #333);
-        font-weight: 500;
-        word-break: break-word;
-    }
-    .data-value.monto { font-weight: 700; color: var(--primary, #5a1160); }
-    /* Tabla items */
-    .items-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.85rem;
-        margin-top: 0.5rem;
-    }
-    .items-table th {
-        background: var(--primary, #5a1160);
-        color: white;
-        padding: 0.5rem 0.75rem;
-        text-align: left;
-        font-weight: 600;
-    }
-    .items-table td {
-        padding: 0.5rem 0.75rem;
-        border-bottom: 1px solid var(--border, #eee);
-        vertical-align: top;
-    }
-    .items-table tr:last-child td { border-bottom: none; }
-    .items-table tr:nth-child(even) td { background: rgba(0,0,0,0.02); }
-    .text-right { text-align: right; }
     #resultadoPanel { display: none; }
 </style>
 
@@ -193,75 +132,13 @@
         <!-- Estado -->
         <div id="estadoPanel"></div>
 
-        <!-- Datos -->
+        <!-- Datos extraídos (partial inyectado) -->
         <div id="datosPanel" class="card-panel" style="display:none;">
             <div class="card-panel-title">
                 <i class="bi bi-list-check"></i> Datos Extraídos
                 <span id="badgeTipo" style="margin-left:auto; font-size:0.78rem; padding:0.25rem 0.7rem; border-radius:20px; background:var(--accent,#f26522); color:white;"></span>
             </div>
-
-            <!-- Datos Generales -->
-            <div class="data-section">
-                <div class="data-section-title"><i class="bi bi-info-circle"></i> Datos Generales</div>
-                <div class="data-grid">
-                    <div class="data-field"><span class="data-label">Tipo Documento</span><span class="data-value" id="d-tipo"></span></div>
-                    <div class="data-field"><span class="data-label">Número</span><span class="data-value" id="d-numero"></span></div>
-                    <div class="data-field"><span class="data-label">Fecha Emisión</span><span class="data-value" id="d-fecha"></span></div>
-                    <div class="data-field"><span class="data-label">Hora Emisión</span><span class="data-value" id="d-hora"></span></div>
-                    <div class="data-field"><span class="data-label">Moneda</span><span class="data-value" id="d-moneda"></span></div>
-                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Total en Letras</span><span class="data-value" id="d-letras"></span></div>
-                </div>
-            </div>
-
-            <!-- Emisor -->
-            <div class="data-section">
-                <div class="data-section-title"><i class="bi bi-person-badge"></i> Emisor</div>
-                <div class="data-grid">
-                    <div class="data-field"><span class="data-label">RUC</span><span class="data-value" id="d-emisor-ruc"></span></div>
-                    <div class="data-field"><span class="data-label">Razón Social / Nombre</span><span class="data-value" id="d-emisor-nombre"></span></div>
-                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Dirección</span><span class="data-value" id="d-emisor-dir"></span></div>
-                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Ubicación</span><span class="data-value" id="d-emisor-ubic"></span></div>
-                </div>
-            </div>
-
-            <!-- Cliente -->
-            <div class="data-section">
-                <div class="data-section-title"><i class="bi bi-building"></i> Cliente / Receptor</div>
-                <div class="data-grid">
-                    <div class="data-field"><span class="data-label">Tipo Documento</span><span class="data-value" id="d-cli-tipodoc"></span></div>
-                    <div class="data-field"><span class="data-label">Número Documento</span><span class="data-value" id="d-cli-numdoc"></span></div>
-                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Razón Social / Nombre</span><span class="data-value" id="d-cli-nombre"></span></div>
-                    <div class="data-field" style="grid-column: span 2"><span class="data-label">Dirección</span><span class="data-value" id="d-cli-dir"></span></div>
-                </div>
-            </div>
-
-            <!-- Totales -->
-            <div class="data-section">
-                <div class="data-section-title"><i class="bi bi-calculator"></i> Importes</div>
-                <div class="data-grid">
-                    <div class="data-field"><span class="data-label">Valor Venta</span><span class="data-value monto" id="d-valor-venta"></span></div>
-                    <div class="data-field"><span class="data-label">IGV</span><span class="data-value monto" id="d-igv"></span></div>
-                    <div class="data-field" id="row-retencion"><span class="data-label">Retención (4ta Cat.)</span><span class="data-value monto" id="d-retencion"></span></div>
-                    <div class="data-field"><span class="data-label">Importe Total</span><span class="data-value monto" id="d-total"></span></div>
-                </div>
-            </div>
-
-            <!-- Items -->
-            <div class="data-section">
-                <div class="data-section-title"><i class="bi bi-list-ul"></i> Detalle de Ítems</div>
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Descripción</th>
-                            <th class="text-right">Cantidad</th>
-                            <th class="text-right">Precio Unit.</th>
-                            <th class="text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="d-items"></tbody>
-                </table>
-            </div>
+            <div id="partialContainer"></div>
         </div>
     </div>
 </div>
@@ -269,7 +146,7 @@
 @section Scripts {
 <script>
     function evaluar() {
-        const tipo = document.getElementById('tipoComprobante').value;
+        const tipo    = document.getElementById('tipoComprobante').value;
         const archivo = document.getElementById('archivoXml').files[0];
 
         if (!tipo) {
@@ -288,14 +165,20 @@
         form.append('archivoXml', archivo);
 
         fetch('/Herramientas/EvaluarXml', { method: 'POST', body: form })
-            .then(r => r.json())
-            .then(res => {
+            .then(r => {
+                const ct = r.headers.get('content-type') ?? '';
+                if (ct.includes('application/json')) {
+                    return r.json().then(data => ({ isError: true, data }));
+                }
+                return r.text().then(html => ({ isError: false, html }));
+            })
+            .then(result => {
                 Swal.close();
                 document.getElementById('resultadoPanel').style.display = 'block';
 
-                if (!res.success) {
+                if (result.isError) {
                     document.getElementById('estadoPanel').innerHTML =
-                        `<div class="estado-valid estado-fail mb-3"><i class="bi bi-x-circle-fill" style="font-size:1.4rem"></i>${escHtml(res.message)}</div>`;
+                        `<div class="estado-valid estado-fail mb-3"><i class="bi bi-x-circle-fill" style="font-size:1.4rem"></i>${escHtml(result.data.message)}</div>`;
                     document.getElementById('datosPanel').style.display = 'none';
                     return;
                 }
@@ -303,90 +186,20 @@
                 document.getElementById('estadoPanel').innerHTML =
                     `<div class="estado-valid estado-ok mb-3"><i class="bi bi-check-circle-fill" style="font-size:1.4rem"></i>XML válido — estructura correcta</div>`;
 
-                const d = res.datos;
+                const tipoLabel = (tipo === '22' || tipo === '02') ? 'Recibo por Honorarios' : 'Factura';
+                document.getElementById('badgeTipo').textContent = tipoLabel;
+                document.getElementById('partialContainer').innerHTML = result.html;
                 document.getElementById('datosPanel').style.display = 'block';
-                document.getElementById('badgeTipo').textContent = res.tipoParser === 'RHE' ? 'Recibo por Honorarios' : 'Factura';
-
-                // Datos generales
-                setText('d-tipo',    d.tipoDocumento);
-                setText('d-numero',  d.numeroDocumento);
-                setText('d-fecha',   formatFecha(d.fechaEmision));
-                setText('d-hora',    d.horaEmision || '-');
-                setText('d-moneda',  d.moneda);
-                setText('d-letras',  d.totalEnLetras || '-');
-
-                // Emisor
-                setText('d-emisor-ruc',    d.emisorRuc);
-                setText('d-emisor-nombre', d.emisorNombre);
-                setText('d-emisor-dir',    d.emisorDireccion || '-');
-                setText('d-emisor-ubic',   d.emisorUbicacion || '-');
-
-                // Cliente
-                const tipoDocDesc = d.clienteTipoDoc === '6' ? 'RUC' : d.clienteTipoDoc === '1' ? 'DNI' : (d.clienteTipoDoc || '-');
-                setText('d-cli-tipodoc',  tipoDocDesc);
-                setText('d-cli-numdoc',   d.clienteNumeroDoc);
-                setText('d-cli-nombre',   d.clienteNombre);
-                setText('d-cli-dir',      d.clienteDireccion || '-');
-
-                // Totales
-                setText('d-valor-venta', formatMonto(d.valorVenta, d.moneda));
-                setText('d-igv',         formatMonto(d.igv, d.moneda));
-                setText('d-total',       formatMonto(d.importeTotal, d.moneda));
-
-                const rowRet = document.getElementById('row-retencion');
-                if (res.tipoParser === 'RHE' && d.retencion > 0) {
-                    rowRet.style.display = '';
-                    setText('d-retencion', formatMonto(d.retencion, d.moneda) + (d.porcentajeRetencion > 0 ? ` (${d.porcentajeRetencion}%)` : ''));
-                } else {
-                    rowRet.style.display = 'none';
-                }
-
-                // Items
-                const tbody = document.getElementById('d-items');
-                tbody.innerHTML = '';
-                if (d.items && d.items.length > 0) {
-                    d.items.forEach(it => {
-                        tbody.innerHTML += `<tr>
-                            <td>${it.numero}</td>
-                            <td>${escHtml(it.descripcion || '-')}</td>
-                            <td class="text-right">${it.cantidad}</td>
-                            <td class="text-right">${formatMonto(it.precio, d.moneda)}</td>
-                            <td class="text-right">${formatMonto(it.total, d.moneda)}</td>
-                        </tr>`;
-                    });
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">Sin ítems</td></tr>';
-                }
-
                 document.getElementById('datosPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
             })
-            .catch(err => {
+            .catch(() => {
                 Swal.close();
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.', confirmButtonColor: '#dc3545' });
             });
     }
 
-    function setText(id, val) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val ?? '-';
-    }
-
     function escHtml(s) {
-        return (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    function formatMonto(val, moneda) {
-        if (val == null) return '-';
-        const sym = moneda === 'USD' ? '$' : 'S/';
-        return `${sym} ${parseFloat(val).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
-    }
-
-    function formatFecha(f) {
-        if (!f) return '-';
-        // Convierte yyyy-mm-dd a dd/mm/yyyy
-        const parts = f.split('-');
-        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        return f;
+        return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 </script>
 }

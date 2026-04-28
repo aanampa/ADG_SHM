@@ -48,9 +48,9 @@
 </div>
 
 <div class="dx-section">
-    <div class="dx-title"><i class="bi bi-person"></i> Cliente</div>
+    <div class="dx-title"><i class="bi bi-person"></i> Receptor</div>
     <div style="display:grid; grid-template-columns: 120px 1fr; gap:0.5rem;">
-        <div class="dx-field"><span class="dx-label">RUC/DNI</span><span class="dx-value mono">@(Model.DatosXml?.Cliente.NumeroDocumento ?? "-")</span></div>
+        <div class="dx-field"><span class="dx-label">RUC</span><span class="dx-value mono">@(Model.DatosXml?.Cliente.NumeroDocumento ?? "-")</span></div>
         <div class="dx-field"><span class="dx-label">Razón Social</span><span class="dx-value">@(Model.DatosXml?.Cliente.RazonSocial ?? "-")</span></div>
     </div>
 </div>
@@ -115,7 +115,7 @@
     <div class="dx-section">
         <div class="dx-title"><i class="bi bi-bank"></i> Detracción</div>
         <div class="dx-det-panel">
-            <div class="dx-det-title"><i class="bi bi-info-circle-fill"></i> Operación Sujeta al SPOT</div>
+            @* <div class="dx-det-title"><i class="bi bi-info-circle-fill"></i> Operación Sujeta al SPOT</div> *@
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
                 <div class="dx-field">
                     <span class="dx-label">Código Medio de Pago</span>

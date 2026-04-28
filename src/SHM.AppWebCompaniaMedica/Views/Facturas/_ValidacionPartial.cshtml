@@ -280,7 +280,7 @@
                 @{ FilaTabla("Serie",          Model.Serie ?? "-", serieXml ?? "-", serieCoincide, Model.ValidaSerie); }
                 @{ FilaTabla("Número",         Model.Numero ?? "-", numeroXml ?? "-", numeroCoincide, Model.ValidaNumero); }
                 @{ FilaTabla("Importe Total",  $"S/ {importeProduccion:N2}", $"S/ {importeXml:N2}", importeCoincide, Model.ValidaImporte); }
-                @{ FilaTabla("Concepto",       string.IsNullOrEmpty(conceptoProduccion) ? "-" : conceptoProduccion, string.IsNullOrEmpty(conceptoXml) ? "-" : conceptoXml, conceptoCoincide, Model.ValidaConcepto); }
+                @{ FilaTabla("Descripción del Ítem", string.IsNullOrEmpty(conceptoProduccion) ? "-" : conceptoProduccion, string.IsNullOrEmpty(conceptoXml) ? "-" : conceptoXml, conceptoCoincide, Model.ValidaConcepto); }
 
                 <tr class="row-section"><td colspan="4"><i class="bi bi-building"></i>Participantes</td></tr>
                 @{ FilaTabla("RUC Emisor",    string.IsNullOrEmpty(rucEmisorSistema) ? "-" : rucEmisorSistema, string.IsNullOrEmpty(rucEmisorXml) ? "-" : rucEmisorXml, rucEmisorCoincide, Model.ValidaRucEmisor); }
@@ -308,7 +308,7 @@
                     @if (xmlTieneDetraccion)
                     {
                         FilaTabla("Medio de Pago",     FacturacionConstants.CodigoMedioPago + " – " + FacturacionConstants.DescMedioPago, xmlDetraccion!.CodigoMedioPago, detMedioPagoCoincide, Model.ValidaDetraccion);
-                        FilaTabla("Bien / Servicio",   FacturacionConstants.CodigoConceptoDetraccion + " – " + FacturacionConstants.DescConceptoDetraccion, xmlDetraccion!.CodigoBienServicio, detConceptoCoincide, Model.ValidaDetraccion);
+                        FilaTabla("Código Bien / Servicio", FacturacionConstants.CodigoConceptoDetraccion + " – " + FacturacionConstants.DescConceptoDetraccion, xmlDetraccion!.CodigoBienServicio, detConceptoCoincide, Model.ValidaDetraccion);
                         if (prodTieneDetraccion)
                         {
                             FilaTabla("Porcentaje",    $"{Model.PorcDetraccion:N2}%", $"{xmlDetraccion!.Porcentaje:N2}%", detPorcCoincide, Model.ValidaDetraccion);
