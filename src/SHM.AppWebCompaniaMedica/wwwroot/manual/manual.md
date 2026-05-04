@@ -14,7 +14,7 @@
 2. [Acceso al Sistema](#2-acceso-al-sistema)
 3. [Dashboard](#3-dashboard)
 4. [Facturas Pendientes](#4-facturas-pendientes)
-5. [Subir Factura (Asistente de 4 pasos)](#5-subir-factura-asistente-de-4-pasos)
+5. [Enviar Factura (Asistente de 4 pasos)](#5-subir-factura-asistente-de-4-pasos)
 6. [Facturas Enviadas](#6-facturas-enviadas)
 7. [Detalle de Factura](#7-detalle-de-factura)
 8. [Mi Perfil](#8-mi-perfil)
@@ -136,15 +136,6 @@ Distribución porcentual de todos los comprobantes por estado:
 - Factura enviada a HHMM
 - Pagado
 
-### 3.3 Resumen del Mes
-
-Sección inferior con información detallada del mes en curso:
-
-| Indicador | Descripción |
-|-----------|-------------|
-| **Total Facturado (S/)** | Suma de importes de facturas procesadas en el mes |
-| **Facturas Procesadas** | Cantidad de facturas completadas |
-| **Tiempo Promedio** | Días promedio desde producción hasta envío |
 
 ---
 
@@ -164,38 +155,26 @@ En el menú lateral, seleccione **Facturas → Pendientes**.
 
 | Columna | Descripción |
 |---------|-------------|
-| **Producción** | Código y número de producción |
 | **Sede** | Nombre de la sede o clínica |
+| **Producción** | Código y número de producción |
 | **Concepto** | Descripción del servicio facturado |
 | **Importe** | Monto total a facturar (S/) |
 | **Fecha Límite** | Fecha máxima para enviar el comprobante |
+| **Estado** | Estado de solicitud de factura |
 | **Acciones** | Botones: Ver datos / Subir factura |
 
-### 4.3 Ver Datos de Producción
 
-El botón **"Ver Datos"** abre un panel informativo con los detalles completos de la producción:
-- Datos del emisor (RUC, razón social)
-- Datos del receptor (RUC, nombre)
-- Desglose de importes (subtotal, IGV, retención, total)
-- Concepto descriptivo
-
-<img src="images/07_modal_datos_produccion.png" width="650"/>
-
-*Figura 4.2: Panel de datos de producción*
-
-También dispone de un botón de **copiar concepto** para facilitar la escritura del XML.
-
-### 4.4 Búsqueda en Tiempo Real
+### 4.3 Búsqueda en Tiempo Real
 
 Use el campo de búsqueda para filtrar por código de producción, sede o concepto. La lista se actualiza automáticamente mientras escribe (sin necesidad de presionar Enter).
 
-### 4.5 Actualizar Lista
+### 4.4 Actualizar Lista
 
 Presione **"Actualizar"** para recargar la lista y ver si hay nuevas facturas disponibles.
 
 ---
 
-## 5. Subir Factura (Asistente de 4 pasos)
+## 5. Enviar Factura (Asistente de 4 pasos)
 
 Este asistente guiado le permite enviar un comprobante electrónico de forma ordenada, validando cada paso antes de continuar.
 
@@ -203,7 +182,7 @@ Este asistente guiado le permite enviar un comprobante electrónico de forma ord
 
 1. Vaya a **Facturas → Pendientes**
 2. Ubique la factura que desea enviar
-3. Haga clic en el botón **"Subir Factura"** (ícono de carga)
+3. Haga clic en el botón **"Enviar Factura"** (ícono de carga)
 
 <img src="images/08_wizard_indicador_pasos.png" width="750"/>
 
@@ -252,7 +231,6 @@ En este paso debe adjuntar los archivos de su comprobante electrónico.
 |---------|-----------|-------------|-------------|
 | **PDF** | .pdf | Sí | Representación impresa del comprobante (SUNAT) |
 | **XML** | .xml | Sí | Archivo XML UBL 2.1 firmado digitalmente |
-| **CDR** | .xml | Según configuración | Constancia de Recepción de SUNAT |
 
 **Cómo adjuntar archivos:**
 
@@ -406,8 +384,8 @@ En el menú lateral, seleccione **Facturas → Enviadas**.
 
 | Columna | Descripción |
 |---------|-------------|
-| **Producción** | Código y número |
 | **Sede** | Nombre de la sede |
+| **Producción** | Código y número |
 | **Concepto** | Descripción del servicio |
 | **Importe** | Total facturado (S/) |
 | **Fecha Emisión** | Fecha del comprobante |
@@ -415,17 +393,8 @@ En el menú lateral, seleccione **Facturas → Enviadas**.
 | **Estado** | Estado actual en el proceso |
 | **Acciones** | Botón para ver el detalle |
 
-### 6.3 Estados del Comprobante
 
-| Estado | Color | Descripción |
-|--------|-------|-------------|
-| **Enviado** | Azul | Comprobante recibido, pendiente de revisión por HHMM |
-| **Enviado HHMM** | Celeste | Registrado en el sistema HHMM |
-| **Aprobado** | Verde | Validado correctamente |
-| **Observado** | Rojo | Tiene observaciones; contacte al administrador |
-| **Pagado** | Verde oscuro | Proceso completado y pago realizado |
-
-### 6.4 Búsqueda y Paginación
+### 6.3 Búsqueda y Paginación
 
 - Use el campo de búsqueda para filtrar por serie, número, sede o concepto
 - Navegue entre páginas con los botones **Anterior / Siguiente** o haciendo clic en el número de página
@@ -440,7 +409,7 @@ Vista completa de un comprobante enviado.
 ### 7.1 Acceso
 
 1. Vaya a **Facturas → Enviadas**
-2. Haga clic en el botón **"Ver Detalle"** de la fila correspondiente
+2. Haga clic en el botón **"Ver"** de la fila correspondiente
 
 <img src="images/17_detalle_factura.png" width="750"/>
 
@@ -483,7 +452,6 @@ Cuenta donde se realizará el abono del pago.
 |------|-------------|--------|
 | PDF | Representación impresa | Descargar |
 | XML | Comprobante electrónico | Descargar |
-| CDR | Constancia de recepción SUNAT | Descargar |
 
 Haga clic en el botón de descarga junto a cada archivo para obtenerlo.
 
@@ -543,11 +511,15 @@ Datos de su compañía médica registrados en el sistema (**solo lectura**):
 - Código, RUC, Razón Social
 - Dirección, Teléfono, Celular
 
+<img src="images/21_datos_entidad_medica.png" width="750"/>
+
 > Para modificar estos datos, contacte al administrador del sistema.
 
 ### 8.4 Cuentas Bancarias
 
 Lista de cuentas bancarias registradas para recibir pagos (**solo lectura**):
+
+<img src="images/21_datos_informacion_bancaria.png" width="750"/>
 
 | Campo | Descripción |
 |-------|-------------|
@@ -694,10 +666,6 @@ Sí, el Evaluador solo lee y valida la estructura del archivo. No requiere que e
 ---
 
 ## 12. Mensajes del Sistema
-
-<img src="images/26_mensajes_sistema.png" width="600"/>
-
-*Figura 12.1: Tipos de mensajes del sistema*
 
 ### Mensaje de Éxito (verde)
 Indica que la operación se realizó correctamente. Aparece en la parte superior de la pantalla y desaparece automáticamente.
