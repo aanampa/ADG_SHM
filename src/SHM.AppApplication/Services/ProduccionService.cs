@@ -20,17 +20,20 @@ public class ProduccionService : IProduccionService
     private readonly IProduccionRepository _produccionRepository;
     private readonly IEmailService _emailService;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IEntidadContactoRepository _contactoRepository;
     private readonly ILogger<ProduccionService> _logger;
 
     public ProduccionService(
         IProduccionRepository produccionRepository,
         IEmailService emailService,
         IUsuarioRepository usuarioRepository,
+        IEntidadContactoRepository contactoRepository,
         ILogger<ProduccionService> logger)
     {
         _produccionRepository = produccionRepository;
         _emailService = emailService;
         _usuarioRepository = usuarioRepository;
+        _contactoRepository = contactoRepository;
         _logger = logger;
     }
 
@@ -363,24 +366,17 @@ public class ProduccionService : IProduccionService
                 var produccion = await _produccionRepository.GetByGuidWithDetailsAsync(solicitudDto.GuidRegistro);
                 if (produccion != null && produccion.IdEntidadMedica.HasValue)
                 {
-                    var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
-                    foreach (var usuario in usuarios)
-                    {
-                        if (!string.IsNullOrEmpty(usuario.Email))
-                        {
-                            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
+                    var (toList, ccList) = await BuildRecipientsAsync(produccion.IdEntidadMedica.Value);
 
-                            await _emailService.EnviarEmailSolicitudFacturaAsync(
-                                email:              usuario.Email,
-                                nombreDestinatario: nombreCompleto,
-                                codigoProduccion:   produccion.NumeroProduccion ?? "",
-                                razonSocial:        produccion.RazonSocial ?? "",
-                                mtoTotal:           produccion.MtoTotal,
-                                fechaLimite:        fechaLimite,
-                                idEntidadMedica:    produccion.IdEntidadMedica,
-                                idProduccion:       produccion.IdProduccion);
-                        }
-                    }
+                    await _emailService.EnviarEmailSolicitudFacturaMultipleAsync(
+                        toRecipients:     toList,
+                        ccRecipients:     ccList,
+                        codigoProduccion: produccion.NumeroProduccion ?? "",
+                        razonSocial:      produccion.RazonSocial ?? "",
+                        mtoTotal:         produccion.MtoTotal,
+                        fechaLimite:      fechaLimite,
+                        idEntidadMedica:  produccion.IdEntidadMedica,
+                        idProduccion:     produccion.IdProduccion);
                 }
             }
             catch (Exception ex)
@@ -412,42 +408,35 @@ public class ProduccionService : IProduccionService
             return false;
         }
 
-        var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
-        foreach (var usuario in usuarios)
-        {
-            if (!string.IsNullOrEmpty(usuario.Email))
-            {
-                var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
+        var (toList, ccList) = await BuildRecipientsAsync(produccion.IdEntidadMedica.Value);
 
-                if (produccion.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
-                {
-                    await _emailService.EnviarEmailFacturaDevueltaAsync(
-                        email:              usuario.Email,
-                        nombreDestinatario: nombreCompleto,
-                        codigoProduccion:   produccion.NumeroProduccion ?? "",
-                        razonSocial:        produccion.RazonSocial ?? "",
-                        mtoTotal:           produccion.MtoTotal,
-                        fechaLimite:        produccion.FechaLimite.Value,
-                        idEntidadMedica:    produccion.IdEntidadMedica,
-                        idProduccion:       produccion.IdProduccion);
-                }
-                else
-                {
-                    await _emailService.EnviarEmailSolicitudFacturaAsync(
-                        email:              usuario.Email,
-                        nombreDestinatario: nombreCompleto,
-                        codigoProduccion:   produccion.NumeroProduccion ?? "",
-                        razonSocial:        produccion.RazonSocial ?? "",
-                        mtoTotal:           produccion.MtoTotal,
-                        fechaLimite:        produccion.FechaLimite.Value,
-                        idEntidadMedica:    produccion.IdEntidadMedica,
-                        idProduccion:       produccion.IdProduccion);
-                }
-            }
+        if (produccion.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
+        {
+            await _emailService.EnviarEmailFacturaDevueltaMultipleAsync(
+                toRecipients:     toList,
+                ccRecipients:     ccList,
+                codigoProduccion: produccion.NumeroProduccion ?? "",
+                razonSocial:      produccion.RazonSocial ?? "",
+                mtoTotal:         produccion.MtoTotal,
+                fechaLimite:      produccion.FechaLimite.Value,
+                idEntidadMedica:  produccion.IdEntidadMedica,
+                idProduccion:     produccion.IdProduccion);
+        }
+        else
+        {
+            await _emailService.EnviarEmailSolicitudFacturaMultipleAsync(
+                toRecipients:     toList,
+                ccRecipients:     ccList,
+                codigoProduccion: produccion.NumeroProduccion ?? "",
+                razonSocial:      produccion.RazonSocial ?? "",
+                mtoTotal:         produccion.MtoTotal,
+                fechaLimite:      produccion.FechaLimite.Value,
+                idEntidadMedica:  produccion.IdEntidadMedica,
+                idProduccion:     produccion.IdProduccion);
         }
 
-        _logger.LogInformation("Renotificacion de solicitud de factura enviada. GUID: {Guid}, Usuario: {Usuario}",
-            guidRegistro, idModificador);
+        _logger.LogInformation("Renotificacion enviada. GUID: {Guid}, Usuario: {Usuario}, TO: {N}, CC: {C}",
+            guidRegistro, idModificador, toList.Count, ccList.Count);
 
         return true;
     }
@@ -505,23 +494,17 @@ public class ProduccionService : IProduccionService
                 var produccion = await _produccionRepository.GetByGuidWithDetailsAsync(guidRegistro);
                 if (produccion != null && produccion.IdEntidadMedica.HasValue && produccion.FechaLimite.HasValue)
                 {
-                    var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(produccion.IdEntidadMedica.Value);
-                    foreach (var usuario in usuarios)
-                    {
-                        if (!string.IsNullOrEmpty(usuario.Email))
-                        {
-                            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim();
-                            await _emailService.EnviarEmailFacturaDevueltaAsync(
-                                email:               usuario.Email,
-                                nombreDestinatario:  nombreCompleto,
-                                codigoProduccion:    produccion.NumeroProduccion ?? "",
-                                razonSocial:         produccion.RazonSocial ?? "",
-                                mtoTotal:            produccion.MtoTotal,
-                                fechaLimite:         produccion.FechaLimite.Value,
-                                idEntidadMedica:     produccion.IdEntidadMedica,
-                                idProduccion:        produccion.IdProduccion);
-                        }
-                    }
+                    var (toList, ccList) = await BuildRecipientsAsync(produccion.IdEntidadMedica.Value);
+
+                    await _emailService.EnviarEmailFacturaDevueltaMultipleAsync(
+                        toRecipients:     toList,
+                        ccRecipients:     ccList,
+                        codigoProduccion: produccion.NumeroProduccion ?? "",
+                        razonSocial:      produccion.RazonSocial ?? "",
+                        mtoTotal:         produccion.MtoTotal,
+                        fechaLimite:      produccion.FechaLimite.Value,
+                        idEntidadMedica:  produccion.IdEntidadMedica,
+                        idProduccion:     produccion.IdProduccion);
                 }
             }
             catch (Exception ex)
@@ -687,5 +670,27 @@ public class ProduccionService : IProduccionService
             FechaCreacion = produccion.FechaCreacion,
             FechaModificacion = produccion.FechaModificacion
         };
+    }
+
+    /// <summary>
+    /// Construye las listas TO (usuarios) y CC (contactos) para el envio de notificaciones de una entidad medica.
+    /// </summary>
+    private async Task<(List<(string Email, string Nombre)> To, List<(string Email, string Nombre)> Cc)>
+        BuildRecipientsAsync(int idEntidadMedica)
+    {
+        var usuarios  = await _usuarioRepository.GetByIdEntidadMedicaAsync(idEntidadMedica);
+        var contactos = await _contactoRepository.GetByEntidadMedicaAsync(idEntidadMedica);
+
+        var to = usuarios
+            .Where(u => !string.IsNullOrEmpty(u.Email))
+            .Select(u => (Email: u.Email!, Nombre: $"{u.Nombres} {u.ApellidoPaterno}".Trim()))
+            .ToList();
+
+        var cc = contactos
+            .Where(c => !string.IsNullOrEmpty(c.Email))
+            .Select(c => (Email: c.Email!, Nombre: $"{c.Nombres} {c.ApellidoPaterno}".Trim()))
+            .ToList();
+
+        return (to, cc);
     }
 }

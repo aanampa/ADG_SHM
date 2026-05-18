@@ -10,7 +10,7 @@
                 <th>Email</th>
                 <th>Celular</th>
                 <th class="text-center" style="width:80px;">Estado</th>
-                <th class="text-center" style="width:100px;">Acciones</th>
+                <th class="text-center" style="width:160px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -43,15 +43,17 @@
                         @if (u.Activo == 1)
                         {
                             <button type="button" class="btn btn-danger btn-xs"
-                                    onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 0)" title="Desactivar">
-                                <i class="fas fa-ban"></i>
+                                    onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 0)"
+                                    title="Desactivar usuario">
+                                <i class="fas fa-ban mr-1"></i>Desactivar
                             </button>
                         }
                         else
                         {
                             <button type="button" class="btn btn-success btn-xs"
-                                    onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 1)" title="Activar">
-                                <i class="fas fa-check"></i>
+                                    onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 1)"
+                                    title="Activar usuario">
+                                <i class="fas fa-check mr-1"></i>Activar
                             </button>
                         }
                     </td>

@@ -125,4 +125,9 @@ public interface IUsuarioService
     /// Obtiene los usuarios externos asociados a una entidad medica.
     /// </summary>
     Task<IEnumerable<UsuarioResponseDto>> GetUsuariosByEntidadMedicaAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Invierte el estado activo de un usuario externo (activo↔inactivo).
+    /// </summary>
+    Task<bool> ToggleActivoUsuarioAsync(string guidRegistro, int idModificador);
 }

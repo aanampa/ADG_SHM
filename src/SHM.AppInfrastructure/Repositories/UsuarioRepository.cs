@@ -744,22 +744,40 @@ public class UsuarioRepository : IUsuarioRepository
 
         var sql = @"
             SELECT
-                ID_USUARIO as IdUsuario,
-                TIPO_USUARIO as TipoUsuario,
-                LOGIN as Login,
-                EMAIL as Email,
-                NOMBRES as Nombres,
-                APELLIDO_PATERNO as ApellidoPaterno,
-                APELLIDO_MATERNO as ApellidoMaterno,
+                ID_USUARIO        as IdUsuario,
+                TIPO_USUARIO      as TipoUsuario,
+                LOGIN             as Login,
+                EMAIL             as Email,
+                NOMBRES           as Nombres,
+                APELLIDO_PATERNO  as ApellidoPaterno,
+                APELLIDO_MATERNO  as ApellidoMaterno,
+                CELULAR           as Celular,
                 ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                GUID_REGISTRO as GuidRegistro,
-                ACTIVO as Activo
+                GUID_REGISTRO     as GuidRegistro,
+                ACTIVO            as Activo
             FROM SHM_SEG_USUARIO
             WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
-              AND ACTIVO = 1
               AND EMAIL IS NOT NULL
-            ORDER BY APELLIDO_PATERNO, NOMBRES";
+            ORDER BY ACTIVO DESC, APELLIDO_PATERNO, NOMBRES";
 
         return await connection.QueryAsync<Usuario>(sql, new { IdEntidadMedica = idEntidadMedica });
+    }
+
+    /// <summary>
+    /// Invierte el estado ACTIVO de un usuario (1→0 o 0→1).
+    /// </summary>
+    public async Task<bool> ToggleActivoAsync(string guidRegistro, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_SEG_USUARIO
+            SET ACTIVO           = CASE WHEN ACTIVO = 1 THEN 0 ELSE 1 END,
+                ID_MODIFICADOR   = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new { GuidRegistro = guidRegistro, IdModificador = idModificador });
+        return rowsAffected > 0;
     }
 }

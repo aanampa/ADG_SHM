@@ -40,8 +40,9 @@
                             <thead style="background-color: #6c757d; color: #fff;">
                                 <tr>
                                     <th class="align-middle text-center" style="width: 40px;">Ver</th>
-                                    <th class="align-middle">Destinatario</th>
-                                    <th class="align-middle">Correo</th>
+                                    <th class="align-middle">Destinatario (TO)</th>
+                                    <th class="align-middle">Correo(s)</th>
+                                    <th class="align-middle">Copia (CC)</th>
                                     <th class="align-middle">Asunto</th>
                                     <th class="align-middle text-center" style="width: 140px;">Fecha Envío</th>
                                 </tr>
@@ -52,16 +53,24 @@
                                     <tr>
                                         <td class="text-center">
                                             <button type="button" class="btn btn-info btn-xs"
-                                                onclick="verContenidoEmail(@log.IdEmailLog, '@Html.Raw(Html.Encode(log.Asunto ?? ""))', '@Html.Raw(Html.Encode(log.NombreDestino ?? ""))', '@Html.Raw(Html.Encode(log.EmailDestino ?? ""))', '@(log.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "-")', '@Html.Raw(Html.Encode(log.EmailOrigen ?? ""))', '@Html.Raw(Html.Encode(log.NombreOrigen ?? ""))')"
+                                                onclick="verContenidoEmail(@log.IdEmailLog, '@Html.Raw(Html.Encode(log.Asunto ?? ""))', '@Html.Raw(Html.Encode(log.NombreDestino ?? ""))', '@Html.Raw(Html.Encode(log.EmailDestino ?? ""))', '@(log.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "-")', '@Html.Raw(Html.Encode(log.EmailOrigen ?? ""))', '@Html.Raw(Html.Encode(log.NombreOrigen ?? ""))', '@Html.Raw(Html.Encode(log.EmailCcLista ?? ""))')"
                                                 title="Ver correo enviado">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                         </td>
                                         <td>@(log.NombreDestino ?? "-")</td>
+                                        <td>@log.EmailDestino</td>
                                         <td>
-                                            <a href="mailto:@log.EmailDestino" class="text-dark">
-                                                @log.EmailDestino
-                                            </a>
+                                            @if (!string.IsNullOrEmpty(log.EmailCcLista))
+                                            {
+                                                <span title="@log.NombreCcLista" style="cursor:default;">
+                                                    @log.EmailCcLista
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
                                         </td>
                                         <td>
                                             @(log.Asunto ?? "-")
@@ -132,6 +141,10 @@
                         <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Destinatario:</span>
                         <span><strong id="emailVisorNombre"></strong> &lt;<span id="emailVisorEmail" class="text-primary"></span>&gt;</span>
                     </div>
+                    <div class="d-flex mb-1" id="emailVisorCCRow" style="display:none !important;">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Copia (CC):</span>
+                        <span id="emailVisorCC" class="text-primary"></span>
+                    </div>
                     <div class="d-flex">
                         <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Fecha:</span>
                         <span id="emailVisorFecha"></span>
@@ -166,13 +179,24 @@
         });
     })();
 
-    function verContenidoEmail(idEmailLog, asunto, nombreDestino, emailDestino, fecha, emailOrigen, nombreOrigen) {
+    function verContenidoEmail(idEmailLog, asunto, nombreDestino, emailDestino, fecha, emailOrigen, nombreOrigen, emailCC) {
         document.getElementById('emailVisorAsunto').textContent = asunto || 'Sin asunto';
         document.getElementById('emailVisorNombreOrigen').textContent = nombreOrigen || '';
         document.getElementById('emailVisorEmailOrigen').textContent = emailOrigen || '';
         document.getElementById('emailVisorNombre').textContent = nombreDestino || '';
         document.getElementById('emailVisorEmail').textContent = emailDestino || '';
         document.getElementById('emailVisorFecha').textContent = fecha || '';
+
+        const ccRow = document.getElementById('emailVisorCCRow');
+        const ccEl  = document.getElementById('emailVisorCC');
+        if (emailCC) {
+            ccEl.textContent = emailCC;
+            ccRow.style.display = 'flex';
+        } else {
+            ccEl.textContent = '';
+            ccRow.style.display = 'none';
+        }
+
         document.getElementById('iframeContenidoEmail').src = '@Url.Action("VerContenido", "EmailLog")?id=' + idEmailLog;
         $('#modalVisorEmail').modal('show');
     }

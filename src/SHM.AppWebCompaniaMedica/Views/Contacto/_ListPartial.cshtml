@@ -1,0 +1,84 @@
+@model List<SHM.AppWebCompaniaMedica.Models.ContactoItemViewModel>
+
+@if (!Model.Any())
+{
+    <div class="text-center py-5" style="color: var(--text-secondary);">
+        <i class="bi bi-person-lines-fill" style="font-size: 2.5rem; opacity: 0.4;"></i>
+        <p class="mt-3 mb-0">No hay contactos registrados.</p>
+        <p style="font-size: 0.85rem;">Agrega contactos para que reciban las notificaciones de facturación.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover" style="font-size: 0.88rem;">
+            <thead style="background: var(--bg-main);">
+                <tr>
+                    <th style="font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border);">Nombre</th>
+                    <th style="font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border);">Correo</th>
+                    <th style="font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border);">Celular</th>
+                    <th style="font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border);">Cargo</th>
+                    <th style="font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border); text-align: center; width: 90px;">Estado</th>
+                    <th style="font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border); text-align: center; width: 120px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr style="border-bottom: 1px solid var(--border); opacity: @(item.Activo == 0 ? "0.55" : "1");">
+                        <td style="padding: 0.85rem 0.75rem; color: var(--text-primary); font-weight: 500;">
+                            @item.NombreCompleto
+                        </td>
+                        <td style="padding: 0.85rem 0.75rem; color: var(--text-secondary);">
+                            <a href="mailto:@item.Email" style="color: var(--accent); text-decoration: none;">
+                                @item.Email
+                            </a>
+                        </td>
+                        <td style="padding: 0.85rem 0.75rem; color: var(--text-secondary);">
+                            @(item.Celular ?? "-")
+                        </td>
+                        <td style="padding: 0.85rem 0.75rem; color: var(--text-secondary);">
+                            @(item.Cargo ?? "-")
+                        </td>
+                        <td style="padding: 0.85rem 0.75rem; text-align: center;">
+                            @if (item.Activo == 1)
+                            {
+                                <span style="background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;">Activo</span>
+                            }
+                            else
+                            {
+                                <span style="background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;">Inactivo</span>
+                            }
+                        </td>
+                        <td style="padding: 0.85rem 0.75rem; text-align: center; white-space: nowrap;">
+                            <button onclick="abrirModalEditar('@item.GuidRegistro')"
+                                style="background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; color: var(--text-secondary); margin-right: 6px;"
+                                title="Editar">
+                                <i class="bi bi-pencil-fill" style="font-size: 0.85rem;"></i>
+                            </button>
+                            @if (item.Activo == 1)
+                            {
+                                <button onclick="toggleActivo('@item.GuidRegistro', 0)"
+                                    style="background: none; border: 1px solid #ffc107; border-radius: 6px; padding: 5px 10px; cursor: pointer; color: #856404;"
+                                    title="Inactivar">
+                                    <i class="bi bi-slash-circle-fill" style="font-size: 0.85rem;"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button onclick="toggleActivo('@item.GuidRegistro', 1)"
+                                    style="background: none; border: 1px solid #d4edda; border-radius: 6px; padding: 5px 10px; cursor: pointer; color: #155724;"
+                                    title="Activar">
+                                    <i class="bi bi-check-circle-fill" style="font-size: 0.85rem;"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div style="padding: 0.5rem 0; color: var(--text-secondary); font-size: 0.82rem;">
+        @Model.Count contacto(s) registrado(s)
+    </div>
+}

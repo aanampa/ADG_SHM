@@ -1014,6 +1014,36 @@ public class UsuarioController : Controller
 
     #endregion
 
+    /// <summary>
+    /// Activa o inactiva un usuario externo (toggle).
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleActivoUsuario([FromQuery] string guidRegistro)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(guidRegistro))
+                return Json(new { success = false, message = "GUID no válido" });
+
+            var idModificador = GetCurrentUserId();
+            if (idModificador == 0)
+                return Json(new { success = false, message = "Usuario no autenticado" });
+
+            var result = await _usuarioService.ToggleActivoUsuarioAsync(guidRegistro, idModificador);
+            if (!result)
+                return Json(new { success = false, message = "No se pudo cambiar el estado del usuario" });
+
+            _logger.LogInformation("Toggle activo de usuario {Guid} por usuario {IdModificador}", guidRegistro, idModificador);
+            return Json(new { success = true, message = "Estado del usuario actualizado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar estado de usuario {Guid}", guidRegistro);
+            return Json(new { success = false, message = "Error al cambiar el estado del usuario" });
+        }
+    }
+
     private int GetCurrentUserId()
     {
         var userIdClaim = User.FindFirstValue("IdUsuario");

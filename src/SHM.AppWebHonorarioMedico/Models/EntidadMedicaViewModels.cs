@@ -119,3 +119,105 @@ public class EntidadMedicaDeleteViewModel
     public string? Ruc { get; set; }
     public string? CodigoEntidad { get; set; }
 }
+
+// ─── Contactos de Entidad Medica ───────────────────────────────────────────
+
+public class ContactoListViewModel
+{
+    public string EntidadGuid { get; set; } = string.Empty;
+    public int IdEntidadMedica { get; set; }
+    public string EntidadRazonSocial { get; set; } = string.Empty;
+    public List<ContactoItemViewModel> Items { get; set; } = new();
+}
+
+public class ContactoItemViewModel
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string? ApellidoPaterno { get; set; }
+    public string? ApellidoMaterno { get; set; }
+    public string? Nombres { get; set; }
+    public string NombreCompleto => $"{ApellidoPaterno} {ApellidoMaterno}, {Nombres}".Trim().Trim(',').Trim();
+    public string? Celular { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string? Cargo { get; set; }
+    public int Activo { get; set; }
+}
+
+public class ContactoCreateViewModel
+{
+    public string EntidadGuid { get; set; } = string.Empty;
+    public int IdEntidadMedica { get; set; }
+
+    [Required(ErrorMessage = "Los nombres son requeridos")]
+    [StringLength(200, ErrorMessage = "Los nombres no pueden exceder 200 caracteres")]
+    [Display(Name = "Nombres")]
+    public string? Nombres { get; set; }
+
+    [StringLength(100, ErrorMessage = "El apellido paterno no puede exceder 100 caracteres")]
+    [Display(Name = "Apellido Paterno")]
+    public string? ApellidoPaterno { get; set; }
+
+    [StringLength(100, ErrorMessage = "El apellido materno no puede exceder 100 caracteres")]
+    [Display(Name = "Apellido Materno")]
+    public string? ApellidoMaterno { get; set; }
+
+    [Required(ErrorMessage = "El correo electronico es requerido")]
+    [StringLength(100, ErrorMessage = "El correo no puede exceder 100 caracteres")]
+    [EmailAddress(ErrorMessage = "Formato de correo invalido")]
+    [Display(Name = "Correo Electronico")]
+    public string? Email { get; set; }
+
+    [StringLength(10, ErrorMessage = "El celular no puede exceder 10 caracteres")]
+    [Display(Name = "Celular")]
+    public string? Celular { get; set; }
+
+    [StringLength(120, ErrorMessage = "El cargo no puede exceder 120 caracteres")]
+    [Display(Name = "Cargo")]
+    public string? Cargo { get; set; }
+}
+
+public class ContactoEditViewModel
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string EntidadGuid { get; set; } = string.Empty;
+    public int IdEntidadContacto { get; set; }
+    public int IdEntidadMedica { get; set; }
+
+    [Required(ErrorMessage = "Los nombres son requeridos")]
+    [StringLength(200, ErrorMessage = "Los nombres no pueden exceder 200 caracteres")]
+    [Display(Name = "Nombres")]
+    public string? Nombres { get; set; }
+
+    [StringLength(100, ErrorMessage = "El apellido paterno no puede exceder 100 caracteres")]
+    [Display(Name = "Apellido Paterno")]
+    public string? ApellidoPaterno { get; set; }
+
+    [StringLength(100, ErrorMessage = "El apellido materno no puede exceder 100 caracteres")]
+    [Display(Name = "Apellido Materno")]
+    public string? ApellidoMaterno { get; set; }
+
+    [Required(ErrorMessage = "El correo electronico es requerido")]
+    [StringLength(100, ErrorMessage = "El correo no puede exceder 100 caracteres")]
+    [EmailAddress(ErrorMessage = "Formato de correo invalido")]
+    [Display(Name = "Correo Electronico")]
+    public string? Email { get; set; }
+
+    [StringLength(10, ErrorMessage = "El celular no puede exceder 10 caracteres")]
+    [Display(Name = "Celular")]
+    public string? Celular { get; set; }
+
+    [StringLength(120, ErrorMessage = "El cargo no puede exceder 120 caracteres")]
+    [Display(Name = "Cargo")]
+    public string? Cargo { get; set; }
+
+    [Display(Name = "Activo")]
+    public int Activo { get; set; } = 1;
+}
+
+public class ContactoDeleteViewModel
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string EntidadGuid { get; set; } = string.Empty;
+    public string? NombreCompleto { get; set; }
+    public string? Email { get; set; }
+}

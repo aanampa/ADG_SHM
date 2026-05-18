@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SHM.AppDomain.DTOs.EntidadContacto;
 using SHM.AppDomain.DTOs.EntidadCuentaBancaria;
 using SHM.AppDomain.DTOs.EntidadMedica;
 using SHM.AppDomain.Interfaces.Services;
@@ -20,6 +21,7 @@ public class EntidadMedicaController : Controller
     private readonly IUsuarioService _usuarioService;
     private readonly ISapApiService _sapApiService;
     private readonly IParametroService _parametroService;
+    private readonly IEntidadContactoService _contactoService;
 
     public EntidadMedicaController(
         ILogger<EntidadMedicaController> logger,
@@ -29,7 +31,8 @@ public class EntidadMedicaController : Controller
         IBancoService bancoService,
         IUsuarioService usuarioService,
         ISapApiService sapApiService,
-        IParametroService parametroService)
+        IParametroService parametroService,
+        IEntidadContactoService contactoService)
     {
         _logger = logger;
         _entidadMedicaService = entidadMedicaService;
@@ -39,6 +42,7 @@ public class EntidadMedicaController : Controller
         _usuarioService = usuarioService;
         _sapApiService = sapApiService;
         _parametroService = parametroService;
+        _contactoService = contactoService;
     }
 
     public IActionResult Index()
@@ -734,6 +738,252 @@ public class EntidadMedicaController : Controller
         {
             _logger.LogError(ex, "Error al eliminar cuenta bancaria");
             return Json(new { success = false, message = "Error al eliminar la cuenta bancaria" });
+        }
+    }
+
+    #endregion
+
+    #region Contactos
+
+    /// <summary>
+    /// Retorna el modal con la lista de contactos de una entidad medica.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetContactosModal(string guid)
+    {
+        try
+        {
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByGuidAsync(guid);
+            if (entidad == null) return NotFound();
+
+            var contactos = await _contactoService.GetByEntidadMedicaAsync(entidad.IdEntidadMedica, soloActivos: false);
+
+            var model = new ContactoListViewModel
+            {
+                EntidadGuid        = guid,
+                IdEntidadMedica    = entidad.IdEntidadMedica,
+                EntidadRazonSocial = entidad.RazonSocial ?? "",
+                Items = contactos.Select(c => new ContactoItemViewModel
+                {
+                    GuidRegistro    = c.GuidRegistro,
+                    ApellidoPaterno = c.ApellidoPaterno,
+                    ApellidoMaterno = c.ApellidoMaterno,
+                    Nombres         = c.Nombres,
+                    Celular         = c.Celular,
+                    Email           = c.Email,
+                    Cargo           = c.Cargo,
+                    Activo          = c.Activo
+                }).ToList()
+            };
+
+            return PartialView("_ContactosModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar contactos de entidad {Guid}", guid);
+            return StatusCode(500);
+        }
+    }
+
+    /// <summary>
+    /// Retorna solo la lista de contactos (para refrescar sin recargar el modal).
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetListContactos(string entidadGuid)
+    {
+        try
+        {
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByGuidAsync(entidadGuid);
+            if (entidad == null) return NotFound();
+
+            var contactos = await _contactoService.GetByEntidadMedicaAsync(entidad.IdEntidadMedica, soloActivos: false);
+
+            var model = new ContactoListViewModel
+            {
+                EntidadGuid        = entidadGuid,
+                IdEntidadMedica    = entidad.IdEntidadMedica,
+                EntidadRazonSocial = entidad.RazonSocial ?? "",
+                Items = contactos.Select(c => new ContactoItemViewModel
+                {
+                    GuidRegistro    = c.GuidRegistro,
+                    ApellidoPaterno = c.ApellidoPaterno,
+                    ApellidoMaterno = c.ApellidoMaterno,
+                    Nombres         = c.Nombres,
+                    Celular         = c.Celular,
+                    Email           = c.Email,
+                    Cargo           = c.Cargo,
+                    Activo          = c.Activo
+                }).ToList()
+            };
+
+            return PartialView("_ContactosListPartial", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al listar contactos de entidad {Guid}", entidadGuid);
+            return PartialView("_ContactosListPartial", new ContactoListViewModel());
+        }
+    }
+
+    [HttpGet]
+    public IActionResult GetCreateContactoModal(string entidadGuid, int idEntidadMedica)
+    {
+        var model = new ContactoCreateViewModel
+        {
+            EntidadGuid     = entidadGuid,
+            IdEntidadMedica = idEntidadMedica
+        };
+
+        return PartialView("_CreateContactoModal", model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateContacto([FromBody] ContactoCreateViewModel model)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return Json(new { success = false, message = string.Join(", ", errors) });
+            }
+
+            var idCreador = GetCurrentUserId();
+            if (idCreador == 0)
+                return Json(new { success = false, message = "Usuario no autenticado" });
+
+            var existeEmail = await _contactoService.ExisteEmailEnEntidadAsync(model.IdEntidadMedica, model.Email!);
+            if (existeEmail)
+                return Json(new { success = false, message = "Ya existe un contacto con ese correo en esta entidad" });
+
+            var createDto = new CreateEntidadContactoDto
+            {
+                IdEntidadMedica = model.IdEntidadMedica,
+                ApellidoPaterno = model.ApellidoPaterno,
+                ApellidoMaterno = model.ApellidoMaterno,
+                Nombres         = model.Nombres,
+                Celular         = model.Celular,
+                Email           = model.Email ?? "",
+                Cargo           = model.Cargo
+            };
+
+            await _contactoService.CreateAsync(createDto, idCreador);
+            _logger.LogInformation("Contacto creado para entidad {Id} por usuario {Usuario}", model.IdEntidadMedica, idCreador);
+
+            return Json(new { success = true, message = "Contacto creado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear contacto");
+            return Json(new { success = false, message = "Error al crear el contacto" });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetEditContactoModal(string guid, string entidadGuid)
+    {
+        try
+        {
+            var contacto = await _contactoService.GetByGuidAsync(guid);
+            if (contacto == null) return NotFound();
+
+            var model = new ContactoEditViewModel
+            {
+                GuidRegistro    = contacto.GuidRegistro,
+                EntidadGuid     = entidadGuid,
+                IdEntidadContacto = contacto.IdEntidadContacto,
+                IdEntidadMedica = contacto.IdEntidadMedica ?? 0,
+                ApellidoPaterno = contacto.ApellidoPaterno,
+                ApellidoMaterno = contacto.ApellidoMaterno,
+                Nombres         = contacto.Nombres,
+                Celular         = contacto.Celular,
+                Email           = contacto.Email,
+                Cargo           = contacto.Cargo,
+                Activo          = contacto.Activo
+            };
+
+            return PartialView("_EditContactoModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener contacto para edicion {Guid}", guid);
+            return StatusCode(500);
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditContacto([FromBody] ContactoEditViewModel model)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return Json(new { success = false, message = string.Join(", ", errors) });
+            }
+
+            var idModificador = GetCurrentUserId();
+            if (idModificador == 0)
+                return Json(new { success = false, message = "Usuario no autenticado" });
+
+            var existeEmail = await _contactoService.ExisteEmailEnEntidadAsync(
+                model.IdEntidadMedica, model.Email!, model.IdEntidadContacto);
+            if (existeEmail)
+                return Json(new { success = false, message = "Ya existe otro contacto con ese correo en esta entidad" });
+
+            var updateDto = new UpdateEntidadContactoDto
+            {
+                ApellidoPaterno = model.ApellidoPaterno,
+                ApellidoMaterno = model.ApellidoMaterno,
+                Nombres         = model.Nombres,
+                Celular         = model.Celular,
+                Email           = model.Email,
+                Cargo           = model.Cargo,
+                Activo          = model.Activo
+            };
+
+            var result = await _contactoService.UpdateAsync(model.GuidRegistro, updateDto, idModificador);
+            if (!result)
+                return Json(new { success = false, message = "No se pudo actualizar el contacto" });
+
+            _logger.LogInformation("Contacto actualizado: {Guid} por usuario {Usuario}", model.GuidRegistro, idModificador);
+            return Json(new { success = true, message = "Contacto actualizado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar contacto");
+            return Json(new { success = false, message = "Error al actualizar el contacto" });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleActivoContacto([FromBody] ContactoDeleteViewModel model)
+    {
+        try
+        {
+            var idModificador = GetCurrentUserId();
+            if (idModificador == 0)
+                return Json(new { success = false, message = "Usuario no autenticado" });
+
+            var contacto = await _contactoService.GetByGuidAsync(model.GuidRegistro);
+            if (contacto == null)
+                return Json(new { success = false, message = "Contacto no encontrado" });
+
+            var result = await _contactoService.ToggleActivoAsync(model.GuidRegistro, idModificador);
+            if (!result)
+                return Json(new { success = false, message = "No se pudo cambiar el estado del contacto" });
+
+            var nuevoEstado = contacto.Activo == 1 ? "inactivado" : "activado";
+            _logger.LogInformation("Contacto {Estado}: {Guid} por usuario {Usuario}", nuevoEstado, model.GuidRegistro, idModificador);
+            return Json(new { success = true, message = $"Contacto {nuevoEstado} exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar estado del contacto");
+            return Json(new { success = false, message = "Error al cambiar el estado del contacto" });
         }
     }
 

@@ -113,4 +113,9 @@ public interface IUsuarioRepository
     /// <param name="idEntidadMedica">ID de la entidad medica</param>
     /// <returns>Lista de usuarios vinculados a la entidad medica</returns>
     Task<IEnumerable<Usuario>> GetByIdEntidadMedicaAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Invierte el estado ACTIVO de un usuario (1→0 o 0→1).
+    /// </summary>
+    Task<bool> ToggleActivoAsync(string guidRegistro, int idModificador);
 }

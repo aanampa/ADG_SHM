@@ -314,6 +314,193 @@ public class EmailService : IEmailService
     }
 
     /// <summary>
+    /// Envia solicitud de factura a multiples destinatarios TO con copia CC. Un solo correo, un solo log.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-05-16</created>
+    /// </summary>
+    public async Task<bool> EnviarEmailSolicitudFacturaMultipleAsync(
+        List<(string Email, string Nombre)> toRecipients,
+        List<(string Email, string Nombre)> ccRecipients,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion)
+    {
+        if (toRecipients.Count == 0) return false;
+
+        var subject = $"Solicitud de Factura - Producción {codigoProduccion}";
+        var montoFormateado = mtoTotal?.ToString("N2") ?? "0.00";
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("SolicitudFactura.html");
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            var body = await File.ReadAllTextAsync(templatePath);
+            body = body.Replace("{{NOMBRE_DESTINATARIO}}", razonSocial)
+                       .Replace("{{CODIGO_PRODUCCION}}", codigoProduccion)
+                       .Replace("{{RAZON_SOCIAL}}", razonSocial)
+                       .Replace("{{MONTO_TOTAL}}", montoFormateado)
+                       .Replace("{{FECHA_LIMITE}}", fechaLimite.ToString("dd/MM/yyyy"))
+                       .Replace("{{HORA_LIMITE}}", fechaLimite.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture))
+                       .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? "")
+                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailMultipleConLogAsync(
+                toRecipients, ccRecipients, subject, body,
+                tipoEmail: "SOLICITUD_FACTURA",
+                idEntidadMedica: idEntidadMedica,
+                entidadReferencia: "SHM_PRODUCCION",
+                idReferencia: idProduccion);
+
+            _logger.LogInformation("Email SOLICITUD_FACTURA multi enviado. Produccion: {Codigo}, TO: {N} usuarios, CC: {C} contactos",
+                codigoProduccion, toRecipients.Count, ccRecipients.Count);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email solicitud factura multiple. Produccion: {Codigo}", codigoProduccion);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Envia notificacion de factura devuelta a multiples destinatarios TO con copia CC. Un solo correo, un solo log.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-05-16</created>
+    /// </summary>
+    public async Task<bool> EnviarEmailFacturaDevueltaMultipleAsync(
+        List<(string Email, string Nombre)> toRecipients,
+        List<(string Email, string Nombre)> ccRecipients,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion)
+    {
+        if (toRecipients.Count == 0) return false;
+
+        var subject = $"Factura Devuelta - Producción {codigoProduccion}";
+        var montoFormateado = mtoTotal?.ToString("N2") ?? "0.00";
+
+        try
+        {
+            var templatePath = ObtenerRutaPlantilla("FacturaDevuelta.html");
+            if (!File.Exists(templatePath))
+            {
+                _logger.LogError("No se encontro la plantilla de email: {TemplatePath}", templatePath);
+                return false;
+            }
+
+            var body = await File.ReadAllTextAsync(templatePath);
+            body = body.Replace("{{NOMBRE_DESTINATARIO}}", razonSocial)
+                       .Replace("{{CODIGO_PRODUCCION}}", codigoProduccion)
+                       .Replace("{{RAZON_SOCIAL}}", razonSocial)
+                       .Replace("{{MONTO_TOTAL}}", montoFormateado)
+                       .Replace("{{FECHA_LIMITE}}", fechaLimite.ToString("dd/MM/yyyy"))
+                       .Replace("{{HORA_LIMITE}}", fechaLimite.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture))
+                       .Replace("{{URL_SISTEMA}}", _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? "")
+                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
+
+            await EnviarEmailMultipleConLogAsync(
+                toRecipients, ccRecipients, subject, body,
+                tipoEmail: "FACTURA_DEVUELTA",
+                idEntidadMedica: idEntidadMedica,
+                entidadReferencia: "SHM_PRODUCCION",
+                idReferencia: idProduccion);
+
+            _logger.LogInformation("Email FACTURA_DEVUELTA multi enviado. Produccion: {Codigo}, TO: {N} usuarios, CC: {C} contactos",
+                codigoProduccion, toRecipients.Count, ccRecipients.Count);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar email factura devuelta multiple. Produccion: {Codigo}", codigoProduccion);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Envia un email a multiples TO con CC y guarda un unico registro en el log.
+    /// </summary>
+    private async Task EnviarEmailMultipleConLogAsync(
+        List<(string Email, string Nombre)> toRecipients,
+        List<(string Email, string Nombre)> ccRecipients,
+        string subject,
+        string body,
+        string tipoEmail,
+        bool isHtml = true,
+        int? idEntidadMedica = null,
+        string? entidadReferencia = null,
+        int? idReferencia = null)
+    {
+        var emailLog = new EmailLog
+        {
+            GuidRegistro      = Guid.NewGuid().ToString(),
+            EmailOrigen       = _smtpSettings.FromEmail,
+            NombreOrigen      = _smtpSettings.FromName,
+            EmailDestino      = string.Join(", ", toRecipients.Select(r => r.Email)),
+            NombreDestino     = string.Join(", ", toRecipients.Select(r => r.Nombre)),
+            EmailCcLista      = ccRecipients.Count > 0 ? string.Join(", ", ccRecipients.Select(r => r.Email)) : null,
+            NombreCcLista     = ccRecipients.Count > 0 ? string.Join(", ", ccRecipients.Select(r => r.Nombre)) : null,
+            Asunto            = subject,
+            TipoEmail         = tipoEmail,
+            Contenido         = body,
+            EsHtml            = isHtml ? 1 : 0,
+            IdEntidadMedica   = idEntidadMedica,
+            EntidadReferencia = entidadReferencia,
+            IdReferencia      = idReferencia,
+            ServidorSmtp      = $"{_smtpSettings.Host}:{_smtpSettings.Port}",
+            Activo            = 1
+        };
+
+        try
+        {
+            using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port)
+            {
+                EnableSsl   = _smtpSettings.EnableSsl,
+                Credentials = new NetworkCredential(_smtpSettings.UserName, _smtpSettings.Password)
+            };
+
+            var mailMessage = new MailMessage
+            {
+                From       = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName),
+                Subject    = subject,
+                Body       = body,
+                IsBodyHtml = isHtml
+            };
+
+            foreach (var (email, _) in toRecipients)
+                mailMessage.To.Add(email);
+
+            foreach (var (email, _) in ccRecipients)
+                mailMessage.CC.Add(email);
+
+            await client.SendMailAsync(mailMessage);
+            emailLog.Estado = "ENVIADO";
+        }
+        catch (Exception ex)
+        {
+            emailLog.Estado       = "ERROR";
+            emailLog.MensajeError = ex.Message.Length > 4000 ? ex.Message[..4000] : ex.Message;
+            try { await _emailLogRepository.CreateAsync(emailLog); } catch (Exception logEx) { _logger.LogError(logEx, "Error al guardar log de email fallido"); }
+            throw;
+        }
+
+        try { await _emailLogRepository.CreateAsync(emailLog); }
+        catch (Exception logEx) { _logger.LogError(logEx, "Error al guardar log de email enviado"); }
+    }
+
+    /// <summary>
     /// Envia un correo electronico notificando al usuario que su clave fue restablecida por un administrador.
     /// <modified>ADG Vladimir D - 2026-04-10 - Usar URL de portal segun tipo de usuario</modified>
     /// </summary>
@@ -369,7 +556,7 @@ public class EmailService : IEmailService
     /// Envia un correo electronico de bienvenida al nuevo usuario con sus credenciales de acceso.
     /// <modified>ADG Vladimir D - 2026-04-10 - Usar URL de portal segun tipo de usuario</modified>
     /// </summary>
-    public async Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario, string tipoUsuario = "I")
+    public async Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario, string tipoUsuario = "I", string? razonSocial = null)
     {
         var subject = "Credenciales de Acceso - Sistema de Honorarios Medicos";
         string body;
@@ -389,10 +576,15 @@ public class EmailService : IEmailService
                 ? _configuration["AppSettings:UrlPortalCompaniaMedica"] ?? ""
                 : _configuration["AppSettings:UrlPortalAdministrativo"] ?? "";
 
+            var razonSocialBloque = !string.IsNullOrEmpty(razonSocial)
+                ? $"<p style=\"margin: 0 0 20px 0; font-size: 14px; color: #777777;\"><i>{razonSocial}</i></p>"
+                : "";
+
             body = body.Replace("{{NOMBRE_USUARIO}}", nombreUsuario)
                       .Replace("{{LOGIN_USUARIO}}", loginUsuario)
                       .Replace("{{CLAVE_USUARIO}}", claveUsuario)
                       .Replace("{{URL_SISTEMA}}", urlSistema)
+                      .Replace("{{RAZON_SOCIAL_BLOQUE}}", razonSocialBloque)
                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
 
             await EnviarEmailConLogAsync(

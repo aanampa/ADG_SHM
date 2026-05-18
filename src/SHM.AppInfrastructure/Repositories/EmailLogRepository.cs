@@ -51,7 +51,9 @@ public class EmailLogRepository : IEmailLogRepository
                 IP_ORIGEN,
                 ACTIVO,
                 ID_CREADOR,
-                FECHA_CREACION
+                FECHA_CREACION,
+                EMAIL_CC_LISTA,
+                NOMBRE_CC_LISTA
             ) VALUES (
                 SHM_EMAIL_LOG_SEQ.NEXTVAL,
                 :GuidRegistro,
@@ -73,7 +75,9 @@ public class EmailLogRepository : IEmailLogRepository
                 :IpOrigen,
                 1,
                 :IdCreador,
-                SYSDATE
+                SYSDATE,
+                :EmailCcLista,
+                :NombreCcLista
             )
             RETURNING ID_EMAIL_LOG INTO :IdEmailLog";
 
@@ -96,6 +100,8 @@ public class EmailLogRepository : IEmailLogRepository
         parameters.Add("ServidorSmtp", emailLog.ServidorSmtp);
         parameters.Add("IpOrigen", emailLog.IpOrigen);
         parameters.Add("IdCreador", emailLog.IdCreador);
+        parameters.Add("EmailCcLista", emailLog.EmailCcLista);
+        parameters.Add("NombreCcLista", emailLog.NombreCcLista);
         parameters.Add("IdEmailLog", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
         await connection.ExecuteAsync(sql, parameters);
@@ -302,7 +308,9 @@ public class EmailLogRepository : IEmailLogRepository
                         ID_REFERENCIA AS IdReferencia,
                         SERVIDOR_SMTP AS ServidorSmtp,
                         ACTIVO AS Activo,
-                        FECHA_CREACION AS FechaCreacion
+                        FECHA_CREACION AS FechaCreacion,
+                        EMAIL_CC_LISTA AS EmailCcLista,
+                        NOMBRE_CC_LISTA AS NombreCcLista
                     FROM SHM_EMAIL_LOG
                     {whereClause}
                     ORDER BY ID_EMAIL_LOG DESC
@@ -343,7 +351,9 @@ public class EmailLogRepository : IEmailLogRepository
                 ENTIDAD_REFERENCIA AS EntidadReferencia,
                 ID_REFERENCIA      AS IdReferencia,
                 ACTIVO             AS Activo,
-                FECHA_CREACION     AS FechaCreacion
+                FECHA_CREACION     AS FechaCreacion,
+                EMAIL_CC_LISTA     AS EmailCcLista,
+                NOMBRE_CC_LISTA    AS NombreCcLista
             FROM SHM_EMAIL_LOG
             {where}
             ORDER BY ID_EMAIL_LOG DESC";

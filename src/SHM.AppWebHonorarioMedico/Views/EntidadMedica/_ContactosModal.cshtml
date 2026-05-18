@@ -1,0 +1,131 @@
+@model SHM.AppWebHonorarioMedico.Models.ContactoListViewModel
+
+<div id="subModalContainer"></div>
+
+<div class="modal fade" id="modalContactos" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #6c757d; color: #fff;">
+                <h5 class="modal-title">
+                    <i class="fas fa-address-book mr-2"></i>Contactos de Notificacion &mdash; @Model.EntidadRazonSocial
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body py-2">
+                @Html.AntiForgeryToken()
+                <div class="mb-2 text-right">
+                    <button type="button" class="btn btn-success btn-sm"
+                            onclick="openCreateContactoModal('@Model.EntidadGuid', @Model.IdEntidadMedica)">
+                        <i class="fas fa-plus mr-1"></i>Nuevo Contacto
+                    </button>
+                </div>
+                <div id="contactosListContainer">
+                    @await Html.PartialAsync("_ContactosListPartial", Model)
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        $('#modalContactos').modal('show');
+
+        $('#modalContactos').on('hidden.bs.modal', function () {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+        });
+    })();
+
+    function refreshContactosList(entidadGuid) {
+        fetch('@Url.Action("GetListContactos", "EntidadMedica")?entidadGuid=' + entidadGuid)
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('contactosListContainer').innerHTML = html;
+            });
+    }
+
+    function openCreateContactoModal(entidadGuid, idEntidadMedica) {
+        fetch('@Url.Action("GetCreateContactoModal", "EntidadMedica")?entidadGuid=' + entidadGuid + '&idEntidadMedica=' + idEntidadMedica)
+            .then(r => r.text())
+            .then(html => {
+                const container = document.getElementById('subModalContainer');
+                if (container) {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                }
+            });
+    }
+
+    function openEditContactoModal(guid, entidadGuid) {
+        fetch('@Url.Action("GetEditContactoModal", "EntidadMedica")?guid=' + guid + '&entidadGuid=' + entidadGuid)
+            .then(r => r.text())
+            .then(html => {
+                const container = document.getElementById('subModalContainer');
+                if (container) {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                }
+            });
+    }
+
+    function toggleActivoContacto(guid, entidadGuid, nuevoActivo) {
+        const accion    = nuevoActivo === 0 ? 'inactivar' : 'activar';
+        const icono     = nuevoActivo === 0 ? 'warning' : 'question';
+        const btnColor  = nuevoActivo === 0 ? '#f26522' : '#28a745';
+        const btnTexto  = nuevoActivo === 0 ? 'Inactivar' : 'Activar';
+
+        Swal.fire({
+            title: `¿${btnTexto} contacto?`,
+            text: nuevoActivo === 0
+                ? 'El contacto no recibirá más notificaciones mientras esté inactivo.'
+                : 'El contacto volverá a recibir notificaciones.',
+            icon: icono,
+            showCancelButton: true,
+            confirmButtonColor: btnColor,
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: btnTexto,
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+            fetch('@Url.Action("ToggleActivoContacto", "EntidadMedica")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ guidRegistro: guid, entidadGuid: entidadGuid })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Exito', text: data.message,
+                        confirmButtonColor: '#28a745', timer: 1500, showConfirmButton: false });
+                    refreshContactosList(entidadGuid);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#dc3545' });
+                }
+            })
+            .catch(() => {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+            });
+        });
+    }
+</script>

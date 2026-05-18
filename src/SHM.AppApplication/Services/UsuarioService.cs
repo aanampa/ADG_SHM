@@ -18,12 +18,14 @@ public class UsuarioService : IUsuarioService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IUsuarioSedeRepository _usuarioSedeRepository;
     private readonly IEmailService _emailService;
+    private readonly IEntidadMedicaRepository _entidadMedicaRepository;
 
-    public UsuarioService(IUsuarioRepository usuarioRepository, IUsuarioSedeRepository usuarioSedeRepository, IEmailService emailService)
+    public UsuarioService(IUsuarioRepository usuarioRepository, IUsuarioSedeRepository usuarioSedeRepository, IEmailService emailService, IEntidadMedicaRepository entidadMedicaRepository)
     {
         _usuarioRepository = usuarioRepository;
         _usuarioSedeRepository = usuarioSedeRepository;
         _emailService = emailService;
+        _entidadMedicaRepository = entidadMedicaRepository;
     }
 
     /// <summary>
@@ -423,13 +425,20 @@ public class UsuarioService : IUsuarioService
         if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
         {
             var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            string? razonSocial = null;
+            if (usuario.IdEntidadMedica.HasValue)
+            {
+                var entidad = await _entidadMedicaRepository.GetByIdAsync(usuario.IdEntidadMedica.Value);
+                razonSocial = entidad?.RazonSocial;
+            }
             await _emailService.EnviarEmailNuevoUsuarioAsync(
                 usuario.Email,
                 nombreCompleto,
                 usuario.Login ?? "",
                 generatedPassword,
                 idUsuario,
-                usuario.TipoUsuario ?? "E");
+                usuario.TipoUsuario ?? "E",
+                razonSocial);
         }
 
         return (true, null, generatedPassword);
@@ -623,5 +632,10 @@ public class UsuarioService : IUsuarioService
     {
         var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(idEntidadMedica);
         return usuarios.Select(MapToResponseDto);
+    }
+
+    public async Task<bool> ToggleActivoUsuarioAsync(string guidRegistro, int idModificador)
+    {
+        return await _usuarioRepository.ToggleActivoAsync(guidRegistro, idModificador);
     }
 }

@@ -107,6 +107,11 @@
                         <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Destinatario:</span>
                         <span><strong id="modalNombreDestino"></strong> &lt;<span id="modalEmailDestino" class="text-primary"></span>&gt;</span>
                     </div>
+                    <!-- Copia (CC) -->
+                    <div class="d-flex mb-1" id="modalCCRow" style="display:none !important;">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Copia (CC):</span>
+                        <span id="modalEmailCC" class="text-primary"></span>
+                    </div>
                     <!-- Fecha -->
                     <div class="d-flex mb-1">
                         <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Fecha:</span>
@@ -154,7 +159,8 @@
                     btn.dataset.nombreOrigen,
                     btn.dataset.tipo,
                     btn.dataset.fecha,
-                    btn.dataset.error
+                    btn.dataset.error,
+                    btn.dataset.cc
                 );
             });
         });
@@ -198,13 +204,23 @@
                 });
         }
 
-        function verContenido(id, asunto, nombreDestino, emailDestino, emailOrigen, nombreOrigen, tipoEmail, fecha, mensajeError) {
+        function verContenido(id, asunto, nombreDestino, emailDestino, emailOrigen, nombreOrigen, tipoEmail, fecha, mensajeError, emailCC) {
             document.getElementById('modalAsunto').textContent = asunto || 'Sin asunto';
             document.getElementById('modalNombreOrigen').textContent = nombreOrigen || '';
             document.getElementById('modalEmailOrigen').textContent = emailOrigen || '';
             document.getElementById('modalNombreDestino').textContent = nombreDestino || '';
             document.getElementById('modalEmailDestino').textContent = emailDestino || '';
             document.getElementById('modalFecha').textContent = fecha || '';
+
+            const ccRow = document.getElementById('modalCCRow');
+            const ccEl  = document.getElementById('modalEmailCC');
+            if (emailCC) {
+                ccEl.textContent = emailCC;
+                ccRow.style.display = 'flex';
+            } else {
+                ccEl.textContent = '';
+                ccRow.style.display = 'none';
+            }
 
             const divError = document.getElementById('modalMensajeError');
             if (mensajeError) {
