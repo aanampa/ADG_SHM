@@ -66,6 +66,9 @@
 <!-- Modal Container -->
 <div id="modalContainer"></div>
 
+<!-- Token antiforgery siempre disponible para llamadas AJAX -->
+@Html.AntiForgeryToken()
+
 @section Scripts {
     <script>
         let currentPage = 1;
@@ -541,57 +544,75 @@
         }
 
         function toggleActivoUsuarioEntidad(guid, nuevoActivo) {
-            var msg = nuevoActivo === 1 ? '¿Activar este usuario?' : '¿Desactivar este usuario?';
-            if (!confirm(msg)) return;
+            var titulo = nuevoActivo === 1 ? '¿Activar usuario?' : '¿Desactivar usuario?';
+            var texto  = nuevoActivo === 1
+                ? 'El usuario podrá ingresar al sistema nuevamente.'
+                : 'El usuario no podrá ingresar al sistema.';
+            var btnColor = nuevoActivo === 1 ? '#28a745' : '#dc3545';
+            var btnTexto = nuevoActivo === 1 ? '<i class="fas fa-check mr-1"></i>Activar' : '<i class="fas fa-ban mr-1"></i>Desactivar';
 
-            // Obtener datos del usuario via GetEditModal y luego llamar Edit con activo modificado
-            fetch('/Usuario/GetEditModal?guid=' + encodeURIComponent(guid))
-                .then(r => r.text())
-                .then(html => {
-                    // Parsear el HTML para extraer campos y enviar Edit
-                    var tmp = document.createElement('div');
-                    tmp.innerHTML = html;
-                    var getVal = function(id) { var el = tmp.querySelector('#' + id); return el ? el.value : ''; };
+            Swal.fire({
+                title: titulo,
+                text: texto,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: btnColor,
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: btnTexto,
+                cancelButtonText: 'Cancelar'
+            }).then(function(result) {
+                if (!result.isConfirmed) return;
 
-                    var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-                    var formData = {
-                        guidRegistro:    getVal('GuidRegistro'),
-                        login:           getVal('Login'),
-                        email:           getVal('Email'),
-                        nombres:         getVal('Nombres'),
-                        apellidoPaterno: getVal('ApellidoPaterno'),
-                        apellidoMaterno: getVal('ApellidoMaterno'),
-                        numeroDocumento: getVal('NumeroDocumento'),
-                        celular:         getVal('Celular'),
-                        idEntidadMedica: getVal('IdEntidadMedica') || null,
-                        idRol:           getVal('IdRol') || null,
-                        activo:          nuevoActivo
-                    };
-
-                    f_loading();
-                    fetch('/Usuario/Edit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-                        body: JSON.stringify(formData)
-                    })
-                    .then(r => r.json())
-                    .then(result => {
-                        f_remove_loading();
-                        if (result.success) {
-                            toastr.success(result.message, 'Exito');
-                            loadUsuariosEntidad();
-                        } else {
-                            f_alert('e', '', result.message);
-                        }
-                    })
-                    .catch(() => { f_remove_loading(); f_alert('e', '', 'Error al procesar'); });
-                });
+                var tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+                var token   = tokenEl ? tokenEl.value : '';
+                f_loading();
+                fetch('/Usuario/ToggleActivoUsuario?guidRegistro=' + encodeURIComponent(guid), {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token }
+                })
+                .then(r => r.json())
+                .then(function(data) {
+                    f_remove_loading();
+                    if (data.success) {
+                        toastr.success(data.message, 'Éxito');
+                        loadUsuariosEntidad();
+                    } else {
+                        f_alert('e', '', data.message);
+                    }
+                })
+                .catch(function() { f_remove_loading(); f_alert('e', '', 'Error al procesar la solicitud'); });
+            });
         }
 
         // Capturar guardado exitoso desde modales de usuario (crear/editar)
         $(document).on('usuarioEntidadGuardado', function () {
             loadUsuariosEntidad();
         });
+
+        // Funciones para Contactos de Notificacion
+        function openContactosModal(guid) {
+            f_loading();
+            fetch('@Url.Action("GetContactosModal", "EntidadMedica")?guid=' + encodeURIComponent(guid))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContainer').innerHTML = html;
+                    document.getElementById('modalContainer').querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                    $('#modalContactos').modal('show');
+                    f_remove_loading();
+                })
+                .catch(() => {
+                    f_remove_loading();
+                    f_alert('e', '', 'Error al cargar los contactos');
+                });
+        }
 
         // Funciones para Cuentas Bancarias
         let currentEntidadGuid = '';

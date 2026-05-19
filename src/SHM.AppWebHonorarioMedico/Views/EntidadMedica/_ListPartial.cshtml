@@ -11,7 +11,7 @@
                 <th style="width: 100px;">Telefono</th>
                 <th style="width: 100px;">Celular</th>
                 <th style="width: 80px;" class="text-center">Estado</th>
-                <th style="width: 140px;" class="text-center">Acciones</th>
+                <th style="width: 180px;" class="text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -44,6 +44,10 @@
                             <button type="button" class="btn btn-morado btn-xs"
                                     onclick="openUsuariosEntidadModal('@item.GuidRegistro')" title="Usuarios">
                                 <i class="fas fa-users"></i>
+                            </button>
+                            <button type="button" class="btn btn-warning btn-xs"
+                                    onclick="openContactosModal('@item.GuidRegistro')" title="Contactos de Notificacion">
+                                <i class="fas fa-address-book"></i>
                             </button>
                             <button type="button" class="btn btn-info btn-xs"
                                     onclick="openEditModal('@item.GuidRegistro')" title="Editar">

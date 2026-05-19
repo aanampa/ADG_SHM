@@ -1,0 +1,235 @@
+@{
+    ViewData["Title"] = "Mis Contactos";
+}
+
+<!-- Modal container para editar/eliminar -->
+<div id="modalContainer"></div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-person-lines-fill"></i>
+                    Mis Contactos de Notificacion
+                </h3>
+                <button class="btn-action" onclick="abrirModalCrear()">
+                    <i class="bi bi-plus-lg"></i>
+                    Nuevo Contacto
+                </button>
+            </div>
+
+            <!-- Nota informativa -->
+            <div style="padding: 1rem 1.5rem 0;">
+                <div style="background: #e8f4fd; border-left: 4px solid #2596be; border-radius: 6px; padding: 0.65rem 1rem; font-size: 0.84rem; color: #1a5f7a; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="bi bi-info-circle-fill" style="font-size: 1rem; flex-shrink: 0;"></i>
+                    <span>Solo los contactos <strong>Activos</strong> recibirán las notificaciones.</span>
+                </div>
+            </div>
+
+            <!-- Tabla de contactos -->
+            <div id="listaContainer" style="padding: 1.5rem;">
+                <div class="text-center py-4">
+                    <i class="bi bi-arrow-clockwise" style="font-size: 1.5rem; color: var(--text-secondary);"></i>
+                    <p class="mt-2" style="color: var(--text-secondary);">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear -->
+<div class="modal fade" id="modalCrear" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: var(--accent); color: #fff; border-radius: 12px 12px 0 0; padding: 1rem 1.5rem;">
+                <h6 class="modal-title mb-0 fw-semibold">
+                    <i class="bi bi-person-plus-fill me-2"></i>Nuevo Contacto
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                @Html.AntiForgeryToken()
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Apellido Paterno</label>
+                        <input type="text" id="crearApellidoPaterno" class="form-control" maxlength="100" placeholder="Apellido paterno" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Apellido Materno</label>
+                        <input type="text" id="crearApellidoMaterno" class="form-control" maxlength="100" placeholder="Apellido materno" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Nombres <span class="text-danger">*</span></label>
+                        <input type="text" id="crearNombres" class="form-control" maxlength="200" placeholder="Nombres completos" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Correo Electronico <span class="text-danger">*</span></label>
+                        <input type="email" id="crearEmail" class="form-control" maxlength="100" placeholder="correo@@ejemplo.com" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Celular</label>
+                        <input type="text" id="crearCelular" class="form-control" maxlength="10" placeholder="999999999" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Cargo</label>
+                        <input type="text" id="crearCargo" class="form-control" maxlength="120" placeholder="Ej: Contador, Gerente" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border); padding: 1rem 1.5rem;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-action" onclick="submitCrear()">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarLista();
+        // Mover el modal de crear al body para evitar conflictos con transform/overflow del layout
+        const modalCrear = document.getElementById('modalCrear');
+        if (modalCrear) document.body.appendChild(modalCrear);
+    });
+
+    function cargarLista() {
+        fetch('@Url.Action("GetList", "Contacto")')
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('listaContainer').innerHTML = html;
+            })
+            .catch(() => {
+                document.getElementById('listaContainer').innerHTML =
+                    '<p class="text-center text-danger py-3">Error al cargar los contactos.</p>';
+            });
+    }
+
+    function abrirModalCrear() {
+        document.getElementById('crearApellidoPaterno').value = '';
+        document.getElementById('crearApellidoMaterno').value = '';
+        document.getElementById('crearNombres').value = '';
+        document.getElementById('crearEmail').value = '';
+        document.getElementById('crearCelular').value = '';
+        document.getElementById('crearCargo').value = '';
+        new bootstrap.Modal(document.getElementById('modalCrear')).show();
+    }
+
+    function submitCrear() {
+        const nombres = document.getElementById('crearNombres').value.trim();
+        const email   = document.getElementById('crearEmail').value.trim();
+
+        const errores = [];
+        if (!nombres) errores.push('Los nombres son requeridos');
+        if (!email)   errores.push('El correo electronico es requerido');
+
+        const emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+        if (email && !emailRegex.test(email)) errores.push('El correo no es valido');
+
+        if (errores.length > 0) {
+            Swal.fire({ icon: 'warning', title: 'Campos requeridos',
+                html: '<ul class="text-start">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+                confirmButtonColor: '#f26522' });
+            return;
+        }
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch('@Url.Action("Create", "Contacto")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({
+                nombres:         nombres,
+                apellidoPaterno: document.getElementById('crearApellidoPaterno').value.trim() || null,
+                apellidoMaterno: document.getElementById('crearApellidoMaterno').value.trim() || null,
+                email:           email,
+                celular:         document.getElementById('crearCelular').value.trim() || null,
+                cargo:           document.getElementById('crearCargo').value.trim() || null
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalCrear')).hide();
+                Swal.fire({ icon: 'success', title: 'Exito', text: data.message,
+                    confirmButtonColor: '#f26522', timer: 1500, showConfirmButton: false });
+                cargarLista();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#f26522' });
+            }
+        })
+        .catch(() => {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#f26522' });
+        });
+    }
+
+    function inyectarModalEnBody(html) {
+        // Eliminar modales previos inyectados
+        ['modalEditar', 'modalEliminar'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.closest('.modal') ? el.closest('.modal').remove() : el.remove();
+        });
+        // Inyectar directamente en body para evitar conflictos con position:fixed/transform del layout
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const modal = tmp.querySelector('.modal');
+        if (modal) document.body.appendChild(modal);
+        tmp.querySelectorAll('script').forEach(s => {
+            const ns = document.createElement('script');
+            ns.textContent = s.textContent;
+            document.body.appendChild(ns);
+            document.body.removeChild(ns);
+        });
+    }
+
+    function abrirModalEditar(guid) {
+        fetch('@Url.Action("GetEditModal", "Contacto")?guid=' + encodeURIComponent(guid))
+            .then(r => r.text())
+            .then(html => inyectarModalEnBody(html));
+    }
+
+    function toggleActivo(guid, nuevoActivo) {
+        const accion   = nuevoActivo === 0 ? 'Inactivar' : 'Activar';
+        const btnColor = nuevoActivo === 0 ? '#f26522' : '#28a745';
+
+        Swal.fire({
+            title: `¿${accion} contacto?`,
+            text: nuevoActivo === 0
+                ? 'El contacto no recibirá notificaciones mientras esté inactivo.'
+                : 'El contacto volverá a recibir notificaciones.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: btnColor,
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: accion,
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+            fetch('@Url.Action("ToggleActivo", "Contacto")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ guidRegistro: guid })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Exito', text: data.message,
+                        confirmButtonColor: '#f26522', timer: 1500, showConfirmButton: false });
+                    cargarLista();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#f26522' });
+                }
+            })
+            .catch(() => {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#f26522' });
+            });
+        });
+    }
+</script>
+}

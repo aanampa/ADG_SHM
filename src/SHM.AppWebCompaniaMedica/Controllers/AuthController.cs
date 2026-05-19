@@ -39,7 +39,7 @@ public class AuthController : Controller
         // Si ya está autenticado, redirigir al Dashboard
         if (User.Identity?.IsAuthenticated == true)
         {
-            return RedirectToAction("Dashboard", "Home");
+            return RedirectToAction("Inicio", "Home");
         }
 
         return View();
@@ -150,7 +150,7 @@ public class AuthController : Controller
             if (usuario.FlagPasswordTemporal == 1)
                 return RedirectToAction("CambiarClave", "Auth");
 
-            return RedirectToAction("Dashboard", "Home");
+            return RedirectToAction("Inicio", "Home");
         }
         catch (Exception ex)
         {
@@ -335,7 +335,7 @@ public class AuthController : Controller
                     ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
                 });
 
-            return RedirectToAction("Dashboard", "Home");
+            return RedirectToAction("Inicio", "Home");
         }
         catch (Exception ex)
         {

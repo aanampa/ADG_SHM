@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppWebCompaniaMedica.Models;
 using SHM.AppWebCompaniaMedica.Services;
 
 namespace SHM.AppWebCompaniaMedica.Controllers;
@@ -35,7 +36,8 @@ public class HerramientasController : BaseController
     }
 
     /// <summary>
-    /// Recibe un archivo XML, lo valida y retorna sus datos parseados en JSON.
+    /// Recibe un archivo XML, lo valida y retorna el partial _DatosXmlPartial con los datos extraídos.
+    /// Retorna JSON con success=false en caso de error de validación.
     /// </summary>
     [HttpPost]
     public IActionResult EvaluarXml([FromForm] IFormFile? archivoXml, [FromForm] string? tipoComprobante)
@@ -52,10 +54,10 @@ public class HerramientasController : BaseController
                 return Json(new { success = false, message = "Debe indicar el tipo de comprobante." });
 
             var esRhe = tipoComprobante == "22" || tipoComprobante == "02";
+            FacturaXmlData datos;
 
             if (esRhe)
             {
-                // Validar
                 RheXmlValidationResult validacion;
                 using (var stream = archivoXml.OpenReadStream())
                     validacion = _rheXmlParserService.ValidateRheXml(stream);
@@ -63,15 +65,11 @@ public class HerramientasController : BaseController
                 if (!validacion.IsValid)
                     return Json(new { success = false, message = $"El XML no es válido: {validacion.ErrorMessage}" });
 
-                // Parsear
                 using var streamParse = archivoXml.OpenReadStream();
-                var datos = _rheXmlParserService.ParseRheXml(streamParse);
-
-                return Json(new { success = true, tipoParser = "RHE", datos = BuildResponse(datos) });
+                datos = _rheXmlParserService.ParseRheXml(streamParse);
             }
             else
             {
-                // Validar
                 FacturaXmlValidationResult validacion;
                 using (var stream = archivoXml.OpenReadStream())
                     validacion = _facturaXmlParserService.ValidateFacturaXml(stream);
@@ -79,12 +77,17 @@ public class HerramientasController : BaseController
                 if (!validacion.IsValid)
                     return Json(new { success = false, message = $"El XML no es válido: {validacion.ErrorMessage}" });
 
-                // Parsear
                 using var streamParse = archivoXml.OpenReadStream();
-                var datos = _facturaXmlParserService.ParseFacturaXml(streamParse);
-
-                return Json(new { success = true, tipoParser = "FACTURA", datos = BuildResponse(datos) });
+                datos = _facturaXmlParserService.ParseFacturaXml(streamParse);
             }
+
+            var viewModel = new VistaPreviaFacturaViewModel
+            {
+                TipoComprobante = tipoComprobante,
+                DatosXml        = datos
+            };
+
+            return PartialView("../Facturas/_DatosXmlPartial", viewModel);
         }
         catch (Exception ex)
         {
@@ -92,47 +95,4 @@ public class HerramientasController : BaseController
             return Json(new { success = false, message = $"Error inesperado: {ex.Message}" });
         }
     }
-
-    private static object BuildResponse(SHM.AppWebCompaniaMedica.Models.FacturaXmlData d) => new
-    {
-        // Datos generales
-        numeroDocumento   = d.DatosGenerales.NumeroFactura,
-        tipoDocumento     = d.DatosGenerales.TipoDocumento,
-        codigoTipo        = d.DatosGenerales.CodigoTipoDocumento,
-        fechaEmision      = d.DatosGenerales.FechaEmision,
-        horaEmision       = d.DatosGenerales.HoraEmision,
-        moneda            = d.DatosGenerales.Moneda,
-        totalEnLetras     = d.DatosGenerales.TotalEnLetras,
-
-        // Emisor
-        emisorRuc         = d.Emisor.Ruc,
-        emisorNombre      = d.Emisor.RazonSocial,
-        emisorDireccion   = d.Emisor.Direccion,
-        emisorUbicacion   = d.Emisor.Ubicacion,
-
-        // Cliente
-        clienteTipoDoc    = d.Cliente.TipoDocumento,
-        clienteNumeroDoc  = d.Cliente.NumeroDocumento,
-        clienteNombre     = d.Cliente.RazonSocial,
-        clienteDireccion  = d.Cliente.Direccion,
-
-        // Totales
-        valorVenta        = d.DesgloseTotales.ValorVenta,
-        igv               = d.DesgloseTotales.Igv,
-        retencion         = d.DesgloseTotales.Retencion,
-        importeTotal      = d.DesgloseTotales.ImporteTotal,
-
-        // Impuestos
-        porcentajeRetencion = d.Impuestos.PorcentajeRetencion,
-
-        // Items
-        items = d.DetalleItems.Select(i => new
-        {
-            numero      = i.NumeroItem,
-            descripcion = i.Descripcion,
-            cantidad    = i.Cantidad,
-            precio      = i.PrecioUnitario,
-            total       = i.ValorVenta
-        }).ToList()
-    };
 }

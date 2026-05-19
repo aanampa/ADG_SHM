@@ -33,7 +33,7 @@
                     <div class="d-flex align-items-center justify-content-center mb-3">
                         <div class="d-flex flex-column align-items-center" style="min-width:140px;">
                             <div id="sfStepCircle1" style="width:32px;height:32px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">1</div>
-                            <small id="sfStepLabel1" class="mt-1 font-weight-bold text-primary">Seleccionar y Fechar</small>
+                            <small id="sfStepLabel1" class="mt-1 font-weight-bold text-primary">Seleccionar / Asignar Fechas</small>
                         </div>
                         <div style="flex:1;height:2px;background:#dee2e6;margin-bottom:18px;max-width:80px;"></div>
                         <div class="d-flex flex-column align-items-center" style="min-width:140px;">
@@ -46,11 +46,8 @@
                     <div id="sfPaso1">
 
                         <!-- Búsqueda -->
-                        <div class="mb-2">
+                        <div class="mb-2 d-flex justify-content-end">
                             <div class="input-group input-group-sm" style="max-width:320px;">
-                                <span class="input-group-text" style="background:#fff;">
-                                    <i class="fas fa-search text-muted"></i>
-                                </span>
                                 <input type="text" id="sfInputBusqueda" class="form-control form-control-sm"
                                        placeholder="Buscar por Cía Médica, código..."
                                        oninput="sfBuscar()">
@@ -187,10 +184,9 @@
                                         <i class="fas fa-file-invoice mr-1"></i>F. Vencimiento Factura
                                     </div>
                                     <div class="d-flex align-items-end" style="gap:10px;">
-                                        <div>
+                                        <div style="width:240px;">
                                             <label class="small font-weight-bold">Fecha <span class="text-danger">*</span></label>
-                                            <input type="date" id="sfFechaVenc" class="form-control form-control-sm"
-                                                   style="max-width:180px;" onchange="sfCalcularDias()" />
+                                            <input type="date" id="sfFechaVenc" class="form-control form-control-sm" onchange="sfCalcularDias()" />
                                         </div>
                                         <div class="pb-1">
                                             <span id="sfLblDias" class="small font-weight-bold"></span>
@@ -269,7 +265,7 @@
                         <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
                             <i class="fas fa-times mr-1"></i>Cancelar
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="sfBtnSiguiente"
+                        <button type="button" class="btn btn-success btn-sm" id="sfBtnSiguiente"
                                 onclick="sfIrPaso2()" disabled>
                             Siguiente <i class="fas fa-arrow-right ml-1"></i>
                         </button>
@@ -296,6 +292,12 @@
     #modalSolicitudFactura thead th { vertical-align: middle !important; text-align: center !important; }
     #modalSolicitudFactura thead th.text-right { text-align: right !important; }
     #modalSolicitudFactura thead th.text-left  { text-align: left !important; }
+    #modalSolicitudFactura .btn-primary { background-color:#007bff !important; border-color:#007bff !important; }
+    #modalSolicitudFactura .btn-primary:hover { background-color:#0069d9 !important; border-color:#0062cc !important; }
+    #modalSolicitudFactura .btn-primary:disabled { background-color:#007bff !important; border-color:#007bff !important; opacity:.65; }
+    #modalSolicitudFactura .btn-success { background-color:#28a745 !important; border-color:#28a745 !important; }
+    #modalSolicitudFactura .btn-success:hover { background-color:#218838 !important; border-color:#1e7e34 !important; }
+    #modalSolicitudFactura .btn-success:disabled { background-color:#28a745 !important; border-color:#28a745 !important; opacity:.65; }
 </style>
 
 <script>
@@ -333,6 +335,7 @@ var sfGuidPreseleccionado = '@guidPreseleccionado';
 })();
 
 function sfReset() {
+    if (!document.getElementById('sfPaso1')) return;
     document.getElementById('sfPaso1').style.display        = '';
     document.getElementById('sfPaso2').style.display        = 'none';
     document.getElementById('sfFooterPaso1').style.display  = 'flex';
@@ -638,10 +641,10 @@ function sfSetStep(paso) {
     var c1 = document.getElementById('sfStepCircle1'), l1 = document.getElementById('sfStepLabel1');
     var c2 = document.getElementById('sfStepCircle2'), l2 = document.getElementById('sfStepLabel2');
     if (paso === 1) {
-        c1.style.background = '#007bff'; c1.style.color = '#fff'; l1.className = 'mt-1 font-weight-bold text-primary';
+        c1.style.background = '#007bff'; c1.style.color = '#fff'; l1.className = 'mt-1 font-weight-bold text-primary'; l1.textContent = 'Seleccionar / Asignar Fechas';
         c2.style.background = '#dee2e6'; c2.style.color = '#6c757d'; l2.className = 'mt-1 text-muted';
     } else {
-        c1.style.background = '#28a745'; c1.style.color = '#fff'; l1.className = 'mt-1 text-success';
+        c1.style.background = '#28a745'; c1.style.color = '#fff'; l1.className = 'mt-1 text-success'; l1.textContent = 'Seleccionar / Asignar Fechas';
         c2.style.background = '#007bff'; c2.style.color = '#fff'; l2.className = 'mt-1 font-weight-bold text-primary';
     }
 }

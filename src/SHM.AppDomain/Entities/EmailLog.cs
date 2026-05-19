@@ -15,9 +15,13 @@ public class EmailLog
     public string? EmailOrigen { get; set; }
     public string? NombreOrigen { get; set; }
 
-    // Informacion del destinatario
+    // Informacion del destinatario (TO) - soporta lista separada por coma
     public string EmailDestino { get; set; } = string.Empty;
     public string? NombreDestino { get; set; }
+
+    // Destinatarios en copia (CC)
+    public string? EmailCcLista { get; set; }
+    public string? NombreCcLista { get; set; }
 
     // Informacion del mensaje
     public string Asunto { get; set; } = string.Empty;

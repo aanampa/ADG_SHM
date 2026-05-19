@@ -1,0 +1,81 @@
+@model SHM.AppWebHonorarioMedico.Models.ContactoDeleteViewModel
+
+<div class="modal fade" id="modalDeleteContacto" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="fas fa-trash mr-2"></i>Eliminar Contacto
+                </h6>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="deleteContactoGuid" value="@Model.GuidRegistro" />
+                <input type="hidden" id="deleteContactoEntidadGuid" value="@Model.EntidadGuid" />
+
+                <div class="alert alert-warning py-2 mb-3" style="font-size: 0.9rem;">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Esta accion desactivara el contacto. Ya no recibirá notificaciones.
+                </div>
+
+                <table class="table table-sm table-borderless mb-0" style="font-size: 13px;">
+                    <tr>
+                        <td class="text-muted" style="width: 100px;">Nombre:</td>
+                        <td><strong>@Model.NombreCompleto</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Correo:</td>
+                        <td>@Model.Email</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="submitDeleteContacto()">
+                    <i class="fas fa-trash mr-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        $('#modalDeleteContacto').modal('show');
+
+        $('#modalDeleteContacto').on('hidden.bs.modal', function () {
+            $('body').addClass('modal-open');
+        });
+    })();
+
+    function submitDeleteContacto() {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch('@Url.Action("DeleteContacto", "EntidadMedica")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({
+                guidRegistro: document.getElementById('deleteContactoGuid').value,
+                entidadGuid:  document.getElementById('deleteContactoEntidadGuid').value
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                $('#modalDeleteContacto').modal('hide');
+                Swal.fire({ icon: 'success', title: 'Exito', text: data.message, confirmButtonColor: '#28a745', timer: 1500, showConfirmButton: false });
+                refreshContactosList(document.getElementById('deleteContactoEntidadGuid').value);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#dc3545' });
+            }
+        })
+        .catch(() => {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+        });
+    }
+</script>

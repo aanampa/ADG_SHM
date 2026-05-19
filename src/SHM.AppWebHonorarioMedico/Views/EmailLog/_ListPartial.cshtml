@@ -14,8 +14,9 @@
                 <th class="align-middle text-center" style="width: 46px;">Ver</th>
                 <th class="align-middle" style="width: 130px;">Fecha</th>
                 <th class="align-middle" style="width: 160px;">Tipo</th>
-                <th class="align-middle">Email Destino</th>
-                <th class="align-middle">Nombre Destino</th>
+                <th class="align-middle">Destinatario (TO)</th>
+                <th class="align-middle">Correo(s)</th>
+                <th class="align-middle">Copia (CC)</th>
                 <th class="align-middle">Asunto</th>
                 <th class="align-middle" style="width: 90px;">Estado</th>
                 <th class="align-middle" style="width: 90px;">Servidor SMTP</th>
@@ -48,6 +49,7 @@
                                     data-email="@item.EmailDestino"
                                     data-email-origen="@(item.EmailOrigen ?? "")"
                                     data-nombre-origen="@(item.NombreOrigen ?? "")"
+                                    data-cc="@(item.EmailCcLista ?? "")"
                                     data-tipo="@tipoLabel"
                                     data-fecha="@fechaStr"
                                     data-error="@(item.MensajeError ?? "")">
@@ -58,8 +60,18 @@
                         <td>
                             <span class="badge badge-secondary" style="font-size: 11px;">@tipoLabel</span>
                         </td>
-                        <td>@item.EmailDestino</td>
                         <td>@(item.NombreDestino ?? "-")</td>
+                        <td>@item.EmailDestino</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.EmailCcLista))
+                            {
+                                <span title="@item.NombreCcLista" style="cursor:default;">@item.EmailCcLista</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
                         <td>
                             <span title="@item.Asunto">
                                 @(item.Asunto?.Length > 60 ? item.Asunto.Substring(0, 60) + "…" : item.Asunto ?? "-")
@@ -75,7 +87,7 @@
             else
             {
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">
+                    <td colspan="9" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                         No se encontraron registros
                     </td>

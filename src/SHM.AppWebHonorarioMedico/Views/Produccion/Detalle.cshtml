@@ -187,7 +187,7 @@
                                         <div class="col-6">
                                             <div class="form-group-sm">
                                                 <label>Moneda</label>
-                                                <input type="text" class="form-control form-control-sm" value="@(moneda == "S" ? "Soles" : moneda ?? "-")" readonly style="background-color: #e9ecef;">
+                                                <input type="text" class="form-control form-control-sm" value="@AppConstants.MonedaConstants.GetDescripcion(moneda)" readonly style="background-color: #e9ecef;">
                                             </div>
                                         </div>
                                     </div>
@@ -372,7 +372,7 @@
                                     var btnLabel = (Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta) ? "Renotificar Solicitud de Factura" : "Solicitar Factura";
                                     var fnOnClick = Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente
                                         ? $"abrirModalSolicitudFactura('{Model.GuidRegistro}')"
-                                        : "$('#modalSolicitudMasiva').modal('show')";
+                                        : $"abrirModalReNotificarFactura('{Model.GuidRegistro}')";
 
                                     string? motivoDeshabilitado = null;
                                     if (!tieneUsuarios)
@@ -479,20 +479,30 @@
     </div>
 </div>
 
-@{
-    var solicitudVm = ViewBag.SolicitudIndividualVm as SHM.AppWebHonorarioMedico.Models.SolicitudMasivaViewModel;
-}
-@if (solicitudVm != null)
-{
-    @await Html.PartialAsync("_SolicitudMasivaModal", solicitudVm)
-}
+<input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
 
 <div id="sfModalContainer"></div>
+<div id="rnModalContainer"></div>
 
 @section Scripts {
     <script>
         // refreshList: en Detalle recarga la página (usado por los modales de solicitud)
         function refreshList() { location.reload(); }
+
+        function abrirModalReNotificarFactura(guid) {
+            fetch('@Url.Action("GetModalReNotificarFactura", "Produccion")' + '?guidRegistro=' + guid)
+                .then(r => r.text())
+                .then(html => {
+                    var container = document.getElementById('rnModalContainer');
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        oldScript.parentNode.removeChild(oldScript);
+                    });
+                });
+        }
 
         function abrirModalSolicitudFactura(guid) {
             fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")' + '?guidRegistro=' + guid)

@@ -1,0 +1,119 @@
+@model SHM.AppWebCompaniaMedica.Models.ContactoEditViewModel
+
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: #0d6efd; color: #fff; border-radius: 12px 12px 0 0; padding: 1rem 1.5rem;">
+                <h6 class="modal-title mb-0 fw-semibold">
+                    <i class="bi bi-pencil-fill me-2"></i>Editar Contacto
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="editGuid" value="@Model.GuidRegistro" />
+                <input type="hidden" id="editId" value="@Model.IdEntidadContacto" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Apellido Paterno</label>
+                        <input type="text" id="editApellidoPaterno" class="form-control" maxlength="100" placeholder="Apellido paterno" value="@Model.ApellidoPaterno" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Apellido Materno</label>
+                        <input type="text" id="editApellidoMaterno" class="form-control" maxlength="100" placeholder="Apellido materno" value="@Model.ApellidoMaterno" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Nombres <span class="text-danger">*</span></label>
+                        <input type="text" id="editNombres" class="form-control" maxlength="200" placeholder="Nombres completos" value="@Model.Nombres" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Correo Electronico <span class="text-danger">*</span></label>
+                        <input type="email" id="editEmail" class="form-control" maxlength="100" placeholder="correo@@ejemplo.com" value="@Model.Email" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Celular</label>
+                        <input type="text" id="editCelular" class="form-control" maxlength="10" placeholder="999999999" value="@Model.Celular" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Cargo</label>
+                        <input type="text" id="editCargo" class="form-control" maxlength="120" placeholder="Ej: Contador, Gerente" value="@Model.Cargo" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="editActivo" @(Model.Activo == 1 ? "checked" : "") />
+                            <label class="form-check-label" for="editActivo">Activo</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border); padding: 1rem 1.5rem;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditar()">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const el = document.getElementById('modalEditar');
+        const modal = new bootstrap.Modal(el);
+        el.addEventListener('hidden.bs.modal', () => el.remove());
+        modal.show();
+    })();
+
+    function submitEditar() {
+        const nombres = document.getElementById('editNombres').value.trim();
+        const email   = document.getElementById('editEmail').value.trim();
+
+        const errores = [];
+        if (!nombres) errores.push('Los nombres son requeridos');
+        if (!email)   errores.push('El correo electronico es requerido');
+
+        const emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+        if (email && !emailRegex.test(email)) errores.push('El correo no es valido');
+
+        if (errores.length > 0) {
+            Swal.fire({ icon: 'warning', title: 'Campos requeridos',
+                html: '<ul class="text-start">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+                confirmButtonColor: '#f26522' });
+            return;
+        }
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch('@Url.Action("Edit", "Contacto")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({
+                guidRegistro:     document.getElementById('editGuid').value,
+                idEntidadContacto: parseInt(document.getElementById('editId').value),
+                nombres:          nombres,
+                apellidoPaterno:  document.getElementById('editApellidoPaterno').value.trim() || null,
+                apellidoMaterno:  document.getElementById('editApellidoMaterno').value.trim() || null,
+                email:            email,
+                celular:          document.getElementById('editCelular').value.trim() || null,
+                cargo:            document.getElementById('editCargo').value.trim() || null,
+                activo:           document.getElementById('editActivo').checked ? 1 : 0
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const el = document.getElementById('modalEditar');
+                bootstrap.Modal.getInstance(el)?.hide();
+                Swal.fire({ icon: 'success', title: 'Exito', text: data.message,
+                    confirmButtonColor: '#f26522', timer: 1500, showConfirmButton: false });
+                cargarLista();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#f26522' });
+            }
+        })
+        .catch(() => {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#f26522' });
+        });
+    }
+</script>

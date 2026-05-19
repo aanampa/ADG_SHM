@@ -35,6 +35,33 @@ public interface IEmailService
         int idProduccion);
 
     /// <summary>
+    /// Envia solicitud de factura a multiples destinatarios (TO) con copia a contactos (CC).
+    /// Genera un unico correo y un unico registro en SHM_EMAIL_LOG.
+    /// </summary>
+    Task<bool> EnviarEmailSolicitudFacturaMultipleAsync(
+        List<(string Email, string Nombre)> toRecipients,
+        List<(string Email, string Nombre)> ccRecipients,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion);
+
+    /// <summary>
+    /// Envia notificacion de factura devuelta a multiples destinatarios (TO) con copia a contactos (CC).
+    /// </summary>
+    Task<bool> EnviarEmailFacturaDevueltaMultipleAsync(
+        List<(string Email, string Nombre)> toRecipients,
+        List<(string Email, string Nombre)> ccRecipients,
+        string codigoProduccion,
+        string razonSocial,
+        decimal? mtoTotal,
+        DateTime fechaLimite,
+        int? idEntidadMedica,
+        int idProduccion);
+
+    /// <summary>
     /// Envia un correo electronico notificando a la Cia Medica que su factura fue devuelta.
     /// </summary>
     Task<bool> EnviarEmailFacturaDevueltaAsync(
@@ -67,7 +94,7 @@ public interface IEmailService
     /// <param name="claveUsuario">Clave generada</param>
     /// <param name="idUsuario">ID del usuario (para log)</param>
     /// <param name="tipoUsuario">Tipo de usuario: "I" = Interno (portal admin), "E" = Externo (portal cia medica)</param>
-    Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario, string tipoUsuario = "I");
+    Task<bool> EnviarEmailNuevoUsuarioAsync(string email, string nombreUsuario, string loginUsuario, string claveUsuario, int? idUsuario, string tipoUsuario = "I", string? razonSocial = null);
 
     /// <summary>
     /// Envia un correo electronico notificando al siguiente aprobador que tiene una orden de pago pendiente.

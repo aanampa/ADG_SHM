@@ -27,15 +27,15 @@ public class HomeController : BaseController
 
     public IActionResult Index()
     {
-        return RedirectToAction("Dashboard");
+        return RedirectToAction("Inicio");
     }
 
     /// <summary>
-    /// Muestra el Dashboard con estadisticas de producciones por entidad medica.
+    /// Muestra el Inicio con estadisticas de producciones por entidad medica.
     /// </summary>
-    public async Task<IActionResult> Dashboard()
+    public async Task<IActionResult> Inicio()
     {
-        ViewData["Title"] = "Dashboard";
+        ViewData["Title"] = "Inicio";
 
         var model = new DashboardViewModel();
 
@@ -61,11 +61,11 @@ public class HomeController : BaseController
             // Obtener facturas enviadas del mes actual
             model.FacturasEnviadasMes = await _produccionService.GetFacturasEnviadasMesActualAsync(idEntidadMedica);
 
-            // Obtener resumen del mes (total facturado, procesadas, tiempo promedio)
-            var resumenMes = await _produccionService.GetResumenMesActualAsync(idEntidadMedica);
-            model.TotalFacturadoMes = resumenMes.TotalFacturado;
-            model.FacturasProcesadasMes = resumenMes.FacturasProcesadas;
-            model.TiempoPromedioDias = resumenMes.TiempoPromedioDias;
+            // Resumen del Mes — deshabilitado (sección oculta en vista)
+            // var resumenMes = await _produccionService.GetResumenMesActualAsync(idEntidadMedica);
+            // model.TotalFacturadoMes = resumenMes.TotalFacturado;
+            // model.FacturasProcesadasMes = resumenMes.FacturasProcesadas;
+            // model.TiempoPromedioDias = resumenMes.TiempoPromedioDias;
 
             // Obtener datos para grafico de barras (ultimos 6 meses)
             var facturasPorMes = await _produccionService.GetFacturasPorMesAsync(idEntidadMedica);
