@@ -33,6 +33,7 @@ public class TesoreriaItemViewModel
     public int? CantLiquidaciones { get; set; }
     public int? CantComprobantes { get; set; }
     public string? Estado { get; set; }
+    public DateTime? FechaAprobacion { get; set; }
     public decimal? MtoTotalAcum { get; set; }
 }
 

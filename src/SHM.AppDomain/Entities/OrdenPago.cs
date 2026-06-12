@@ -35,6 +35,8 @@ public class OrdenPago
     public string? NombreBanco { get; set; }
     public string? NombreSede { get; set; }
 
+    public DateTime? FechaAprobacion { get; set; }
+
     // Estado de aprobacion por perfil
     public string? EstadoAprobJefeSede { get; set; }
     public string? EstadoAprobJefeCorp { get; set; }
