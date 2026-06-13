@@ -20,6 +20,7 @@ public class DetalleLiquidacionItemDto
 
     // Entidad Medica
     public string? Ruc { get; set; }
+    public string? CodigoAcreedor { get; set; }
     public string? TipoEntidadMedica { get; set; }
     public string? DesTipoEntidadMedica { get; set; }
     public string? RazonSocial { get; set; }
@@ -34,6 +35,7 @@ public class DetalleLiquidacionItemDto
     public string? TipoComprobante { get; set; }
     public string? Serie { get; set; }
     public string? Numero { get; set; }
+    public DateTime? FechaEmision { get; set; }
     public string? GuidArchivoFactura { get; set; }
     public string? GuidArchivoXml { get; set; }
 

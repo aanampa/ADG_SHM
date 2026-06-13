@@ -76,13 +76,13 @@
                                     <input type="text" class="form-control form-control-sm" value="@(Model.NombreBanco ?? "-")" readonly style="background-color: #e9ecef;">
                                 </div>
                             </div>
-                            <div class="col-3">
+                            <div class="col-2">
                                 <div class="form-group-sm">
                                     <label>Fecha de Generación</label>
                                     <input type="text" class="form-control form-control-sm" value="@(Model.FechaGeneracion?.ToString("dd/MM/yyyy") ?? "-")" readonly style="background-color: #e9ecef;">
                                 </div>
                             </div>
-                            <div class="col-3">
+                            <div class="col-2">
                                 <div class="form-group-sm">
                                     <label>Estado</label>
                                     <div>
@@ -90,6 +90,22 @@
                                             @EstadoDescripcion.OrdenPago.GetDescripcion(Model.Estado)
                                         </span>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="form-group-sm">
+                                    <label>Fecha Aprobaci&oacute;n</label>
+                                    @if (Model.FechaAprobacion.HasValue)
+                                    {
+                                        <input type="text" class="form-control form-control-sm"
+                                               value="@Model.FechaAprobacion.Value.ToString("dd/MM/yyyy HH:mm")"
+                                               readonly style="background-color: #e9ecef;">
+                                    }
+                                    else
+                                    {
+                                        <input type="text" class="form-control form-control-sm"
+                                               value="-" readonly style="background-color: #e9ecef;">
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -267,10 +283,12 @@
                                         <th style="width: 30px;">#</th>
                                         <th style="width: 130px;">Liquidaci&oacute;n</th>
                                         <th style="width: 85px;">RUC</th>
+                                        <th style="width: 90px;">Cod.<br/>Acreedor</th>
                                         <th style="width: 100px;">Tipo<br/>Entidad</th>
                                         <th style="width: 130px;">Cia Medica</th>
                                         <th style="width: 160px;">Banco</th>
                                         <th style="width: 90px;">Comproban.</th>
+                                        <th style="width: 90px;">F. Emisi&oacute;n</th>
                                         <th style="width: 40px;">PDF</th>
                                         <th style="width: 40px;">XML</th>
                                         <th style="width: 160px;">Estado</th>
@@ -286,8 +304,9 @@
                                         var idxDet = 1;
                                         @foreach (var det in detalleLiquidaciones)
                                         {
-                                            var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                                                ? $"{det.Serie}-{det.Numero}"
+                                            var numComp = (int.TryParse(det.Numero, out int nParsed) ? nParsed : 0).ToString("D7");
+                                            var comprobante = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                                ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp}"
                                                 : "-";
                                             <tr data-numliq="@(det.NumeroLiquidacion ?? "")">
                                                 <td class="text-center" style="display:none;">
@@ -302,10 +321,12 @@
                                                     <small><span class="text-muted">Periodo:</span> @(det.PeriodoLiquidacion ?? "-")</small>
                                                 </td>
                                                 <td class="text-center">@(det.Ruc ?? "-")</td>
+                                                <td class="text-center">@(det.CodigoAcreedor ?? "-")</td>
                                                 <td>@(det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-")</td>
                                                 <td>@(det.RazonSocial ?? "-")</td>
                                                 <td class="text-center">@(det.NombreBanco ?? "-")</td>
                                                 <td class="text-center">@comprobante</td>
+                                                <td class="text-center">@(det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</td>
                                                 <td class="text-center">
                                                     @if (!string.IsNullOrEmpty(det.GuidArchivoFactura))
                                                     {

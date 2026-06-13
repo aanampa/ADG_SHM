@@ -241,10 +241,11 @@ public class OrdenPagoDocument : IDocument
                     cols.ConstantColumn(20);
                     cols.RelativeColumn(3);
                     cols.ConstantColumn(60);
+                    cols.ConstantColumn(60);
                     cols.RelativeColumn(4);
-                    cols.RelativeColumn(2);
                     cols.RelativeColumn(3);
                     cols.RelativeColumn(2);
+                    cols.ConstantColumn(55);
                     cols.RelativeColumn(3);
                     cols.RelativeColumn(2);
                     cols.RelativeColumn(2);
@@ -252,7 +253,7 @@ public class OrdenPagoDocument : IDocument
                     cols.RelativeColumn(2);
                 });
 
-                var hdrs = new[] { "#", "Liquidación", "RUC", "Cía Médica", "Tipo Entidad", "Banco", "Comprobante", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Total S/." };
+                var hdrs = new[] { "#", "Liquidación", "RUC", "Cod. Acreedor", "Cía Médica", "Banco", "Comprobante", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Total S/." };
                 foreach (var h in hdrs)
                     EncabezadoCelda(table, h);
 
@@ -260,16 +261,18 @@ public class OrdenPagoDocument : IDocument
                 foreach (var det in _detalle)
                 {
                     var bg = idx % 2 == 0 ? ColorHeaderFila : ColorBlanco;
-                    var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                        ? $"{det.Serie}-{det.Numero}" : "-";
+                    var numComp = (int.TryParse(det.Numero, out int nParsed) ? nParsed : 0).ToString("D7");
+                    var comprobante = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                        ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp}" : "-";
 
                     FilaCelda(table, idx.ToString(), bg, center: true);
                     FilaCelda(table, det.NumeroLiquidacion ?? "-", bg);
                     FilaCelda(table, det.Ruc ?? "-", bg, center: true);
+                    FilaCelda(table, det.CodigoAcreedor ?? "-", bg, center: true);
                     FilaCelda(table, det.RazonSocial ?? "-", bg);
-                    FilaCelda(table, det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-", bg);
                     FilaCelda(table, det.NombreBanco ?? "-", bg);
                     FilaCelda(table, comprobante, bg, center: true);
+                    FilaCelda(table, det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-", bg, center: true);
                     FilaCelda(table, EstadoDescripcion.Produccion.GetDescripcion(det.Estado), bg, center: true);
                     FilaCeldaMonto(table, det.MtoSubtotal, bg);
                     FilaCeldaMonto(table, det.MtoIgv, bg);
@@ -278,7 +281,7 @@ public class OrdenPagoDocument : IDocument
                     idx++;
                 }
 
-                table.Cell().ColumnSpan(8).Background(ColorHeaderFila).Padding(3)
+                table.Cell().ColumnSpan(9).Background(ColorHeaderFila).Padding(3)
                      .Text("TOTAL GENERAL:").Bold().FontSize(8).AlignRight();
                 FilaCeldaMonto(table, _detalle.Sum(d => d.MtoSubtotal ?? 0), ColorHeaderFila, bold: true);
                 FilaCeldaMonto(table, _detalle.Sum(d => d.MtoIgv ?? 0), ColorHeaderFila, bold: true);

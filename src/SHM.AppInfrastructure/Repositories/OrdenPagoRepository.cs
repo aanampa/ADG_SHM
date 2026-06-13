@@ -42,6 +42,7 @@ public class OrdenPagoRepository : IOrdenPagoRepository
             op.FECHA_MODIFICACION as FechaModificacion,
             b.NOMBRE_BANCO as NombreBanco,
             s.NOMBRE as NombreSede,
+            op.FECHA_APROBACION as FechaAprobacion,
             (SELECT opa1.ESTADO FROM SHM_ORDEN_PAGO_APROBACION opa1
              INNER JOIN SHM_PERFIL_APROBACION pa1 ON pa1.ID_PERFIL_APROBACION = opa1.ID_PERFIL_APROBACION
              WHERE opa1.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
@@ -211,8 +212,13 @@ public class OrdenPagoRepository : IOrdenPagoRepository
 
         var sql = @"
             UPDATE SHM_ORDEN_PAGO
-            SET ESTADO = :Estado,
-                ID_MODIFICADOR = :IdModificador,
+            SET ESTADO             = :Estado,
+                FECHA_APROBACION   = CASE
+                                       WHEN :Estado = 'APROBADO' THEN SYSDATE
+                                       WHEN :Estado = 'DEVUELTO' THEN NULL
+                                       ELSE FECHA_APROBACION
+                                     END,
+                ID_MODIFICADOR     = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_ORDEN_PAGO = :IdOrdenPago";
 

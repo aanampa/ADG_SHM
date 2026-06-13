@@ -580,11 +580,16 @@ public class EmailService : IEmailService
                 ? $"<p style=\"margin: 0 0 20px 0; font-size: 14px; color: #777777;\"><i>{razonSocial}</i></p>"
                 : "";
 
+            var urlGuiaPrimerAccesoPortal = "";
+            if (tipoUsuario == "E")
+                urlGuiaPrimerAccesoPortal = $"{urlSistema}/archivos/manuales/guia_registro_usuario_compania_medica.pdf";
+
             body = body.Replace("{{NOMBRE_USUARIO}}", nombreUsuario)
                       .Replace("{{LOGIN_USUARIO}}", loginUsuario)
                       .Replace("{{CLAVE_USUARIO}}", claveUsuario)
                       .Replace("{{URL_SISTEMA}}", urlSistema)
                       .Replace("{{RAZON_SOCIAL_BLOQUE}}", razonSocialBloque)
+                      .Replace("{{URL_GUIA_PRIMER_ACCESO_PORTAL}}", urlGuiaPrimerAccesoPortal)
                       .Replace("{{ANIO}}", DateTime.Now.Year.ToString());
 
             await EnviarEmailConLogAsync(

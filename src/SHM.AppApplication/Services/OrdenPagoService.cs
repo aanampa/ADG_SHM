@@ -236,6 +236,7 @@ public class OrdenPagoService : IOrdenPagoService
             NumeroOrdenPago = orden.NumeroOrdenPago,
             FechaGeneracion = orden.FechaGeneracion,
             Estado = orden.Estado,
+            FechaAprobacion = orden.FechaAprobacion,
             MtoConsumoAcum = orden.MtoConsumoAcum,
             MtoDescuentoAcum = orden.MtoDescuentoAcum,
             MtoSubtotalAcum = orden.MtoSubtotalAcum,

@@ -301,8 +301,9 @@
                                     var idxDet = 1;
                                     @foreach (var det in detalleLiquidaciones)
                                     {
-                                        var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                                            ? $"{det.Serie}-{det.Numero}"
+                                        var numComp = (int.TryParse(det.Numero, out int nParsed) ? nParsed : 0).ToString("D7");
+                                        var comprobante = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                            ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp}"
                                             : "-";
                                         <tr>
                                             <td class="text-center">@(idxDet++)</td>
@@ -460,8 +461,9 @@
                                                             @foreach (var det in detLiq)
                                                             {
                                                                 detIdx++;
-                                                                var comp = (!string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero))
-                                                                    ? $"{det.Serie}-{det.Numero}" : "-";
+                                                                var numComp2 = (int.TryParse(det.Numero, out int nParsed2) ? nParsed2 : 0).ToString("D7");
+                                                                var comp = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                                                    ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp2}" : "-";
                                                                 <tr style="background-color: #ffffff;">
                                                                     <td class="text-center">@detIdx</td>
                                                                     <td class="text-center">@(det.Ruc ?? "-")</td>
