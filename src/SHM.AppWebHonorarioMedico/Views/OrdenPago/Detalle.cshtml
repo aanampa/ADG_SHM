@@ -301,9 +301,8 @@
                                     var idxDet = 1;
                                     @foreach (var det in detalleLiquidaciones)
                                     {
-                                        var numComp = (int.TryParse(det.Numero, out int nParsed) ? nParsed : 0).ToString("D7");
-                                        var comprobante = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                                            ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp}"
+                                        var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                            ? $"{det.Serie}-{(int.TryParse(det.Numero, out int nParsed) ? nParsed.ToString() : det.Numero)}"
                                             : "-";
                                         <tr>
                                             <td class="text-center">@(idxDet++)</td>
@@ -461,9 +460,8 @@
                                                             @foreach (var det in detLiq)
                                                             {
                                                                 detIdx++;
-                                                                var numComp2 = (int.TryParse(det.Numero, out int nParsed2) ? nParsed2 : 0).ToString("D7");
-                                                                var comp = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                                                                    ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp2}" : "-";
+                                                                var comp = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                                                    ? $"{det.Serie}-{(int.TryParse(det.Numero, out int nParsed2) ? nParsed2.ToString() : det.Numero)}" : "-";
                                                                 <tr style="background-color: #ffffff;">
                                                                     <td class="text-center">@detIdx</td>
                                                                     <td class="text-center">@(det.Ruc ?? "-")</td>

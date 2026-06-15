@@ -320,9 +320,8 @@
                                     var idxDet = 1;
                                     @foreach (var det in detalleLiquidaciones)
                                     {
-                                        var numComp = (int.TryParse(det.Numero, out int nParsed) ? nParsed : 0).ToString("D7");
-                                        var comprobante = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                                            ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp}"
+                                        var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                            ? $"{det.Serie}-{(int.TryParse(det.Numero, out int nParsed) ? nParsed.ToString() : det.Numero)}"
                                             : "-";
                                         <tr>
                                             <td class="text-center">@(idxDet++)</td>
