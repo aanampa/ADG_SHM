@@ -213,7 +213,8 @@ try
                     !path.StartsWith("/css/") &&
                     !path.StartsWith("/js/") &&
                     !path.StartsWith("/images/") &&
-                    !path.StartsWith("/lib/"))
+                    !path.StartsWith("/lib/") &&
+                    !path.StartsWith("/archivos/"))
                 {
                     context.Response.Redirect("/Auth/CambiarClave");
                     return;
