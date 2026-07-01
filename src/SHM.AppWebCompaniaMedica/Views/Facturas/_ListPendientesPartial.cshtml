@@ -10,7 +10,7 @@
                 <th>Importe</th>
                 <th>Fecha Limite</th>
                 <th>Estado</th>
-                <th>Accion</th>
+                <th style="text-align:center;">Accion</th>
             </tr>
         </thead>
         <tbody>
@@ -20,31 +20,31 @@
                 {
                     <tr>
                         <td><strong>@factura.NombreSede</strong></td>
-                        <td>@factura.CodigoProduccion</td>
+                        <td>@factura.NumeroProduccion</td>
                         <td>@(factura.Concepto ?? "-")</td>
                         <td><strong>S/ @(factura.MtoTotal?.ToString("N2") ?? "0.00")</strong></td>
-                        <td>@(factura.FechaLimite?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@(factura.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                         <td>
                             @{
                                 var badgeClass = factura.Estado?.ToUpper() switch
                                 {
-                                    "PENDIENTE" => "badge-pending",
-                                    "VENCIDO" => "badge-rejected",
+                                    EstadoDescripcion.Produccion.FacturaSolicitada => "badge-pending",
+                                    EstadoDescripcion.Produccion.FacturaDevuelta => "badge-rejected",
                                     _ => "badge-pending"
                                 };
                                 var estadoTexto = factura.Estado?.ToUpper() switch
                                 {
-                                    "PENDIENTE" => "Por Enviar",
-                                    "VENCIDO" => "Vencido",
+                                    EstadoDescripcion.Produccion.FacturaSolicitada => "Por Enviar",
+                                    EstadoDescripcion.Produccion.FacturaDevuelta => "Devuelta",
                                     _ => "Por Enviar"
                                 };
                             }
                             <span class="badge @badgeClass">@estadoTexto</span>
                         </td>
-                        <td>
-                            <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action">
+                        <td style="text-align:center;">
+                            <a asp-controller="Facturas" asp-action="Subir" asp-route-guid="@factura.GuidRegistro" class="btn-action" title="Enviar Factura">
                                 <i class="bi bi-upload"></i>
-                                Subir
+                                Enviar Factura
                             </a>
                         </td>
                     </tr>

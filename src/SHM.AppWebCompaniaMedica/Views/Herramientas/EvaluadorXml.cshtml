@@ -1,0 +1,205 @@
+@{
+    ViewData["Title"] = "Evaluador de XML";
+}
+
+<style>
+    .evaluador-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    .page-header { margin-bottom: 1.5rem; }
+    .page-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .page-title i { color: var(--accent); }
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+    .card-panel {
+        background: var(--bg-card, white);
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .card-panel-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--primary, #5a1160);
+        border-bottom: 2px solid var(--accent, #f26522);
+        padding-bottom: 0.6rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        align-items: end;
+    }
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-secondary, #666);
+        margin-bottom: 0.4rem;
+        display: block;
+    }
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 1.5px solid var(--border, #e0e0e0);
+        padding: 0.55rem 0.9rem;
+        font-size: 0.9rem;
+        width: 100%;
+        background: var(--bg-input, white);
+        color: var(--text-primary, #333);
+    }
+    .btn-evaluar {
+        background: linear-gradient(135deg, var(--accent, #f26522), #e05010);
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 0.6rem 1.75rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        transition: opacity 0.2s;
+    }
+    .btn-evaluar:hover { opacity: 0.88; }
+    .estado-valid {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.7rem 1.1rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 1.25rem;
+    }
+    .estado-ok   { background: #d4edda; color: #155724; }
+    .estado-fail { background: #f8d7da; color: #721c24; }
+    #resultadoPanel { display: none; }
+</style>
+
+<div class="evaluador-container">
+    <div class="page-header">
+        <div class="page-title">
+            <i class="bi bi-file-earmark-code-fill"></i>
+            Evaluador de XML
+        </div>
+        <div class="page-subtitle">Cargue un archivo XML para validar su estructura y visualizar los datos extraídos</div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card-panel">
+        <div class="card-panel-title">
+            <i class="bi bi-upload"></i> Cargar XML
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tipo de Comprobante <span class="text-danger">*</span></label>
+                <select id="tipoComprobante" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    <option value="1">Factura</option>
+                    <option value="22">Recibo por Honorarios</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Archivo XML <span class="text-danger">*</span></label>
+                <input type="file" id="archivoXml" class="form-control" accept=".xml" />
+            </div>
+        </div>
+        <button class="btn-evaluar" onclick="evaluar()">
+            <i class="bi bi-search"></i> Evaluar XML
+        </button>
+    </div>
+
+    <!-- Resultado -->
+    <div id="resultadoPanel">
+        <!-- Estado -->
+        <div id="estadoPanel"></div>
+
+        <!-- Datos extraídos (partial inyectado) -->
+        <div id="datosPanel" class="card-panel" style="display:none;">
+            <div class="card-panel-title">
+                <i class="bi bi-list-check"></i> Datos Extraídos
+                <span id="badgeTipo" style="margin-left:auto; font-size:0.78rem; padding:0.25rem 0.7rem; border-radius:20px; background:var(--accent,#f26522); color:white;"></span>
+            </div>
+            <div id="partialContainer"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function evaluar() {
+        const tipo    = document.getElementById('tipoComprobante').value;
+        const archivo = document.getElementById('archivoXml').files[0];
+
+        if (!tipo) {
+            Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Seleccione el tipo de comprobante.', confirmButtonColor: '#f26522' });
+            return;
+        }
+        if (!archivo) {
+            Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Seleccione un archivo XML.', confirmButtonColor: '#f26522' });
+            return;
+        }
+
+        Swal.fire({ title: 'Evaluando XML...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        const form = new FormData();
+        form.append('tipoComprobante', tipo);
+        form.append('archivoXml', archivo);
+
+        fetch('/Herramientas/EvaluarXml', { method: 'POST', body: form })
+            .then(r => {
+                const ct = r.headers.get('content-type') ?? '';
+                if (ct.includes('application/json')) {
+                    return r.json().then(data => ({ isError: true, data }));
+                }
+                return r.text().then(html => ({ isError: false, html }));
+            })
+            .then(result => {
+                Swal.close();
+                document.getElementById('resultadoPanel').style.display = 'block';
+
+                if (result.isError) {
+                    document.getElementById('estadoPanel').innerHTML =
+                        `<div class="estado-valid estado-fail mb-3"><i class="bi bi-x-circle-fill" style="font-size:1.4rem"></i>${escHtml(result.data.message)}</div>`;
+                    document.getElementById('datosPanel').style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('estadoPanel').innerHTML =
+                    `<div class="estado-valid estado-ok mb-3"><i class="bi bi-check-circle-fill" style="font-size:1.4rem"></i>XML válido — estructura correcta</div>`;
+
+                const tipoLabel = (tipo === '22' || tipo === '02') ? 'Recibo por Honorarios' : 'Factura';
+                document.getElementById('badgeTipo').textContent = tipoLabel;
+                document.getElementById('partialContainer').innerHTML = result.html;
+                document.getElementById('datosPanel').style.display = 'block';
+                document.getElementById('datosPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            })
+            .catch(() => {
+                Swal.close();
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.', confirmButtonColor: '#dc3545' });
+            });
+    }
+
+    function escHtml(s) {
+        return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+</script>
+}

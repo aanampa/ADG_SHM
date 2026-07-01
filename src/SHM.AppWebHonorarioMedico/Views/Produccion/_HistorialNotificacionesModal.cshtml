@@ -1,0 +1,268 @@
+@model List<SHM.AppDomain.Entities.EmailLog>
+
+@{
+    var guidRegistro      = ViewBag.GuidRegistro as string ?? "";
+    var numeroProduccion  = ViewBag.NumeroProduccion as string ?? "";
+    var fechaLimite       = ViewBag.FechaLimite as string ?? "-";
+    var puedeRenotificar  = (bool)(ViewBag.PuedeRenotificar ?? false);
+}
+
+<div class="modal fade" id="modalHistorialNotificaciones" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #6c757d; color: #fff;">
+                <h5 class="modal-title">
+                    <i class="fas fa-envelope mr-2"></i>Correos Enviados &mdash; Producción @numeroProduccion
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body py-2">
+
+                <!-- Info fecha límite -->
+                <div class="alert alert-info py-2 mb-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-clock mr-1"></i>
+                    <strong>Fecha límite establecida:</strong> @fechaLimite
+                </div>
+
+                @if (!Model.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No hay notificaciones registradas para esta producción.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0" style="font-size: 13px;">
+                            <thead style="background-color: #6c757d; color: #fff;">
+                                <tr>
+                                    <th class="align-middle text-center" style="width: 40px;">Ver</th>
+                                    <th class="align-middle">Destinatario (TO)</th>
+                                    <th class="align-middle">Correo(s)</th>
+                                    <th class="align-middle">Copia (CC)</th>
+                                    <th class="align-middle">Asunto</th>
+                                    <th class="align-middle text-center" style="width: 140px;">Fecha Envío</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var log in Model)
+                                {
+                                    <tr>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-info btn-xs"
+                                                onclick="verContenidoEmail(@log.IdEmailLog, '@Html.Raw(Html.Encode(log.Asunto ?? ""))', '@Html.Raw(Html.Encode(log.NombreDestino ?? ""))', '@Html.Raw(Html.Encode(log.EmailDestino ?? ""))', '@(log.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "-")', '@Html.Raw(Html.Encode(log.EmailOrigen ?? ""))', '@Html.Raw(Html.Encode(log.NombreOrigen ?? ""))', '@Html.Raw(Html.Encode(log.EmailCcLista ?? ""))')"
+                                                title="Ver correo enviado">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                        <td>@(log.NombreDestino ?? "-")</td>
+                                        <td>@log.EmailDestino</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(log.EmailCcLista))
+                                            {
+                                                <span title="@log.NombreCcLista" style="cursor:default;">
+                                                    @log.EmailCcLista
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @(log.Asunto ?? "-")
+                                            @if (log.Estado != "ENVIADO")
+                                            {
+                                                <div class="text-danger mt-1" style="font-size: 0.78rem;">
+                                                    <i class="fas fa-exclamation-circle mr-1"></i><strong>Error al enviar</strong>
+                                                    @if (!string.IsNullOrEmpty(log.MensajeError))
+                                                    {
+                                                        <span>: @log.MensajeError</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                        <td class="text-center">@(log.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            @Model.Count notificación(es) enviada(s).
+                        </small>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+                @if (puedeRenotificar)
+                {
+                    <button type="button" class="btn btn-warning btn-sm"
+                        onclick="renotificarDesdeModal('@guidRegistro')"
+                        title="Reenviar correo con la misma fecha límite">
+                        <i class="fas fa-bell mr-1"></i>Reenviar Notificación
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sub-modal: Visor de contenido del correo -->
+<div class="modal fade" id="modalVisorEmail" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="fas fa-envelope mr-2"></i>Contenido del Correo
+                </h6>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="emailVisorInfo" class="px-3 pt-3 pb-2 bg-light border-bottom" style="font-size: 13px;">
+                    <div class="mb-2">
+                        <strong id="emailVisorAsunto" style="font-size: 15px; color: #1a1a2e;"></strong>
+                    </div>
+                    <hr class="my-1">
+                    <div class="d-flex mb-1">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">De:</span>
+                        <span id="emailVisorNombreOrigen"></span>&nbsp;&lt;<span id="emailVisorEmailOrigen" class="text-primary"></span>&gt;
+                    </div>
+                    <div class="d-flex mb-1">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Destinatario:</span>
+                        <span><strong id="emailVisorNombre"></strong> &lt;<span id="emailVisorEmail" class="text-primary"></span>&gt;</span>
+                    </div>
+                    <div class="d-flex mb-1" id="emailVisorCCRow" style="display:none !important;">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Copia (CC):</span>
+                        <span id="emailVisorCC" class="text-primary"></span>
+                    </div>
+                    <div class="d-flex">
+                        <span class="text-muted mr-2" style="width: 90px; flex-shrink: 0;">Fecha:</span>
+                        <span id="emailVisorFecha"></span>
+                    </div>
+                </div>
+                <iframe id="iframeContenidoEmail" src="" style="width:100%; height:580px; border:none;"></iframe>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        // Mostrar el modal principal
+        $('#modalHistorialNotificaciones').modal('show');
+
+        // Al cerrar el modal principal: limpiar backdrop y desbloquear body
+        $('#modalHistorialNotificaciones').on('hidden.bs.modal', function () {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+        });
+
+        // Al cerrar el sub-modal: limpiar iframe y restaurar scroll del modal principal
+        $('#modalVisorEmail').on('hidden.bs.modal', function () {
+            document.getElementById('iframeContenidoEmail').src = '';
+            $('body').addClass('modal-open');
+        });
+    })();
+
+    function verContenidoEmail(idEmailLog, asunto, nombreDestino, emailDestino, fecha, emailOrigen, nombreOrigen, emailCC) {
+        document.getElementById('emailVisorAsunto').textContent = asunto || 'Sin asunto';
+        document.getElementById('emailVisorNombreOrigen').textContent = nombreOrigen || '';
+        document.getElementById('emailVisorEmailOrigen').textContent = emailOrigen || '';
+        document.getElementById('emailVisorNombre').textContent = nombreDestino || '';
+        document.getElementById('emailVisorEmail').textContent = emailDestino || '';
+        document.getElementById('emailVisorFecha').textContent = fecha || '';
+
+        const ccRow = document.getElementById('emailVisorCCRow');
+        const ccEl  = document.getElementById('emailVisorCC');
+        if (emailCC) {
+            ccEl.textContent = emailCC;
+            ccRow.style.display = 'flex';
+        } else {
+            ccEl.textContent = '';
+            ccRow.style.display = 'none';
+        }
+
+        document.getElementById('iframeContenidoEmail').src = '@Url.Action("VerContenido", "EmailLog")?id=' + idEmailLog;
+        $('#modalVisorEmail').modal('show');
+    }
+
+    function renotificarDesdeModal(guid) {
+        Swal.fire({
+            title: '¿Reenviar notificación?',
+            text: 'Se reenviará el correo de solicitud de factura con la misma fecha límite establecida.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#f26522',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-bell"></i> Reenviar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Enviando notificación...',
+                text: 'Procesando, por favor espere.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            fetch('@Url.Action("RenotificarFactura", "Produccion")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(guid)
+            })
+            .then(r => r.json())
+            .then(data => {
+                Swal.close();
+                Swal.fire({
+                    icon: data.success ? 'success' : 'error',
+                    title: data.success ? 'Notificación reenviada' : 'Error',
+                    text: data.message,
+                    confirmButtonColor: data.success ? '#28a745' : '#dc3545'
+                }).then(() => {
+                    if (data.success) {
+                        // Refrescar contenido del modal sin cerrarlo
+                        fetch('@Url.Action("GetModalHistorialNotificaciones", "Produccion")?guidRegistro=' + guid)
+                            .then(r => r.text())
+                            .then(html => {
+                                const container = document.getElementById('modalContainer');
+                                if (container) {
+                                    container.innerHTML = html;
+                                    container.querySelectorAll('script').forEach(oldScript => {
+                                        const newScript = document.createElement('script');
+                                        newScript.textContent = oldScript.textContent;
+                                        document.body.appendChild(newScript);
+                                        document.body.removeChild(newScript);
+                                    });
+                                }
+                                refreshList();
+                            });
+                    }
+                });
+            })
+            .catch(() => {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#dc3545' });
+            });
+        });
+    }
+</script>

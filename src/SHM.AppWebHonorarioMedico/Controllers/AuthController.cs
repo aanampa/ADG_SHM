@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Entities;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 using System.Security.Claims;
@@ -15,17 +17,23 @@ public class AuthController : Controller
     private readonly IConfiguration _configuration;
     private readonly IUsuarioService _usuarioService;
     private readonly IEmailService _emailService;
+    private readonly IUsuarioSedeRepository _usuarioSedeRepository;
+    private readonly ISegAccesoService _segAccesoService;
 
     public AuthController(
         ILogger<AuthController> logger,
         IConfiguration configuration,
         IUsuarioService usuarioService,
-        IEmailService emailService)
+        IEmailService emailService,
+        IUsuarioSedeRepository usuarioSedeRepository,
+        ISegAccesoService segAccesoService)
     {
         _logger = logger;
         _configuration = configuration;
         _usuarioService = usuarioService;
         _emailService = emailService;
+        _usuarioSedeRepository = usuarioSedeRepository;
+        _segAccesoService = segAccesoService;
     }
 
     [HttpGet]
@@ -56,6 +64,10 @@ public class AuthController : Controller
 
         try
         {
+            // Quitar espacios al inicio y al final
+            model.Username = model.Username?.Trim() ?? "";
+            model.Password = model.Password?.Trim() ?? "";
+
             // Limpiar username si viene con @
             if (!string.IsNullOrEmpty(model.Username) && model.Username.Contains("@"))
             {
@@ -96,8 +108,7 @@ public class AuthController : Controller
                     new ClaimsPrincipal(claimsIdentity),
                     new AuthenticationProperties
                     {
-                        IsPersistent = model.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                        IsPersistent = model.RememberMe
                     }
                 );
 
@@ -105,15 +116,16 @@ public class AuthController : Controller
                 return RedirectToAction("Index", "Home");
             }
 
-            // Modo DEV - login sin validación de contraseña pero con datos reales
-            if (instancia == "DEV")
+            // Modo NO-PROD - login sin validación de contraseña pero con datos reales
+            if (instancia != "PROD")
             {
                 // Obtener usuario solo por login (sin validar password)
                 var usuarioDev = await _usuarioService.GetUsuarioByLoginAsync(model.Username);
 
                 if (usuarioDev == null)
                 {
-                    _logger.LogWarning("Usuario no encontrado en modo DEV: {Username}", model.Username);
+                    _logger.LogWarning("Usuario no encontrado en modo {Instancia}: {Username}", instancia, model.Username);
+                    await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), null, $"Usuario no encontrado [{instancia}]");
                     SetModelView(model);
                     ViewBag.LoginMessage = "Usuario no encontrado";
                     return View(model);
@@ -121,10 +133,20 @@ public class AuthController : Controller
 
                 if (usuarioDev.Activo != 1)
                 {
+                    await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), usuarioDev.IdUsuario, $"Usuario inactivo [{instancia}]");
                     SetModelView(model);
                     ViewBag.LoginMessage = "Usuario inactivo";
                     return View(model);
                 }
+
+                // Obtener sede del usuario (prioridad: ES_ULTIMA_SEDE = 1, sino el primer registro)
+                var sedeDevInfo = await _usuarioSedeRepository.GetSedeSeleccionadaLoginAsync(usuarioDev.IdUsuario);
+                var idSedeDev = sedeDevInfo?.IdSede.ToString() ?? "0";
+                var nombreSedeDev = sedeDevInfo?.NombreSede ?? "";
+
+                // Actualizar ES_ULTIMA_SEDE para la sede seleccionada
+                if (sedeDevInfo.HasValue)
+                    await _usuarioSedeRepository.UpdateUltimaSedeAsync(usuarioDev.IdUsuario, sedeDevInfo.Value.IdSede);
 
                 // Crear Claims con datos reales del usuario
                 var devClaims = new List<Claim>
@@ -135,8 +157,8 @@ public class AuthController : Controller
                     new Claim("NombreUsuario", $"{usuarioDev.Nombres} {usuarioDev.ApellidoPaterno}".Trim()),
                     new Claim("IdUsuario", usuarioDev.IdUsuario.ToString()),
                     new Claim("Email", usuarioDev.Email ?? ""),
-                    new Claim("IdSede", "0"),
-                    new Claim("NombreSede", ""),
+                    new Claim("IdSede", idSedeDev),
+                    new Claim("NombreSede", nombreSedeDev),
                     new Claim("IdArea", "0"),
                     new Claim("NombreArea", "")
                 };
@@ -147,6 +169,10 @@ public class AuthController : Controller
                 if (usuarioDev.IdEntidadMedica.HasValue)
                     devClaims.Add(new Claim("IdEntidadMedica", usuarioDev.IdEntidadMedica.Value.ToString()));
 
+                // Verificar si tiene clave temporal
+                if (usuarioDev.FlagPasswordTemporal == 1)
+                    devClaims.Add(new Claim("PasswordTemporal", "1"));
+
                 var devIdentity = new ClaimsIdentity(devClaims, CookieAuthenticationDefaults.AuthenticationScheme);
 
                 await HttpContext.SignInAsync(
@@ -154,13 +180,18 @@ public class AuthController : Controller
                     new ClaimsPrincipal(devIdentity),
                     new AuthenticationProperties
                     {
-                        IsPersistent = model.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                        IsPersistent = model.RememberMe
                     }
                 );
 
-                _logger.LogInformation("Login DEV exitoso para usuario: {Username} (ID: {UserId})",
-                    model.Username, usuarioDev.IdUsuario);
+                _logger.LogInformation("Login {Instancia} exitoso para usuario: {Username} (ID: {UserId})",
+                    instancia, model.Username, usuarioDev.IdUsuario);
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginOk, model.Username, ObtenerIp(), ObtenerUserAgent(), usuarioDev.IdUsuario, $"[{instancia}]");
+
+                // Redirigir a cambiar clave si es temporal
+                if (usuarioDev.FlagPasswordTemporal == 1)
+                    return RedirectToAction("CambiarClave", "Auth");
+
                 return RedirectToAction("Index", "Home");
             }
 
@@ -170,6 +201,7 @@ public class AuthController : Controller
             if (usuario == null)
             {
                 _logger.LogWarning("Intento de login fallido para usuario: {Username}", model.Username);
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), null, "Credenciales incorrectas");
                 SetModelView(model);
                 ViewBag.LoginMessage = "Credenciales ingresadas son inválidas";
                 return View(model);
@@ -177,10 +209,20 @@ public class AuthController : Controller
 
             if (usuario.Activo != 1)
             {
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, model.Username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario, "Usuario inactivo");
                 SetModelView(model);
                 ViewBag.LoginMessage = "Usuario inactivo";
                 return View(model);
             }
+
+            // Obtener sede del usuario (prioridad: ES_ULTIMA_SEDE = 1, sino el primer registro)
+            var sedeInfo = await _usuarioSedeRepository.GetSedeSeleccionadaLoginAsync(usuario.IdUsuario);
+            var idSede = sedeInfo?.IdSede.ToString() ?? "0";
+            var nombreSede = sedeInfo?.NombreSede ?? "";
+
+            // Actualizar ES_ULTIMA_SEDE para la sede seleccionada
+            if (sedeInfo.HasValue)
+                await _usuarioSedeRepository.UpdateUltimaSedeAsync(usuario.IdUsuario, sedeInfo.Value.IdSede);
 
             // Crear Claims para el usuario autenticado
             var userClaims = new List<Claim>
@@ -191,8 +233,8 @@ public class AuthController : Controller
                 new Claim("NombreUsuario", $"{usuario.Nombres} {usuario.ApellidoPaterno}".Trim()),
                 new Claim("IdUsuario", usuario.IdUsuario.ToString()),
                 new Claim("Email", usuario.Email ?? ""),
-                new Claim("IdSede", "0"),
-                new Claim("NombreSede", ""),
+                new Claim("IdSede", idSede),
+                new Claim("NombreSede", nombreSede),
                 new Claim("IdArea", "0"),
                 new Claim("NombreArea", "")
             };
@@ -203,6 +245,10 @@ public class AuthController : Controller
             if (usuario.IdEntidadMedica.HasValue)
                 userClaims.Add(new Claim("IdEntidadMedica", usuario.IdEntidadMedica.Value.ToString()));
 
+            // Verificar si tiene clave temporal
+            if (usuario.FlagPasswordTemporal == 1)
+                userClaims.Add(new Claim("PasswordTemporal", "1"));
+
             var identity = new ClaimsIdentity(userClaims, CookieAuthenticationDefaults.AuthenticationScheme);
 
             await HttpContext.SignInAsync(
@@ -210,12 +256,17 @@ public class AuthController : Controller
                 new ClaimsPrincipal(identity),
                 new AuthenticationProperties
                 {
-                    IsPersistent = model.RememberMe,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    IsPersistent = model.RememberMe
+                    // ExpiresUtc se toma de options.ExpireTimeSpan en Program.cs
                 }
             );
 
             _logger.LogInformation("Login exitoso para usuario: {Username} (ID: {UserId})", model.Username, usuario.IdUsuario);
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginOk, model.Username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario);
+
+            // Redirigir a cambiar clave si es temporal
+            if (usuario.FlagPasswordTemporal == 1)
+                return RedirectToAction("CambiarClave", "Auth");
 
             return RedirectToAction("Index", "Home");
         }
@@ -268,11 +319,28 @@ public class AuthController : Controller
         }
     }
 
+    /// <summary>
+    /// Endpoint liviano para verificar si la sesion sigue activa (usado por polling en el cliente).
+    /// Devuelve 200 si autenticado, 401 si la sesion expiro.
+    /// Nota: [AllowAnonymous] en el controlador no impide que el middleware de autenticacion
+    /// procese la cookie; solo omite el bloqueo de autorizacion. Por eso IsAuthenticated es confiable.
+    /// </summary>
+    [HttpGet]
+    public IActionResult Ping()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return Ok();
+        return Unauthorized();
+    }
+
     [Authorize]
     public async Task<IActionResult> Logout()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userLogin = User.FindFirstValue(ClaimTypes.Name);
+        var userId    = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userLogin = User.FindFirstValue(ClaimTypes.Name) ?? "";
+
+        if (int.TryParse(userId, out var idUsuario))
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.Logout, userLogin, ObtenerIp(), ObtenerUserAgent(), idUsuario);
 
         // Limpiar la sesion (incluye cache del menu)
         HttpContext.Session.Clear();
@@ -283,6 +351,17 @@ public class AuthController : Controller
 
         return RedirectToAction("Login", "Auth");
     }
+
+    private string ObtenerIp()
+    {
+        var forwarded = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwarded))
+            return forwarded.Split(',')[0].Trim();
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
+    }
+
+    private string? ObtenerUserAgent() =>
+        HttpContext.Request.Headers["User-Agent"].FirstOrDefault();
 
     [HttpGet]
     public IActionResult RecuperarClave()
@@ -425,9 +504,182 @@ public class AuthController : Controller
         return View(new LoginView());
     }
 
+    [Authorize]
+    [HttpGet]
+    public IActionResult CambiarClave()
+    {
+        var model = new LoginView();
+        SetModelView(model);
+        model.Username = User.FindFirstValue(ClaimTypes.Name) ?? "";
+        return View(model);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CambiarClave(LoginView model)
+    {
+        try
+        {
+            SetModelView(model);
+            model.Username = User.FindFirstValue(ClaimTypes.Name) ?? "";
+
+            if (string.IsNullOrEmpty(model.Password) || string.IsNullOrEmpty(model.ConfirmPassword))
+            {
+                ViewBag.LoginMessage = "La contraseña es requerida";
+                return View(model);
+            }
+
+            if (model.Password != model.ConfirmPassword)
+            {
+                ViewBag.LoginMessage = "Las contraseñas no coinciden";
+                return View(model);
+            }
+
+            if (model.Password.Length < 6)
+            {
+                ViewBag.LoginMessage = "La contraseña debe tener al menos 6 caracteres";
+                return View(model);
+            }
+
+            var idUsuario = int.Parse(User.FindFirstValue("IdUsuario") ?? "0");
+
+            // La clave actual es la temporal con la que ingresó (ResetCode contiene la clave actual)
+            var (success, errorMessage) = await _usuarioService.CambiarPasswordAsync(
+                idUsuario, model.ResetCode, model.Password);
+
+            if (!success)
+            {
+                ViewBag.LoginMessage = errorMessage;
+                return View(model);
+            }
+
+            _logger.LogInformation("Usuario {Username} cambió su contraseña temporal exitosamente", model.Username);
+
+            // Re-autenticar sin el claim PasswordTemporal
+            var claims = User.Claims
+                .Where(c => c.Type != "PasswordTemporal")
+                .ToList();
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties
+                {
+                    IsPersistent = false,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                }
+            );
+
+            return RedirectToAction("Index", "Home");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar contraseña temporal");
+            SetModelView(model);
+            ViewBag.LoginMessage = "Ocurrió un error al procesar la solicitud";
+            return View(model);
+        }
+    }
+
     [HttpGet]
     public IActionResult AccesoDenegado()
     {
         return View();
+    }
+
+    /// <summary>
+    /// Obtiene las sedes disponibles del usuario autenticado (AJAX).
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    /// </summary>
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> GetSedesUsuario()
+    {
+        try
+        {
+            var idUsuarioStr = User.FindFirstValue("IdUsuario");
+            if (string.IsNullOrEmpty(idUsuarioStr) || !int.TryParse(idUsuarioStr, out int idUsuario))
+                return Json(new { success = false, message = "Usuario no identificado" });
+
+            var sedes = await _usuarioSedeRepository.GetSedesActivasByUsuarioAsync(idUsuario);
+
+            return Json(new
+            {
+                success = true,
+                data = sedes.Select(s => new { idSede = s.IdSede, nombreSede = s.NombreSede })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener sedes del usuario");
+            return Json(new { success = false, message = "Error al obtener sedes" });
+        }
+    }
+
+    /// <summary>
+    /// Cambia la sede activa del usuario autenticado.
+    /// Re-autentica con los nuevos claims de sede.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-03-09</created>
+    /// </summary>
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> CambiarSede([FromBody] CambiarSedeRequest request)
+    {
+        try
+        {
+            var idUsuarioStr = User.FindFirstValue("IdUsuario");
+            if (string.IsNullOrEmpty(idUsuarioStr) || !int.TryParse(idUsuarioStr, out int idUsuario))
+                return Json(new { success = false, message = "Usuario no identificado" });
+
+            // Validar que el usuario tenga acceso a la sede solicitada
+            var sedes = await _usuarioSedeRepository.GetSedesActivasByUsuarioAsync(idUsuario);
+            var sedeSeleccionada = sedes.FirstOrDefault(s => s.IdSede == request.IdSede);
+
+            if (sedeSeleccionada.NombreSede == null)
+                return Json(new { success = false, message = "No tiene acceso a la sede seleccionada" });
+
+            // Actualizar ES_ULTIMA_SEDE en BD
+            await _usuarioSedeRepository.UpdateUltimaSedeAsync(idUsuario, request.IdSede);
+
+            // Re-crear claims con la nueva sede
+            var claims = User.Claims
+                .Where(c => c.Type != "IdSede" && c.Type != "NombreSede")
+                .ToList();
+
+            claims.Add(new Claim("IdSede", request.IdSede.ToString()));
+            claims.Add(new Claim("NombreSede", sedeSeleccionada.NombreSede));
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                }
+            );
+
+            // Limpiar sesion para invalidar cache de menu
+            HttpContext.Session.Clear();
+
+            _logger.LogInformation("Usuario {UserId} cambió a sede {IdSede} ({NombreSede})",
+                idUsuario, request.IdSede, sedeSeleccionada.NombreSede);
+
+            return Json(new { success = true, nombreSede = sedeSeleccionada.NombreSede });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar sede");
+            return Json(new { success = false, message = "Error al cambiar sede" });
+        }
     }
 }

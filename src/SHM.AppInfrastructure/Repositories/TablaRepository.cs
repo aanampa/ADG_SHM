@@ -44,6 +44,7 @@ public class TablaRepository : ITablaRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_TABLA
+            WHERE ACTIVO = 1
             ORDER BY ID_TABLA";
 
         return await connection.QueryAsync<Tabla>(sql);
@@ -116,7 +117,7 @@ public class TablaRepository : ITablaRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_TABLA
-            WHERE CODIGO = :Codigo";
+            WHERE CODIGO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Tabla>(sql, new { Codigo = codigo });
     }
@@ -138,7 +139,7 @@ public class TablaRepository : ITablaRepository
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SGH_SEG_TABLA_SEQ.NEXTVAL,
+                SHM_SEG_TABLA_SEQ.NEXTVAL,
                 :Codigo,
                 :Descripcion,
                 1,

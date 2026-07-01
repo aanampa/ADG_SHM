@@ -62,9 +62,15 @@ public interface IUsuarioRepository
     Task<bool> UpdateTokenRecuperacionAsync(int idUsuario, string token, DateTime fechaExpiracion);
 
     /// <summary>
-    /// Actualiza la contrasena de un usuario.
+    /// Actualiza la contrasena de un usuario (reset por admin, marca como temporal).
     /// </summary>
     Task<bool> UpdatePasswordAsync(int idUsuario, string newPasswordHash);
+
+    /// <summary>
+    /// Actualiza la contrasena de un usuario y limpia el flag de password temporal.
+    /// Se usa cuando el propio usuario cambia su clave.
+    /// </summary>
+    Task<bool> UpdatePasswordCambioUsuarioAsync(int idUsuario, string newPasswordHash);
 
     /// <summary>
     /// Limpia el token de recuperacion de un usuario despues de su uso.
@@ -100,4 +106,16 @@ public interface IUsuarioRepository
     /// Elimina un usuario registrando quien realizo la eliminacion.
     /// </summary>
     Task<bool> DeleteAsync(int id, int idModificador);
+
+    /// <summary>
+    /// Obtiene los usuarios activos asociados a una entidad medica.
+    /// </summary>
+    /// <param name="idEntidadMedica">ID de la entidad medica</param>
+    /// <returns>Lista de usuarios vinculados a la entidad medica</returns>
+    Task<IEnumerable<Usuario>> GetByIdEntidadMedicaAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Invierte el estado ACTIVO de un usuario (1→0 o 0→1).
+    /// </summary>
+    Task<bool> ToggleActivoAsync(string guidRegistro, int idModificador);
 }

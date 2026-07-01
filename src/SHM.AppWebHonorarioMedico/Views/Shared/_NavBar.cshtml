@@ -1,34 +1,20 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using Microsoft.Extensions.Configuration
 
 @inject IConfiguration Configuration
 
 @{
-
     string nombreSede = "";
-    string nombreArea = "";
-
-    if (User?.Identity?.IsAuthenticated == true)
-    {
-        //sedeUsuario = User.FindFirst("NombreSede")?.Value;
-        nombreSede = User?.FindFirst("NombreSede")?.Value ?? string.Empty;
-        nombreArea = User?.FindFirst("NombreArea")?.Value ?? string.Empty;
-    }
-
-
+    string idSedeActual = "0";
     string nombreUsuario = "";
 
     if (User?.Identity?.IsAuthenticated == true)
     {
+        nombreSede = User?.FindFirst("NombreSede")?.Value ?? string.Empty;
+        idSedeActual = User?.FindFirst("IdSede")?.Value ?? "0";
         nombreUsuario = User?.FindFirst("NombreUsuario")?.Value ?? string.Empty;
     }
-    else
-    {
-        nombreUsuario = "";
-    }
-
-
 }
 
 <!-- Navbar -->
@@ -42,26 +28,23 @@
         <li class="nav-item d-none d-sm-inline-block">
             <a href="@Url.Action("","Home")" class="nav-link">Inicio</a>
         </li>
-        <li class="nav-item">
-            <span class="nav-link text-primary">Sede: @nombreSede | @nombreArea</span>
+        <li class="nav-item dropdown" id="sedeDropdownContainer">
+            <a class="nav-link text-primary dropdown-toggle" href="#" id="sedeDropdown"
+               role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+               title="Cambiar sede">
+                <i class="fas fa-hospital mr-1"></i>Sede: <span id="sedeActualText">@nombreSede</span>
+            </a>
+            <div class="dropdown-menu" aria-labelledby="sedeDropdown" id="sedeDropdownMenu">
+                <span class="dropdown-item text-muted"><i class="fas fa-spinner fa-spin mr-1"></i>Cargando...</span>
+            </div>
         </li>
     </ul>
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto align-items-center">
-        <!-- Navbar Search -->
-        <!-- Messages Dropdown Menu -->
-        <!-- Notifications Dropdown Menu -->
         <li class="nav-item">
             <span class="nav-link text-primary">Bienvenido @nombreUsuario</span>
         </li>
-        <!--
-    <li class="nav-item">
-        <a class="nav-link" data-widget="fullscreen" href="#" role="button">
-            <i class="fas fa-expand-arrows-alt"></i>
-        </a>
-    </li>
-        -->
         <li class="nav-item">
             <a class="nav-link" href="#" data-toggle="modal" data-target="#logoutModal" title="Salir">
                 <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
@@ -92,3 +75,116 @@
     </div>
 </div>
 
+<script>
+    var sedeActualId = @idSedeActual;
+    var sedesLoaded = false;
+
+    // Cargar sedes al abrir el dropdown
+    document.getElementById('sedeDropdown').addEventListener('click', function () {
+        if (sedesLoaded) return;
+
+        fetch('@Url.Action("GetSedesUsuario", "Auth")')
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(function (result) {
+                var menu = document.getElementById('sedeDropdownMenu');
+                menu.innerHTML = '';
+
+                if (!result.success || !result.data) {
+                    menu.innerHTML = '<span class="dropdown-item text-danger small">Error: ' + (result.message || 'Sin datos') + '</span>';
+                    return;
+                }
+
+                // Si solo tiene 1 sede, mostrar mensaje
+                if (result.data.length <= 1) {
+                    menu.innerHTML = '<span class="dropdown-item text-muted small">Solo tiene una sede asignada</span>';
+                    sedesLoaded = true;
+                    return;
+                }
+
+                result.data.forEach(function (sede) {
+                    var isActive = sede.idSede === sedeActualId;
+                    var item = document.createElement('a');
+                    item.href = '#';
+                    item.className = 'dropdown-item' + (isActive ? ' active' : '');
+                    item.style.fontSize = '0.875rem';
+                    item.innerHTML = (isActive ? '<i class="fas fa-check mr-2"></i>' : '<i class="fas fa-hospital mr-2 text-muted"></i>') + sede.nombreSede;
+
+                    if (!isActive) {
+                        item.onclick = function (e) {
+                            e.preventDefault();
+                            cambiarSede(sede.idSede, sede.nombreSede);
+                        };
+                    } else {
+                        item.onclick = function (e) { e.preventDefault(); };
+                    }
+
+                    menu.appendChild(item);
+                });
+
+                sedesLoaded = true;
+            })
+            .catch(function (err) {
+                console.error('Error cargando sedes:', err);
+                var menu = document.getElementById('sedeDropdownMenu');
+                menu.innerHTML = '<span class="dropdown-item text-danger small">Error al cargar sedes</span>';
+            });
+    });
+
+    function cambiarSede(idSede, nombreSede) {
+        Swal.fire({
+            title: 'Cambiar sede',
+            html: '¿Desea cambiar a la sede <strong>' + nombreSede + '</strong>?<br><br><small class="text-muted">La página se recargará con los datos de la nueva sede.</small>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3498db',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                f_loading();
+
+                fetch('@Url.Action("CambiarSede", "Auth")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idSede: idSede })
+                })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    f_remove_loading();
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Sede cambiada',
+                            text: 'Ahora está en: ' + data.nombreSede,
+                            confirmButtonColor: '#28a745',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(function () {
+                            window.location.href = '@Url.Action("Index", "Home")';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message,
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .catch(function () {
+                    f_remove_loading();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al cambiar sede',
+                        confirmButtonColor: '#dc3545'
+                    });
+                });
+            }
+        });
+    }
+</script>

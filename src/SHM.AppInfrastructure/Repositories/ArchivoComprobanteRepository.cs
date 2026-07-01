@@ -46,6 +46,7 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO_COMPROBANTE
+            WHERE ACTIVO = 1
             ORDER BY ID_ARCHIVO_COMPROBANTE";
 
         return await connection.QueryAsync<ArchivoComprobante>(sql);
@@ -98,7 +99,7 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO_COMPROBANTE
-            WHERE ID_PRODUCCION = :IdProduccion
+            WHERE ID_PRODUCCION = :IdProduccion AND ACTIVO = 1
             ORDER BY ID_ARCHIVO_COMPROBANTE";
 
         return await connection.QueryAsync<ArchivoComprobante>(sql, new { IdProduccion = idProduccion });
@@ -125,7 +126,7 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_ARCHIVO_COMPROBANTE
-            WHERE ID_ARCHIVO = :IdArchivo
+            WHERE ID_ARCHIVO = :IdArchivo AND ACTIVO = 1
             ORDER BY ID_ARCHIVO_COMPROBANTE";
 
         return await connection.QueryAsync<ArchivoComprobante>(sql, new { IdArchivo = idArchivo });
@@ -239,5 +240,26 @@ public class ArchivoComprobanteRepository : IArchivoComprobanteRepository
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Id = id });
 
         return count > 0;
+    }
+
+    /// <summary>
+    /// Desactiva todos los archivos comprobantes asociados a una produccion.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    public async Task<int> DeactivateByProduccionIdAsync(int idProduccion, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_ARCHIVO_COMPROBANTE
+            SET ACTIVO = 0,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_PRODUCCION = :IdProduccion
+            AND ACTIVO = 1";
+
+        return await connection.ExecuteAsync(sql, new { IdProduccion = idProduccion, IdModificador = idModificador });
     }
 }

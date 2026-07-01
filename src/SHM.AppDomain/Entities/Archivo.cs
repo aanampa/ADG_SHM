@@ -6,6 +6,7 @@ namespace SHM.AppDomain.Entities;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Vladimir - 2026-01-29 - Agregado soporte para almacenamiento BLOB</modified>
 /// </summary>
 public class Archivo
 {
@@ -22,4 +23,14 @@ public class Archivo
     public DateTime FechaCreacion { get; set; }
     public int? IdModificador { get; set; }
     public DateTime? FechaModificacion { get; set; }
+
+    /// <summary>
+    /// Contenido binario del archivo (solo cuando TipoAlmacenamiento = 'BLOB').
+    /// </summary>
+    public byte[]? ContenidoArchivo { get; set; }
+
+    /// <summary>
+    /// Tipo de almacenamiento: 'FILE' (sistema de archivos) o 'BLOB' (base de datos).
+    /// </summary>
+    public string? TipoAlmacenamiento { get; set; }
 }

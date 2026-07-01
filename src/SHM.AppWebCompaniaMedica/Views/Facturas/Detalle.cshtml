@@ -53,8 +53,8 @@
                 </div>
                 <div class="col-md-4">
                     <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Codigo Produccion</span>
-                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.CodigoProduccion</span>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Produccion</span>
+                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.NumeroProduccion</span>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -86,8 +86,8 @@
                         @{
                             var tipoComprobanteTexto = Model.TipoComprobante switch
                             {
-                                "01" => "Factura",
-                                "03" => "Boleta",
+                                "1" => "Factura",
+                                "22" => "Recibo por Honorarios",
                                 _ => Model.TipoComprobante ?? "-"
                             };
                         }
@@ -294,6 +294,15 @@
                 </div>
             </div>
         }
+
+        <hr style="margin: 2rem 0; border-color: var(--border);">
+
+        <!-- Seccion de Bitacora -->
+        @await Html.PartialAsync("_BitacoraPartial", new SHM.AppWebCompaniaMedica.Models.BitacoraViewModel
+        {
+            Items = Model.Bitacora,
+            Titulo = "Historial de la Factura"
+        })
 
         <div class="d-flex gap-2 mt-4">
             <a asp-controller="Facturas" asp-action="Enviadas" class="btn btn-secondary" style="border-radius: 12px; padding: 0.875rem 2rem;">

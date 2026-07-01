@@ -16,6 +16,13 @@
                 <input type="hidden" id="edit_GuidRegistro" value="@Model.GuidRegistro" />
                 <div class="modal-body">
                     <div class="row">
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label class="adg-label">Id</label>
+                                <input type="text" id="edit_IdEntidadMedica" class="form-control form-control-sm"
+                                       readonly style="background-color: #e9ecef;" value="@Model.IdEntidadMedica">
+                            </div>
+                        </div>
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label class="adg-label">Codigo de Entidad <span class="text-danger">*</span></label>
@@ -23,14 +30,14 @@
                                        maxlength="20" required placeholder="Ingrese codigo" value="@Model.CodigoEntidad">
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label class="adg-label">RUC <span class="text-danger">*</span></label>
                                 <input type="text" id="edit_Ruc" class="form-control form-control-sm only-numbers"
                                        maxlength="11" required placeholder="11 digitos" value="@Model.Ruc">
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label class="adg-label">Tipo de Entidad <span class="text-danger">*</span></label>
                                 <select id="edit_TipoEntidadMedica" class="form-control form-control-sm" required>

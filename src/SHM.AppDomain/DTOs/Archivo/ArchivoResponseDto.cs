@@ -5,6 +5,7 @@ namespace SHM.AppDomain.DTOs.Archivo;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Vladimir - 2026-01-29 - Agregado soporte para almacenamiento BLOB</modified>
 /// </summary>
 public class ArchivoResponseDto
 {
@@ -19,4 +20,9 @@ public class ArchivoResponseDto
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
+
+    /// <summary>
+    /// Tipo de almacenamiento: 'FILE' (sistema de archivos) o 'BLOB' (base de datos).
+    /// </summary>
+    public string? TipoAlmacenamiento { get; set; }
 }

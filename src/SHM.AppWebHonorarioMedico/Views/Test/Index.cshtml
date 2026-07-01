@@ -1,0 +1,350 @@
+@{
+    ViewData["Title"] = "Pruebas del Sistema";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0"><i class="fas fa-flask mr-2"></i>Pruebas del Sistema</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+                            <li class="breadcrumb-item active">Pruebas</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+                <div class="row">
+
+                    <!-- Card: Prueba de Correo -->
+                    <div class="col-md-5">
+                        <div class="card card-primary card-outline">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-envelope mr-2"></i>Prueba de Envio de Correo
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-3">
+                                    Ingrese un correo electronico para verificar que la configuracion SMTP del sistema funciona correctamente.
+                                </p>
+                                <form id="formCorreoPrueba">
+                                    @Html.AntiForgeryToken()
+                                    <div class="form-group">
+                                        <label for="correoDestino">
+                                            Correo Destinatario <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-at"></i></span>
+                                            </div>
+                                            <input type="email" id="correoDestino" name="correoDestino"
+                                                   class="form-control" placeholder="ejemplo@correo.com" maxlength="200" />
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                    <div class="text-muted small mb-3">
+                                        <strong>Configuracion SMTP activa:</strong><br />
+                                        <i class="fas fa-server mr-1"></i> @ViewBag.SmtpHost : @ViewBag.SmtpPort<br />
+                                        <i class="fas fa-user mr-1"></i> @ViewBag.SmtpUserName<br />
+                                        <i class="fas fa-lock mr-1"></i> SSL: @(ViewBag.SmtpEnableSsl == true ? "Si" : "No")
+                                    </div>
+
+                                    <button type="button" id="btnEnviarCorreo" class="btn btn-primary btn-block"
+                                            onclick="enviarCorreoPrueba()">
+                                        <i class="fas fa-paper-plane mr-2"></i>Enviar Correo de Prueba
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card: Configuracion del Sistema -->
+                    <div class="col-md-7">
+                        <div class="card card-secondary card-outline">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-cogs mr-2"></i>Configuracion del Sistema (appsettings.json)
+                                </h3>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th width="35%">Parametro</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- AppSettings -->
+                                        <tr class="table-secondary">
+                                            <td colspan="2"><strong><i class="fas fa-info-circle mr-1"></i>AppSettings</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>InstanceName</td>
+                                            <td>
+                                                @{
+                                                    var instance = ViewBag.AppInstanceName as string ?? "";
+                                                    var badgeClass = instance == "PROD" ? "badge-danger" :
+                                                                     instance == "TEST" ? "badge-warning" : "badge-secondary";
+                                                }
+                                                <span class="badge @badgeClass">@instance</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ApplicationCode</td>
+                                            <td>@ViewBag.AppApplicationCode</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CompanyName</td>
+                                            <td>@ViewBag.AppCompanyName</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Version</td>
+                                            <td>@ViewBag.AppVersion</td>
+                                        </tr>
+                                        <tr>
+                                            <td>UrlBaseApp</td>
+                                            <td><code>@ViewBag.AppUrlBase</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td>UrlPortalAdministrativo</td>
+                                            <td><code>@ViewBag.AppUrlPortalAdministrativo</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td>UrlPortalCompaniaMedica</td>
+                                            <td><code>@ViewBag.AppUrlPortalCompaniaMedica</code></td>
+                                        </tr>
+
+                                        <!-- SMTP -->
+                                        <tr class="table-secondary">
+                                            <td colspan="2"><strong><i class="fas fa-envelope mr-1"></i>SmtpSettings</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Host</td>
+                                            <td><code>@ViewBag.SmtpHost</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Port</td>
+                                            <td>@ViewBag.SmtpPort</td>
+                                        </tr>
+                                        <tr>
+                                            <td>EnableSsl</td>
+                                            <td>@(ViewBag.SmtpEnableSsl == true ? "Si" : "No")</td>
+                                        </tr>
+                                        <tr>
+                                            <td>UserName</td>
+                                            <td>@ViewBag.SmtpUserName</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Password</td>
+                                            <td>@ViewBag.SmtpPassword</td>
+                                        </tr>
+                                        <tr>
+                                            <td>FromEmail</td>
+                                            <td>@ViewBag.SmtpFromEmail</td>
+                                        </tr>
+                                        <tr>
+                                            <td>FromName</td>
+                                            <td>@ViewBag.SmtpFromName</td>
+                                        </tr>
+
+                                        <!-- ConnectionStrings -->
+                                        <tr class="table-secondary">
+                                            <td colspan="2"><strong><i class="fas fa-database mr-1"></i>ConnectionStrings</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>OracleConnection (activa)</td>
+                                            <td><small><code>@ViewBag.ConnActiva</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>OracleConnectionLocal</td>
+                                            <td><small><code>@ViewBag.ConnLocal</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>OracleConnectionNube</td>
+                                            <td><small><code>@ViewBag.ConnNube</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>OracleConnectionTest</td>
+                                            <td><small><code>@ViewBag.ConnTest</code></small></td>
+                                        </tr>
+
+                                        <!-- FileStorage -->
+                                        <tr class="table-secondary">
+                                            <td colspan="2"><strong><i class="fas fa-folder-open mr-1"></i>FileStorage</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>UploadPath</td>
+                                            <td><code>@ViewBag.FileStorageUploadPath</code></td>
+                                        </tr>
+
+                                        <!-- SapApi -->
+                                        <tr class="table-secondary">
+                                            <td colspan="2"><strong><i class="fas fa-link mr-1"></i>SapApi</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>BaseUrl</td>
+                                            <td><small><code>@ViewBag.SapBaseUrl</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Username</td>
+                                            <td>@ViewBag.SapUsername</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Password</td>
+                                            <td>@ViewBag.SapPassword</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Scope</td>
+                                            <td><small><code>@ViewBag.SapScope</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>TimeoutSeconds</td>
+                                            <td>@ViewBag.SapTimeoutSeconds</td>
+                                        </tr>
+                                        <tr>
+                                            <td>EndpointToken</td>
+                                            <td><small><code>@ViewBag.SapEndpointToken</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>EndpointBancos</td>
+                                            <td><small><code>@ViewBag.SapEndpointBancos</code></small></td>
+                                        </tr>
+
+                                        <!-- SanPabloApi -->
+                                        <tr class="table-secondary">
+                                            <td colspan="2"><strong><i class="fas fa-globe mr-1"></i>SanPabloApi</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>BaseUrl</td>
+                                            <td><small><code>@ViewBag.SanPabloBaseUrl</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Usuario</td>
+                                            <td>@ViewBag.SanPabloUsuario</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Password</td>
+                                            <td>@ViewBag.SanPabloPassword</td>
+                                        </tr>
+                                        <tr>
+                                            <td>TimeoutSeconds</td>
+                                            <td>@ViewBag.SanPabloTimeoutSeconds</td>
+                                        </tr>
+                                        <tr>
+                                            <td>EndpointLogin</td>
+                                            <td><small><code>@ViewBag.SanPabloEndpointLogin</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>EndpointObtenerEntidad</td>
+                                            <td><small><code>@ViewBag.SanPabloEndpointObtenerEntidad</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>EndpointObtenerSede</td>
+                                            <td><small><code>@ViewBag.SanPabloEndpointObtenerSede</code></small></td>
+                                        </tr>
+                                        <tr>
+                                            <td>EndpointRegistrarComprobante</td>
+                                            <td><small><code>@ViewBag.SanPabloEndpointRegistrarComprobante</code></small></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function enviarCorreoPrueba() {
+        var correo = document.getElementById('correoDestino').value.trim();
+        var emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+
+        if (!correo) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campo requerido',
+                text: 'Debe ingresar un correo electronico.',
+                confirmButtonColor: '#f26522'
+            });
+            return;
+        }
+
+        if (!emailRegex.test(correo)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Correo invalido',
+                text: 'Ingrese un correo electronico valido.',
+                confirmButtonColor: '#f26522'
+            });
+            return;
+        }
+
+        var btn = document.getElementById('btnEnviarCorreo');
+        btn.disabled = true;
+
+        Swal.fire({
+            title: 'Enviando correo...',
+            text: 'Por favor espere.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: function () { Swal.showLoading(); }
+        });
+
+        var formData = new FormData(document.getElementById('formCorreoPrueba'));
+        formData.set('correoDestino', correo);
+
+        fetch('@Url.Action("EnviarCorreoPrueba", "Test")', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Correo Enviado',
+                    text: data.message,
+                    confirmButtonColor: '#28a745'
+                });
+                document.getElementById('correoDestino').value = '';
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al Enviar',
+                    text: data.message,
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+            btn.disabled = false;
+        })
+        .catch(function (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error inesperado al procesar la solicitud.',
+                confirmButtonColor: '#dc3545'
+            });
+            btn.disabled = false;
+        });
+    }
+</script>
+}

@@ -22,6 +22,10 @@ public class UsuarioInternoItemViewModel
     public string? NumeroDocumento { get; set; }
     public string? Celular { get; set; }
     public string? RolDescripcion { get; set; }
+    public string? PerfilAprobacion { get; set; }
+    public int CantidadSedes { get; set; }
+    public string? UltimaSede { get; set; }
+    public DateTime? UltimoAcceso { get; set; }
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }
@@ -70,6 +74,12 @@ public class UsuarioInternoCreateViewModel
     public bool EnviarCorreo { get; set; } = true;
 
     public List<SelectListItem> Roles { get; set; } = new();
+
+    [Required(ErrorMessage = "Debe seleccionar al menos una sede")]
+    [Display(Name = "Sedes")]
+    public List<int> IdsSedesSeleccionadas { get; set; } = new();
+
+    public List<SelectListItem> SedesDisponibles { get; set; } = new();
 }
 
 public class UsuarioInternoEditViewModel
@@ -118,6 +128,12 @@ public class UsuarioInternoEditViewModel
     public int Activo { get; set; } = 1;
 
     public List<SelectListItem> Roles { get; set; } = new();
+
+    [Required(ErrorMessage = "Debe seleccionar al menos una sede")]
+    [Display(Name = "Sedes")]
+    public List<int> IdsSedesSeleccionadas { get; set; } = new();
+
+    public List<SelectListItem> SedesDisponibles { get; set; } = new();
 }
 
 public class UsuarioInternoDeleteViewModel
@@ -135,4 +151,36 @@ public class UsuarioInternoResetClaveViewModel
     public string? Login { get; set; }
     public string? Email { get; set; }
     public bool EnviarCorreo { get; set; } = true;
+}
+
+public class PerfilAprobacionUsuarioModalViewModel
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string? NombreCompleto { get; set; }
+    public int IdUsuario { get; set; }
+    public List<PerfilAprobacionUsuarioItemViewModel> Asignaciones { get; set; } = new();
+    public List<SelectListItem> PerfilesDisponibles { get; set; } = new();
+    public List<SelectListItem> SedesDisponibles { get; set; } = new();
+}
+
+public class PerfilAprobacionUsuarioItemViewModel
+{
+    public int IdPerfilAprobacion { get; set; }
+    public int IdUsuario { get; set; }
+    public string? NombrePerfil { get; set; }
+    public int? IdSede { get; set; }
+    public string? NombreSede { get; set; }
+}
+
+public class AsignarPerfilRequest
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public int IdPerfilAprobacion { get; set; }
+    public int? IdSede { get; set; }
+}
+
+public class QuitarPerfilRequest
+{
+    public int IdPerfilAprobacion { get; set; }
+    public int IdUsuario { get; set; }
 }

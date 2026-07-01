@@ -29,8 +29,11 @@ public class ProduccionItemViewModel
 {
     public string GuidRegistro { get; set; } = string.Empty;
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? TipoProduccion { get; set; }
     public string? DesTipoProduccion { get; set; }
+    public string? DesTipoMedico { get; set; }
+    public string? DesTipoRubro { get; set; }
     public string? Descripcion { get; set; }
     public string? Periodo { get; set; }
     public string? Estado { get; set; }
@@ -49,6 +52,7 @@ public class ProduccionItemViewModel
         : null;
     public DateTime? FechaEmision { get; set; }
     public DateTime? FechaLimite { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
     public int Activo { get; set; }
 }
 
@@ -58,6 +62,41 @@ public class ProduccionItemViewModel
 /// <author>ADG Vladimir D</author>
 /// <created>2025-01-22</created>
 /// </summary>
+/// <summary>
+/// ViewModel para el modal de solicitud masiva de facturas.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-04-03</created>
+/// </summary>
+public class SolicitudMasivaViewModel
+{
+    public List<SolicitudMasivaItemViewModel> Items { get; set; } = new();
+    public bool EsModoIndividual { get; set; }
+}
+
+/// <summary>
+/// ViewModel para un item en la solicitud masiva de facturas.
+///
+/// <author>ADG Vladimir D</author>
+/// <created>2026-04-03</created>
+/// </summary>
+public class SolicitudMasivaItemViewModel
+{
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string? NumeroProduccion { get; set; }
+    public string? DesTipoProduccion { get; set; }
+    public string? DesTipoMedico { get; set; }
+    public string? RazonSocial { get; set; }
+    public string? Periodo { get; set; }
+    public decimal? MtoTotal { get; set; }
+    public string? Estado { get; set; }
+    public string? DesEstado { get; set; }
+    public bool Habilitado { get; set; }
+    public string? MotivoDeshabilitado { get; set; }
+    public DateTime? FechaLimite { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+}
+
 public class ArchivoAdjuntoViewModel
 {
     public string? GuidRegistro { get; set; }

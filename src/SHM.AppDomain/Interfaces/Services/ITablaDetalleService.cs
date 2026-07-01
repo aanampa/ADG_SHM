@@ -45,6 +45,7 @@ public interface ITablaDetalleService
     /// Obtiene un detalle de tabla por su codigo dentro de una tabla especifica.
     /// </summary>
     Task<TablaDetalleResponseDto?> GetTablaDetalleByCodigoAsync(int idTabla, string codigo);
+    Task<TablaDetalleResponseDto?> GetTablaDetalleByCodigoAsync(string codigoTabla, string codigo);
 
     /// <summary>
     /// Crea un nuevo detalle de tabla en el sistema.

@@ -3,23 +3,8 @@
     ViewData["Title"] = "Detalle de Produccion";
     var archivos = ViewBag.Archivos as List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>
         ?? new List<SHM.AppWebHonorarioMedico.Models.ArchivoAdjuntoViewModel>();
-    var badgeClass = Model.Estado switch
-    {
-        "FACTURA_PENDIENTE" => "badge-estado-pendiente",
-        "FACTURA_SOLICITADA" => "badge-estado-solicitada",
-        "FACTURA_ENVIADA" => "badge-estado-enviada",
-        "FACTURA_ACEPTADA" => "badge-estado-aceptada",
-        "FACTURA_LIQUIDADA" => "badge-estado-liquidada",
-        "FACTURA_PAGADA" => "badge-estado-pagada",
-        "FACTURA_DEVUELTA" => "badge-estado-devuelta",
-        _ => "badge-secondary"
-    };
-    var tipoComprobanteTexto = Model.TipoComprobante switch
-    {
-        "01" => "Factura",
-        "03" => "Boleta",
-        _ => Model.TipoComprobante ?? "-"
-    };
+    var badgeClass = EstadoDescripcion.Produccion.GetBadgeClass(Model.Estado);
+    var tipoComprobanteTexto = Model.DesTipoComprobante ?? Model.TipoComprobante ?? "-";
 }
 
 <style>
@@ -74,15 +59,21 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-6">
+                                    <div class="col-2">
                                         <div class="form-group-sm">
-                                            <label>Produccion</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.CodigoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <label>ID</label>
+                                            <input type="text" class="form-control form-control-sm" value="@Model.IdProduccion" readonly style="background-color: #e9ecef;">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group-sm">
+                                            <label>Cod. Producción</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.NumeroProduccion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="form-group-sm">
-                                            <label>Tipo</label>
+                                            <label>Tipo de Producción</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoProduccion ?? Model.TipoProduccion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
@@ -96,16 +87,16 @@
                                     </div>
                                     <div class="col-4">
                                         <div class="form-group-sm">
-                                            <label>Rubro</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <label>Tipo de Médico</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
                                     <div class="col-4">
                                         <div class="form-group-sm">
-                                            <label>Tipo Medico</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoMedico ?? Model.TipoMedico ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <label>Tipo de Rubro</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoRubro ?? Model.TipoRubro ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
-                                    </div>
+                                    </div>                                    
                                 </div>
                                 <div class="row">
                                     <div class="col-6">
@@ -116,7 +107,7 @@
                                     </div>
                                     <div class="col-6">
                                         <div class="form-group-sm">
-                                            <label>Descripcion</label>
+                                            <label>Descripción</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.Descripcion ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
@@ -141,7 +132,7 @@
                                     </div>
                                     <div class="col-8">
                                         <div class="form-group-sm">
-                                            <label>Tipo Entidad</label>
+                                            <label>Tipo de Entidad</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.DesTipoEntidadMedica ?? Model.TipoEntidadMedica ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
@@ -154,6 +145,67 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Datos Bancarios para Pago -->
+                        <div class="card card-compact mb-2">
+                            <div class="card-header bg-light">
+                                <h3 class="card-title">
+                                    <i class="fas fa-university mr-1"></i>Datos Bancarios para Pago
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                @{
+                                    var nombreBanco = ViewBag.NombreBanco as string;
+                                    var cuentaCorriente = ViewBag.CuentaCorriente as string;
+                                    var cuentaCci = ViewBag.CuentaCci as string;
+                                    var moneda = ViewBag.Moneda as string;
+                                    var cantCuentas = (int)(ViewBag.CantCuentasActivas ?? 0);
+                                }
+                                @if (cantCuentas == 0)
+                                {
+                                    <div class="alert alert-warning mb-0" style="font-size: 0.8rem;">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>No tiene cuenta bancaria activa registrada.
+                                    </div>
+                                }
+                                else if (cantCuentas > 1)
+                                {
+                                    <div class="alert alert-danger mb-0" style="font-size: 0.8rem;">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>Tiene <strong>@cantCuentas cuentas bancarias activas</strong>. Debe dejar solo una activa desde el mantenimiento de Entidades Médicas &gt; Cuentas Bancarias.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="form-group-sm">
+                                                <label>Banco</label>
+                                                <input type="text" class="form-control form-control-sm" value="@(nombreBanco ?? "-")" readonly style="background-color: #e9ecef;">
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-group-sm">
+                                                <label>Moneda</label>
+                                                <input type="text" class="form-control form-control-sm" value="@AppConstants.MonedaConstants.GetDescripcion(moneda)" readonly style="background-color: #e9ecef;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="form-group-sm">
+                                                <label>Cuenta Corriente</label>
+                                                <input type="text" class="form-control form-control-sm" value="@(cuentaCorriente ?? "-")" readonly style="background-color: #e9ecef;">
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-group-sm mb-0">
+                                                <label>Cuenta CCI</label>
+                                                <input type="text" class="form-control form-control-sm" value="@(cuentaCci ?? "-")" readonly style="background-color: #e9ecef;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         </div>
 
@@ -190,44 +242,59 @@
                                         <div class="monto-label text-primary">Total</div>
                                         <div class="monto-value text-primary">S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")</div>
                                     </div>
+                                    <div class="monto-item">
+                                        <div class="monto-label">Mto. Detracción</div>
+                                        <div class="monto-value">S/ @(Model.MtoDetraccion?.ToString("N2") ?? "0.00")</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Bitacora -->
+                        @{
+                            var bitacoras = ViewBag.Bitacoras as List<SHM.AppDomain.DTOs.Bitacora.BitacoraConUsuarioDto>
+                                ?? new List<SHM.AppDomain.DTOs.Bitacora.BitacoraConUsuarioDto>();
+                        }
                         <div class="card card-compact mb-2">
                             <div class="card-header bg-light">
                                 <h3 class="card-title">
                                     <i class="fas fa-history mr-1"></i>Bitácora
                                 </h3>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-striped table-bordered mb-0" style="font-size: 0.8rem;">
-                                        <thead class="thead-light">
-                                            <tr>
-                                                <th style="width: 30px;" class="text-center">#</th>
-                                                <th>Acción</th>
-                                                <th style="width: 100px;">De</th>
-                                                <th style="width: 110px;">Fecha</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="text-center">1</td>
-                                                <td>Se solicito Factura con Fecha Limite 23/01/2026 18:00</td>
-                                                <td>Juan Perez</td>
-                                                <td>15/11/2005 11:00</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="text-center">2</td>
-                                                <td>Se envio Factura</td>
-                                                <td>Maria Robles</td>
-                                                <td>16/11/2005 8:00</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="card-body p-2">
+                                @if (bitacoras.Any())
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0" style="font-size: 0.8rem;">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th style="width: 30px;" class="text-center">#</th>
+                                                    <th>Descripción</th>
+                                                    <th style="width: 160px;">Usuario</th>
+                                                    <th style="width: 130px;">Fecha</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @{ var index = 1; }
+                                                @foreach (var bit in bitacoras)
+                                                {
+                                                    <tr>
+                                                        <td class="text-center">@(index++)</td>
+                                                        <td>@(bit.Descripcion ?? bit.Accion ?? "-")</td>
+                                                        <td>@bit.NombreCompletoUsuario</td>
+                                                        <td>@(bit.FechaAccion?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center text-muted py-3" style="font-size: 0.8rem;">
+                                        <i class="fas fa-info-circle mr-1"></i>No hay registros en la bitácora.
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -272,17 +339,25 @@
                                 <div class="row">
                                     <div class="col-3">
                                         <div class="form-group-sm">
-                                            <label>Fecha Limite</label>
-                                            <input type="text" class="form-control form-control-sm" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")" readonly style="background-color: #e9ecef;">
+                                            <label>Fecha Límite</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.FechaLimite?.ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture) ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3">
+                                        <div class="form-group-sm">
+                                            <label>Fecha Vencimiento Factura</label>
+                                            <input type="text" class="form-control form-control-sm" value="@(Model.FacturaFechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")" readonly style="background-color: #e9ecef;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
                                         <div class="form-group-sm">
                                             <label>Concepto</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.Concepto ?? "-")" readonly style="background-color: #e9ecef;">
                                         </div>
                                     </div>
-                                    <div class="col-5">
+                                    <div class="col-6">
                                         <div class="form-group-sm">
                                             <label>Glosa</label>
                                             <input type="text" class="form-control form-control-sm" value="@(Model.Glosa ?? "-")" readonly style="background-color: #e9ecef;">
@@ -290,15 +365,43 @@
                                     </div>
                                 </div>
 
-                                @if (Model.Estado == "FACTURA_PENDIENTE" || Model.Estado == "FACTURA_SOLICITADA")
+                                @if (Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente || Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta)
                                 {
+                                    var tieneUsuarios = (bool)(ViewBag.TieneUsuariosExternos ?? false);
+                                    var nroCuentas = (int)(ViewBag.CantCuentasActivas ?? 0);
+                                    var btnLabel = (Model.Estado == EstadoDescripcion.Produccion.FacturaSolicitada || Model.Estado == EstadoDescripcion.Produccion.FacturaDevuelta) ? "Renotificar Solicitud de Factura" : "Solicitar Factura";
+                                    var fnOnClick = Model.Estado == EstadoDescripcion.Produccion.FacturaPendiente
+                                        ? $"abrirModalSolicitudFactura('{Model.GuidRegistro}')"
+                                        : $"abrirModalReNotificarFactura('{Model.GuidRegistro}')";
+
+                                    string? motivoDeshabilitado = null;
+                                    if (!tieneUsuarios)
+                                        motivoDeshabilitado = "Sin usuarios externos configurados para esta entidad";
+                                    else if (nroCuentas == 0)
+                                        motivoDeshabilitado = "Sin cuenta bancaria activa registrada";
+                                    else if (nroCuentas > 1)
+                                        motivoDeshabilitado = $"Tiene {nroCuentas} cuentas bancarias activas. Debe dejar solo una activa en Entidades Médicas > Cuentas Bancarias";
+
                                     <div class="mt-2">
-                                        <button type="button" class="btn btn-success btn-sm" onclick="solicitarFactura()">
-                                            <i class="fas fa-file-invoice-dollar mr-1"></i>@(Model.Estado == "FACTURA_SOLICITADA" ? "Actualizar Fecha Limite" : "Solicitar Factura")
-                                        </button>
+                                        @if (motivoDeshabilitado == null)
+                                        {
+                                            <button type="button" class="btn btn-success btn-sm" onclick="@fnOnClick">
+                                                <i class="fas fa-paper-plane mr-1"></i>@btnLabel
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-success btn-sm" disabled
+                                                    title="@motivoDeshabilitado">
+                                                <i class="fas fa-paper-plane mr-1"></i>@btnLabel
+                                            </button>
+                                            <small class="text-warning d-block mt-1">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>@motivoDeshabilitado
+                                            </small>
+                                        }
                                     </div>
                                 }
-                                @if (Model.Estado == "FACTURA_ENVIADA")
+                                @if (Model.Estado == EstadoDescripcion.Produccion.FacturaEnviada)
                                 {
                                     <div class="mt-2">
                                         <button type="button" class="btn btn-danger btn-sm mr-2" onclick="devolverFactura()">
@@ -311,14 +414,14 @@
                                 }
 
                                 @* Documentos Adjuntos *@
-                                @if (Model.Estado != "FACTURA_PENDIENTE" && Model.Estado != "FACTURA_SOLICITADA" && archivos.Any())
+                                @if (Model.Estado != EstadoDescripcion.Produccion.FacturaPendiente && Model.Estado != EstadoDescripcion.Produccion.FacturaSolicitada && archivos.Any())
                                 {
                                     <hr class="my-2" />
                                     <div class="section-title">
                                         <i class="fas fa-paperclip mr-1"></i>Documentos Adjuntos
                                     </div>
                                     <div class="d-flex flex-wrap">
-                                        @foreach (var archivo in archivos)
+                                        @foreach (var archivo in archivos.Where(a => a.TipoArchivo?.ToUpper() != "CDR"))
                                         {
                                             var iconClass = archivo.TipoArchivo?.ToUpper() switch
                                             {
@@ -336,7 +439,7 @@
                                             };
                                             var tamanoKb = archivo.Tamano.HasValue ? (archivo.Tamano.Value / 1024.0).ToString("N0") + " KB" : "";
 
-                                            <a href="@Url.Action("DescargarArchivo", "Produccion", new { guid = archivo.GuidRegistro })"
+                                            <a href="@Url.Action("Descargar", "Archivo", new { guid = archivo.GuidRegistro })"
                                                class="d-flex align-items-center mr-3 mb-2 p-2"
                                                style="background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; text-decoration: none; color: inherit;"
                                                title="@(archivo.TipoArchivo?.ToUpper() == "PDF" ? "Abrir" : "Descargar") @archivo.NombreArchivo"
@@ -360,7 +463,7 @@
                                         </div>
                                         <div style="border-radius: 6px; overflow: hidden; background: #525659; border: 1px solid #dee2e6;">
                                             <iframe id="pdfViewer"
-                                                    src="@Url.Action("DescargarArchivo", "Produccion", new { guid = archivoPdf.GuidRegistro })"
+                                                    src="@Url.Action("Descargar", "Archivo", new { guid = archivoPdf.GuidRegistro })"
                                                     style="width: 100%; height: 450px; border: none;"
                                                     title="Vista previa del PDF">
                                             </iframe>
@@ -376,90 +479,46 @@
     </div>
 </div>
 
-<!-- Modal Solicitar Factura -->
-<div class="modal fade" id="modalSolicitarFactura" tabindex="-1" role="dialog"
-    aria-labelledby="modalSolicitarFacturaLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalSolicitarFacturaLabel">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i>@(Model.Estado == "FACTURA_SOLICITADA" ? "Actualizar Fecha Limite" : "Solicitar Factura")
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="formSolicitarFactura">
-                    <input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
+<input type="hidden" id="hdnGuidProduccion" value="@Model.GuidRegistro" />
 
-                    <!-- Opciones rapidas -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <label class="mb-2">Seleccione un plazo sugerido:</label>
-                            <div class="btn-group d-flex" role="group" id="btnGroupPlazo">
-                                <button type="button" class="btn btn-outline-primary btn-plazo" data-dias="1">
-                                    <i class="fas fa-clock mr-1"></i>1 Dia
-                                    <small class="d-block" id="lblFecha1Dia"></small>
-                                </button>
-                                <button type="button" class="btn btn-outline-primary btn-plazo" data-dias="2">
-                                    <i class="fas fa-clock mr-1"></i>2 Dias
-                                    <small class="d-block" id="lblFecha2Dias"></small>
-                                </button>
-                                <button type="button" class="btn btn-outline-primary btn-plazo" data-dias="3">
-                                    <i class="fas fa-clock mr-1"></i>3 Dias
-                                    <small class="d-block" id="lblFecha3Dias"></small>
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-plazo" data-dias="0">
-                                    <i class="fas fa-edit mr-1"></i>Manual
-                                    <small class="d-block">Personalizado</small>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campos de fecha y hora (inicialmente readonly) -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Fecha Limite <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="txtFechaLimite" required readonly
-                                    style="background-color: #e9ecef;" />
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Hora Limite <span class="text-danger">*</span></label>
-                                <input type="time" class="form-control" id="txtHoraLimite" required readonly
-                                    style="background-color: #e9ecef;" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-info" role="alert">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                <span id="msgInfoPlazo">Seleccione una opcion de plazo para establecer la fecha y hora
-                                    limite.</span>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i>Cancelar
-                </button>
-                <button type="button" class="btn btn-success" onclick="enviarSolicitudFactura()">
-                    <i class="fas fa-paper-plane mr-1"></i>Enviar Solicitud
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<div id="sfModalContainer"></div>
+<div id="rnModalContainer"></div>
 
 @section Scripts {
     <script>
+        // refreshList: en Detalle recarga la página (usado por los modales de solicitud)
+        function refreshList() { location.reload(); }
+
+        function abrirModalReNotificarFactura(guid) {
+            fetch('@Url.Action("GetModalReNotificarFactura", "Produccion")' + '?guidRegistro=' + guid)
+                .then(r => r.text())
+                .then(html => {
+                    var container = document.getElementById('rnModalContainer');
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        oldScript.parentNode.removeChild(oldScript);
+                    });
+                });
+        }
+
+        function abrirModalSolicitudFactura(guid) {
+            fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")' + '?guidRegistro=' + guid)
+                .then(r => r.text())
+                .then(html => {
+                    var container = document.getElementById('sfModalContainer');
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        oldScript.parentNode.removeChild(oldScript);
+                    });
+                });
+        }
+
         // Configurar URLs de retorno preservando filtros
         document.addEventListener('DOMContentLoaded', function() {
             var queryString = window.location.search;
@@ -480,315 +539,56 @@
             }
         });
 
-        // Calcular fecha agregando dias laborables (Lunes a Viernes)
-        function agregarDiasLaborables(fecha, dias) {
-            var resultado = new Date(fecha);
-            var diasAgregados = 0;
-
-            while (diasAgregados < dias) {
-                resultado.setDate(resultado.getDate() + 1);
-                var diaSemana = resultado.getDay();
-                // 0 = Domingo, 6 = Sabado
-                if (diaSemana !== 0 && diaSemana !== 6) {
-                    diasAgregados++;
-                }
-            }
-
-            return resultado;
-        }
-
-        // Formatear fecha para mostrar (dd/MM/yyyy)
-        function formatearFechaMostrar(fecha) {
-            var dia = String(fecha.getDate()).padStart(2, '0');
-            var mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            var anio = fecha.getFullYear();
-            return dia + '/' + mes + '/' + anio;
-        }
-
-        // Formatear fecha para input date (yyyy-MM-dd)
-        function formatearFechaInput(fecha) {
-            var dia = String(fecha.getDate()).padStart(2, '0');
-            var mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            var anio = fecha.getFullYear();
-            return anio + '-' + mes + '-' + dia;
-        }
-
-        // Obtener nombre del dia
-        function obtenerNombreDia(fecha) {
-            var dias = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
-            return dias[fecha.getDay()];
-        }
-
-        // Calcular y mostrar las fechas sugeridas
-        function calcularFechasSugeridas() {
-            var hoy = new Date();
-
-            for (var i = 1; i <= 3; i++) {
-                var fechaSugerida = agregarDiasLaborables(hoy, i);
-                var nombreDia = obtenerNombreDia(fechaSugerida);
-                var fechaFormateada = formatearFechaMostrar(fechaSugerida);
-                var labelId = i === 1 ? 'lblFecha1Dia' : 'lblFecha' + i + 'Dias';
-                document.getElementById(labelId).textContent = nombreDia + ' ' + fechaFormateada + ' 18:00';
-            }
-        }
-
-        // Actualizar mensaje en modo manual
-        function actualizarMensajeManual() {
-            var txtFecha = document.getElementById('txtFechaLimite');
-            var txtHora = document.getElementById('txtHoraLimite');
-            var msgInfo = document.getElementById('msgInfoPlazo');
-
-            var fecha = txtFecha.value;
-            var hora = txtHora.value;
-
-            if (fecha && hora) {
-                var fechaObj = new Date(fecha + 'T' + hora);
-                var nombreDia = obtenerNombreDia(fechaObj);
-                var fechaFormateada = formatearFechaMostrar(fechaObj);
-                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las ' + hora + ' horas.';
-            } else if (fecha) {
-                var fechaObj = new Date(fecha + 'T00:00:00');
-                var nombreDia = obtenerNombreDia(fechaObj);
-                var fechaFormateada = formatearFechaMostrar(fechaObj);
-                msgInfo.textContent = 'Fecha seleccionada: ' + nombreDia + ' ' + fechaFormateada + '. Ingrese la hora limite.';
-            } else if (hora) {
-                msgInfo.textContent = 'Hora seleccionada: ' + hora + '. Ingrese la fecha limite.';
-            } else {
-                msgInfo.textContent = 'Ingrese manualmente la fecha y hora limite para la entrega de la factura.';
-            }
-        }
-
-        // Seleccionar plazo
-        function seleccionarPlazo(dias) {
-            var botones = document.querySelectorAll('.btn-plazo');
-            botones.forEach(function (btn) {
-                btn.classList.remove('active', 'btn-primary');
-                btn.classList.add('btn-outline-primary');
-                if (btn.dataset.dias === '0') {
-                    btn.classList.remove('btn-outline-primary');
-                    btn.classList.add('btn-outline-secondary');
-                }
-            });
-
-            var botonSeleccionado = document.querySelector('.btn-plazo[data-dias="' + dias + '"]');
-            if (botonSeleccionado) {
-                botonSeleccionado.classList.remove('btn-outline-primary', 'btn-outline-secondary');
-                botonSeleccionado.classList.add('active', 'btn-primary');
-            }
-
-            var txtFecha = document.getElementById('txtFechaLimite');
-            var txtHora = document.getElementById('txtHoraLimite');
-            var msgInfo = document.getElementById('msgInfoPlazo');
-
-            if (dias === 0) {
-                // Modo manual
-                txtFecha.readOnly = false;
-                txtHora.readOnly = false;
-                txtFecha.style.backgroundColor = '';
-                txtHora.style.backgroundColor = '';
-                txtFecha.value = '';
-                txtHora.value = '';
-                actualizarMensajeManual();
-            } else {
-                // Modo automatico
-                var hoy = new Date();
-                var fechaSugerida = agregarDiasLaborables(hoy, dias);
-
-                txtFecha.value = formatearFechaInput(fechaSugerida);
-                txtHora.value = '18:00';
-                txtFecha.readOnly = true;
-                txtHora.readOnly = true;
-                txtFecha.style.backgroundColor = '#e9ecef';
-                txtHora.style.backgroundColor = '#e9ecef';
-
-                var nombreDia = obtenerNombreDia(fechaSugerida);
-                var fechaFormateada = formatearFechaMostrar(fechaSugerida);
-                msgInfo.textContent = 'Fecha limite: ' + nombreDia + ' ' + fechaFormateada + ' a las 18:00 horas (' + dias + ' dia' + (dias > 1 ? 's' : '') + ' laborable' + (dias > 1 ? 's' : '') + ').';
-            }
-        }
-
-        function solicitarFactura() {
-            // Limpiar campos del modal
-            document.getElementById('txtFechaLimite').value = '';
-            document.getElementById('txtHoraLimite').value = '';
-
-            // Resetear botones
-            var botones = document.querySelectorAll('.btn-plazo');
-            botones.forEach(function (btn) {
-                btn.classList.remove('active', 'btn-primary');
-                if (btn.dataset.dias === '0') {
-                    btn.classList.add('btn-outline-secondary');
-                } else {
-                    btn.classList.add('btn-outline-primary');
-                }
-            });
-
-            // Resetear campos a readonly
-            var txtFecha = document.getElementById('txtFechaLimite');
-            var txtHora = document.getElementById('txtHoraLimite');
-            txtFecha.readOnly = true;
-            txtHora.readOnly = true;
-            txtFecha.style.backgroundColor = '#e9ecef';
-            txtHora.style.backgroundColor = '#e9ecef';
-
-            // Resetear mensaje
-            document.getElementById('msgInfoPlazo').textContent = 'Seleccione una opcion de plazo para establecer la fecha y hora limite.';
-
-            // Calcular fechas sugeridas
-            calcularFechasSugeridas();
-
-            // Abrir modal
-            $('#modalSolicitarFactura').modal('show');
-        }
-
-        // Evento click para botones de plazo y eventos de cambio en inputs
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.btn-plazo').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var dias = parseInt(this.dataset.dias);
-                    seleccionarPlazo(dias);
-                });
-            });
-
-            // Eventos para actualizar mensaje en modo manual
-            document.getElementById('txtFechaLimite').addEventListener('change', function () {
-                var botonManual = document.querySelector('.btn-plazo[data-dias="0"].active');
-                if (botonManual) {
-                    actualizarMensajeManual();
-                }
-            });
-
-            document.getElementById('txtHoraLimite').addEventListener('change', function () {
-                var botonManual = document.querySelector('.btn-plazo[data-dias="0"].active');
-                if (botonManual) {
-                    actualizarMensajeManual();
-                }
-            });
-        });
-
-        function enviarSolicitudFactura() {
-            var fecha = document.getElementById('txtFechaLimite').value;
-            var hora = document.getElementById('txtHoraLimite').value;
-            var guid = document.getElementById('hdnGuidProduccion').value;
-
-            // Verificar si se selecciono alguna opcion
-            var botonActivo = document.querySelector('.btn-plazo.active');
-
-            // Validar campos requeridos
-            var errores = [];
-            if (!botonActivo) {
-                errores.push('Debe seleccionar una opcion de plazo');
-            }
-            if (!fecha) errores.push('La fecha limite es requerida');
-            if (!hora) errores.push('La hora limite es requerida');
-
-            // Validar que la fecha y hora limite no sea menor a la actual
-            if (fecha && hora) {
-                var fechaHoraLimite = new Date(fecha + 'T' + hora);
-                var ahora = new Date();
-
-                if (fechaHoraLimite <= ahora) {
-                    errores.push('La fecha y hora limite debe ser mayor a la fecha y hora actual');
-                }
-            }
-
-            if (errores.length > 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Campos requeridos',
-                    html: '<ul style="text-align:left;">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
-                    confirmButtonColor: '#f26522'
-                });
-                return;
-            }
-
-            // Confirmar antes de enviar
-            Swal.fire({
-                icon: 'question',
-                title: 'Confirmar Solicitud',
-                html: '¿Desea enviar la solicitud de factura con fecha limite <strong>' +
-                    formatearFecha(fecha) + '</strong> a las <strong>' + hora + '</strong>?',
-                showCancelButton: true,
-                confirmButtonColor: '#007bff',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Si, Enviar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Llamar al endpoint del API
-                    fetch('@Url.Action("SolicitarFactura", "Produccion")', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            guidRegistro: guid,
-                            fecha: fecha,
-                            hora: hora
-                        })
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                $('#modalSolicitarFactura').modal('hide');
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Exito',
-                                    text: data.message,
-                                    confirmButtonColor: '#28a745'
-                                }).then(() => {
-                                    // Recargar la pagina para reflejar el nuevo estado
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: data.message,
-                                    confirmButtonColor: '#dc3545'
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: 'Error al procesar la solicitud',
-                                confirmButtonColor: '#dc3545'
-                            });
-                        });
-                }
-            });
-        }
-
-        function formatearFecha(fecha) {
-            if (!fecha) return '';
-            var partes = fecha.split('-');
-            return partes[2] + '/' + partes[1] + '/' + partes[0];
-        }
-
         function devolverFactura() {
             var guid = document.getElementById('hdnGuidProduccion').value;
+            var btnDevolver = document.querySelector('.btn-danger[onclick="devolverFactura()"]');
+            var btnAceptar  = document.querySelector('.btn-success[onclick="aceptarFactura()"]');
+            if (btnDevolver) btnDevolver.disabled = true;
+            if (btnAceptar)  btnAceptar.disabled  = true;
 
             Swal.fire({
                 icon: 'warning',
                 title: 'Devolver Factura',
-                text: '¿Esta seguro que desea devolver esta factura?',
+                html: '<p style="margin-bottom:0.75rem;">¿Esta seguro que desea devolver esta factura?</p>' +
+                      '<label style="display:block;text-align:left;font-size:0.875rem;margin-bottom:0.3rem;">Ingrese Motivo de devolución <span style="color:#dc3545;">*</span></label>' +
+                      '<textarea id="swalMotivo" class="swal2-textarea" placeholder="Ingrese el motivo de devolución..." ' +
+                      'style="height:90px; resize:none; font-size:0.95rem; width:100%; box-sizing:border-box; margin:0;"></textarea>',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Si, Devolver',
-                cancelButtonText: 'Cancelar'
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    var motivo = document.getElementById('swalMotivo').value.trim();
+                    if (!motivo) {
+                        Swal.showValidationMessage('El motivo de devolución es requerido');
+                        return false;
+                    }
+                    if (motivo.length < 10) {
+                        Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+                        return false;
+                    }
+                    return motivo;
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    var motivo = result.value || '';
+                    Swal.fire({
+                        title: 'Procesando...',
+                        text: 'Por favor espere.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
                     fetch('@Url.Action("DevolverFactura", "Produccion")', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            guidRegistro: guid
+                            guidRegistro: guid,
+                            motivoDevolucion: motivo
                         })
                     })
                         .then(response => response.json())
@@ -803,6 +603,8 @@
                                     location.reload();
                                 });
                             } else {
+                                if (btnDevolver) btnDevolver.disabled = false;
+                                if (btnAceptar)  btnAceptar.disabled  = false;
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error',
@@ -813,6 +615,8 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
+                            if (btnDevolver) btnDevolver.disabled = false;
+                            if (btnAceptar)  btnAceptar.disabled  = false;
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
@@ -820,12 +624,19 @@
                                 confirmButtonColor: '#dc3545'
                             });
                         });
+                } else {
+                    if (btnDevolver) btnDevolver.disabled = false;
+                    if (btnAceptar)  btnAceptar.disabled  = false;
                 }
             });
         }
 
         function aceptarFactura() {
             var guid = document.getElementById('hdnGuidProduccion').value;
+            var btnDevolver = document.querySelector('.btn-danger[onclick="devolverFactura()"]');
+            var btnAceptar  = document.querySelector('.btn-success[onclick="aceptarFactura()"]');
+            if (btnDevolver) btnDevolver.disabled = true;
+            if (btnAceptar)  btnAceptar.disabled  = true;
 
             Swal.fire({
                 icon: 'question',
@@ -838,6 +649,14 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando...',
+                        text: 'Por favor espere.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
                     fetch('@Url.Action("AceptarFactura", "Produccion")', {
                         method: 'POST',
                         headers: {
@@ -859,6 +678,8 @@
                                     location.reload();
                                 });
                             } else {
+                                if (btnDevolver) btnDevolver.disabled = false;
+                                if (btnAceptar)  btnAceptar.disabled  = false;
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error',
@@ -869,6 +690,8 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
+                            if (btnDevolver) btnDevolver.disabled = false;
+                            if (btnAceptar)  btnAceptar.disabled  = false;
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
@@ -876,6 +699,9 @@
                                 confirmButtonColor: '#dc3545'
                             });
                         });
+                } else {
+                    if (btnDevolver) btnDevolver.disabled = false;
+                    if (btnAceptar)  btnAceptar.disabled  = false;
                 }
             });
         }

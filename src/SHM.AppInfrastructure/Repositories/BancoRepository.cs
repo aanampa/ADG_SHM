@@ -44,6 +44,7 @@ public class BancoRepository : IBancoRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_BANCO
+            WHERE ACTIVO = 1
             ORDER BY ID_BANCO";
 
         return await connection.QueryAsync<Banco>(sql);
@@ -92,7 +93,7 @@ public class BancoRepository : IBancoRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_BANCO
-            WHERE CODIGO_BANCO = :Codigo";
+            WHERE CODIGO_BANCO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Banco>(sql, new { Codigo = codigo });
     }
@@ -195,6 +196,32 @@ public class BancoRepository : IBancoRepository
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Id = id });
 
         return count > 0;
+    }
+
+    /// <summary>
+    /// Obtiene los bancos que tienen al menos una cuenta registrada en SHM_ENTIDAD_CUENTA_BANCO.
+    /// </summary>
+    public async Task<IEnumerable<Banco>> GetBancosConCuentasAsync()
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT DISTINCT
+                b.ID_BANCO as IdBanco,
+                b.CODIGO_BANCO as CodigoBanco,
+                b.NOMBRE_BANCO as NombreBanco,
+                b.GUID_REGISTRO as GuidRegistro,
+                b.ACTIVO as Activo,
+                b.ID_CREADOR as IdCreador,
+                b.FECHA_CREACION as FechaCreacion,
+                b.ID_MODIFICADOR as IdModificador,
+                b.FECHA_MODIFICACION as FechaModificacion
+            FROM SHM_BANCO b
+            INNER JOIN SHM_ENTIDAD_CUENTA_BANCO ec ON ec.ID_BANCO = b.ID_BANCO AND ec.ACTIVO = 1
+            WHERE b.ACTIVO = 1
+            ORDER BY b.NOMBRE_BANCO";
+
+        return await connection.QueryAsync<Banco>(sql);
     }
 
     /// <summary>

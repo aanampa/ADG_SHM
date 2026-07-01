@@ -16,6 +16,7 @@ public class ProduccionListaResponseDto
     public int? IdSede { get; set; }
     public int? IdEntidadMedica { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
 
     // Produccion - Tipos con descripciones
     public string? TipoProduccion { get; set; }
@@ -39,9 +40,12 @@ public class ProduccionListaResponseDto
     public decimal? MtoRenta { get; set; }
     public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
 
     // Produccion - Comprobante
     public string? TipoComprobante { get; set; }
+    public string? DesTipoComprobante { get; set; }
     public string? Concepto { get; set; }
     public DateTime? FechaLimite { get; set; }
     public string? Serie { get; set; }
@@ -55,6 +59,15 @@ public class ProduccionListaResponseDto
     public DateTime? FacturaFechaEnvio { get; set; }
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
+
+    // Produccion - Estado de Pago (sincronizados desde SAP)
+    public string? PagoEstado { get; set; }
+    public DateTime? PagoFecha { get; set; }
+    public string? PagoNumeroOperacion { get; set; }
+    public string? PagoBanco { get; set; }
+    public string? PagoCuentaDeposito { get; set; }
+    public decimal? PagoMontoPagado { get; set; }
 
     // Produccion - Auditoria
     public int Activo { get; set; }
@@ -77,4 +90,8 @@ public class ProduccionListaResponseDto
     public string? ComprobanteFactura => !string.IsNullOrEmpty(Serie) && !string.IsNullOrEmpty(Numero)
         ? $"{Serie}-{Numero}"
         : null;
+
+    // Campos de validacion para modal solicitud masiva (populados solo en GetListSolicitudMasivaAsync)
+    public int NroUsuariosExternos { get; set; }
+    public int NroCuentasBancarias { get; set; }
 }

@@ -1,0 +1,71 @@
+@model List<SHM.AppWebHonorarioMedico.Models.UsuarioExternoItemViewModel>
+
+@if (Model != null && Model.Any())
+{
+    <table class="table table-hover table-striped table-sm mb-0">
+        <thead>
+            <tr>
+                <th>Login</th>
+                <th>Nombre Completo</th>
+                <th>Email</th>
+                <th>Celular</th>
+                <th class="text-center" style="width:80px;">Estado</th>
+                <th class="text-center" style="width:160px;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td>@u.Login</td>
+                    <td>@u.NombreCompleto</td>
+                    <td>@u.Email</td>
+                    <td>@u.Celular</td>
+                    <td class="text-center">
+                        @if (u.Activo == 1)
+                        {
+                            <span class="badge badge-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">Inactivo</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-info btn-xs"
+                                onclick="openEditUsuarioEntidad('@u.GuidRegistro')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-warning btn-xs"
+                                onclick="openResetClaveUsuarioEntidad('@u.GuidRegistro')" title="Resetear Clave">
+                            <i class="fas fa-key"></i>
+                        </button>
+                        @if (u.Activo == 1)
+                        {
+                            <button type="button" class="btn btn-danger btn-xs"
+                                    onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 0)"
+                                    title="Desactivar usuario">
+                                <i class="fas fa-ban mr-1"></i>Desactivar
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-success btn-xs"
+                                    onclick="toggleActivoUsuarioEntidad('@u.GuidRegistro', 1)"
+                                    title="Activar usuario">
+                                <i class="fas fa-check mr-1"></i>Activar
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="text-center text-muted py-4">
+        <i class="fas fa-users fa-2x mb-2"></i>
+        <p class="mb-0">No hay usuarios registrados para esta entidad</p>
+    </div>
+}

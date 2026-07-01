@@ -47,7 +47,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0 2rem;
-    z-index: 1050;
+    z-index: 1040; /* Reducido de 1050 para no interferir con modales Bootstrap */
 }
 
 .navbar-left {

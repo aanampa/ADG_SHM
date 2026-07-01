@@ -1,3 +1,4 @@
+using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.Entities;
 
 namespace SHM.AppDomain.Interfaces.Repositories;
@@ -44,4 +45,12 @@ public interface IBitacoraRepository
     /// Verifica si existe una bitacora con el identificador especificado.
     /// </summary>
     Task<bool> ExistsAsync(int id);
+
+    /// <summary>
+    /// Obtiene las bitacoras de una entidad especifica por su ID, incluyendo datos del usuario que realizo la accion.
+    /// </summary>
+    /// <param name="entidad">Nombre de la entidad (ej: SHM_PRODUCCION)</param>
+    /// <param name="idEntidad">ID de la entidad</param>
+    /// <returns>Lista de bitacoras con datos del usuario</returns>
+    Task<IEnumerable<BitacoraConUsuarioDto>> GetByEntidadYIdConUsuarioAsync(string entidad, int idEntidad);
 }

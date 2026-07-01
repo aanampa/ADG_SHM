@@ -1,0 +1,75 @@
+@{
+    ViewData["Title"] = "Material de Capacitación";
+    Layout = User.Identity?.IsAuthenticated == true ? "_Layout" : "_LayoutPublico";
+}
+
+<div class="wrapper">
+    <div class="content-wrapper">
+        <div class="content-header">
+            <div class="container-fluid text-center">
+                <h1 class="titulo-formulario">Sistema de Gestión de Honorarios Médicos <br />Material de Capacitación</h1>
+            </div>
+        </div>
+        <br />
+        <section class="content">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="far fa-file-pdf fa-3x text-danger mb-3"></i>
+                                <h5 class="card-title">Manual de Producciones</h5>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="~/archivos/manuales/SHM_MUS_ModuloProducciones.pdf" target="_blank" rel="noopener" class="btn btn-morado">
+                                    <i class="far fa-eye"></i> Ver Manual
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="far fa-file-pdf fa-3x text-danger mb-3"></i>
+                                <h5 class="card-title">Manual de Liquidaciones</h5>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="~/archivos/manuales/SHM_MUS_ModuloLiquidaciones.pdf" target="_blank" rel="noopener" class="btn btn-morado">
+                                    <i class="far fa-eye"></i> Ver Manual
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="far fa-file-pdf fa-3x text-danger mb-3"></i>
+                                <h5 class="card-title">Manual de Aprobación de Orden de Pago</h5>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="~/archivos/manuales/SHM_MUS_AprobacionOP.pdf" target="_blank" rel="noopener" class="btn btn-morado">
+                                    <i class="far fa-eye"></i> Ver Manual
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="far fa-file-pdf fa-3x text-danger mb-3"></i>
+                                <h5 class="card-title">Manual de Tesorería</h5>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="~/archivos/manuales/SHM_MUS_Tesoreria.pdf" target="_blank" rel="noopener" class="btn btn-morado">
+                                    <i class="far fa-eye"></i> Ver Manual
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

@@ -1,3 +1,4 @@
+using System.Transactions;
 using SHM.AppDomain.DTOs.Opcion;
 using SHM.AppDomain.DTOs.Usuario;
 using SHM.AppDomain.Entities;
@@ -15,10 +16,16 @@ namespace SHM.AppApplication.Services;
 public class UsuarioService : IUsuarioService
 {
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IUsuarioSedeRepository _usuarioSedeRepository;
+    private readonly IEmailService _emailService;
+    private readonly IEntidadMedicaRepository _entidadMedicaRepository;
 
-    public UsuarioService(IUsuarioRepository usuarioRepository)
+    public UsuarioService(IUsuarioRepository usuarioRepository, IUsuarioSedeRepository usuarioSedeRepository, IEmailService emailService, IEntidadMedicaRepository entidadMedicaRepository)
     {
         _usuarioRepository = usuarioRepository;
+        _usuarioSedeRepository = usuarioSedeRepository;
+        _emailService = emailService;
+        _entidadMedicaRepository = entidadMedicaRepository;
     }
 
     /// <summary>
@@ -63,12 +70,7 @@ public class UsuarioService : IUsuarioService
             return null;
 
         // Verificar la contraseña con BCrypt
-        // TODO: Descomentar cuando las claves estén cifradas en BD
-        // if (!BCrypt.Net.BCrypt.Verify(password, usuario.Password))
-        //     return null;
-
-        // Validación temporal para desarrollo (clave sin cifrar)
-        if (password != usuario.Password)
+        if (!BCrypt.Net.BCrypt.Verify(password, usuario.Password))
             return null;
 
         return MapToResponseDto(usuario);
@@ -257,9 +259,7 @@ public class UsuarioService : IUsuarioService
         }
 
         // Hashear nueva contraseña
-        // TODO: Descomentar cuando se use BCrypt en producción
-        // var passwordHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword);
-        var passwordHash = nuevaPassword; // Temporal para desarrollo
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword);
 
         // Actualizar contraseña
         var updated = await _usuarioRepository.UpdatePasswordAsync(usuario.IdUsuario, passwordHash);
@@ -325,22 +325,14 @@ public class UsuarioService : IUsuarioService
         }
 
         // Verificar contraseña actual
-        // TODO: Descomentar cuando las claves estén cifradas en BD
-        // if (!BCrypt.Net.BCrypt.Verify(passwordActual, usuario.Password))
-        //     return (false, "La contraseña actual es incorrecta");
-
-        // Validación temporal para desarrollo (clave sin cifrar)
-        if (passwordActual != usuario.Password)
-        {
+        if (!BCrypt.Net.BCrypt.Verify(passwordActual, usuario.Password))
             return (false, "La contraseña actual es incorrecta");
-        }
 
         // Hashear nueva contraseña
-        // TODO: Descomentar cuando se use BCrypt en producción
-        // var passwordHash = BCrypt.Net.BCrypt.HashPassword(passwordNueva);
-        var passwordHash = passwordNueva; // Temporal para desarrollo
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(passwordNueva);
 
-        var updated = await _usuarioRepository.UpdatePasswordAsync(idUsuario, passwordHash);
+        // Usar metodo que limpia FLAG_PASSWORD_TEMPORAL = 0 (cambio por el propio usuario)
+        var updated = await _usuarioRepository.UpdatePasswordCambioUsuarioAsync(idUsuario, passwordHash);
         if (!updated)
         {
             return (false, "Error al actualizar la contraseña");
@@ -393,14 +385,14 @@ public class UsuarioService : IUsuarioService
         }
 
         // Verificar si el email ya existe
-        if (!string.IsNullOrEmpty(createDto.Email))
-        {
-            var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
-            if (existeEmail != null)
-            {
-                return (false, "Ya existe un usuario con el mismo correo electronico", null);
-            }
-        }
+        // if (!string.IsNullOrEmpty(createDto.Email))
+        // {
+        //     var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
+        //     if (existeEmail != null)
+        //     {
+        //         return (false, "Ya existe un usuario con el mismo correo electronico", null);
+        //     }
+        // }
 
         // Generar clave aleatoria si no se proporciona
         var generatedPassword = string.IsNullOrEmpty(createDto.Password)
@@ -411,7 +403,7 @@ public class UsuarioService : IUsuarioService
         {
             TipoUsuario = "E", // Siempre externo
             Login = createDto.Login,
-            Password = generatedPassword, // TODO: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+            Password = BCrypt.Net.BCrypt.HashPassword(generatedPassword),
             Email = createDto.Email,
             NumeroDocumento = createDto.NumeroDocumento,
             Nombres = createDto.Nombres,
@@ -423,12 +415,31 @@ public class UsuarioService : IUsuarioService
             IdEntidadMedica = createDto.IdEntidadMedica,
             IdRol = createDto.IdRol,
             IdCreador = idCreador,
-            Activo = 1
+            Activo = 1,
+            FlagPasswordTemporal = 1
         };
 
         var idUsuario = await _usuarioRepository.CreateAsync(usuario);
 
-        // TODO: Si enviarCorreo es true, enviar email con credenciales
+        // Enviar email con credenciales si se solicito
+        if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
+        {
+            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            string? razonSocial = null;
+            if (usuario.IdEntidadMedica.HasValue)
+            {
+                var entidad = await _entidadMedicaRepository.GetByIdAsync(usuario.IdEntidadMedica.Value);
+                razonSocial = entidad?.RazonSocial;
+            }
+            await _emailService.EnviarEmailNuevoUsuarioAsync(
+                usuario.Email,
+                nombreCompleto,
+                usuario.Login ?? "",
+                generatedPassword,
+                idUsuario,
+                usuario.TipoUsuario ?? "E",
+                razonSocial);
+        }
 
         return (true, null, generatedPassword);
     }
@@ -444,7 +455,8 @@ public class UsuarioService : IUsuarioService
     }
 
     /// <summary>
-    /// Crea un usuario interno con generacion automatica de clave
+    /// Crea un usuario interno con generacion automatica de clave.
+    /// Usa TransactionScope para garantizar consistencia entre SHM_SEG_USUARIO y SHM_SEG_USUARIO_SEDE.
     /// </summary>
     public async Task<(bool Success, string? ErrorMessage, string? GeneratedPassword)> CreateUsuarioInternoAsync(CreateUsuarioDto createDto, int idCreador, bool enviarCorreo)
     {
@@ -456,14 +468,14 @@ public class UsuarioService : IUsuarioService
         }
 
         // Verificar si el email ya existe
-        if (!string.IsNullOrEmpty(createDto.Email))
-        {
-            var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
-            if (existeEmail != null)
-            {
-                return (false, "Ya existe un usuario con el mismo correo electronico", null);
-            }
-        }
+        // if (!string.IsNullOrEmpty(createDto.Email))
+        // {
+        //     var existeEmail = await _usuarioRepository.GetByEmailAsync(createDto.Email);
+        //     if (existeEmail != null)
+        //     {
+        //         return (false, "Ya existe un usuario con el mismo correo electronico", null);
+        //     }
+        // }
 
         // Generar clave aleatoria si no se proporciona
         var generatedPassword = string.IsNullOrEmpty(createDto.Password)
@@ -474,7 +486,7 @@ public class UsuarioService : IUsuarioService
         {
             TipoUsuario = "I", // Siempre interno
             Login = createDto.Login,
-            Password = generatedPassword, // TODO: BCrypt.Net.BCrypt.HashPassword(generatedPassword)
+            Password = BCrypt.Net.BCrypt.HashPassword(generatedPassword),
             Email = createDto.Email,
             NumeroDocumento = createDto.NumeroDocumento,
             Nombres = createDto.Nombres,
@@ -486,14 +498,60 @@ public class UsuarioService : IUsuarioService
             IdEntidadMedica = null, // Usuario interno no tiene entidad medica
             IdRol = createDto.IdRol,
             IdCreador = idCreador,
-            Activo = 1
+            Activo = 1,
+            FlagPasswordTemporal = 1
         };
 
-        var idUsuario = await _usuarioRepository.CreateAsync(usuario);
+        // Usar TransactionScope para operaciones en multiples tablas
+        int idUsuario;
+        using (var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+        {
+            idUsuario = await _usuarioRepository.CreateAsync(usuario);
 
-        // TODO: Si enviarCorreo es true, enviar email con credenciales
+            // Asignar sedes al usuario interno si se proporcionaron
+            if (createDto.IdsSedesSeleccionadas != null && createDto.IdsSedesSeleccionadas.Count > 0)
+            {
+                await _usuarioSedeRepository.UpdateSedesUsuarioAsync(idUsuario, createDto.IdsSedesSeleccionadas, idCreador);
+            }
+
+            // Commit de la transaccion - si no se llama, se hace rollback automatico
+            transactionScope.Complete();
+        }
+
+        // Enviar email FUERA del TransactionScope para que el log no quede enlazado en la transaccion
+        if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
+        {
+            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            await _emailService.EnviarEmailNuevoUsuarioAsync(
+                usuario.Email,
+                nombreCompleto,
+                usuario.Login ?? "",
+                generatedPassword,
+                idUsuario,
+                usuario.TipoUsuario ?? "I");
+        }
 
         return (true, null, generatedPassword);
+    }
+
+    /// <summary>
+    /// Obtiene los IDs de sedes asignadas a un usuario interno.
+    /// </summary>
+    public async Task<IEnumerable<int>> GetSedesUsuarioInternoAsync(int idUsuario)
+    {
+        return await _usuarioSedeRepository.GetSedeIdsByUsuarioIdAsync(idUsuario);
+    }
+
+    /// <summary>
+    /// Actualiza las sedes de un usuario interno.
+    /// </summary>
+    public async Task<bool> UpdateSedesUsuarioInternoAsync(int idUsuario, List<int>? idsSedesSeleccionadas, int idModificador)
+    {
+        if (idsSedesSeleccionadas == null)
+        {
+            idsSedesSeleccionadas = new List<int>();
+        }
+        return await _usuarioSedeRepository.UpdateSedesUsuarioAsync(idUsuario, idsSedesSeleccionadas, idModificador);
     }
 
     /// <summary>
@@ -510,15 +568,26 @@ public class UsuarioService : IUsuarioService
         // Generar nueva clave
         var nuevaClave = GenerarClaveAleatoria();
 
-        // Actualizar clave
-        // TODO: BCrypt.Net.BCrypt.HashPassword(nuevaClave)
-        var updated = await _usuarioRepository.UpdatePasswordAsync(idUsuario, nuevaClave);
+        // Actualizar clave (hasheada)
+        var claveHasheada = BCrypt.Net.BCrypt.HashPassword(nuevaClave);
+        var updated = await _usuarioRepository.UpdatePasswordAsync(idUsuario, claveHasheada);
         if (!updated)
         {
             return (false, "Error al actualizar la clave", null);
         }
 
-        // TODO: Si enviarCorreo es true, enviar email con nueva clave
+        // Enviar email con nueva clave si se solicito
+        if (enviarCorreo && !string.IsNullOrEmpty(usuario.Email))
+        {
+            var nombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim();
+            await _emailService.EnviarEmailResetClaveAsync(
+                usuario.Email,
+                nombreCompleto,
+                usuario.Login ?? "",
+                nuevaClave,
+                idUsuario,
+                usuario.TipoUsuario ?? "I");
+        }
 
         return (true, null, nuevaClave);
     }
@@ -551,7 +620,22 @@ public class UsuarioService : IUsuarioService
             GuidRegistro = usuario.GuidRegistro,
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion,
-            FechaModificacion = usuario.FechaModificacion
+            FechaModificacion = usuario.FechaModificacion,
+            FlagPasswordTemporal = usuario.FlagPasswordTemporal
         };
+    }
+
+    /// <summary>
+    /// Obtiene los usuarios externos asociados a una entidad medica.
+    /// </summary>
+    public async Task<IEnumerable<UsuarioResponseDto>> GetUsuariosByEntidadMedicaAsync(int idEntidadMedica)
+    {
+        var usuarios = await _usuarioRepository.GetByIdEntidadMedicaAsync(idEntidadMedica);
+        return usuarios.Select(MapToResponseDto);
+    }
+
+    public async Task<bool> ToggleActivoUsuarioAsync(string guidRegistro, int idModificador)
+    {
+        return await _usuarioRepository.ToggleActivoAsync(guidRegistro, idModificador);
     }
 }

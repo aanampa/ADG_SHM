@@ -2,7 +2,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SHM.AppDomain.DTOs.PerfilAprobacionUsuario;
 using SHM.AppDomain.DTOs.Usuario;
+using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebHonorarioMedico.Models;
 
@@ -15,21 +17,50 @@ public class UsuarioController : Controller
     private readonly IUsuarioService _usuarioService;
     private readonly IRolService _rolService;
     private readonly IEntidadMedicaService _entidadMedicaService;
+    private readonly ISedeService _sedeService;
+    private readonly IPerfilAprobacionService _perfilAprobacionService;
+    private readonly IPerfilAprobacionUsuarioService _perfilAprobacionUsuarioService;
+    private readonly IUsuarioSedeRepository _usuarioSedeRepository;
+    private readonly ISegAccesoRepository _segAccesoRepository;
 
     public UsuarioController(
         ILogger<UsuarioController> logger,
         IUsuarioService usuarioService,
         IRolService rolService,
-        IEntidadMedicaService entidadMedicaService)
+        IEntidadMedicaService entidadMedicaService,
+        ISedeService sedeService,
+        IPerfilAprobacionService perfilAprobacionService,
+        IPerfilAprobacionUsuarioService perfilAprobacionUsuarioService,
+        IUsuarioSedeRepository usuarioSedeRepository,
+        ISegAccesoRepository segAccesoRepository)
     {
         _logger = logger;
         _usuarioService = usuarioService;
         _rolService = rolService;
         _entidadMedicaService = entidadMedicaService;
+        _sedeService = sedeService;
+        _perfilAprobacionService = perfilAprobacionService;
+        _perfilAprobacionUsuarioService = perfilAprobacionUsuarioService;
+        _usuarioSedeRepository = usuarioSedeRepository;
+        _segAccesoRepository = segAccesoRepository;
     }
 
-    public IActionResult Externos()
+    /// <summary>
+    /// Vista principal del mantenimiento de usuarios externos.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <modified>ADG Vladimir D - 2026-01-28 - Carga de Entidades Medicas para Select2 en memoria</modified>
+    /// </summary>
+    public async Task<IActionResult> Externos()
     {
+        // Cargar Entidades Medicas para el filtro Select2 en memoria
+        var entidadesMedicas = await _entidadMedicaService.GetAllEntidadesMedicasAsync();
+        ViewBag.EntidadesMedicas = entidadesMedicas
+            .Where(e => e.Activo == 1)
+            .OrderBy(e => e.RazonSocial)
+            .Select(e => new { id = e.IdEntidadMedica, text = e.RazonSocial })
+            .ToList();
+
         return View();
     }
 
@@ -44,6 +75,11 @@ public class UsuarioController : Controller
             var roles = await _rolService.GetAllRolesAsync();
             var rolesDict = roles.ToDictionary(r => r.IdRol, r => r.Descripcion ?? "");
 
+            var itemsList = items.ToList();
+
+            // Obtener fecha del ultimo acceso exitoso para todos los usuarios en una sola consulta
+            var ultimosAccesos = await _segAccesoRepository.GetUltimosAccesosAsync(itemsList.Select(u => u.IdUsuario));
+
             var model = new UsuarioExternoListViewModel
             {
                 Items = new List<UsuarioExternoItemViewModel>(),
@@ -53,7 +89,7 @@ public class UsuarioController : Controller
                 SearchTerm = searchTerm
             };
 
-            foreach (var u in items)
+            foreach (var u in itemsList)
             {
                 string? entidadNombre = null;
                 if (u.IdEntidadMedica.HasValue)
@@ -72,6 +108,7 @@ public class UsuarioController : Controller
                     Celular = u.Celular,
                     EntidadMedicaNombre = entidadNombre,
                     RolDescripcion = u.IdRol.HasValue && rolesDict.TryGetValue(u.IdRol.Value, out var rol) ? rol : "",
+                    UltimoAcceso = ultimosAccesos.TryGetValue(u.IdUsuario, out var ua) ? ua : null,
                     Activo = u.Activo,
                     FechaCreacion = u.FechaCreacion
                 });
@@ -88,7 +125,7 @@ public class UsuarioController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetCreateModal()
+    public async Task<IActionResult> GetCreateModal(int? idEntidadMedica = null)
     {
         var roles = await _rolService.GetAllRolesAsync();
         var model = new UsuarioExternoCreateViewModel
@@ -99,6 +136,13 @@ public class UsuarioController : Controller
                 Text = r.Descripcion
             }).ToList()
         };
+
+        if (idEntidadMedica.HasValue)
+        {
+            model.IdEntidadMedica = idEntidadMedica;
+            var entidad = await _entidadMedicaService.GetEntidadMedicaByIdAsync(idEntidadMedica.Value);
+            model.EntidadMedicaNombre = entidad?.RazonSocial;
+        }
 
         return PartialView("_CreateModal", model);
     }
@@ -127,14 +171,14 @@ public class UsuarioController : Controller
             var createDto = new CreateUsuarioDto
             {
                 TipoUsuario = "E",
-                Login = model.Login ?? "",
+                Login = (model.Login ?? "").Trim().ToUpper(),
                 Password = "", // Se generara automaticamente
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = model.IdEntidadMedica,
                 IdRol = model.IdRol
             };
@@ -246,13 +290,13 @@ public class UsuarioController : Controller
 
             var updateDto = new UpdateUsuarioDto
             {
-                Login = model.Login,
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Login = model.Login?.Trim().ToUpper(),
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = model.IdEntidadMedica,
                 IdRol = model.IdRol,
                 Activo = model.Activo
@@ -449,6 +493,27 @@ public class UsuarioController : Controller
             var roles = await _rolService.GetAllRolesAsync();
             var rolesDict = roles.ToDictionary(r => r.IdRol, r => r.Descripcion ?? "");
 
+            // Obtener sedes por usuario para las columnas Cantidad Sedes y Ultima Sede
+            var itemsList = items.ToList();
+            var sedesInfoDict = new Dictionary<int, (int Cantidad, string UltimaSede)>();
+            foreach (var u in itemsList)
+            {
+                var sedes = await _usuarioSedeRepository.GetByUsuarioIdAsync(u.IdUsuario);
+                var sedesList = sedes.ToList();
+                var ultimaSede = sedesList.FirstOrDefault(s => s.EsUltimaSede == 1);
+                string nombreUltimaSede = "";
+                if (ultimaSede != null)
+                {
+                    var sedesActivas = await _usuarioSedeRepository.GetSedesActivasByUsuarioAsync(u.IdUsuario);
+                    var sedeInfo = sedesActivas.FirstOrDefault(s => s.IdSede == ultimaSede.IdSede);
+                    nombreUltimaSede = sedeInfo.NombreSede ?? "";
+                }
+                sedesInfoDict[u.IdUsuario] = (sedesList.Count, nombreUltimaSede);
+            }
+
+            // Obtener fecha del ultimo acceso exitoso para todos los usuarios en una sola consulta
+            var ultimosAccesos = await _segAccesoRepository.GetUltimosAccesosAsync(itemsList.Select(u => u.IdUsuario));
+
             var model = new UsuarioInternoListViewModel
             {
                 Items = new List<UsuarioInternoItemViewModel>(),
@@ -458,8 +523,17 @@ public class UsuarioController : Controller
                 SearchTerm = searchTerm
             };
 
-            foreach (var u in items)
+            foreach (var u in itemsList)
             {
+                sedesInfoDict.TryGetValue(u.IdUsuario, out var sedesInfo);
+
+                var perfiles = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(u.IdUsuario);
+                var perfilDescripcion = perfiles
+                    .Select(p => p.NombrePerfil)
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .Distinct()
+                    .FirstOrDefault();
+
                 model.Items.Add(new UsuarioInternoItemViewModel
                 {
                     GuidRegistro = u.GuidRegistro ?? "",
@@ -469,6 +543,10 @@ public class UsuarioController : Controller
                     NumeroDocumento = u.NumeroDocumento,
                     Celular = u.Celular,
                     RolDescripcion = u.IdRol.HasValue && rolesDict.TryGetValue(u.IdRol.Value, out var rol) ? rol : "",
+                    PerfilAprobacion = perfilDescripcion,
+                    CantidadSedes = sedesInfo.Cantidad,
+                    UltimaSede = sedesInfo.UltimaSede,
+                    UltimoAcceso = ultimosAccesos.TryGetValue(u.IdUsuario, out var ua) ? ua : null,
                     Activo = u.Activo,
                     FechaCreacion = u.FechaCreacion
                 });
@@ -488,12 +566,19 @@ public class UsuarioController : Controller
     public async Task<IActionResult> GetCreateInternoModal()
     {
         var roles = await _rolService.GetAllRolesAsync();
+        var sedes = await _sedeService.GetAllSedesAsync();
+
         var model = new UsuarioInternoCreateViewModel
         {
             Roles = roles.Where(r => r.Activo == 1).Select(r => new SelectListItem
             {
                 Value = r.IdRol.ToString(),
                 Text = r.Descripcion
+            }).ToList(),
+            SedesDisponibles = sedes.Where(s => s.Activo == 1).Select(s => new SelectListItem
+            {
+                Value = s.IdSede.ToString(),
+                Text = s.Nombre
             }).ToList()
         };
 
@@ -524,16 +609,17 @@ public class UsuarioController : Controller
             var createDto = new CreateUsuarioDto
             {
                 TipoUsuario = "I",
-                Login = model.Login ?? "",
+                Login = (model.Login ?? "").Trim().ToUpper(),
                 Password = "", // Se generara automaticamente
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = null, // Usuario interno no tiene entidad medica
-                IdRol = model.IdRol
+                IdRol = model.IdRol,
+                IdsSedesSeleccionadas = model.IdsSedesSeleccionadas
             };
 
             var (success, errorMessage, generatedPassword) = await _usuarioService.CreateUsuarioInternoAsync(createDto, idCreador, model.EnviarCorreo);
@@ -576,6 +662,9 @@ public class UsuarioController : Controller
             }
 
             var roles = await _rolService.GetAllRolesAsync();
+            var sedes = await _sedeService.GetAllSedesAsync();
+            var sedesUsuario = await _usuarioService.GetSedesUsuarioInternoAsync(usuario.IdUsuario);
+            var sedesUsuarioList = sedesUsuario.ToList();
 
             var model = new UsuarioInternoEditViewModel
             {
@@ -594,7 +683,13 @@ public class UsuarioController : Controller
                     Value = r.IdRol.ToString(),
                     Text = r.Descripcion,
                     Selected = r.IdRol == usuario.IdRol
-                }).ToList()
+                }).ToList(),
+                SedesDisponibles = sedes.Where(s => s.Activo == 1).Select(s => new SelectListItem
+                {
+                    Value = s.IdSede.ToString(),
+                    Text = s.Nombre
+                }).ToList(),
+                IdsSedesSeleccionadas = sedesUsuarioList
             };
 
             return PartialView("_EditInternoModal", model);
@@ -635,16 +730,17 @@ public class UsuarioController : Controller
 
             var updateDto = new UpdateUsuarioDto
             {
-                Login = model.Login,
-                Email = model.Email,
-                Nombres = model.Nombres,
-                ApellidoPaterno = model.ApellidoPaterno,
-                ApellidoMaterno = model.ApellidoMaterno,
-                NumeroDocumento = model.NumeroDocumento,
-                Celular = model.Celular,
+                Login = model.Login?.Trim().ToUpper(),
+                Email = model.Email?.Trim(),
+                Nombres = model.Nombres?.Trim(),
+                ApellidoPaterno = model.ApellidoPaterno?.Trim(),
+                ApellidoMaterno = model.ApellidoMaterno?.Trim(),
+                NumeroDocumento = model.NumeroDocumento?.Trim(),
+                Celular = model.Celular?.Trim(),
                 IdEntidadMedica = null, // Usuario interno no tiene entidad medica
                 IdRol = model.IdRol,
-                Activo = model.Activo
+                Activo = model.Activo,
+                IdsSedesSeleccionadas = model.IdsSedesSeleccionadas
             };
 
             var result = await _usuarioService.UpdateUsuarioAsync(usuario.IdUsuario, updateDto, idModificador);
@@ -652,6 +748,9 @@ public class UsuarioController : Controller
             {
                 return Json(new { success = false, message = "No se pudo actualizar el usuario" });
             }
+
+            // Actualizar sedes del usuario interno
+            await _usuarioService.UpdateSedesUsuarioInternoAsync(usuario.IdUsuario, model.IdsSedesSeleccionadas, idModificador);
 
             _logger.LogInformation("Usuario interno actualizado: {Login} por usuario {IdUsuario}", model.Login, idModificador);
             return Json(new { success = true, message = "Usuario actualizado exitosamente" });
@@ -799,7 +898,151 @@ public class UsuarioController : Controller
         }
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetPerfilAprobacionModal(string guid)
+    {
+        try
+        {
+            var usuario = await _usuarioService.GetUsuarioByGuidAsync(guid);
+            if (usuario == null)
+            {
+                return NotFound();
+            }
+
+            var asignaciones = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(usuario.IdUsuario);
+            var perfiles = await _perfilAprobacionService.GetAllActiveAsync();
+            var sedes = await _sedeService.GetAllSedesAsync();
+
+            var model = new PerfilAprobacionUsuarioModalViewModel
+            {
+                GuidRegistro = usuario.GuidRegistro ?? "",
+                NombreCompleto = $"{usuario.Nombres} {usuario.ApellidoPaterno} {usuario.ApellidoMaterno}".Trim(),
+                IdUsuario = usuario.IdUsuario,
+                Asignaciones = asignaciones.Select(a => new PerfilAprobacionUsuarioItemViewModel
+                {
+                    IdPerfilAprobacion = a.IdPerfilAprobacion,
+                    IdUsuario = a.IdUsuario,
+                    NombrePerfil = a.NombrePerfil,
+                    IdSede = a.IdSede,
+                    NombreSede = a.NombreSede
+                }).ToList(),
+                PerfilesDisponibles = perfiles.Select(p => new SelectListItem
+                {
+                    Value = p.IdPerfilAprobacion.ToString(),
+                    Text = $"{p.Codigo} - {p.Descripcion}"
+                }).ToList(),
+                SedesDisponibles = sedes.Where(s => s.Activo == 1).Select(s => new SelectListItem
+                {
+                    Value = s.IdSede.ToString(),
+                    Text = s.Nombre
+                }).ToList()
+            };
+
+            return PartialView("_PerfilAprobacionUsuarioModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener modal de perfiles de aprobacion para usuario: {Guid}", guid);
+            return StatusCode(500);
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AsignarPerfil([FromBody] AsignarPerfilRequest request)
+    {
+        try
+        {
+            var usuario = await _usuarioService.GetUsuarioByGuidAsync(request.GuidRegistro);
+            if (usuario == null)
+            {
+                return Json(new { success = false, message = "Usuario no encontrado" });
+            }
+
+            // Validar que el usuario no tenga ya un perfil asignado
+            var perfilesExistentes = await _perfilAprobacionUsuarioService.GetByUsuarioIdAsync(usuario.IdUsuario);
+            if (perfilesExistentes.Any())
+            {
+                var perfilActual = perfilesExistentes.First();
+                return Json(new { success = false, message = $"El usuario ya tiene asignado el perfil '{perfilActual.NombrePerfil}'. Solo se permite un perfil por usuario." });
+            }
+
+            var createDto = new CreatePerfilAprobacionUsuarioDto
+            {
+                IdPerfilAprobacion = request.IdPerfilAprobacion,
+                IdUsuario = usuario.IdUsuario,
+                IdSede = request.IdSede
+            };
+
+            await _perfilAprobacionUsuarioService.CreateAsync(createDto);
+
+            _logger.LogInformation("Perfil de aprobacion {IdPerfil} asignado al usuario {IdUsuario}",
+                request.IdPerfilAprobacion, usuario.IdUsuario);
+
+            return Json(new { success = true, message = "Perfil asignado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al asignar perfil de aprobacion");
+            return Json(new { success = false, message = "Error al asignar el perfil. Verifique que no exista una asignacion duplicada." });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> QuitarPerfil([FromBody] QuitarPerfilRequest request)
+    {
+        try
+        {
+            var result = await _perfilAprobacionUsuarioService.DeleteAsync(request.IdPerfilAprobacion, request.IdUsuario);
+            if (!result)
+            {
+                return Json(new { success = false, message = "No se pudo quitar la asignacion" });
+            }
+
+            _logger.LogInformation("Perfil de aprobacion {IdPerfil} quitado del usuario {IdUsuario}",
+                request.IdPerfilAprobacion, request.IdUsuario);
+
+            return Json(new { success = true, message = "Perfil quitado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al quitar perfil de aprobacion");
+            return Json(new { success = false, message = "Error al quitar el perfil" });
+        }
+    }
+
     #endregion
+
+    /// <summary>
+    /// Activa o inactiva un usuario externo (toggle).
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleActivoUsuario([FromQuery] string guidRegistro)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(guidRegistro))
+                return Json(new { success = false, message = "GUID no válido" });
+
+            var idModificador = GetCurrentUserId();
+            if (idModificador == 0)
+                return Json(new { success = false, message = "Usuario no autenticado" });
+
+            var result = await _usuarioService.ToggleActivoUsuarioAsync(guidRegistro, idModificador);
+            if (!result)
+                return Json(new { success = false, message = "No se pudo cambiar el estado del usuario" });
+
+            _logger.LogInformation("Toggle activo de usuario {Guid} por usuario {IdModificador}", guidRegistro, idModificador);
+            return Json(new { success = true, message = "Estado del usuario actualizado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar estado de usuario {Guid}", guidRegistro);
+            return Json(new { success = false, message = "Error al cambiar el estado del usuario" });
+        }
+    }
 
     private int GetCurrentUserId()
     {

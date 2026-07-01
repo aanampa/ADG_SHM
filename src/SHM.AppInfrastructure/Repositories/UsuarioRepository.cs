@@ -54,7 +54,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR as IdCreador,
                 FECHA_CREACION as FechaCreacion,
                 ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
+                FECHA_MODIFICACION as FechaModificacion,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             ORDER BY ID_USUARIO";
 
@@ -89,7 +90,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR as IdCreador,
                 FECHA_CREACION as FechaCreacion,
                 ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
+                FECHA_MODIFICACION as FechaModificacion,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE ID_USUARIO = :Id";
 
@@ -126,7 +128,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion,
                 TOKEN_RECUPERACION as TokenRecuperacion,
-                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken
+                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE UPPER(LOGIN) = UPPER(:Login)";
 
@@ -156,12 +159,13 @@ public class UsuarioRepository : IUsuarioRepository
                 CARGO,
                 ID_ENTIDAD_MEDICA,
                 ID_ROL,
+                FLAG_PASSWORD_TEMPORAL,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
                 FECHA_CREACION
             ) VALUES (
-                SGH_SEG_USUARIO_SEQ.NEXTVAL,
+                SHM_SEG_USUARIO_SEQ.NEXTVAL,
                 :TipoUsuario,
                 :Login,
                 :Password,
@@ -175,6 +179,7 @@ public class UsuarioRepository : IUsuarioRepository
                 :Cargo,
                 :IdEntidadMedica,
                 :IdRol,
+                :FlagPasswordTemporal,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -196,6 +201,7 @@ public class UsuarioRepository : IUsuarioRepository
         parameters.Add("Cargo", usuario.Cargo);
         parameters.Add("IdEntidadMedica", usuario.IdEntidadMedica);
         parameters.Add("IdRol", usuario.IdRol);
+        parameters.Add("FlagPasswordTemporal", usuario.FlagPasswordTemporal);
         parameters.Add("IdCreador", usuario.IdCreador);
         parameters.Add("IdUsuario", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -228,6 +234,7 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_ENTIDAD_MEDICA = :IdEntidadMedica,
                 ID_ROL = :IdRol,
                 ACTIVO = :Activo,
+                FLAG_PASSWORD_TEMPORAL = :FlagPasswordTemporal,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_USUARIO = :IdUsuario";
@@ -249,6 +256,7 @@ public class UsuarioRepository : IUsuarioRepository
             usuario.IdEntidadMedica,
             usuario.IdRol,
             usuario.Activo,
+            usuario.FlagPasswordTemporal,
             usuario.IdModificador
         });
 
@@ -317,7 +325,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion,
                 TOKEN_RECUPERACION as TokenRecuperacion,
-                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken
+                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE UPPER(EMAIL) = UPPER(:Email) AND ACTIVO = 1";
 
@@ -354,7 +363,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion,
                 TOKEN_RECUPERACION as TokenRecuperacion,
-                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken
+                FECHA_EXPIRACION_TOKEN as FechaExpiracionToken,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE TOKEN_RECUPERACION = :Token AND ACTIVO = 1";
 
@@ -394,6 +404,31 @@ public class UsuarioRepository : IUsuarioRepository
         var sql = @"
             UPDATE SHM_SEG_USUARIO
             SET PASSWORD = :Password,
+                FLAG_PASSWORD_TEMPORAL = 1,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_USUARIO = :IdUsuario";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdUsuario = idUsuario,
+            Password = newPasswordHash
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza la contrasena de un usuario y limpia el flag de password temporal.
+    /// Se usa cuando el propio usuario cambia su clave.
+    /// </summary>
+    public async Task<bool> UpdatePasswordCambioUsuarioAsync(int idUsuario, string newPasswordHash)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_SEG_USUARIO
+            SET PASSWORD = :Password,
+                FLAG_PASSWORD_TEMPORAL = 0,
                 FECHA_MODIFICACION = SYSDATE
             WHERE ID_USUARIO = :IdUsuario";
 
@@ -527,7 +562,8 @@ public class UsuarioRepository : IUsuarioRepository
                 ID_CREADOR as IdCreador,
                 FECHA_CREACION as FechaCreacion,
                 ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
+                FECHA_MODIFICACION as FechaModificacion,
+                FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
             FROM SHM_SEG_USUARIO
             WHERE GUID_REGISTRO = :GuidRegistro";
 
@@ -536,6 +572,8 @@ public class UsuarioRepository : IUsuarioRepository
 
     /// <summary>
     /// Obtiene usuarios externos de forma paginada con opcion de busqueda.
+    /// Utiliza sintaxis compatible con Oracle 11g (ROWNUM).
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<Usuario> Items, int TotalCount)> GetPaginatedExternosAsync(string? searchTerm, int pageNumber, int pageSize)
     {
@@ -561,42 +599,54 @@ public class UsuarioRepository : IUsuarioRepository
             {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { SearchTerm = searchTerm });
 
-        var offset = (pageNumber - 1) * pageSize;
-        var dataSql = $@"
-            SELECT
-                u.ID_USUARIO as IdUsuario,
-                u.TIPO_USUARIO as TipoUsuario,
-                u.LOGIN as Login,
-                u.PASSWORD as Password,
-                u.EMAIL as Email,
-                u.NUMERO_DOCUMENTO as NumeroDocumento,
-                u.NOMBRES as Nombres,
-                u.APELLIDO_PATERNO as ApellidoPaterno,
-                u.APELLIDO_MATERNO as ApellidoMaterno,
-                u.CELULAR as Celular,
-                u.TELEFONO as Telefono,
-                u.CARGO as Cargo,
-                u.ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                u.ID_ROL as IdRol,
-                u.GUID_REGISTRO as GuidRegistro,
-                u.ACTIVO as Activo,
-                u.ID_CREADOR as IdCreador,
-                u.FECHA_CREACION as FechaCreacion,
-                u.ID_MODIFICADOR as IdModificador,
-                u.FECHA_MODIFICACION as FechaModificacion
-            FROM SHM_SEG_USUARIO u
-            LEFT JOIN SHM_ENTIDAD_MEDICA em ON u.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
-            {whereClause}
-            ORDER BY u.APELLIDO_PATERNO, u.NOMBRES
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+        // Calcular rangos para paginacion con ROWNUM (Oracle 11g)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
 
-        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, Offset = offset, PageSize = pageSize });
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
+        var dataSql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        u.ID_USUARIO as IdUsuario,
+                        u.TIPO_USUARIO as TipoUsuario,
+                        u.LOGIN as Login,
+                        u.PASSWORD as Password,
+                        u.EMAIL as Email,
+                        u.NUMERO_DOCUMENTO as NumeroDocumento,
+                        u.NOMBRES as Nombres,
+                        u.APELLIDO_PATERNO as ApellidoPaterno,
+                        u.APELLIDO_MATERNO as ApellidoMaterno,
+                        u.CELULAR as Celular,
+                        u.TELEFONO as Telefono,
+                        u.CARGO as Cargo,
+                        u.ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                        u.ID_ROL as IdRol,
+                        u.GUID_REGISTRO as GuidRegistro,
+                        u.ACTIVO as Activo,
+                        u.ID_CREADOR as IdCreador,
+                        u.FECHA_CREACION as FechaCreacion,
+                        u.ID_MODIFICADOR as IdModificador,
+                        u.FECHA_MODIFICACION as FechaModificacion,
+                        u.FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
+                    FROM SHM_SEG_USUARIO u
+                    LEFT JOIN SHM_ENTIDAD_MEDICA em ON u.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
+                    {whereClause}
+                    ORDER BY u.APELLIDO_PATERNO, u.NOMBRES
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, MinRow = minRow, MaxRow = maxRow });
 
         return (items, totalCount);
     }
 
     /// <summary>
     /// Obtiene usuarios internos de forma paginada con opcion de busqueda.
+    /// Utiliza sintaxis compatible con Oracle 11g (ROWNUM).
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<Usuario> Items, int TotalCount)> GetPaginatedInternosAsync(string? searchTerm, int pageNumber, int pageSize)
     {
@@ -620,35 +670,45 @@ public class UsuarioRepository : IUsuarioRepository
             {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { SearchTerm = searchTerm });
 
-        var offset = (pageNumber - 1) * pageSize;
-        var dataSql = $@"
-            SELECT
-                ID_USUARIO as IdUsuario,
-                TIPO_USUARIO as TipoUsuario,
-                LOGIN as Login,
-                PASSWORD as Password,
-                EMAIL as Email,
-                NUMERO_DOCUMENTO as NumeroDocumento,
-                NOMBRES as Nombres,
-                APELLIDO_PATERNO as ApellidoPaterno,
-                APELLIDO_MATERNO as ApellidoMaterno,
-                CELULAR as Celular,
-                TELEFONO as Telefono,
-                CARGO as Cargo,
-                ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                ID_ROL as IdRol,
-                GUID_REGISTRO as GuidRegistro,
-                ACTIVO as Activo,
-                ID_CREADOR as IdCreador,
-                FECHA_CREACION as FechaCreacion,
-                ID_MODIFICADOR as IdModificador,
-                FECHA_MODIFICACION as FechaModificacion
-            FROM SHM_SEG_USUARIO
-            {whereClause}
-            ORDER BY APELLIDO_PATERNO, NOMBRES
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+        // Calcular rangos para paginacion con ROWNUM (Oracle 11g)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
 
-        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, Offset = offset, PageSize = pageSize });
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
+        var dataSql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        ID_USUARIO as IdUsuario,
+                        TIPO_USUARIO as TipoUsuario,
+                        LOGIN as Login,
+                        PASSWORD as Password,
+                        EMAIL as Email,
+                        NUMERO_DOCUMENTO as NumeroDocumento,
+                        NOMBRES as Nombres,
+                        APELLIDO_PATERNO as ApellidoPaterno,
+                        APELLIDO_MATERNO as ApellidoMaterno,
+                        CELULAR as Celular,
+                        TELEFONO as Telefono,
+                        CARGO as Cargo,
+                        ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                        ID_ROL as IdRol,
+                        GUID_REGISTRO as GuidRegistro,
+                        ACTIVO as Activo,
+                        ID_CREADOR as IdCreador,
+                        FECHA_CREACION as FechaCreacion,
+                        ID_MODIFICADOR as IdModificador,
+                        FECHA_MODIFICACION as FechaModificacion,
+                        FLAG_PASSWORD_TEMPORAL as FlagPasswordTemporal
+                    FROM SHM_SEG_USUARIO
+                    {whereClause}
+                    ORDER BY APELLIDO_PATERNO, NOMBRES
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<Usuario>(dataSql, new { SearchTerm = searchTerm, MinRow = minRow, MaxRow = maxRow });
 
         return (items, totalCount);
     }
@@ -669,6 +729,55 @@ public class UsuarioRepository : IUsuarioRepository
 
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id, IdModificador = idModificador });
 
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Obtiene los usuarios activos asociados a una entidad medica.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-01-26</created>
+    /// </summary>
+    public async Task<IEnumerable<Usuario>> GetByIdEntidadMedicaAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                ID_USUARIO        as IdUsuario,
+                TIPO_USUARIO      as TipoUsuario,
+                LOGIN             as Login,
+                EMAIL             as Email,
+                NOMBRES           as Nombres,
+                APELLIDO_PATERNO  as ApellidoPaterno,
+                APELLIDO_MATERNO  as ApellidoMaterno,
+                CELULAR           as Celular,
+                ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                GUID_REGISTRO     as GuidRegistro,
+                ACTIVO            as Activo
+            FROM SHM_SEG_USUARIO
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+              AND EMAIL IS NOT NULL
+            ORDER BY ACTIVO DESC, APELLIDO_PATERNO, NOMBRES";
+
+        return await connection.QueryAsync<Usuario>(sql, new { IdEntidadMedica = idEntidadMedica });
+    }
+
+    /// <summary>
+    /// Invierte el estado ACTIVO de un usuario (1→0 o 0→1).
+    /// </summary>
+    public async Task<bool> ToggleActivoAsync(string guidRegistro, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_SEG_USUARIO
+            SET ACTIVO           = CASE WHEN ACTIVO = 1 THEN 0 ELSE 1 END,
+                ID_MODIFICADOR   = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new { GuidRegistro = guidRegistro, IdModificador = idModificador });
         return rowsAffected > 0;
     }
 }

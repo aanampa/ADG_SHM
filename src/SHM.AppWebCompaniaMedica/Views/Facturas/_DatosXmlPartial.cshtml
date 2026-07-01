@@ -1,0 +1,184 @@
+@model SHM.AppWebCompaniaMedica.Models.VistaPreviaFacturaViewModel
+@using static SHM.AppDomain.Constants.AppConstants
+@{
+    var fechaEmisionXmlStr = Model.DatosXml?.DatosGenerales.FechaEmision ?? "";
+    DateTime.TryParse(fechaEmisionXmlStr, out var fechaEmisionXmlDate);
+
+    var pago       = Model.DatosXml?.DetallesPago;
+    var detraccion = Model.DatosXml?.Detraccion;
+}
+
+<style>
+    .dx-section       { margin-bottom: 1rem; }
+    .dx-title         { font-weight: 700; color: var(--primary); font-size: 0.8rem; margin-bottom: 0.5rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 0.4rem; }
+    .dx-grid          { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .dx-field         { background: var(--bg-main); padding: 0.4rem 0.65rem; border-radius: 7px; }
+    .dx-field.full    { grid-column: 1 / -1; }
+    .dx-label         { font-size: 0.68rem; color: var(--text-secondary); display: block; margin-bottom: 0.1rem; }
+    .dx-value         { font-weight: 600; font-size: 0.82rem; color: var(--text-primary); }
+    .dx-value.mono    { font-family: 'JetBrains Mono', monospace; }
+    .dx-total         { background: rgba(242,101,34,0.1); padding: 0.6rem 0.75rem; border-radius: 8px; margin-top: 0.4rem; display: flex; justify-content: space-between; align-items: center; }
+    .dx-total-lbl     { font-size: 0.72rem; color: var(--text-secondary); }
+    .dx-total-val     { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    .dx-item-row      { padding: 0.4rem 0.65rem; border-radius: 7px; margin-bottom: 0.3rem; font-size: 0.78rem; background: #f5f5f5; border: 1px solid #e0e0e0; color: #333; }
+    .dx-cuota-row     { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.35rem; }
+    .dx-det-panel     { border: 1.5px solid #e6a000; background: rgba(255,193,7,0.04); border-radius: 9px; padding: 0.6rem 0.8rem; }
+    .dx-det-title     { font-size: 0.7rem; color: #e6a000; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.3rem; }
+    .dx-badge         { display: inline-block; background: rgba(242,101,34,0.12); color: var(--accent); font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; margin-left: 0.3rem; }
+    .dx-badge.ok      { background: rgba(40,167,69,0.12); color: #28a745; }
+    .dx-badge.warn    { background: rgba(255,193,7,0.18); color: #e6a000; }
+</style>
+
+<div class="dx-section">
+    <div class="dx-title"><i class="bi bi-receipt"></i> Comprobante</div>
+    <div style="display:grid; grid-template-columns: 2fr 1.5fr 1.5fr 0.8fr; gap:0.5rem;">
+        <div class="dx-field"><span class="dx-label">Tipo</span><span class="dx-value">@(Model.DatosXml?.DatosGenerales.TipoDocumento ?? "-")</span></div>
+        <div class="dx-field"><span class="dx-label">Número</span><span class="dx-value mono">@(Model.DatosXml?.DatosGenerales.NumeroFactura ?? "-")</span></div>
+        <div class="dx-field"><span class="dx-label">Fecha Emisión</span><span class="dx-value">@(fechaEmisionXmlDate != DateTime.MinValue ? fechaEmisionXmlDate.ToString("dd/MM/yyyy") : fechaEmisionXmlStr)</span></div>
+        <div class="dx-field"><span class="dx-label">Moneda</span><span class="dx-value">@(Model.DatosXml?.DatosGenerales.Moneda ?? "-")</span></div>
+    </div>
+</div>
+
+<div class="dx-section">
+    <div class="dx-title"><i class="bi bi-building"></i> Emisor</div>
+    <div style="display:grid; grid-template-columns: 120px 1fr; gap:0.5rem;">
+        <div class="dx-field"><span class="dx-label">RUC</span><span class="dx-value mono">@(Model.DatosXml?.Emisor.Ruc ?? "-")</span></div>
+        <div class="dx-field"><span class="dx-label">Razón Social</span><span class="dx-value">@(Model.DatosXml?.Emisor.RazonSocial ?? "-")</span></div>
+    </div>
+</div>
+
+<div class="dx-section">
+    <div class="dx-title"><i class="bi bi-person"></i> Receptor</div>
+    <div style="display:grid; grid-template-columns: 120px 1fr; gap:0.5rem;">
+        <div class="dx-field"><span class="dx-label">RUC</span><span class="dx-value mono">@(Model.DatosXml?.Cliente.NumeroDocumento ?? "-")</span></div>
+        <div class="dx-field"><span class="dx-label">Razón Social</span><span class="dx-value">@(Model.DatosXml?.Cliente.RazonSocial ?? "-")</span></div>
+    </div>
+</div>
+
+<div class="dx-section">
+    <div class="dx-title"><i class="bi bi-calculator"></i> Importes</div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.5rem;">
+        <div class="dx-field"><span class="dx-label">Valor Venta</span><span class="dx-value">S/ @(Model.DatosXml?.DesgloseTotales.ValorVenta.ToString("N2") ?? "0.00")</span></div>
+        <div class="dx-field">
+            @if (Model.TipoComprobante == "22")
+            { <span class="dx-label">Retención</span><span class="dx-value">S/ @(Model.DatosXml?.DesgloseTotales.Retencion.ToString("N2") ?? "0.00")</span> }
+            else
+            { <span class="dx-label">IGV</span><span class="dx-value">S/ @(Model.DatosXml?.DesgloseTotales.Igv.ToString("N2") ?? "0.00")</span> }
+        </div>
+        <div class="dx-field"><span class="dx-label">Importe Total</span><span class="dx-value">S/ @(Model.DatosXml?.DesgloseTotales.ImporteTotal.ToString("N2") ?? "0.00")</span></div>
+    </div>
+</div>
+
+@* ── Información de Pago ── *@
+@if (pago != null && !string.IsNullOrEmpty(pago.FormaPago))
+{
+    <div class="dx-section">
+        <div class="dx-title"><i class="bi bi-credit-card"></i> Información de Pago</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+            <div class="dx-field">
+                <span class="dx-label">Forma de Pago</span>
+                <span class="dx-value">
+                    @pago.FormaPago
+                    @if (string.Equals(pago.FormaPago, FacturacionConstants.FormaPago, StringComparison.OrdinalIgnoreCase))
+                    { <span class="dx-badge ok"><i class="bi bi-check-circle-fill"></i> correcto</span> }
+                    else
+                    { <span class="dx-badge warn"><i class="bi bi-exclamation-triangle-fill"></i> esperado: @FacturacionConstants.FormaPago</span> }
+                </span>
+            </div>
+            <div class="dx-field">
+                <span class="dx-label">N° de Cuotas</span>
+                <span class="dx-value">@(pago.Cuotas.Count > 0 ? pago.Cuotas.Count.ToString() : "—")</span>
+            </div>
+        </div>
+        @if (pago.Cuotas.Count > 0)
+        {
+            <div style="font-size:0.7rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.04em;">Detalle de Cuotas</div>
+            <div style="display:grid; grid-template-columns: 1.2fr 1.5fr 1fr; gap:0.3rem 0.5rem; align-items:center;">
+                <div style="font-size:0.68rem; color:var(--text-secondary); font-weight:700;">Cuota</div>
+                <div style="font-size:0.68rem; color:var(--text-secondary); font-weight:700;">Fecha Vencimiento</div>
+                <div style="font-size:0.68rem; color:var(--text-secondary); font-weight:700; text-align:right;">Monto</div>
+                @foreach (var cuota in pago.Cuotas)
+                {
+                    DateTime.TryParse(cuota.FechaVencimiento, out var fv);
+                    <div class="dx-field" style="padding:0.3rem 0.55rem;"><span class="dx-value mono" style="font-size:0.78rem;">@cuota.NumeroCuota</span></div>
+                    <div class="dx-field" style="padding:0.3rem 0.55rem;"><span class="dx-value" style="font-size:0.78rem;">@(fv != DateTime.MinValue ? fv.ToString("dd/MM/yyyy") : cuota.FechaVencimiento)</span></div>
+                    <div class="dx-field" style="padding:0.3rem 0.55rem; text-align:right;"><span class="dx-value" style="font-size:0.78rem;">S/ @cuota.Monto.ToString("N2")</span></div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@* ── Información de Detracción ── *@
+@if (detraccion != null)
+{
+    <div class="dx-section">
+        <div class="dx-title"><i class="bi bi-bank"></i> Detracción</div>
+        <div class="dx-det-panel">
+            @* <div class="dx-det-title"><i class="bi bi-info-circle-fill"></i> Operación Sujeta al SPOT</div> *@
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+                <div class="dx-field">
+                    <span class="dx-label">Código Medio de Pago</span>
+                    <span class="dx-value mono">
+                        @detraccion.CodigoMedioPago
+                        @if (detraccion.CodigoMedioPago == FacturacionConstants.CodigoMedioPago)
+                        { <span class="dx-badge ok"><i class="bi bi-check-circle-fill"></i></span> }
+                        else
+                        { <span class="dx-badge warn">esperado: @FacturacionConstants.CodigoMedioPago</span> }
+                    </span>
+                    <span class="dx-label" style="margin-top:0.15rem;">
+                        @(detraccion.CodigoMedioPago == FacturacionConstants.CodigoMedioPago ? FacturacionConstants.DescMedioPago : "")
+                    </span>
+                </div>
+                <div class="dx-field">
+                    <span class="dx-label">N° de Cuenta</span>
+                    <span class="dx-value mono">@(string.IsNullOrEmpty(detraccion.NumeroCuenta) ? "—" : detraccion.NumeroCuenta)</span>
+                </div>
+                <div class="dx-field">
+                    <span class="dx-label">Código Bien / Servicio</span>
+                    <span class="dx-value mono">
+                        @detraccion.CodigoBienServicio
+                        @if (detraccion.CodigoBienServicio == FacturacionConstants.CodigoConceptoDetraccion)
+                        { <span class="dx-badge ok"><i class="bi bi-check-circle-fill"></i></span> }
+                        else
+                        { <span class="dx-badge warn">esperado: @FacturacionConstants.CodigoConceptoDetraccion</span> }
+                    </span>
+                    <span class="dx-label" style="margin-top:0.15rem;">
+                        @(detraccion.CodigoBienServicio == FacturacionConstants.CodigoConceptoDetraccion ? FacturacionConstants.DescConceptoDetraccion : "")
+                    </span>
+                </div>
+                <div class="dx-field" style="display:flex; gap:0.5rem;">
+                    <div style="flex:1;">
+                        <span class="dx-label">Porcentaje</span>
+                        <span class="dx-value">@detraccion.Porcentaje.ToString("N2") %</span>
+                    </div>
+                    <div style="flex:1;">
+                        <span class="dx-label">Monto</span>
+                        <span class="dx-value">S/ @detraccion.Monto.ToString("N2")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="dx-section">
+    <div class="dx-title"><i class="bi bi-list-ul"></i> Items (@(Model.DatosXml?.DetalleItems?.Count ?? 0))</div>
+    @if (Model.DatosXml?.DetalleItems != null && Model.DatosXml.DetalleItems.Count > 0)
+    {
+        @foreach (var item in Model.DatosXml.DetalleItems)
+        {
+            <div class="dx-item-row">
+                <div style="font-weight:600; margin-bottom:0.1rem; color:#222;">@item.Descripcion</div>
+                <div style="display:flex; justify-content:space-between; color:#666; font-size:0.75rem;">
+                    <span>@item.Cantidad @item.UnidadMedida &times; S/ @item.PrecioUnitario.ToString("N2")</span>
+                    <span style="font-weight:600; color:#333;">S/ @item.ValorVenta.ToString("N2")</span>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div style="font-size:0.78rem; color:var(--text-secondary); padding:0.4rem 0.65rem;">Sin items registrados en el XML</div>
+    }
+</div>

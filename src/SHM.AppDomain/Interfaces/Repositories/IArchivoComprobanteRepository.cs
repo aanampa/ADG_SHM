@@ -49,4 +49,12 @@ public interface IArchivoComprobanteRepository
     /// Verifica si existe un archivo comprobante con el identificador especificado.
     /// </summary>
     Task<bool> ExistsAsync(int id);
+
+    /// <summary>
+    /// Desactiva todos los archivos comprobantes asociados a una produccion.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    Task<int> DeactivateByProduccionIdAsync(int idProduccion, int idModificador);
 }

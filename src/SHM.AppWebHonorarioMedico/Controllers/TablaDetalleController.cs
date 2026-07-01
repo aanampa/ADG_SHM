@@ -548,4 +548,175 @@ public class TablaDetalleController : Controller
             return Json(new { success = false, message = "Error al eliminar la tabla" });
         }
     }
+
+    // ==================== Mantenimiento de Tablas Maestras (Solo Lectura) ====================
+
+    /// <summary>
+    /// Vista principal de mantenimiento de tablas maestras (solo lectura).
+    /// </summary>
+    /// <author>Vladimir</author>
+    /// <created>2026-01-29</created>
+    public async Task<IActionResult> Mantenimiento()
+    {
+        var tablas = await _tablaService.GetAllTablasAsync();
+
+        var model = new TablaMantenimientoViewModel
+        {
+            Tablas = new List<TablaMantenimientoItemViewModel>()
+        };
+
+        foreach (var tabla in tablas)
+        {
+            var detalles = await _tablaDetalleService.GetTablaDetallesByTablaIdAsync(tabla.IdTabla);
+            model.Tablas.Add(new TablaMantenimientoItemViewModel
+            {
+                IdTabla = tabla.IdTabla,
+                GuidRegistro = tabla.GuidRegistro ?? "",
+                Codigo = tabla.Codigo,
+                Descripcion = tabla.Descripcion,
+                Activo = tabla.Activo,
+                CantidadDetalles = detalles.Count()
+            });
+        }
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Obtiene la lista de tablas para la pantalla de mantenimiento.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetTablaMantenimientoList()
+    {
+        try
+        {
+            var tablas = await _tablaService.GetAllTablasAsync();
+            var model = new TablaMantenimientoViewModel
+            {
+                Tablas = new List<TablaMantenimientoItemViewModel>()
+            };
+
+            foreach (var tabla in tablas)
+            {
+                var detalles = await _tablaDetalleService.GetTablaDetallesByTablaIdAsync(tabla.IdTabla);
+                model.Tablas.Add(new TablaMantenimientoItemViewModel
+                {
+                    IdTabla = tabla.IdTabla,
+                    GuidRegistro = tabla.GuidRegistro ?? "",
+                    Codigo = tabla.Codigo,
+                    Descripcion = tabla.Descripcion,
+                    Activo = tabla.Activo,
+                    CantidadDetalles = detalles.Count()
+                });
+            }
+
+            return PartialView("_TablaMantenimientoListPartial", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener lista de tablas para mantenimiento");
+            return PartialView("_TablaMantenimientoListPartial", new TablaMantenimientoViewModel());
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el modal con la lista de detalles de una tabla especifica.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetDetallesModal(int idTabla)
+    {
+        try
+        {
+            var tabla = await _tablaService.GetTablaByIdAsync(idTabla);
+            if (tabla == null)
+            {
+                return NotFound();
+            }
+
+            var detalles = await _tablaDetalleService.GetTablaDetallesByTablaIdAsync(idTabla);
+
+            var model = new TablaDetallesModalViewModel
+            {
+                IdTabla = idTabla,
+                CodigoTabla = tabla.Codigo,
+                DescripcionTabla = tabla.Descripcion,
+                Detalles = detalles.Select(td => new TablaDetalleItemViewModel
+                {
+                    GuidRegistro = td.GuidRegistro ?? "",
+                    IdTabla = td.IdTabla,
+                    Codigo = td.Codigo,
+                    Descripcion = td.Descripcion,
+                    Orden = td.Orden,
+                    Activo = td.Activo
+                }).ToList()
+            };
+
+            return PartialView("_DetallesModal", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener detalles de tabla: {IdTabla}", idTabla);
+            return StatusCode(500);
+        }
+    }
+
+    /// <summary>
+    /// Obtiene la lista de detalles para refrescar dentro del modal.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetDetallesListForModal(int idTabla)
+    {
+        try
+        {
+            var detalles = await _tablaDetalleService.GetTablaDetallesByTablaIdAsync(idTabla);
+
+            var model = new TablaDetalleListViewModel
+            {
+                Items = detalles.Select(td => new TablaDetalleItemViewModel
+                {
+                    GuidRegistro = td.GuidRegistro ?? "",
+                    IdTabla = td.IdTabla,
+                    Codigo = td.Codigo,
+                    Descripcion = td.Descripcion,
+                    Orden = td.Orden,
+                    Activo = td.Activo
+                }).ToList()
+            };
+
+            return PartialView("_DetallesListPartial", model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener lista de detalles para modal: {IdTabla}", idTabla);
+            return PartialView("_DetallesListPartial", new TablaDetalleListViewModel());
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el modal de creacion de detalle con IdTabla fijo.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetCreateDetalleModalForTabla(int idTabla)
+    {
+        var tabla = await _tablaService.GetTablaByIdAsync(idTabla);
+        if (tabla == null)
+        {
+            return NotFound();
+        }
+
+        var model = new TablaDetalleCreateViewModel
+        {
+            IdTabla = idTabla,
+            Tablas = new List<SelectListItem>
+            {
+                new SelectListItem
+                {
+                    Value = tabla.IdTabla.ToString(),
+                    Text = $"{tabla.Codigo} - {tabla.Descripcion}",
+                    Selected = true
+                }
+            }
+        };
+        return PartialView("_CreateDetalleModalFixed", model);
+    }
 }

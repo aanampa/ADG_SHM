@@ -22,4 +22,9 @@ public class SolicitarFacturaDto
     /// Hora limite para entrega de factura (formato: HH:mm)
     /// </summary>
     public string Hora { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Fecha de vencimiento de pago que debe figurar en la factura (formato: yyyy-MM-dd)
+    /// </summary>
+    public string FechaVencimiento { get; set; } = string.Empty;
 }

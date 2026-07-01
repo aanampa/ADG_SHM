@@ -7,6 +7,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Vladimir - 2026-01-29 - Agregado soporte para almacenamiento BLOB</modified>
 /// </summary>
 public interface IArchivoRepository
 {
@@ -29,6 +30,16 @@ public interface IArchivoRepository
     /// Crea un nuevo archivo y retorna el ID generado.
     /// </summary>
     Task<int> CreateAsync(Archivo archivo);
+
+    /// <summary>
+    /// Crea un nuevo archivo con contenido BLOB y retorna el ID generado.
+    /// </summary>
+    Task<int> CreateWithBlobAsync(Archivo archivo, byte[] contenido);
+
+    /// <summary>
+    /// Obtiene el contenido BLOB de un archivo.
+    /// </summary>
+    Task<byte[]?> GetBlobContentAsync(int idArchivo);
 
     /// <summary>
     /// Actualiza un archivo existente.

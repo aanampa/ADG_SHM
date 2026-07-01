@@ -115,3 +115,39 @@ public class TablaItemViewModel
     public string? Descripcion { get; set; }
     public int Activo { get; set; }
 }
+
+// ==================== ViewModels para Mantenimiento de Tablas Maestras ====================
+
+/// <summary>
+/// ViewModel para la pantalla de Mantenimiento de Tablas Maestras (solo lectura para Tabla).
+/// </summary>
+/// <author>Vladimir</author>
+/// <created>2026-01-29</created>
+public class TablaMantenimientoViewModel
+{
+    public List<TablaMantenimientoItemViewModel> Tablas { get; set; } = new();
+}
+
+/// <summary>
+/// ViewModel para cada item de tabla en la pantalla de mantenimiento.
+/// </summary>
+public class TablaMantenimientoItemViewModel
+{
+    public int IdTabla { get; set; }
+    public string GuidRegistro { get; set; } = string.Empty;
+    public string? Codigo { get; set; }
+    public string? Descripcion { get; set; }
+    public int Activo { get; set; }
+    public int CantidadDetalles { get; set; }
+}
+
+/// <summary>
+/// ViewModel para el modal de administrar detalles de una tabla.
+/// </summary>
+public class TablaDetallesModalViewModel
+{
+    public int IdTabla { get; set; }
+    public string? CodigoTabla { get; set; }
+    public string? DescripcionTabla { get; set; }
+    public List<TablaDetalleItemViewModel> Detalles { get; set; } = new();
+}

@@ -42,6 +42,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -50,6 +51,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 FECHA_MODIFICACION as FechaModificacion,
                 ID_MODIFICADOR as IdModificador
             FROM SHM_ENTIDAD_MEDICA
+            WHERE ACTIVO = 1
             ORDER BY ID_ENTIDAD_MEDICA";
 
         return await connection.QueryAsync<EntidadMedica>(sql);
@@ -72,6 +74,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -102,6 +105,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -110,7 +114,8 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 FECHA_MODIFICACION as FechaModificacion,
                 ID_MODIFICADOR as IdModificador
             FROM SHM_ENTIDAD_MEDICA
-            WHERE CODIGO_ENTIDAD = :Codigo";
+            WHERE CODIGO_ENTIDAD = :Codigo
+             AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<EntidadMedica>(sql, new { Codigo = codigo });
     }
@@ -132,6 +137,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -140,7 +146,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 FECHA_MODIFICACION as FechaModificacion,
                 ID_MODIFICADOR as IdModificador
             FROM SHM_ENTIDAD_MEDICA
-            WHERE RUC = :Ruc";
+            WHERE RUC = :Ruc AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<EntidadMedica>(sql, new { Ruc = ruc });
     }
@@ -162,6 +168,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO,
                 CELULAR,
                 CODIGO_ACREEDOR,
+                CODIGO_CORRENTISTA,
                 DIRECCION,
                 GUID_REGISTRO,
                 ACTIVO,
@@ -176,6 +183,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 :Telefono,
                 :Celular,
                 :CodigoAcreedor,
+                :CodigoCorrentista,
                 :Direccion,
                 SYS_GUID(),
                 1,
@@ -192,6 +200,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
         parameters.Add("Telefono", entidadMedica.Telefono);
         parameters.Add("Celular", entidadMedica.Celular);
         parameters.Add("CodigoAcreedor", entidadMedica.CodigoAcreedor);
+        parameters.Add("CodigoCorrentista", entidadMedica.CodigoCorrentista);
         parameters.Add("Direccion", entidadMedica.Direccion);
         parameters.Add("IdCreador", entidadMedica.IdCreador);
         parameters.Add("IdEntidadMedica", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
@@ -218,6 +227,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO = :Telefono,
                 CELULAR = :Celular,
                 CODIGO_ACREEDOR = :CodigoAcreedor,
+                CODIGO_CORRENTISTA = :CodigoCorrentista,
                 DIRECCION = :Direccion,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
@@ -234,6 +244,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
             entidadMedica.Telefono,
             entidadMedica.Celular,
             entidadMedica.CodigoAcreedor,
+            entidadMedica.CodigoCorrentista,
             entidadMedica.Direccion,
             entidadMedica.Activo,
             entidadMedica.IdModificador
@@ -292,6 +303,7 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
                 TELEFONO as Telefono,
                 CELULAR as Celular,
                 CODIGO_ACREEDOR as CodigoAcreedor,
+                CODIGO_CORRENTISTA as CodigoCorrentista,
                 DIRECCION as Direccion,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
@@ -307,12 +319,14 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
 
     /// <summary>
     /// Obtiene entidades medicas de forma paginada con opcion de busqueda.
+    /// Utiliza sintaxis compatible con Oracle 11g (ROWNUM).
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<EntidadMedica> Items, int TotalCount)> GetPaginatedAsync(string? searchTerm, int pageNumber, int pageSize)
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var whereClause = "WHERE ACTIVO = 1";
+        var whereClause = "WHERE 1=1";
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             whereClause += @" AND (
@@ -324,30 +338,40 @@ public class EntidadMedicaRepository : IEntidadMedicaRepository
         var countSql = $"SELECT COUNT(1) FROM SHM_ENTIDAD_MEDICA {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { SearchTerm = searchTerm });
 
-        var offset = (pageNumber - 1) * pageSize;
-        var dataSql = $@"
-            SELECT
-                ID_ENTIDAD_MEDICA as IdEntidadMedica,
-                CODIGO_ENTIDAD as CodigoEntidad,
-                RAZON_SOCIAL as RazonSocial,
-                RUC as Ruc,
-                TIPO_ENTIDAD_MEDICA as TipoEntidadMedica,
-                TELEFONO as Telefono,
-                CELULAR as Celular,
-                CODIGO_ACREEDOR as CodigoAcreedor,
-                DIRECCION as Direccion,
-                GUID_REGISTRO as GuidRegistro,
-                ACTIVO as Activo,
-                FECHA_CREACION as FechaCreacion,
-                ID_CREADOR as IdCreador,
-                FECHA_MODIFICACION as FechaModificacion,
-                ID_MODIFICADOR as IdModificador
-            FROM SHM_ENTIDAD_MEDICA
-            {whereClause}
-            ORDER BY RAZON_SOCIAL
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+        // Calcular rangos para paginacion con ROWNUM (Oracle 11g)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
 
-        var items = await connection.QueryAsync<EntidadMedica>(dataSql, new { SearchTerm = searchTerm, Offset = offset, PageSize = pageSize });
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
+        var dataSql = $@"
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        ID_ENTIDAD_MEDICA as IdEntidadMedica,
+                        CODIGO_ENTIDAD as CodigoEntidad,
+                        RAZON_SOCIAL as RazonSocial,
+                        RUC as Ruc,
+                        TIPO_ENTIDAD_MEDICA as TipoEntidadMedica,
+                        TELEFONO as Telefono,
+                        CELULAR as Celular,
+                        CODIGO_ACREEDOR as CodigoAcreedor,
+                        CODIGO_CORRENTISTA as CodigoCorrentista,
+                        DIRECCION as Direccion,
+                        GUID_REGISTRO as GuidRegistro,
+                        ACTIVO as Activo,
+                        FECHA_CREACION as FechaCreacion,
+                        ID_CREADOR as IdCreador,
+                        FECHA_MODIFICACION as FechaModificacion,
+                        ID_MODIFICADOR as IdModificador
+                    FROM SHM_ENTIDAD_MEDICA
+                    {whereClause}
+                    ORDER BY ACTIVO DESC, RAZON_SOCIAL
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
+
+        var items = await connection.QueryAsync<EntidadMedica>(dataSql, new { SearchTerm = searchTerm, MinRow = minRow, MaxRow = maxRow });
 
         return (items, totalCount);
     }

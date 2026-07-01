@@ -1,5 +1,6 @@
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Produccion;
 using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -15,6 +16,10 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
 /// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
+/// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos de estado de pago SAP (PAGO_*)</modified>
 /// </summary>
 public class ProduccionRepository : IProduccionRepository
 {
@@ -35,12 +40,16 @@ public class ProduccionRepository : IProduccionRepository
         ID_PRODUCCION as IdProduccion,
         ID_SEDE as IdSede,
         ID_ENTIDAD_MEDICA as IdEntidadMedica,
+        ID_CUENTA_BANCO as IdCuentaBanco,
         CODIGO_PRODUCCION as CodigoProduccion,
+        NUMERO_PRODUCCION as NumeroProduccion,
         TIPO_PRODUCCION as TipoProduccion,
+        TIPO_ENTIDAD_MEDICA as TipoEntidadMedica,
         TIPO_MEDICO as TipoMedico,
         TIPO_RUBRO as TipoRubro,
         DESCRIPCION as Descripcion,
         PERIODO as Periodo,
+        FECHA_PRODUCCION as FechaProduccion,
         ESTADO_PRODUCCION as EstadoProduccion,
         MTO_CONSUMO as MtoConsumo,
         MTO_DESCUENTO as MtoDescuento,
@@ -48,6 +57,8 @@ public class ProduccionRepository : IProduccionRepository
         MTO_RENTA as MtoRenta,
         MTO_IGV as MtoIgv,
         MTO_TOTAL as MtoTotal,
+        MTO_DETRACCION as MtoDetraccion,
+        PORC_DETRACCION as PorcDetraccion,
         TIPO_COMPROBANTE as TipoComprobante,
         SERIE as Serie,
         NUMERO as Numero,
@@ -61,6 +72,20 @@ public class ProduccionRepository : IProduccionRepository
         FACTURA_FECHA_ENVIO as FacturaFechaEnvio,
         FACTURA_FECHA_ACEPTACION as FacturaFechaAceptacion,
         FACTURA_FECHA_PAGO as FacturaFechaPago,
+        FACTURA_FECHA_VENCIMIENTO as FacturaFechaVencimiento,
+        NUMERO_LIQUIDACION as NumeroLiquidacion,
+        CODIGO_LIQUIDACION as CodigoLiquidacion,
+        PERIODO_LIQUIDACION as PeriodoLiquidacion,
+        ESTADO_LIQUIDACION as EstadoLiquidacion,
+        FECHA_LIQUIDACION as FechaLiquidacion,
+        DESCRIPCION_LIQUIDACION as DescripcionLiquidacion,
+        TIPO_LIQUIDACION as TipoLiquidacion,
+        PAGO_ESTADO as PagoEstado,
+        PAGO_FECHA as PagoFecha,
+        PAGO_NUMERO_OPERACION as PagoNumeroOperacion,
+        PAGO_BANCO as PagoBanco,
+        PAGO_CUENTA_DEPOSITO as PagoCuentaDeposito,
+        PAGO_MONTO_PAGADO as PagoMontoPagado,
         GUID_REGISTRO as GuidRegistro,
         ACTIVO as Activo,
         ID_CREADOR as IdCreador,
@@ -75,7 +100,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql);
     }
@@ -99,7 +124,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE CODIGO_PRODUCCION = :Codigo";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE CODIGO_PRODUCCION = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Produccion>(sql, new { Codigo = codigo });
     }
@@ -123,7 +148,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_SEDE = :IdSede ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_SEDE = :IdSede AND ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql, new { IdSede = idSede });
     }
@@ -135,9 +160,25 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica AND ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql, new { IdEntidadMedica = idEntidadMedica });
+    }
+
+    /// <summary>
+    /// Obtiene los registros de produccion de una entidad medica filtrados por estado comprobante.
+    /// </summary>
+    public async Task<IEnumerable<Produccion>> GetByEntidadMedicaYEstadoComprobanteAsync(int idEntidadMedica, string estadoComprobante)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION
+                     WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+                       AND ESTADO_COMPROBANTE = :EstadoComprobante
+                       AND ACTIVO = 1
+                     ORDER BY ID_PRODUCCION DESC";
+
+        return await connection.QueryAsync<Produccion>(sql, new { IdEntidadMedica = idEntidadMedica, EstadoComprobante = estadoComprobante });
     }
 
     /// <summary>
@@ -147,7 +188,7 @@ public class ProduccionRepository : IProduccionRepository
     {
         using var connection = new OracleConnection(_connectionString);
 
-        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE PERIODO = :Periodo ORDER BY ID_PRODUCCION DESC";
+        var sql = $@"SELECT {SelectColumns} FROM SHM_PRODUCCION WHERE PERIODO = :Periodo AND ACTIVO = 1 ORDER BY ID_PRODUCCION DESC";
 
         return await connection.QueryAsync<Produccion>(sql, new { Periodo = periodo });
     }
@@ -165,11 +206,14 @@ public class ProduccionRepository : IProduccionRepository
                 ID_SEDE,
                 ID_ENTIDAD_MEDICA,
                 CODIGO_PRODUCCION,
+                NUMERO_PRODUCCION,
                 TIPO_PRODUCCION,
+                TIPO_ENTIDAD_MEDICA,
                 TIPO_MEDICO,
                 TIPO_RUBRO,
                 DESCRIPCION,
                 PERIODO,
+                FECHA_PRODUCCION,
                 ESTADO_PRODUCCION,
                 MTO_CONSUMO,
                 MTO_DESCUENTO,
@@ -177,6 +221,8 @@ public class ProduccionRepository : IProduccionRepository
                 MTO_RENTA,
                 MTO_IGV,
                 MTO_TOTAL,
+                MTO_DETRACCION,
+                PORC_DETRACCION,
                 TIPO_COMPROBANTE,
                 SERIE,
                 NUMERO,
@@ -190,6 +236,14 @@ public class ProduccionRepository : IProduccionRepository
                 FACTURA_FECHA_ENVIO,
                 FACTURA_FECHA_ACEPTACION,
                 FACTURA_FECHA_PAGO,
+                FACTURA_FECHA_VENCIMIENTO,
+                NUMERO_LIQUIDACION,
+                CODIGO_LIQUIDACION,
+                PERIODO_LIQUIDACION,
+                ESTADO_LIQUIDACION,
+                FECHA_LIQUIDACION,
+                DESCRIPCION_LIQUIDACION,
+                TIPO_LIQUIDACION,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -199,11 +253,14 @@ public class ProduccionRepository : IProduccionRepository
                 :IdSede,
                 :IdEntidadMedica,
                 :CodigoProduccion,
+                :NumeroProduccion,
                 :TipoProduccion,
+                :TipoEntidadMedica,
                 :TipoMedico,
                 :TipoRubro,
                 :Descripcion,
                 :Periodo,
+                :FechaProduccion,
                 :EstadoProduccion,
                 :MtoConsumo,
                 :MtoDescuento,
@@ -211,6 +268,8 @@ public class ProduccionRepository : IProduccionRepository
                 :MtoRenta,
                 :MtoIgv,
                 :MtoTotal,
+                :MtoDetraccion,
+                :PorcDetraccion,
                 :TipoComprobante,
                 :Serie,
                 :Numero,
@@ -224,6 +283,14 @@ public class ProduccionRepository : IProduccionRepository
                 :FacturaFechaEnvio,
                 :FacturaFechaAceptacion,
                 :FacturaFechaPago,
+                :FacturaFechaVencimiento,
+                :NumeroLiquidacion,
+                :CodigoLiquidacion,
+                :PeriodoLiquidacion,
+                :EstadoLiquidacion,
+                :FechaLiquidacion,
+                :DescripcionLiquidacion,
+                :TipoLiquidacion,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -235,11 +302,14 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("IdSede", produccion.IdSede);
         parameters.Add("IdEntidadMedica", produccion.IdEntidadMedica);
         parameters.Add("CodigoProduccion", produccion.CodigoProduccion);
+        parameters.Add("NumeroProduccion", produccion.NumeroProduccion);
         parameters.Add("TipoProduccion", produccion.TipoProduccion);
+        parameters.Add("TipoEntidadMedica", produccion.TipoEntidadMedica);
         parameters.Add("TipoMedico", produccion.TipoMedico);
         parameters.Add("TipoRubro", produccion.TipoRubro);
         parameters.Add("Descripcion", produccion.Descripcion);
         parameters.Add("Periodo", produccion.Periodo);
+        parameters.Add("FechaProduccion", produccion.FechaProduccion);
         parameters.Add("EstadoProduccion", produccion.EstadoProduccion);
         parameters.Add("MtoConsumo", produccion.MtoConsumo);
         parameters.Add("MtoDescuento", produccion.MtoDescuento);
@@ -247,6 +317,8 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("MtoRenta", produccion.MtoRenta);
         parameters.Add("MtoIgv", produccion.MtoIgv);
         parameters.Add("MtoTotal", produccion.MtoTotal);
+        parameters.Add("MtoDetraccion", produccion.MtoDetraccion);
+        parameters.Add("PorcDetraccion", produccion.PorcDetraccion);
         parameters.Add("TipoComprobante", produccion.TipoComprobante);
         parameters.Add("Serie", produccion.Serie);
         parameters.Add("Numero", produccion.Numero);
@@ -260,6 +332,14 @@ public class ProduccionRepository : IProduccionRepository
         parameters.Add("FacturaFechaEnvio", produccion.FacturaFechaEnvio);
         parameters.Add("FacturaFechaAceptacion", produccion.FacturaFechaAceptacion);
         parameters.Add("FacturaFechaPago", produccion.FacturaFechaPago);
+        parameters.Add("FacturaFechaVencimiento", produccion.FacturaFechaVencimiento);
+        parameters.Add("NumeroLiquidacion", produccion.NumeroLiquidacion);
+        parameters.Add("CodigoLiquidacion", produccion.CodigoLiquidacion);
+        parameters.Add("PeriodoLiquidacion", produccion.PeriodoLiquidacion);
+        parameters.Add("EstadoLiquidacion", produccion.EstadoLiquidacion);
+        parameters.Add("FechaLiquidacion", produccion.FechaLiquidacion);
+        parameters.Add("DescripcionLiquidacion", produccion.DescripcionLiquidacion);
+        parameters.Add("TipoLiquidacion", produccion.TipoLiquidacion);
         parameters.Add("IdCreador", produccion.IdCreador);
         parameters.Add("IdProduccion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -280,12 +360,16 @@ public class ProduccionRepository : IProduccionRepository
             SET
                 ID_SEDE = :IdSede,
                 ID_ENTIDAD_MEDICA = :IdEntidadMedica,
+                ID_CUENTA_BANCO = :IdCuentaBanco,
                 CODIGO_PRODUCCION = :CodigoProduccion,
+                NUMERO_PRODUCCION = :NumeroProduccion,
                 TIPO_PRODUCCION = :TipoProduccion,
+                TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica,
                 TIPO_MEDICO = :TipoMedico,
                 TIPO_RUBRO = :TipoRubro,
                 DESCRIPCION = :Descripcion,
                 PERIODO = :Periodo,
+                FECHA_PRODUCCION = :FechaProduccion,
                 ESTADO_PRODUCCION = :EstadoProduccion,
                 MTO_CONSUMO = :MtoConsumo,
                 MTO_DESCUENTO = :MtoDescuento,
@@ -293,6 +377,8 @@ public class ProduccionRepository : IProduccionRepository
                 MTO_RENTA = :MtoRenta,
                 MTO_IGV = :MtoIgv,
                 MTO_TOTAL = :MtoTotal,
+                MTO_DETRACCION = :MtoDetraccion,
+                PORC_DETRACCION = :PorcDetraccion,
                 TIPO_COMPROBANTE = :TipoComprobante,
                 SERIE = :Serie,
                 NUMERO = :Numero,
@@ -306,6 +392,20 @@ public class ProduccionRepository : IProduccionRepository
                 FACTURA_FECHA_ENVIO = :FacturaFechaEnvio,
                 FACTURA_FECHA_ACEPTACION = :FacturaFechaAceptacion,
                 FACTURA_FECHA_PAGO = :FacturaFechaPago,
+                FACTURA_FECHA_VENCIMIENTO = :FacturaFechaVencimiento,
+                NUMERO_LIQUIDACION = :NumeroLiquidacion,
+                CODIGO_LIQUIDACION = :CodigoLiquidacion,
+                PERIODO_LIQUIDACION = :PeriodoLiquidacion,
+                ESTADO_LIQUIDACION = :EstadoLiquidacion,
+                FECHA_LIQUIDACION = :FechaLiquidacion,
+                DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
+                TIPO_LIQUIDACION = :TipoLiquidacion,
+                PAGO_ESTADO = :PagoEstado,
+                PAGO_FECHA = :PagoFecha,
+                PAGO_NUMERO_OPERACION = :PagoNumeroOperacion,
+                PAGO_BANCO = :PagoBanco,
+                PAGO_CUENTA_DEPOSITO = :PagoCuentaDeposito,
+                PAGO_MONTO_PAGADO = :PagoMontoPagado,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -316,12 +416,16 @@ public class ProduccionRepository : IProduccionRepository
             IdProduccion = id,
             produccion.IdSede,
             produccion.IdEntidadMedica,
+            produccion.IdCuentaBanco,
             produccion.CodigoProduccion,
+            produccion.NumeroProduccion,
             produccion.TipoProduccion,
+            produccion.TipoEntidadMedica,
             produccion.TipoMedico,
             produccion.TipoRubro,
             produccion.Descripcion,
             produccion.Periodo,
+            produccion.FechaProduccion,
             produccion.EstadoProduccion,
             produccion.MtoConsumo,
             produccion.MtoDescuento,
@@ -329,6 +433,8 @@ public class ProduccionRepository : IProduccionRepository
             produccion.MtoRenta,
             produccion.MtoIgv,
             produccion.MtoTotal,
+            produccion.MtoDetraccion,
+            produccion.PorcDetraccion,
             produccion.TipoComprobante,
             produccion.Serie,
             produccion.Numero,
@@ -342,6 +448,20 @@ public class ProduccionRepository : IProduccionRepository
             produccion.FacturaFechaEnvio,
             produccion.FacturaFechaAceptacion,
             produccion.FacturaFechaPago,
+            produccion.FacturaFechaVencimiento,
+            produccion.NumeroLiquidacion,
+            produccion.CodigoLiquidacion,
+            produccion.PeriodoLiquidacion,
+            produccion.EstadoLiquidacion,
+            produccion.FechaLiquidacion,
+            produccion.DescripcionLiquidacion,
+            produccion.TipoLiquidacion,
+            produccion.PagoEstado,
+            produccion.PagoFecha,
+            produccion.PagoNumeroOperacion,
+            produccion.PagoBanco,
+            produccion.PagoCuentaDeposito,
+            produccion.PagoMontoPagado,
             produccion.Activo,
             produccion.IdModificador
         });
@@ -382,31 +502,37 @@ public class ProduccionRepository : IProduccionRepository
         return count > 0;
     }
 
-/// <summary>
-    /// Verifica si existe un registro de produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    /// <summary>
+    /// Verifica si existe un registro de produccion con la llave compuesta
+    /// (IdSede, IdEntidadMedica, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-19</created>
+    /// <modified>ADG Antonio - 2026-01-31 - Ampliada llave compuesta</modified>
     /// </summary>
-    public async Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion)
+    public async Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion, string? numeroProduccion, string? tipoEntidadMedica)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = @"SELECT COUNT(1) FROM SHM_PRODUCCION
                     WHERE ID_SEDE = :IdSede
                     AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
-                    AND CODIGO_PRODUCCION = :CodigoProduccion";
+                    AND CODIGO_PRODUCCION = :CodigoProduccion
+                    AND ((:NumeroProduccion IS NULL AND NUMERO_PRODUCCION IS NULL) OR NUMERO_PRODUCCION = :NumeroProduccion)
+                    AND ((:TipoEntidadMedica IS NULL AND TIPO_ENTIDAD_MEDICA IS NULL) OR TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica)";
 
         var count = await connection.ExecuteScalarAsync<int>(sql, new
         {
             IdSede = idSede,
             IdEntidadMedica = idEntidadMedica,
-            CodigoProduccion = codigoProduccion
+            CodigoProduccion = codigoProduccion,
+            NumeroProduccion = numeroProduccion,
+            TipoEntidadMedica = tipoEntidadMedica
         });
 
         return count > 0;
     }
-    
+
     /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
     ///
@@ -414,16 +540,17 @@ public class ProduccionRepository : IProduccionRepository
     /// <created>2025-01-20</created>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por codigo de produccion</modified>
     /// <modified>ADG Vladimir D - 2026-01-24 - Agregado filtro por Cia Medica</modified>
+    /// <modified>ADG Vladimir D - 2025-01-30 - Compatibilidad Oracle 11g con ROWNUM</modified>
     /// </summary>
     public async Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize)
+        string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var whereClause = "WHERE p.ACTIVO = 1";
         if (!string.IsNullOrEmpty(produccion))
         {
-            whereClause += " AND UPPER(p.CODIGO_PRODUCCION) LIKE '%' || UPPER(:Produccion) || '%'";
+            whereClause += " AND UPPER(p.NUMERO_PRODUCCION) LIKE '%' || UPPER(:Produccion) || '%'";
         }
         if (!string.IsNullOrEmpty(estado))
         {
@@ -433,6 +560,10 @@ public class ProduccionRepository : IProduccionRepository
         {
             whereClause += " AND p.ID_ENTIDAD_MEDICA = :IdEntidadMedica";
         }
+        if (idSede.HasValue && idSede.Value > 0)
+        {
+            whereClause += " AND p.ID_SEDE = :IdSede";
+        }
 
         // Query para obtener el total de registros
         var countSql = $@"
@@ -440,79 +571,201 @@ public class ProduccionRepository : IProduccionRepository
             FROM SHM_PRODUCCION p
             {whereClause}";
 
-        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Produccion = produccion, Estado = estado, IdEntidadMedica = idEntidadMedica });
+        var totalCount = await connection.ExecuteScalarAsync<int>(countSql, new { Produccion = produccion, Estado = estado, IdEntidadMedica = idEntidadMedica, IdSede = idSede });
 
-        // Query principal con paginacion
-        var offset = (pageNumber - 1) * pageSize;
+        // Query principal con paginacion - Compatible con Oracle 11g (ROWNUM)
+        var minRow = (pageNumber - 1) * pageSize;
+        var maxRow = pageNumber * pageSize;
+
+        // Triple subconsulta con ROWNUM - Compatible con Oracle 11g
         var sql = $@"
-            SELECT
-                p.ID_PRODUCCION AS IdProduccion,
-                p.GUID_REGISTRO AS GuidRegistro,
-                p.ID_SEDE AS IdSede,
-                p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
-                p.CODIGO_PRODUCCION AS CodigoProduccion,
-                p.TIPO_PRODUCCION AS TipoProduccion,
-                tp.DESCRIPCION AS DesTipoProduccion,
-                p.TIPO_MEDICO AS TipoMedico,
-                tm.DESCRIPCION AS DesTipoMedico,
-                p.TIPO_RUBRO AS TipoRubro,
-                tr.DESCRIPCION AS DesTipoRubro,
-                p.ESTADO AS Estado,
-                ep.DESCRIPCION AS DesEstado,
-                p.DESCRIPCION AS Descripcion,
-                p.PERIODO AS Periodo,
-                p.ESTADO_PRODUCCION AS EstadoProduccion,
-                p.MTO_CONSUMO AS MtoConsumo,
-                p.MTO_DESCUENTO AS MtoDescuento,
-                p.MTO_SUBTOTAL AS MtoSubtotal,
-                p.MTO_RENTA AS MtoRenta,
-                p.MTO_IGV AS MtoIgv,
-                p.MTO_TOTAL AS MtoTotal,
-                p.TIPO_COMPROBANTE AS TipoComprobante,
-                p.CONCEPTO AS Concepto,
-                p.FECHA_LIMITE AS FechaLimite,
-                p.SERIE AS Serie,
-                p.NUMERO AS Numero,
-                p.FECHA_EMISION AS FechaEmision,
-                p.GLOSA AS Glosa,
-                p.ESTADO_COMPROBANTE AS EstadoComprobante,
-                p.FACTURA_FECHA_SOLICITUD AS FacturaFechaSolicitud,
-                p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
-                p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
-                p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
-                p.ACTIVO AS Activo,
-                p.ID_CREADOR AS IdCreador,
-                p.FECHA_CREACION AS FechaCreacion,
-                p.ID_MODIFICADOR AS IdModificador,
-                p.FECHA_MODIFICACION AS FechaModificacion,
-                s.CODIGO AS CodigoSede,
-                s.NOMBRE AS NombreSede,
-                em.RUC AS Ruc,
-                em.RAZON_SOCIAL AS RazonSocial,
-                em.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
-                tem.DESCRIPCION AS DesTipoEntidadMedica
-            FROM SHM_PRODUCCION p
-            LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
-            LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
-            LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
-            LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
-            LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
-            LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
-            LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
-            {whereClause}
-            ORDER BY p.CODIGO_PRODUCCION DESC
-            OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY";
+            SELECT * FROM (
+                SELECT a.*, ROWNUM rnum FROM (
+                    SELECT
+                        p.ID_PRODUCCION AS IdProduccion,
+                        p.GUID_REGISTRO AS GuidRegistro,
+                        p.ID_SEDE AS IdSede,
+                        p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
+                        p.CODIGO_PRODUCCION AS CodigoProduccion,
+                        p.NUMERO_PRODUCCION AS NumeroProduccion,
+                        p.TIPO_PRODUCCION AS TipoProduccion,
+                        tp.DESCRIPCION AS DesTipoProduccion,
+                        p.TIPO_MEDICO AS TipoMedico,
+                        tm.DESCRIPCION AS DesTipoMedico,
+                        p.TIPO_RUBRO AS TipoRubro,
+                        tr.DESCRIPCION AS DesTipoRubro,
+                        p.ESTADO AS Estado,
+                        ep.DESCRIPCION AS DesEstado,
+                        p.DESCRIPCION AS Descripcion,
+                        p.PERIODO AS Periodo,
+                        p.ESTADO_PRODUCCION AS EstadoProduccion,
+                        p.MTO_CONSUMO AS MtoConsumo,
+                        p.MTO_DESCUENTO AS MtoDescuento,
+                        p.MTO_SUBTOTAL AS MtoSubtotal,
+                        p.MTO_RENTA AS MtoRenta,
+                        p.MTO_IGV AS MtoIgv,
+                        p.MTO_TOTAL AS MtoTotal,
+                        p.MTO_DETRACCION AS MtoDetraccion,
+                        p.PORC_DETRACCION AS PorcDetraccion,
+                        p.TIPO_COMPROBANTE AS TipoComprobante,
+                        p.CONCEPTO AS Concepto,
+                        p.FECHA_LIMITE AS FechaLimite,
+                        p.SERIE AS Serie,
+                        p.NUMERO AS Numero,
+                        p.FECHA_EMISION AS FechaEmision,
+                        p.GLOSA AS Glosa,
+                        p.ESTADO_COMPROBANTE AS EstadoComprobante,
+                        p.FACTURA_FECHA_SOLICITUD AS FacturaFechaSolicitud,
+                        p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
+                        p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
+                        p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                        p.FACTURA_FECHA_VENCIMIENTO AS FacturaFechaVencimiento,
+                        p.PAGO_ESTADO AS PagoEstado,
+                        p.PAGO_FECHA AS PagoFecha,
+                        p.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,
+                        p.PAGO_BANCO AS PagoBanco,
+                        p.PAGO_CUENTA_DEPOSITO AS PagoCuentaDeposito,
+                        p.PAGO_MONTO_PAGADO AS PagoMontoPagado,
+                        p.ACTIVO AS Activo,
+                        p.ID_CREADOR AS IdCreador,
+                        p.FECHA_CREACION AS FechaCreacion,
+                        p.ID_MODIFICADOR AS IdModificador,
+                        p.FECHA_MODIFICACION AS FechaModificacion,
+                        s.CODIGO AS CodigoSede,
+                        s.NOMBRE AS NombreSede,
+                        em.RUC AS Ruc,
+                        em.RAZON_SOCIAL AS RazonSocial,
+                        em.TIPO_ENTIDAD_MEDICA AS TipoEntidadMedica,
+                        tem.DESCRIPCION AS DesTipoEntidadMedica
+                    FROM SHM_PRODUCCION p
+                    LEFT JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
+                    LEFT JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tp ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tm ON tm.CODIGO_TABLA = 'TIPO_MEDICO' AND tm.CODIGO = p.TIPO_MEDICO
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
+                    LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
+                    LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
+                    {whereClause}
+                    ORDER BY p.CODIGO_PRODUCCION DESC
+                ) a
+                WHERE ROWNUM <= :MaxRow
+            )
+            WHERE rnum > :MinRow";
 
         var items = await connection.QueryAsync<ProduccionListaResponseDto>(sql, new
         {
             Produccion = produccion,
             Estado = estado,
             IdEntidadMedica = idEntidadMedica,
-            Offset = offset,
-            PageSize = pageSize
+            IdSede = idSede,
+            MinRow = minRow,
+            MaxRow = maxRow
         });
 
         return (items, totalCount);
+    }
+
+    /// <summary>
+    /// Obtiene producciones con estado FACTURA_PENDIENTE o FACTURA_SOLICITADA para el modal
+    /// de solicitud masiva. Incluye conteo de usuarios externos y cuentas bancarias por entidad
+    /// en una sola query, evitando llamadas N+1.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-08</created>
+    /// </summary>
+    public async Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var whereClause = "WHERE p.ACTIVO = 1 AND p.ESTADO IN ('FACTURA_PENDIENTE', 'FACTURA_SOLICITADA', 'FACTURA_DEVUELTA')";
+        if (idSede.HasValue && idSede.Value > 0)
+            whereClause += " AND p.ID_SEDE = :IdSede";
+
+        var sql = $@"
+            SELECT
+                p.ID_PRODUCCION       AS IdProduccion,
+                p.GUID_REGISTRO       AS GuidRegistro,
+                p.ID_SEDE             AS IdSede,
+                p.ID_ENTIDAD_MEDICA   AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION   AS CodigoProduccion,
+                p.NUMERO_PRODUCCION   AS NumeroProduccion,
+                p.TIPO_PRODUCCION     AS TipoProduccion,
+                tp.DESCRIPCION        AS DesTipoProduccion,
+                p.TIPO_MEDICO         AS TipoMedico,
+                tm.DESCRIPCION        AS DesTipoMedico,
+                p.ESTADO              AS Estado,
+                ep.DESCRIPCION        AS DesEstado,
+                p.PERIODO                    AS Periodo,
+                p.MTO_TOTAL                  AS MtoTotal,
+                p.FECHA_LIMITE               AS FechaLimite,
+                p.FACTURA_FECHA_VENCIMIENTO  AS FacturaFechaVencimiento,
+                em.RAZON_SOCIAL              AS RazonSocial,
+                em.RUC                       AS Ruc,
+                (SELECT COUNT(1) FROM SHM_SEG_USUARIO u
+                 WHERE u.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND u.TIPO_USUARIO = 'E' AND u.ACTIVO = 1) AS NroUsuariosExternos,
+                (SELECT COUNT(1) FROM SHM_ENTIDAD_CUENTA_BANCO ecb
+                 WHERE ecb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND ecb.ACTIVO = 1)                         AS NroCuentasBancarias
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_ENTIDAD_MEDICA em    ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp  ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm  ON tm.CODIGO_TABLA = 'TIPO_MEDICO'     AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW ep  ON ep.CODIGO_TABLA = 'ESTADO_PROCESO'  AND ep.CODIGO = p.ESTADO
+            {whereClause}
+            ORDER BY p.CODIGO_PRODUCCION DESC";
+
+        return await connection.QueryAsync<ProduccionListaResponseDto>(sql, new { IdSede = idSede });
+    }
+
+    /// <summary>
+    /// Obtiene un único registro para el modal de solicitud individual.
+    /// Incluye conteo de usuarios externos y cuentas bancarias para validación.
+    /// Acepta estados FACTURA_PENDIENTE, FACTURA_SOLICITADA y FACTURA_DEVUELTA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-25</created>
+    /// </summary>
+    public async Task<ProduccionListaResponseDto?> GetSolicitudMasivaByGuidAsync(string guidRegistro)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                p.ID_PRODUCCION       AS IdProduccion,
+                p.GUID_REGISTRO       AS GuidRegistro,
+                p.ID_SEDE             AS IdSede,
+                p.ID_ENTIDAD_MEDICA   AS IdEntidadMedica,
+                p.CODIGO_PRODUCCION   AS CodigoProduccion,
+                p.NUMERO_PRODUCCION   AS NumeroProduccion,
+                p.TIPO_PRODUCCION     AS TipoProduccion,
+                tp.DESCRIPCION        AS DesTipoProduccion,
+                p.TIPO_MEDICO         AS TipoMedico,
+                tm.DESCRIPCION        AS DesTipoMedico,
+                p.ESTADO              AS Estado,
+                ep.DESCRIPCION        AS DesEstado,
+                p.PERIODO                    AS Periodo,
+                p.MTO_TOTAL                  AS MtoTotal,
+                p.FECHA_LIMITE               AS FechaLimite,
+                p.FACTURA_FECHA_VENCIMIENTO  AS FacturaFechaVencimiento,
+                em.RAZON_SOCIAL              AS RazonSocial,
+                em.RUC                       AS Ruc,
+                (SELECT COUNT(1) FROM SHM_SEG_USUARIO u
+                 WHERE u.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND u.TIPO_USUARIO = 'E' AND u.ACTIVO = 1) AS NroUsuariosExternos,
+                (SELECT COUNT(1) FROM SHM_ENTIDAD_CUENTA_BANCO ecb
+                 WHERE ecb.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+                   AND ecb.ACTIVO = 1)                         AS NroCuentasBancarias
+            FROM SHM_PRODUCCION p
+            LEFT JOIN SHM_ENTIDAD_MEDICA em    ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tp  ON tp.CODIGO_TABLA = 'TIPO_PRODUCCION' AND tp.CODIGO = p.TIPO_PRODUCCION
+            LEFT JOIN SHM_TABLA_DETALLE_VW tm  ON tm.CODIGO_TABLA = 'TIPO_MEDICO'     AND tm.CODIGO = p.TIPO_MEDICO
+            LEFT JOIN SHM_TABLA_DETALLE_VW ep  ON ep.CODIGO_TABLA = 'ESTADO_PROCESO'  AND ep.CODIGO = p.ESTADO
+            WHERE p.GUID_REGISTRO = :GuidRegistro
+              AND p.ACTIVO = 1
+              AND p.ESTADO IN ('FACTURA_PENDIENTE', 'FACTURA_SOLICITADA', 'FACTURA_DEVUELTA')";
+
+        return await connection.QueryFirstOrDefaultAsync<ProduccionListaResponseDto>(sql, new { GuidRegistro = guidRegistro });
     }
 
     /// <summary>
@@ -532,6 +785,7 @@ public class ProduccionRepository : IProduccionRepository
                 p.ID_SEDE AS IdSede,
                 p.ID_ENTIDAD_MEDICA AS IdEntidadMedica,
                 p.CODIGO_PRODUCCION AS CodigoProduccion,
+                p.NUMERO_PRODUCCION AS NumeroProduccion,
                 p.TIPO_PRODUCCION AS TipoProduccion,
                 tp.DESCRIPCION AS DesTipoProduccion,
                 p.TIPO_MEDICO AS TipoMedico,
@@ -549,7 +803,10 @@ public class ProduccionRepository : IProduccionRepository
                 p.MTO_RENTA AS MtoRenta,
                 p.MTO_IGV AS MtoIgv,
                 p.MTO_TOTAL AS MtoTotal,
+                p.MTO_DETRACCION AS MtoDetraccion,
+                p.PORC_DETRACCION AS PorcDetraccion,
                 p.TIPO_COMPROBANTE AS TipoComprobante,
+                tc.DESCRIPCION AS DesTipoComprobante,
                 p.CONCEPTO AS Concepto,
                 p.FECHA_LIMITE AS FechaLimite,
                 p.SERIE AS Serie,
@@ -561,6 +818,13 @@ public class ProduccionRepository : IProduccionRepository
                 p.FACTURA_FECHA_ENVIO AS FacturaFechaEnvio,
                 p.FACTURA_FECHA_ACEPTACION AS FacturaFechaAceptacion,
                 p.FACTURA_FECHA_PAGO AS FacturaFechaPago,
+                p.FACTURA_FECHA_VENCIMIENTO AS FacturaFechaVencimiento,
+                p.PAGO_ESTADO AS PagoEstado,
+                p.PAGO_FECHA AS PagoFecha,
+                p.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,
+                p.PAGO_BANCO AS PagoBanco,
+                p.PAGO_CUENTA_DEPOSITO AS PagoCuentaDeposito,
+                p.PAGO_MONTO_PAGADO AS PagoMontoPagado,
                 p.ACTIVO AS Activo,
                 p.ID_CREADOR AS IdCreador,
                 p.FECHA_CREACION AS FechaCreacion,
@@ -580,6 +844,7 @@ public class ProduccionRepository : IProduccionRepository
             LEFT JOIN SHM_TABLA_DETALLE_VW tr ON tr.CODIGO_TABLA = 'TIPO_RUBRO' AND tr.CODIGO = p.TIPO_RUBRO
             LEFT JOIN SHM_TABLA_DETALLE_VW ep ON ep.CODIGO_TABLA = 'ESTADO_PROCESO' AND ep.CODIGO = p.ESTADO
             LEFT JOIN SHM_TABLA_DETALLE_VW tem ON tem.CODIGO_TABLA = 'TIPO_ENTIDAD_MEDICA' AND tem.CODIGO = em.TIPO_ENTIDAD_MEDICA
+            LEFT JOIN SHM_TABLA_DETALLE_VW tc ON tc.CODIGO_TABLA = 'TIPO_COMPROBANTE' AND tc.CODIGO = p.TIPO_COMPROBANTE
             WHERE p.GUID_REGISTRO = :GuidRegistro";
 
         return await connection.QueryFirstOrDefaultAsync<ProduccionListaResponseDto>(sql, new { GuidRegistro = guidRegistro });
@@ -591,24 +856,27 @@ public class ProduccionRepository : IProduccionRepository
     /// <author>ADG Vladimir D</author>
     /// <created>2025-01-21</created>
     /// </summary>
-    public async Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador)
+    public async Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador, DateTime? fechaVencimiento = null)
     {
         using var connection = new OracleConnection(_connectionString);
 
         var sql = @"
             UPDATE SHM_PRODUCCION
-            SET FECHA_LIMITE = :FechaLimite,
-                ESTADO = :Estado,
-                ID_MODIFICADOR = :IdModificador,
-                FECHA_MODIFICACION = SYSDATE
+            SET FECHA_LIMITE               = :FechaLimite,
+                FACTURA_FECHA_SOLICITUD    = SYSDATE,
+                FACTURA_FECHA_VENCIMIENTO  = :FechaVencimiento,
+                ESTADO                     = :Estado,
+                ID_MODIFICADOR             = :IdModificador,
+                FECHA_MODIFICACION         = SYSDATE
             WHERE GUID_REGISTRO = :GuidRegistro";
 
         var rowsAffected = await connection.ExecuteAsync(sql, new
         {
-            GuidRegistro = guidRegistro,
-            FechaLimite = fechaLimite,
-            Estado = estado,
-            IdModificador = idModificador
+            GuidRegistro     = guidRegistro,
+            FechaLimite      = fechaLimite,
+            FechaVencimiento = fechaVencimiento,
+            Estado           = estado,
+            IdModificador    = idModificador
         });
 
         return rowsAffected > 0;
@@ -627,6 +895,7 @@ public class ProduccionRepository : IProduccionRepository
         var sql = @"
             UPDATE SHM_PRODUCCION
             SET ESTADO = :Estado,
+                FACTURA_FECHA_ACEPTACION = CASE WHEN :Estado = 'FACTURA_ACEPTADA' THEN SYSDATE ELSE FACTURA_FECHA_ACEPTACION END,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
             WHERE GUID_REGISTRO = :GuidRegistro";
@@ -640,7 +909,7 @@ public class ProduccionRepository : IProduccionRepository
 
         return rowsAffected > 0;
     }
-    
+
     /// Obtiene estadisticas del dashboard para una entidad medica.
     ///
     /// <author>ADG Antonio</author>
@@ -695,6 +964,38 @@ public class ProduccionRepository : IProduccionRepository
     }
 
     /// <summary>
+    /// Obtiene el resumen del mes actual: total facturado, cantidad procesada y tiempo promedio
+    /// (dias entre FACTURA_FECHA_SOLICITUD y FECHA_EMISION).
+    ///
+    /// <author>ADG Vladimir</author>
+    /// <created>2026-04-11</created>
+    /// </summary>
+    public async Task<(decimal TotalFacturado, int FacturasProcesadas, decimal TiempoPromedioDias)> GetResumenMesActualAsync(int idEntidadMedica)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                NVL(SUM(MTO_TOTAL), 0)                               AS TOTAL_FACTURADO,
+                COUNT(1)                                             AS FACTURAS_PROCESADAS,
+                NVL(AVG(FECHA_EMISION - FACTURA_FECHA_SOLICITUD), 0) AS TIEMPO_PROMEDIO_DIAS
+            FROM SHM_PRODUCCION
+            WHERE ID_ENTIDAD_MEDICA = :IdEntidadMedica
+              AND ACTIVO = 1
+              AND ESTADO IN ('FACTURA_ENVIADA', 'FACTURA_ENVIADA_HHMM', 'FACTURA_PAGADA')
+              AND TRUNC(FECHA_EMISION, 'MM') = TRUNC(SYSDATE, 'MM')
+              AND FACTURA_FECHA_SOLICITUD IS NOT NULL
+              AND FECHA_EMISION IS NOT NULL";
+
+        var result = await connection.QueryFirstOrDefaultAsync<ResumenMesDto>(sql, new { IdEntidadMedica = idEntidadMedica });
+
+        if (result == null)
+            return (0m, 0, 0m);
+
+        return (result.TotalFacturado, result.FacturasProcesadas, Math.Round(result.TiempoPromedioDias, 1));
+    }
+
+    /// <summary>
     /// Obtiene datos de facturas por mes para los ultimos 6 meses.
     ///
     /// <author>ADG Antonio</author>
@@ -731,4 +1032,320 @@ public class ProduccionRepository : IProduccionRepository
             Pendientes: (int)r.PENDIENTES
         ));
     }
+
+    /// <summary>
+    /// Actualiza los datos de liquidacion de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-31</created>
+    /// </summary>
+    public async Task<bool> UpdateLiquidacionByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string numeroProduccion,
+        string tipoEntidadMedica,
+        string numeroLiquidacion,
+        string codigoLiquidacion,
+        string periodoLiquidacion,
+        string estadoLiquidacion,
+        DateTime fechaLiquidacion,
+        string descripcionLiquidacion,
+        string? tipoLiquidacion,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET
+                NUMERO_LIQUIDACION = :NumeroLiquidacion,
+                CODIGO_LIQUIDACION = :CodigoLiquidacion,
+                PERIODO_LIQUIDACION = :PeriodoLiquidacion,
+                ESTADO_LIQUIDACION = :EstadoLiquidacion,
+                FECHA_LIQUIDACION = :FechaLiquidacion,
+                DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
+                TIPO_LIQUIDACION = :TipoLiquidacion,
+                ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_SEDE = :IdSede
+            AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND CODIGO_PRODUCCION = :CodigoProduccion
+            AND NUMERO_PRODUCCION = :NumeroProduccion
+            AND TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica
+            AND ESTADO = :EstadoRequerido";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdSede = idSede,
+            IdEntidadMedica = idEntidadMedica,
+            CodigoProduccion = codigoProduccion,
+            NumeroProduccion = numeroProduccion,
+            TipoEntidadMedica = tipoEntidadMedica,
+            NumeroLiquidacion = numeroLiquidacion,
+            CodigoLiquidacion = codigoLiquidacion,
+            PeriodoLiquidacion = periodoLiquidacion,
+            EstadoLiquidacion = estadoLiquidacion,
+            FechaLiquidacion = fechaLiquidacion,
+            DescripcionLiquidacion = descripcionLiquidacion,
+            TipoLiquidacion = tipoLiquidacion,
+            Estado = EstadoDescripcion.Produccion.FacturaLiquidada,
+            EstadoRequerido = EstadoDescripcion.Produccion.FacturaEnviadaHhmm,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza el estado de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_SEDE = :IdSede
+            AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND CODIGO_PRODUCCION = :CodigoProduccion
+            AND ((:NumeroProduccion IS NULL AND NUMERO_PRODUCCION IS NULL) OR NUMERO_PRODUCCION = :NumeroProduccion)
+            AND ((:TipoEntidadMedica IS NULL AND TIPO_ENTIDAD_MEDICA IS NULL) OR TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica)";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdSede = idSede,
+            IdEntidadMedica = idEntidadMedica,
+            CodigoProduccion = codigoProduccion,
+            NumeroProduccion = numeroProduccion,
+            TipoEntidadMedica = tipoEntidadMedica,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Anula el comprobante de una produccion por llave compuesta.
+    /// Limpia campos de comprobante y asigna el estado indicado.
+    /// Retorna el IdProduccion si se actualizo, null si no se encontro.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    public async Task<int?> AnularComprobanteByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET SERIE = NULL,
+                NUMERO = NULL,
+                FECHA_EMISION = NULL,
+                GLOSA = NULL,
+                ESTADO_COMPROBANTE = NULL,
+                FACTURA_FECHA_SOLICITUD = NULL,
+                FACTURA_FECHA_ENVIO = NULL,
+                FACTURA_FECHA_ACEPTACION = NULL,
+                ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_SEDE = :IdSede
+            AND ID_ENTIDAD_MEDICA = :IdEntidadMedica
+            AND CODIGO_PRODUCCION = :CodigoProduccion
+            AND ((:NumeroProduccion IS NULL AND NUMERO_PRODUCCION IS NULL) OR NUMERO_PRODUCCION = :NumeroProduccion)
+            AND ((:TipoEntidadMedica IS NULL AND TIPO_ENTIDAD_MEDICA IS NULL) OR TIPO_ENTIDAD_MEDICA = :TipoEntidadMedica)
+            RETURNING ID_PRODUCCION INTO :IdProduccion";
+
+        var param = new DynamicParameters();
+        param.Add("IdSede", idSede);
+        param.Add("IdEntidadMedica", idEntidadMedica);
+        param.Add("CodigoProduccion", codigoProduccion);
+        param.Add("NumeroProduccion", numeroProduccion);
+        param.Add("TipoEntidadMedica", tipoEntidadMedica);
+        param.Add("Estado", estado);
+        param.Add("IdModificador", idModificador);
+        param.Add("IdProduccion", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
+
+        var rowsAffected = await connection.ExecuteAsync(sql, param);
+
+        if (rowsAffected > 0)
+            return param.Get<int>("IdProduccion");
+
+        return null;
+    }
+
+    /// <summary>
+    /// Revierte los datos de comprobante de una produccion por su ID.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    public async Task<bool> RevertComprobanteByIdAsync(int idProduccion, string estado, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET SERIE = NULL,
+                NUMERO = NULL,
+                FECHA_EMISION = NULL,
+                GLOSA = NULL,
+                ESTADO_COMPROBANTE = NULL,
+                FACTURA_FECHA_ENVIO = NULL,
+                ESTADO = :Estado,
+                ID_MODIFICADOR = :IdModificador,
+                FECHA_MODIFICACION = SYSDATE
+            WHERE ID_PRODUCCION = :IdProduccion";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdProduccion = idProduccion,
+            Estado = estado,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Devuelve una factura por GUID: limpia comprobante, asigna ESTADO_COMPROBANTE = POR_ENVIAR
+    /// y cambia el estado a FACTURA_DEVUELTA.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-23</created>
+    /// </summary>
+    public async Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET ESTADO              = 'FACTURA_DEVUELTA',
+                ESTADO_COMPROBANTE  = 'POR_ENVIAR',
+                SERIE               = NULL,
+                NUMERO              = NULL,
+                FECHA_EMISION       = NULL,
+                GLOSA               = NULL,
+                FACTURA_FECHA_ENVIO = NULL,
+                ID_MODIFICADOR      = :IdModificador,
+                FECHA_MODIFICACION  = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro = guidRegistro,
+            IdModificador = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza FECHA_LIMITE y FACTURA_FECHA_VENCIMIENTO sin cambiar el estado.
+    /// Usado en el Paso 1 del flujo de Solicitud de Factura.
+    ///
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-26</created>
+    /// </summary>
+    public async Task<bool> UpdateFechasProduccionAsync(string guidRegistro, DateTime fechaLimite, DateTime fechaVencimiento, int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET FECHA_LIMITE              = :FechaLimite,
+                FACTURA_FECHA_VENCIMIENTO = :FechaVencimiento,
+                ID_MODIFICADOR            = :IdModificador,
+                FECHA_MODIFICACION        = SYSDATE
+            WHERE GUID_REGISTRO = :GuidRegistro
+              AND ESTADO = 'FACTURA_PENDIENTE'
+              AND ACTIVO = 1";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            GuidRegistro     = guidRegistro,
+            FechaLimite      = fechaLimite,
+            FechaVencimiento = fechaVencimiento,
+            IdModificador    = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+
+    /// <summary>
+    /// Actualiza los campos de estado de pago SAP de una produccion por su ID.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    /// </summary>
+    public async Task<bool> UpdateEstadoPagoAsync(
+        int idProduccion,
+        string? pagoEstado,
+        DateTime? pagoFecha,
+        string? pagoNumeroOperacion,
+        string? pagoBanco,
+        string? pagoCuentaDeposito,
+        decimal? pagoMontoPagado,
+        int idModificador)
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            UPDATE SHM_PRODUCCION
+            SET PAGO_ESTADO           = :PagoEstado,
+                PAGO_FECHA            = :PagoFecha,
+                PAGO_NUMERO_OPERACION = :PagoNumeroOperacion,
+                PAGO_BANCO            = :PagoBanco,
+                PAGO_CUENTA_DEPOSITO  = :PagoCuentaDeposito,
+                PAGO_MONTO_PAGADO     = :PagoMontoPagado,
+                ID_MODIFICADOR        = :IdModificador,
+                FECHA_MODIFICACION    = SYSDATE
+            WHERE ID_PRODUCCION = :IdProduccion";
+
+        var rowsAffected = await connection.ExecuteAsync(sql, new
+        {
+            IdProduccion        = idProduccion,
+            PagoEstado          = pagoEstado,
+            PagoFecha           = pagoFecha,
+            PagoNumeroOperacion = pagoNumeroOperacion,
+            PagoBanco           = pagoBanco,
+            PagoCuentaDeposito  = pagoCuentaDeposito,
+            PagoMontoPagado     = pagoMontoPagado,
+            IdModificador       = idModificador
+        });
+
+        return rowsAffected > 0;
+    }
+}
+
+/// <summary>
+/// DTO interno para mapear el resultado de GetResumenMesActualAsync.
+/// </summary>
+file class ResumenMesDto
+{
+    public decimal TotalFacturado { get; set; }
+    public int FacturasProcesadas { get; set; }
+    public decimal TiempoPromedioDias { get; set; }
 }

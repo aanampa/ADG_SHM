@@ -1,5 +1,7 @@
+@using System.Text.Json
 @{
     ViewData["Title"] = "Usuarios Externos";
+    var entidadesMedicas = ViewBag.EntidadesMedicas ?? new List<object>();
 }
 
 <div class="wrapper">
@@ -10,7 +12,7 @@
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0">Usuarios Externos</h1>
+                <h1 class="m-0"><i class="fas fa-users mr-2"></i>Usuarios Externos</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
@@ -80,14 +82,22 @@
         .select2-container--bootstrap4 .select2-selection--single {
             height: calc(2.25rem + 2px) !important;
         }
+        /* Convertir texto a mayusculas en el campo de busqueda */
+        .select2-container--bootstrap4 .select2-search__field {
+            text-transform: uppercase;
+        }
     </style>
 }
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
     <script>
         let currentPage = 1;
         const pageSize = 10;
+
+        // Datos de Entidades Medicas cargados en memoria
+        var entidadesMedicasData = @Html.Raw(JsonSerializer.Serialize(entidadesMedicas));
 
         document.addEventListener('DOMContentLoaded', function () {
             loadList(1);
@@ -188,64 +198,78 @@
         }
 
         function initSelect2Create() {
+            // Preseleccionar el rol "Compania Medica" por defecto
+            var $rolSelect = $('#IdRol');
+            $rolSelect.find('option').each(function() {
+                if ($(this).text().toUpperCase().indexOf('COMPAN') > -1 ||
+                    $(this).text().toUpperCase().indexOf('COMPA\u00D1') > -1) {
+                    $rolSelect.val($(this).val());
+                    return false; // break
+                }
+            });
+
             $('#IdEntidadMedica').select2({
                 theme: 'bootstrap4',
                 placeholder: 'Buscar entidad medica...',
                 allowClear: true,
-                minimumInputLength: 2,
                 dropdownParent: $('#modalContainer'),
-                ajax: {
-                    url: '@Url.Action("BuscarEntidadesMedicas")',
-                    dataType: 'json',
-                    delay: 300,
-                    data: function (params) {
-                        return { term: params.term };
-                    },
-                    processResults: function (data) {
-                        return {
-                            results: data.map(function (item) {
-                                return { id: item.id, text: item.text };
-                            })
-                        };
-                    },
-                    cache: true
+                data: entidadesMedicasData,
+                language: 'es',
+                matcher: function(params, data) {
+                    // Si no hay termino de busqueda, mostrar todo
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+                    // Busqueda en cualquier parte del texto (case-insensitive)
+                    if (data.text && data.text.toUpperCase().indexOf(params.term.toUpperCase()) > -1) {
+                        return data;
+                    }
+                    return null;
                 }
+            });
+
+            // Foco automatico en el campo de busqueda al abrir el dropdown
+            $('#IdEntidadMedica').on('select2:open', function() {
+                setTimeout(function() {
+                    document.querySelector('.select2-container--open .select2-search__field').focus();
+                }, 0);
             });
         }
 
         function initSelect2Edit() {
             var $select = $('#IdEntidadMedica');
             var currentId = $select.data('current-id');
-            var currentText = $select.data('current-text');
 
             $select.select2({
                 theme: 'bootstrap4',
                 placeholder: 'Buscar entidad medica...',
                 allowClear: true,
-                minimumInputLength: 2,
                 dropdownParent: $('#modalContainer'),
-                ajax: {
-                    url: '@Url.Action("BuscarEntidadesMedicas")',
-                    dataType: 'json',
-                    delay: 300,
-                    data: function (params) {
-                        return { term: params.term };
-                    },
-                    processResults: function (data) {
-                        return {
-                            results: data.map(function (item) {
-                                return { id: item.id, text: item.text };
-                            })
-                        };
-                    },
-                    cache: true
+                data: entidadesMedicasData,
+                language: 'es',
+                matcher: function(params, data) {
+                    // Si no hay termino de busqueda, mostrar todo
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+                    // Busqueda en cualquier parte del texto (case-insensitive)
+                    if (data.text && data.text.toUpperCase().indexOf(params.term.toUpperCase()) > -1) {
+                        return data;
+                    }
+                    return null;
                 }
             });
 
+            // Foco automatico en el campo de busqueda al abrir el dropdown
+            $select.on('select2:open', function() {
+                setTimeout(function() {
+                    document.querySelector('.select2-container--open .select2-search__field').focus();
+                }, 0);
+            });
+
             // Set initial value if exists
-            if (currentId && currentText) {
-                var option = new Option(currentText, currentId, true, true);
-                $select.append(option).trigger('change');
+            if (currentId) {
+                $select.val(currentId).trigger('change');
             }
         }
 
@@ -271,6 +295,15 @@
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+            Swal.fire({
+                title: 'Guardando...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
             fetch('@Url.Action("Create")', {
                 method: 'POST',
                 headers: {
@@ -281,6 +314,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     loadList(currentPage);
@@ -295,6 +329,7 @@
                 }
             })
             .catch(error => {
+                Swal.close();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });
@@ -323,6 +358,15 @@
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+            Swal.fire({
+                title: 'Actualizando...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
             fetch('@Url.Action("Edit")', {
                 method: 'POST',
                 headers: {
@@ -333,6 +377,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     loadList(currentPage);
@@ -342,6 +387,7 @@
                 }
             })
             .catch(error => {
+                Swal.close();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });
@@ -386,6 +432,7 @@
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+            f_loading();
             fetch('@Url.Action("ResetClave")', {
                 method: 'POST',
                 headers: {
@@ -396,6 +443,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                f_remove_loading();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     showToast(data.message, 'success');
@@ -409,6 +457,7 @@
                 }
             })
             .catch(error => {
+                f_remove_loading();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });

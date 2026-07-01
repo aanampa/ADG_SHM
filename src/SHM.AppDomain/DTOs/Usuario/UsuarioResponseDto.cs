@@ -25,4 +25,5 @@ public class UsuarioResponseDto
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
+    public int? FlagPasswordTemporal { get; set; }
 }

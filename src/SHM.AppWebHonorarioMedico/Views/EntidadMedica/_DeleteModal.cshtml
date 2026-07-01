@@ -12,6 +12,7 @@
                 </button>
             </div>
             <div class="modal-body">
+                @Html.AntiForgeryToken()
                 <input type="hidden" id="delete_GuidRegistro" value="@Model.GuidRegistro" />
 
                 <div class="text-center mb-3">
@@ -46,7 +47,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i>Cancelar
                 </button>
-                <button type="button" class="btn btn-danger btn-sm" onclick="submitDelete()">
+                <button type="button" class="btn btn-danger btn-sm" onclick="submitDelete('@Model.GuidRegistro')">
                     <i class="fas fa-trash mr-1"></i>Eliminar
                 </button>
             </div>

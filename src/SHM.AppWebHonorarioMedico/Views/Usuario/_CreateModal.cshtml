@@ -68,8 +68,17 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="IdEntidadMedica">Entidad Medica</label>
-                    <select class="form-control" id="IdEntidadMedica" name="IdEntidadMedica" style="width: 100%;">
-                    </select>
+                    @if (Model.IdEntidadMedica.HasValue && !string.IsNullOrEmpty(Model.EntidadMedicaNombre))
+                    {
+                        <input type="hidden" id="IdEntidadMedica" name="IdEntidadMedica" value="@Model.IdEntidadMedica" />
+                        <input type="text" class="form-control" value="@Model.EntidadMedicaNombre" readonly style="background-color: #e9ecef;" />
+                    }
+                    else
+                    {
+                        <select class="form-control" id="IdEntidadMedica" name="IdEntidadMedica" style="width: 100%;">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                    }
                 </div>
             </div>
             <div class="col-md-6">

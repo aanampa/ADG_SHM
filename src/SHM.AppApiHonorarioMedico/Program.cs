@@ -1,13 +1,19 @@
 using NLog;
 using NLog.Web;
 using SHM.AppApplication.Services;
+using SHM.AppDomain.DTOs.SanPabloApi;
+using SHM.AppDomain.DTOs.SapApi;
 using SHM.AppDomain.Interfaces.Repositories;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppInfrastructure.Configurations;
+using SHM.AppInfrastructure.HealthChecks;
 using SHM.AppInfrastructure.Repositories;
+using System.Text.Json;
 
 // Configurar NLog temprano para capturar todos los errores de inicio
-var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
+//var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
+var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+
 logger.Debug("Iniciando aplicación SHM Honorario Medico API");
 
 try
@@ -47,6 +53,7 @@ try
     // Dependency Injection
     builder.Services.AddSingleton<DatabaseConfig>();
     builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+    builder.Services.AddScoped<IUsuarioSedeRepository, UsuarioSedeRepository>();
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
     builder.Services.AddScoped<ITablaRepository, TablaRepository>();
     builder.Services.AddScoped<ITablaService, TablaService>();
@@ -64,11 +71,57 @@ try
     builder.Services.AddScoped<IBancoService, BancoService>();
     builder.Services.AddScoped<IProduccionRepository, ProduccionRepository>();
     builder.Services.AddScoped<IProduccionInterfaceService, ProduccionInterfaceService>();
+    builder.Services.AddScoped<IParametroRepository, ParametroRepository>();
+    builder.Services.AddScoped<IParametroService, ParametroService>();
+    builder.Services.AddScoped<IOrdenPagoRepository, OrdenPagoRepository>();
+    builder.Services.AddScoped<IOrdenPagoService, OrdenPagoService>();
+    builder.Services.AddScoped<IOrdenPagoProduccionRepository, OrdenPagoProduccionRepository>();
+    builder.Services.AddScoped<IOrdenPagoProduccionService, OrdenPagoProduccionService>();
+    builder.Services.AddScoped<IOrdenPagoAprobacionRepository, OrdenPagoAprobacionRepository>();
+    builder.Services.AddScoped<IOrdenPagoAprobacionService, OrdenPagoAprobacionService>();
+    builder.Services.AddScoped<IOrdenPagoLiquidacionRepository, OrdenPagoLiquidacionRepository>();
+    builder.Services.AddScoped<IOrdenPagoLiquidacionService, OrdenPagoLiquidacionService>();
+    builder.Services.AddScoped<IPerfilAprobacionRepository, PerfilAprobacionRepository>();
+    builder.Services.AddScoped<IPerfilAprobacionService, PerfilAprobacionService>();
+    builder.Services.AddScoped<IPerfilAprobacionUsuarioRepository, PerfilAprobacionUsuarioRepository>();
+    builder.Services.AddScoped<IPerfilAprobacionUsuarioService, PerfilAprobacionUsuarioService>();
+
+    builder.Services.AddScoped<IEmailService, EmailService>();
+    builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
+    builder.Services.AddScoped<IArchivoComprobanteRepository, ArchivoComprobanteRepository>();
+    
+
+    // Configuracion del API externo de San Pablo
+    builder.Services.Configure<SanPabloApiSettings>(
+        builder.Configuration.GetSection("SanPabloApi"));
+
+    // Registrar HttpClient y servicio para API San Pablo
+    builder.Services.AddHttpClient<ISanPabloApiService, SanPabloApiService>()
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            // Permitir certificados auto-firmados en desarrollo
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+
+    // Configuracion del API de SAP
+    builder.Services.Configure<SapApiSettings>(
+        builder.Configuration.GetSection("SapApi"));
+
+    // Registrar HttpClient y servicio para API SAP
+    builder.Services.AddHttpClient<ISapApiService, SapApiService>()
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+
+    // Health Checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<OracleHealthCheck>("oracle-database", tags: new[] { "db", "oracle" });
 
     var app = builder.Build();
 
     // Configure the HTTP request pipeline
-    if (app.Environment.IsDevelopment())
+    if (app.Environment.IsDevelopment() || 1==1)
     {
         app.UseSwagger();
         app.UseSwaggerUI(options =>
@@ -84,6 +137,35 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+
+    // Health Check endpoint con respuesta JSON detallada
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+
+            var response = new
+            {
+                status = report.Status.ToString(),
+                totalDuration = report.TotalDuration.TotalMilliseconds + " ms",
+                timestamp = DateTime.Now,
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration.TotalMilliseconds + " ms"
+                })
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        }
+    });
 
     logger.Info("Aplicación iniciada correctamente");
     app.Run();

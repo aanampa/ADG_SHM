@@ -1,7 +1,7 @@
 @model SHM.AppWebHonorarioMedico.Models.ParametroCreateViewModel
 
 <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-morado">
                 <h5 class="modal-title text-white">
@@ -14,21 +14,29 @@
             <form id="createForm">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="create_Codigo">Codigo <span class="text-danger">*</span></label>
-                                <input type="text" id="create_Codigo" class="form-control" maxlength="100" required
-                                       placeholder="Ej: CORREO_ADMIN" />
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="create_Valor">Valor</label>
-                                <input type="text" id="create_Valor" class="form-control" maxlength="512"
-                                       placeholder="Ej: admin@correo.com" />
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="create_TipoParametro">Tipo de Parametro <span class="text-danger">*</span></label>
+                        <select id="create_TipoParametro" class="form-control" required onchange="onTipoParametroChange('create')">
+                            <option value="">-- Seleccione --</option>
+                            <option value="TEXTO">Texto</option>
+                            <option value="LOGICO">Logico (S/N)</option>
+                            <option value="FECHA">Fecha</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="create_Codigo">Codigo <span class="text-danger">*</span></label>
+                        <input type="text" id="create_Codigo" class="form-control" maxlength="100" required
+                               placeholder="Ej: CORREO_ADMIN" />
+                    </div>
+                    <div class="form-group" id="create_ValorContainer">
+                        <label for="create_Valor">Valor</label>
+                        <input type="text" id="create_Valor" class="form-control" maxlength="512"
+                               placeholder="Ej: admin@correo.com" />
+                    </div>
+                    <div class="form-group">
+                        <label for="create_Descripcion">Descripcion</label>
+                        <textarea id="create_Descripcion" class="form-control" maxlength="1024" rows="1"
+                                  placeholder="Descripcion del parametro"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

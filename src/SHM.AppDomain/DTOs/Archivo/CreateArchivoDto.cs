@@ -5,6 +5,7 @@ namespace SHM.AppDomain.DTOs.Archivo;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Vladimir - 2026-01-29 - Agregado soporte para almacenamiento BLOB</modified>
 /// </summary>
 public class CreateArchivoDto
 {
@@ -14,4 +15,10 @@ public class CreateArchivoDto
     public string? Extension { get; set; }
     public int? Tamano { get; set; }
     public string? Ruta { get; set; }
+
+    /// <summary>
+    /// Contenido binario del archivo para almacenamiento BLOB.
+    /// Si es null, se utiliza almacenamiento FILE con la propiedad Ruta.
+    /// </summary>
+    public byte[]? ContenidoArchivo { get; set; }
 }

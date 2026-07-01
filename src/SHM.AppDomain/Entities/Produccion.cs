@@ -7,6 +7,11 @@ namespace SHM.AppDomain.Entities;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-24 - Agregados campos de fechas de factura</modified>
+/// <modified>ADG Antonio - 2026-01-30 - Agregados campos de liquidacion</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos de estado de pago SAP (PAGO_*)</modified>
+/// <modified>ADG Antonio - 2026-04-25 - Agregado campo FacturaFechaVencimiento</modified>
 /// </summary>
 public class Produccion
 {
@@ -14,11 +19,14 @@ public class Produccion
     public int IdSede { get; set; }
     public int IdEntidadMedica { get; set; }
     public string? CodigoProduccion { get; set; }
+    public string? NumeroProduccion { get; set; }
     public string? TipoProduccion { get; set; }
+    public string? TipoEntidadMedica { get; set; }
     public string? TipoMedico { get; set; }
     public string? TipoRubro { get; set; }
     public string? Descripcion { get; set; }
     public string? Periodo { get; set; }
+    public DateTime? FechaProduccion { get; set; }
     public string? EstadoProduccion { get; set; }
     public decimal? MtoConsumo { get; set; }
     public decimal? MtoDescuento { get; set; }
@@ -26,6 +34,8 @@ public class Produccion
     public decimal? MtoRenta { get; set; }
     public decimal? MtoIgv { get; set; }
     public decimal? MtoTotal { get; set; }
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
     public string? TipoComprobante { get; set; }
     public string? Serie { get; set; }
     public string? Numero { get; set; }
@@ -39,6 +49,28 @@ public class Produccion
     public DateTime? FacturaFechaEnvio { get; set; }
     public DateTime? FacturaFechaAceptacion { get; set; }
     public DateTime? FacturaFechaPago { get; set; }
+    public DateTime? FacturaFechaVencimiento { get; set; }
+
+    // Cuenta Bancaria
+    public int? IdCuentaBanco { get; set; }
+
+    // Campos de Liquidacion
+    public string? NumeroLiquidacion { get; set; }
+    public string? CodigoLiquidacion { get; set; }
+    public string? PeriodoLiquidacion { get; set; }
+    public string? EstadoLiquidacion { get; set; }
+    public DateTime? FechaLiquidacion { get; set; }
+    public string? DescripcionLiquidacion { get; set; }
+    public string? TipoLiquidacion { get; set; }
+
+    // Campos de Estado de Pago (sincronizados desde SAP)
+    public string? PagoEstado { get; set; }
+    public DateTime? PagoFecha { get; set; }
+    public string? PagoNumeroOperacion { get; set; }
+    public string? PagoBanco { get; set; }
+    public string? PagoCuentaDeposito { get; set; }
+    public decimal? PagoMontoPagado { get; set; }
+
     public string? GuidRegistro { get; set; }
     public int Activo { get; set; }
     public int IdCreador { get; set; }

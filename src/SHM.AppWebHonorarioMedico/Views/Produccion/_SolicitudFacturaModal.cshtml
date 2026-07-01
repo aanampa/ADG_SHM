@@ -1,0 +1,651 @@
+@using SHM.AppDomain.Constants
+@model List<SHM.AppWebHonorarioMedico.Models.SolicitudMasivaItemViewModel>
+
+@{
+    var habilitados          = Model.Where(i => i.Habilitado).ToList();
+    var deshabilitados       = Model.Where(i => !i.Habilitado).ToList();
+    var guidPreseleccionado  = ViewBag.GuidPreseleccionado as string ?? string.Empty;
+}
+
+<div class="modal fade" id="modalSolicitudFactura" tabindex="-1" role="dialog" aria-labelledby="modalSolicitudFacturaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #28a745; color: #fff;">
+                <h5 class="modal-title" id="modalSolicitudFacturaLabel">
+                    <i class="fas fa-file-invoice-dollar mr-2"></i>Solicitar Factura
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body py-2">
+                @if (!Model.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No hay producciones en estado Factura Pendiente</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Indicador de pasos -->
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <div class="d-flex flex-column align-items-center" style="min-width:140px;">
+                            <div id="sfStepCircle1" style="width:32px;height:32px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">1</div>
+                            <small id="sfStepLabel1" class="mt-1 font-weight-bold text-primary">Seleccionar / Asignar Fechas</small>
+                        </div>
+                        <div style="flex:1;height:2px;background:#dee2e6;margin-bottom:18px;max-width:80px;"></div>
+                        <div class="d-flex flex-column align-items-center" style="min-width:140px;">
+                            <div id="sfStepCircle2" style="width:32px;height:32px;border-radius:50%;background:#dee2e6;color:#6c757d;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">2</div>
+                            <small id="sfStepLabel2" class="mt-1 text-muted">Solicitar y Notificar</small>
+                        </div>
+                    </div>
+
+                    <!-- ══ PASO 1 ══ -->
+                    <div id="sfPaso1">
+
+                        <!-- Búsqueda -->
+                        <div class="mb-2 d-flex justify-content-end">
+                            <div class="input-group input-group-sm" style="max-width:320px;">
+                                <input type="text" id="sfInputBusqueda" class="form-control form-control-sm"
+                                       placeholder="Buscar por Cía Médica, código..."
+                                       oninput="sfBuscar()">
+                                <button class="btn btn-outline-secondary btn-sm" type="button"
+                                        onclick="document.getElementById('sfInputBusqueda').value=''; sfBuscar();">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabla -->
+                        <div class="table-responsive" style="max-height:320px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+                                <thead style="background-color:#6c757d; color:#fff; position:sticky; top:0; z-index:1;">
+                                    <tr>
+                                        <th class="text-center align-middle" style="width:40px;">
+                                            <input type="checkbox" id="sfChkAll" title="Seleccionar todos los habilitados" />
+                                        </th>
+                                        <th class="sf-th-sort align-middle" style="width:70px;" onclick="sfOrdenar('numero')">Producción <span class="sf-sort-icon" id="sfsi-numero"></span></th>
+                                        <th class="sf-th-sort align-middle" style="width:120px;" onclick="sfOrdenar('tipo')">Tipo Producción <span class="sf-sort-icon" id="sfsi-tipo"></span></th>
+                                        <th class="sf-th-sort align-middle" onclick="sfOrdenar('cia')">Cía Médica <span class="sf-sort-icon" id="sfsi-cia"></span></th>
+                                        <th class="sf-th-sort align-middle" style="width:80px;" onclick="sfOrdenar('periodo')">Periodo <span class="sf-sort-icon" id="sfsi-periodo"></span></th>
+                                        <th class="sf-th-sort align-middle text-right" style="width:70px;" onclick="sfOrdenar('total')">Total S/. <span class="sf-sort-icon" id="sfsi-total"></span></th>
+                                        <th class="align-middle text-center" style="width:120px;">Estado</th>
+                                        <th class="sf-th-sort align-middle text-center" style="width:100px;" onclick="sfOrdenar('fechaLimite')">Fecha Límite <span class="sf-sort-icon" id="sfsi-fechaLimite"></span></th>
+                                        <th class="sf-th-sort align-middle text-center" style="width:110px;" onclick="sfOrdenar('fechaVenc')">F. Vencimiento <span class="sf-sort-icon" id="sfsi-fechaVenc"></span></th>
+                                        <th class="align-middle" style="width:150px;">Observación</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sfTbody">
+                                    @foreach (var item in Model)
+                                    {
+                                        var rowCss = item.Habilitado ? "" : "table-light text-muted";
+                                        <tr class="sf-row @rowCss"
+                                            data-guid="@item.GuidRegistro"
+                                            data-numero="@item.NumeroProduccion"
+                                            data-tipo="@item.DesTipoProduccion"
+                                            data-cia="@item.RazonSocial"
+                                            data-periodo="@item.Periodo"
+                                            data-total="@item.MtoTotal"
+                                            data-fechalimite="@item.FechaLimite?.ToString("yyyy-MM-dd")"
+                                            data-horalimite="@item.FechaLimite?.ToString("HH:mm")"
+                                            data-fechavenc="@item.FechaVencimiento?.ToString("yyyy-MM-dd")"
+                                            data-habilitado="@(item.Habilitado ? "1" : "0")">
+                                            <td class="text-center">
+                                                @if (item.Habilitado)
+                                                {
+                                                    <input type="checkbox" class="sf-chk" data-guid="@item.GuidRegistro" />
+                                                }
+                                                else
+                                                {
+                                                    <input type="checkbox" disabled title="@item.MotivoDeshabilitado" />
+                                                }
+                                            </td>
+                                            <td>@(item.NumeroProduccion ?? "-")</td>
+                                            <td>@(item.DesTipoProduccion ?? "-")</td>
+                                            <td>@(item.RazonSocial ?? "-")</td>
+                                            <td>@(item.Periodo ?? "-")</td>
+                                            <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                                            <td class="text-center">
+                                                <span class="badge badge-warning">Factura Pendiente</span>
+                                            </td>
+                                            <td class="text-center sf-cell-fechalimite">
+                                                @if (item.FechaLimite.HasValue)
+                                                {
+                                                    <span class="text-success font-weight-bold">@item.FechaLimite.Value.ToString("dd/MM/yyyy")</span>
+                                                    <br /><span class="text-muted">@item.FechaLimite.Value.ToString("HH:mm")</span>
+                                                }
+                                                else { <span class="text-muted">—</span> }
+                                            </td>
+                                            <td class="text-center sf-cell-fechavenc">
+                                                @if (item.FechaVencimiento.HasValue)
+                                                {
+                                                    <span class="text-success font-weight-bold">@item.FechaVencimiento.Value.ToString("dd/MM/yyyy")</span>
+                                                }
+                                                else { <span class="text-muted">—</span> }
+                                            </td>
+                                            <td>
+                                                @if (!item.Habilitado)
+                                                {
+                                                    <span class="text-danger small"><i class="fas fa-exclamation-circle mr-1"></i>@item.MotivoDeshabilitado</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-1 mb-2">
+                            <small class="text-muted">
+                                Total: <strong>@Model.Count</strong> |
+                                Habilitados: <strong class="text-success">@habilitados.Count</strong> |
+                                No habilitados: <strong class="text-danger">@deshabilitados.Count</strong> |
+                                Seleccionados: <strong id="sfContador">0</strong>
+                            </small>
+                        </div>
+
+                        <!-- Sección ingreso de fechas -->
+                        <div class="border rounded p-2" style="background:#f8f9fa;">
+                            <div class="small font-weight-bold text-secondary mb-2" style="text-transform:uppercase; letter-spacing:.5px; font-size:11px;">
+                                <i class="fas fa-calendar-alt mr-1"></i>Paso 1 — Ingresar Fechas para los registros seleccionados
+                            </div>
+                            <div class="d-flex" style="gap:0;">
+                                <!-- Plazo de Entrega -->
+                                <div class="p-2 flex-shrink-0" style="width:46%; background:#fff; border:1px solid #dee2e6; border-radius:4px 0 0 4px; border-right:2px solid #dee2e6;">
+                                    <div class="small font-weight-bold text-muted mb-2" style="height:18px;">
+                                        <i class="fas fa-clock mr-1"></i>Plazo de Entrega
+                                    </div>
+                                    <div class="d-flex" style="gap:8px;">
+                                        <div style="flex:1;">
+                                            <label class="small font-weight-bold">Fecha Límite <span class="text-danger">*</span></label>
+                                            <input type="date" id="sfFechaLimite" class="form-control form-control-sm" onchange="sfCalcularDias()" />
+                                        </div>
+                                        <div style="width:95px;">
+                                            <label class="small font-weight-bold">Hora <span class="text-danger">*</span></label>
+                                            <select id="sfHoraLimite" class="form-control form-control-sm">
+                                                <option value="">--</option>
+                                                @foreach (var h in Enumerable.Range(8, 15))
+                                                {
+                                                    foreach (var m in new[] { 0, 15, 30, 45 })
+                                                    {
+                                                        var val = $"{h:D2}:{m:D2}";
+                                                        <option value="@val">@val</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- F. Vencimiento -->
+                                <div class="p-2" style="flex:1; background:#fff; border:1px solid #dee2e6; border-left:none; border-radius:0 4px 4px 0;">
+                                    <div class="small font-weight-bold text-muted mb-2" style="height:18px;">
+                                        <i class="fas fa-file-invoice mr-1"></i>F. Vencimiento Factura
+                                    </div>
+                                    <div class="d-flex align-items-end" style="gap:10px;">
+                                        <div style="width:240px;">
+                                            <label class="small font-weight-bold">Fecha <span class="text-danger">*</span></label>
+                                            <input type="date" id="sfFechaVenc" class="form-control form-control-sm" onchange="sfCalcularDias()" />
+                                        </div>
+                                        <div class="pb-1">
+                                            <span id="sfLblDias" class="small font-weight-bold"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-2">
+                                <small class="text-muted font-italic">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Las fechas se graban sin cambiar el estado. Puede cerrar y continuar después.
+                                </small>
+                                <div>
+                                    <button class="btn btn-outline-secondary btn-sm mr-1" onclick="sfLimpiarFechas()">
+                                        <i class="fas fa-eraser mr-1"></i>Limpiar
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" id="sfBtnGrabar" onclick="sfGrabarFechas()">
+                                        <i class="fas fa-save mr-1"></i>Grabar Fechas
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /sfPaso1 -->
+
+                    <!-- ══ PASO 2 ══ -->
+                    <div id="sfPaso2" style="display:none;">
+
+                        <!-- Resumen -->
+                        <div id="sfResumen" class="mb-2 p-2 rounded" style="background:#f8f9fa; border:1px solid #dee2e6; font-size:13px;"></div>
+
+                        <!-- Alerta prerequisito -->
+                        <div id="sfAlertaPrerequisito" class="alert alert-warning py-2 small" style="display:none;">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            <span id="sfMsgPrerequisito"></span>
+                        </div>
+
+                        <!-- Tabla resumen -->
+                        <div class="table-responsive" style="max-height:260px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+                                <thead style="background-color:#6c757d; color:#fff; position:sticky; top:0; z-index:1;">
+                                    <tr>
+                                        <th style="width:70px;">Producción</th>
+                                        <th style="width:120px;">Tipo Producción</th>
+                                        <th>Cía Médica</th>
+                                        <th style="width:80px;">Periodo</th>
+                                        <th class="text-right" style="width:90px;">Total S/.</th>
+                                        <th class="text-center" style="width:120px;">Estado</th>
+                                        <th class="text-center" style="width:130px;">Fecha Límite</th>
+                                        <th class="text-center" style="width:110px;">F. Vencimiento</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sfTbodyResumen"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Sección Paso 2 -->
+                        <div class="border rounded p-2 mt-2" style="background:#f8f9fa;">
+                            <div class="small font-weight-bold text-secondary mb-1" style="text-transform:uppercase; letter-spacing:.5px; font-size:11px;">
+                                <i class="fas fa-paper-plane mr-1"></i>Paso 2 — Solicitar y Notificar
+                            </div>
+                            <p class="small mb-2 text-muted">
+                                Al confirmar se cambiará el estado a <strong>Factura Solicitada</strong>
+                                y se enviarán los correos de notificación a las compañías médicas.
+                            </p>
+                        </div>
+
+                    </div><!-- /sfPaso2 -->
+                }
+            </div>
+
+            @if (Model.Any())
+            {
+                <div class="modal-footer py-2" style="display:block;">
+                    <div id="sfFooterPaso1" style="display:flex; justify-content:space-between; align-items:center;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                            <i class="fas fa-times mr-1"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="sfBtnSiguiente"
+                                onclick="sfIrPaso2()" disabled>
+                            Siguiente <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                    <div id="sfFooterPaso2" style="display:none; justify-content:space-between; align-items:center;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="sfIrPaso1()">
+                            <i class="fas fa-arrow-left mr-1"></i>Anterior
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="sfBtnSolicitar"
+                                onclick="sfSolicitarNotificar()">
+                            <i class="fas fa-paper-plane mr-1"></i>Solicitar y Notificar
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .sf-th-sort { cursor:pointer; user-select:none; white-space:nowrap; }
+    .sf-th-sort:hover { background:#5a6268 !important; }
+    .sf-sort-icon { font-style:normal; font-size:10px; margin-left:3px; opacity:.7; }
+    #modalSolicitudFactura thead th { vertical-align: middle !important; text-align: center !important; }
+    #modalSolicitudFactura thead th.text-right { text-align: right !important; }
+    #modalSolicitudFactura thead th.text-left  { text-align: left !important; }
+    #modalSolicitudFactura .btn-primary { background-color:#007bff !important; border-color:#007bff !important; }
+    #modalSolicitudFactura .btn-primary:hover { background-color:#0069d9 !important; border-color:#0062cc !important; }
+    #modalSolicitudFactura .btn-primary:disabled { background-color:#007bff !important; border-color:#007bff !important; opacity:.65; }
+    #modalSolicitudFactura .btn-success { background-color:#28a745 !important; border-color:#28a745 !important; }
+    #modalSolicitudFactura .btn-success:hover { background-color:#218838 !important; border-color:#1e7e34 !important; }
+    #modalSolicitudFactura .btn-success:disabled { background-color:#28a745 !important; border-color:#28a745 !important; opacity:.65; }
+</style>
+
+<script>
+var sfSortCol = null;
+var sfSortAsc = true;
+var sfGuidPreseleccionado = '@guidPreseleccionado';
+
+(function () {
+    var modal  = document.getElementById('modalSolicitudFactura');
+    var chkAll = document.getElementById('sfChkAll');
+
+    if (chkAll) {
+        chkAll.addEventListener('change', function () {
+            document.querySelectorAll('#sfTbody .sf-row:not([style*="display: none"]) .sf-chk')
+                    .forEach(function (cb) { cb.checked = chkAll.checked; });
+            sfActualizarContador();
+        });
+    }
+
+    modal.addEventListener('change', function (e) {
+        if (e.target.classList.contains('sf-chk')) {
+            sfActualizarContador();
+            var vis  = document.querySelectorAll('#sfTbody .sf-row:not([style*="display: none"]) .sf-chk');
+            var marc = document.querySelectorAll('#sfTbody .sf-row:not([style*="display: none"]) .sf-chk:checked');
+            if (chkAll) chkAll.checked = (vis.length > 0 && vis.length === marc.length);
+        }
+    });
+
+    // Inicializar al abrir
+    modal.addEventListener('show.bs.modal', sfReset);
+    if (document.readyState !== 'loading') {
+        sfReset();
+        $('#modalSolicitudFactura').modal('show');
+    }
+})();
+
+function sfReset() {
+    if (!document.getElementById('sfPaso1')) return;
+    document.getElementById('sfPaso1').style.display        = '';
+    document.getElementById('sfPaso2').style.display        = 'none';
+    document.getElementById('sfFooterPaso1').style.display  = 'flex';
+    document.getElementById('sfFooterPaso2').style.display  = 'none';
+    document.getElementById('sfInputBusqueda').value        = '';
+    document.getElementById('sfFechaLimite').value          = '';
+    document.getElementById('sfHoraLimite').value           = '';
+    document.getElementById('sfFechaVenc').value            = '';
+
+    document.querySelectorAll('.sf-chk').forEach(function (cb) { cb.checked = false; });
+    var chkAll = document.getElementById('sfChkAll');
+    if (chkAll) chkAll.checked = false;
+
+    document.querySelectorAll('#sfTbody .sf-row').forEach(function (r) { r.style.display = ''; });
+
+    // Pre-marcar el registro si viene de modo individual
+    if (sfGuidPreseleccionado) {
+        var chk = document.querySelector('#sfTbody .sf-chk[data-guid="' + sfGuidPreseleccionado + '"]');
+        if (chk) chk.checked = true;
+    }
+
+    sfActualizarContador();
+    sfSetStep(1);
+}
+
+// ── Búsqueda ──────────────────────────────────────────────────────────────────
+
+function sfBuscar() {
+    var t = document.getElementById('sfInputBusqueda').value.trim().toUpperCase();
+    document.querySelectorAll('#sfTbody .sf-row').forEach(function (row) {
+        row.style.display = (!t || row.innerText.toUpperCase().includes(t)) ? '' : 'none';
+    });
+    sfActualizarContador();
+}
+
+// ── Ordenamiento ──────────────────────────────────────────────────────────────
+
+var sfGetters = {
+    numero:      function(r) { return r.dataset.numero     || ''; },
+    tipo:        function(r) { return r.dataset.tipo       || ''; },
+    cia:         function(r) { return r.dataset.cia        || ''; },
+    periodo:     function(r) { return r.dataset.periodo    || ''; },
+    total:       function(r) { return parseFloat(r.dataset.total || '0'); },
+    fechaLimite: function(r) { return r.dataset.fechalimite || ''; },
+    fechaVenc:   function(r) { return r.dataset.fechavenc  || ''; }
+};
+
+function sfOrdenar(col) {
+    sfSortAsc = (sfSortCol === col) ? !sfSortAsc : true;
+    sfSortCol = col;
+
+    Object.keys(sfGetters).forEach(function (c) {
+        var el = document.getElementById('sfsi-' + c);
+        if (el) el.textContent = c === sfSortCol ? (sfSortAsc ? ' ▲' : ' ▼') : '';
+    });
+
+    var tbody = document.getElementById('sfTbody');
+    var rows  = Array.from(tbody.querySelectorAll('.sf-row'));
+    var getter = sfGetters[col];
+
+    rows.sort(function(a, b) {
+        var va = getter(a), vb = getter(b);
+        if (va < vb) return sfSortAsc ? -1 :  1;
+        if (va > vb) return sfSortAsc ?  1 : -1;
+        return 0;
+    });
+    rows.forEach(function (r) { tbody.appendChild(r); });
+    sfBuscar();
+}
+
+// ── Selección ─────────────────────────────────────────────────────────────────
+
+function sfActualizarContador() {
+    var n = document.querySelectorAll('.sf-chk:checked').length;
+    document.getElementById('sfContador').textContent = n;
+    document.getElementById('sfBtnSiguiente').disabled = (n === 0);
+}
+
+// ── Grabar Fechas (Paso 1) ────────────────────────────────────────────────────
+
+function sfCalcularDias() {
+    var lbl = document.getElementById('sfLblDias');
+    var fl  = document.getElementById('sfFechaLimite').value;
+    var fv  = document.getElementById('sfFechaVenc').value;
+    if (!fl || !fv) { lbl.textContent = ''; lbl.style.color = ''; return; }
+    var limite      = new Date(fl + 'T00:00:00');
+    var vencimiento = new Date(fv + 'T00:00:00');
+    var dias = Math.round((vencimiento - limite) / (1000 * 60 * 60 * 24));
+    if (dias > 0) {
+        lbl.textContent = dias + ' día' + (dias !== 1 ? 's' : '') + ' después de la fecha límite';
+        lbl.style.color = '#28a745';
+    } else if (dias === 0) {
+        lbl.textContent = 'Mismo día que la fecha límite';
+        lbl.style.color = '#6c757d';
+    } else {
+        lbl.textContent = Math.abs(dias) + ' día' + (Math.abs(dias) !== 1 ? 's' : '') + ' antes de la fecha límite';
+        lbl.style.color = '#dc3545';
+    }
+}
+
+function sfLimpiarFechas() {
+    document.getElementById('sfFechaLimite').value = '';
+    document.getElementById('sfHoraLimite').value  = '';
+    document.getElementById('sfFechaVenc').value   = '';
+    document.getElementById('sfLblDias').textContent = '';
+}
+
+function sfGrabarFechas() {
+    var guids = Array.from(document.querySelectorAll('.sf-chk:checked')).map(function (cb) { return cb.dataset.guid; });
+    if (guids.length === 0) {
+        Swal.fire({ icon:'warning', title:'Atención', text:'Seleccione al menos un registro.', confirmButtonColor:'#f26522' });
+        return;
+    }
+    var fecha = document.getElementById('sfFechaLimite').value;
+    var hora  = document.getElementById('sfHoraLimite').value;
+    var fv    = document.getElementById('sfFechaVenc').value;
+    var errores = [];
+    if (!fecha) errores.push('La Fecha Límite es requerida');
+    if (!hora)  errores.push('La Hora Límite es requerida');
+    if (!fv)    errores.push('La Fecha de Vencimiento es requerida');
+    if (fecha && hora && new Date(fecha + 'T' + hora) <= new Date())
+        errores.push('La fecha y hora límite debe ser mayor a la actual');
+    if (fecha && fv && new Date(fv + 'T00:00:00') <= new Date(fecha + 'T00:00:00'))
+        errores.push('La F. Vencimiento debe ser posterior a la Fecha Límite');
+    if (errores.length > 0) {
+        Swal.fire({ icon:'warning', title:'Atención',
+            html:'<ul style="text-align:left;">' + errores.map(function(e){return '<li>'+e+'</li>';}).join('') + '</ul>',
+            confirmButtonColor:'#f26522' });
+        return;
+    }
+
+    var btn = document.getElementById('sfBtnGrabar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Grabando...';
+
+    fetch('@Url.Action("GrabarFechasProduccion", "Produccion")', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guids: guids, fecha: fecha, hora: hora, fechaVencimiento: fv })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save mr-1"></i>Grabar Fechas';
+        if (d.success) {
+            // Actualizar celdas en la tabla
+            guids.forEach(function(guid) {
+                var row = document.querySelector('#sfTbody .sf-row[data-guid="' + guid + '"]');
+                if (!row) return;
+                row.dataset.fechalimite = fecha;
+                row.dataset.horalimite  = hora;
+                row.dataset.fechavenc   = fv;
+                var flCell = row.querySelector('.sf-cell-fechalimite');
+                var fvCell = row.querySelector('.sf-cell-fechavenc');
+                if (flCell) flCell.innerHTML = '<span class="text-success font-weight-bold">' +
+                    sfFmtDate(fecha) + '</span><br><span class="text-muted">' + hora + '</span>';
+                if (fvCell) fvCell.innerHTML = '<span class="text-success font-weight-bold">' + sfFmtDate(fv) + '</span>';
+            });
+            Swal.fire({ icon:'success', title:'Fechas grabadas', text: d.message, confirmButtonColor:'#28a745',timer:2000, showConfirmButton:false });
+        } else {
+            Swal.fire({ icon:'error', title:'Error', text: d.message, confirmButtonColor:'#dc3545' });
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save mr-1"></i>Grabar Fechas';
+        Swal.fire({ icon:'error', title:'Error', text:'Error al procesar la solicitud.', confirmButtonColor:'#dc3545' });
+    });
+}
+
+// ── Paso 1 → Paso 2 ──────────────────────────────────────────────────────────
+
+function sfIrPaso2() {
+    var guids = Array.from(document.querySelectorAll('.sf-chk:checked')).map(function (cb) { return cb.dataset.guid; });
+    if (guids.length === 0) return;
+
+    // Resumen header
+    document.getElementById('sfResumen').innerHTML =
+        '<i class="fas fa-check-square text-success mr-1"></i>' +
+        '<strong>' + guids.length + '</strong> registro(s) seleccionado(s) para solicitar';
+
+    // Tabla resumen
+    var tbody = document.getElementById('sfTbodyResumen');
+    tbody.innerHTML = '';
+    var sinFechas = 0;
+
+    guids.forEach(function(guid) {
+        var row = document.querySelector('#sfTbody .sf-row[data-guid="' + guid + '"]');
+        if (!row) return;
+        var fl  = row.dataset.fechalimite;
+        var hl  = row.dataset.horalimite;
+        var fv  = row.dataset.fechavenc;
+        var ok  = fl && fv;
+        if (!ok) sinFechas++;
+
+        var flCell = ok ? sfFmtDate(fl) + ' <span class="text-muted">' + hl + '</span>'
+                       : '<span class="text-danger font-weight-bold">Sin fecha</span>';
+        var fvCell = ok ? sfFmtDate(fv)
+                       : '<span class="text-danger font-weight-bold">Sin fecha</span>';
+
+        tbody.innerHTML += '<tr>' +
+            '<td>' + (row.dataset.numero || '-') + '</td>' +
+            '<td>' + (row.dataset.tipo   || '-') + '</td>' +
+            '<td>' + (row.dataset.cia    || '-') + '</td>' +
+            '<td>' + (row.dataset.periodo|| '-') + '</td>' +
+            '<td class="text-right font-weight-bold">' + (row.dataset.total ? parseFloat(row.dataset.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-') + '</td>' +
+            '<td class="text-center"><span class="badge badge-warning">Factura Pendiente</span></td>' +
+            '<td class="text-center">' + flCell + '</td>' +
+            '<td class="text-center">' + fvCell + '</td>' +
+            '</tr>';
+    });
+
+    // Prerequisito
+    var alertaEl = document.getElementById('sfAlertaPrerequisito');
+    var btnSol   = document.getElementById('sfBtnSolicitar');
+    if (sinFechas > 0) {
+        alertaEl.style.display = '';
+        document.getElementById('sfMsgPrerequisito').textContent =
+            sinFechas + ' registro(s) no tienen fechas grabadas. Vuelva al Paso 1 y grabe las fechas primero.';
+        btnSol.disabled = true;
+    } else {
+        alertaEl.style.display = 'none';
+        btnSol.disabled = false;
+    }
+
+    document.getElementById('sfPaso1').style.display       = 'none';
+    document.getElementById('sfPaso2').style.display       = '';
+    document.getElementById('sfFooterPaso1').style.display = 'none';
+    document.getElementById('sfFooterPaso2').style.display = 'flex';
+    sfSetStep(2);
+}
+
+function sfIrPaso1() {
+    document.getElementById('sfPaso2').style.display       = 'none';
+    document.getElementById('sfPaso1').style.display       = '';
+    document.getElementById('sfFooterPaso2').style.display = 'none';
+    document.getElementById('sfFooterPaso1').style.display = 'flex';
+    sfSetStep(1);
+}
+
+// ── Paso 2: Solicitar y Notificar ─────────────────────────────────────────────
+
+function sfSolicitarNotificar() {
+    var guids = Array.from(document.querySelectorAll('.sf-chk:checked')).map(function (cb) { return cb.dataset.guid; });
+    if (guids.length === 0) return;
+
+    // Obtener fecha/hora del primer registro (todos deberían tener)
+    var firstRow = document.querySelector('#sfTbody .sf-row[data-guid="' + guids[0] + '"]');
+    var fecha    = firstRow ? firstRow.dataset.fechalimite : '';
+    var hora     = firstRow ? firstRow.dataset.horalimite  : '';
+    var fv       = firstRow ? firstRow.dataset.fechavenc   : '';
+
+    Swal.fire({
+        icon: 'question', title: 'Confirmar Solicitud',
+        html: '<div><i class="fas fa-paper-plane text-success mr-1"></i>Solicitar factura a <strong>' + guids.length + '</strong> registro(s)</div>' +
+              '<div class="mt-1"><small class="text-muted">El estado cambiará a <strong>Factura Solicitada</strong> y se enviarán los correos.</small></div>',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check"></i> Confirmar', cancelButtonText: 'Cancelar'
+    }).then(function(result) {
+        if (!result.isConfirmed) return;
+
+        Swal.fire({ title:'Procesando...', text:'Por favor espere.',
+            allowOutsideClick:false, allowEscapeKey:false, showConfirmButton:false,
+            didOpen: function() { Swal.showLoading(); } });
+
+        var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
+
+        // Cada registro ya tiene su propia fecha grabada en DB.
+        // Se llama SolicitarFacturaMasivo con la fecha del primero (todos deben tener la misma o ya la tienen en DB).
+        fetch('@Url.Action("SolicitarFacturaMasivo", "Produccion")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ guids: guids, fecha: fecha, hora: hora, fechaVencimiento: fv })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            Swal.close();
+            $('#modalSolicitudFactura').modal('hide');
+            Swal.fire({
+                icon: (d.errores || 0) > 0 ? 'warning' : 'success',
+                title: 'Proceso completado',
+                text: d.message,
+                confirmButtonColor: '#28a745'
+            }).then(function() { refreshList(); });
+        })
+        .catch(function() {
+            Swal.close();
+            Swal.fire({ icon:'error', title:'Error', text:'Error al procesar la solicitud.', confirmButtonColor:'#dc3545' });
+        });
+    });
+}
+
+// ── Utilidades ────────────────────────────────────────────────────────────────
+
+function sfFmtDate(iso) {
+    if (!iso) return '—';
+    var p = iso.split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+
+function sfSetStep(paso) {
+    var c1 = document.getElementById('sfStepCircle1'), l1 = document.getElementById('sfStepLabel1');
+    var c2 = document.getElementById('sfStepCircle2'), l2 = document.getElementById('sfStepLabel2');
+    if (paso === 1) {
+        c1.style.background = '#007bff'; c1.style.color = '#fff'; l1.className = 'mt-1 font-weight-bold text-primary'; l1.textContent = 'Seleccionar / Asignar Fechas';
+        c2.style.background = '#dee2e6'; c2.style.color = '#6c757d'; l2.className = 'mt-1 text-muted';
+    } else {
+        c1.style.background = '#28a745'; c1.style.color = '#fff'; l1.className = 'mt-1 text-success'; l1.textContent = 'Seleccionar / Asignar Fechas';
+        c2.style.background = '#007bff'; c2.style.color = '#fff'; l2.className = 'mt-1 font-weight-bold text-primary';
+    }
+}
+</script>

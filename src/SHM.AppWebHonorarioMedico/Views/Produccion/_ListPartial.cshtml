@@ -1,22 +1,33 @@
 @model SHM.AppWebHonorarioMedico.Models.ProduccionListViewModel
 
-<div class="card-body table-responsive p-0">
-    <table class="table table-hover table-striped table-sm" style="font-size: 0.85rem;">
-        <thead>
+<style>
+    thead th {
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+    .tabla-pequena {
+        font-size: 14px;
+    }
+
+</style>
+
+<div class="card-body table-responsive px-2 py-1">
+    <table class="table table-sm table-bordered table-hover tabla-pequena" style="background-color: #FFFFFF; width: 100%;">
+        <thead style="background-color: #6c757d; color: #fff;">
             <tr>
-                <th class="text-center" style="width: 40px;">
-                    <input type="checkbox" id="chkSelectAll" onclick="toggleSelectAll(this)">
-                </th>
-                <th style="width: 90px;">Produccion</th>
-                <th style="width: 130px;">Tipo Produccion</th>
-                <th>Descripcion</th>
-                <th style="width: 100px;">Periodo</th>
-                <th style="width: 120px;">Estado Factura</th>
-                <th>Cía Médica</th>
-                <th style="width: 100px;" class="text-right">Total S/.</th>
-                <th style="width: 130px;">Fecha Limite</th>
-                <th style="width: 120px;">Comprobante</th>
-                <th style="width: 80px;" class="text-center">Acciones</th>
+                <th class="align-middle text-center" style="width: 120px;">Acciones</th>
+                <th class="align-middle" style="width: 90px;">Cod.<br/>Producción</th>
+                <th class="align-middle" style="width: 120px;">Tipo Médico</th>
+                <th class="align-middle" style="width: 130px;">Tipo Producción</th>
+                <th class="align-middle" style="width: 120px;">Tipo Rubro</th>
+                <th class="align-middle" style="width: 100px;">Periodo</th>
+                <th class="align-middle">Descripción</th>
+                <th class="align-middle">Cía Médica</th>
+                <th class="align-middle text-right" style="width: 100px;">Total S/.</th>
+                <th class="align-middle text-center" style="width: 120px;">Estado Factura</th>
+                <th class="align-middle text-center" style="width: 100px;">Fecha Límite</th>
+                <th class="align-middle text-center" style="width: 100px;">Fecha Vencimiento</th>
+                <th class="align-middle" style="width: 120px;">Comprobante</th>
             </tr>
         </thead>
         <tbody>
@@ -25,34 +36,72 @@
                 @foreach (var item in Model.Items)
                 {
                     var badgeClass = GetBadgeClass(item.Estado);
+                    var esSolicitable = item.Estado == EstadoDescripcion.Produccion.FacturaPendiente
+                                     || item.Estado == EstadoDescripcion.Produccion.FacturaSolicitada
+                                     || item.Estado == EstadoDescripcion.Produccion.FacturaDevuelta;
+                    var tooltipSolicitar  = item.Estado == EstadoDescripcion.Produccion.FacturaPendiente
+                                          ? "Solicitar Factura"
+                                          : "Renotificar Factura";
+                    var fnSolicitar = item.Estado == EstadoDescripcion.Produccion.FacturaPendiente
+                                    ? $"abrirModalSolicitudFacturaIndividual('{item.GuidRegistro}')"
+                                    : $"abrirModalReNotificarFacturaIndividual('{item.GuidRegistro}')";
                     <tr>
-                        <td class="text-center">
-                            <input type="checkbox" class="chk-item" data-guid="@item.GuidRegistro">
-                        </td>
-                        <td>@item.CodigoProduccion</td>
-                        <td>@item.DesTipoProduccion</td>
-                        <td>@item.Descripcion</td>
-                        <td>@(item.Periodo != null ? FormatPeriodo(item.Periodo) : "-")</td>
-                        <td>
-                            <span class="badge @badgeClass">@item.DesEstado</span>
-                        </td>
-                        <td>@item.RazonSocial</td>
-                        <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
-                        <td>@(item.FechaLimite?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
-                        <td>@(item.ComprobanteFactura ?? "-")</td>
                         <td class="text-center">
                             <button type="button" class="btn btn-info btn-xs" onclick="verDetalle('@item.GuidRegistro')"
                                 title="Ver Detalle">
                                 <i class="fas fa-eye"></i>
                             </button>
+                            @if (esSolicitable)
+                            {
+                                <button type="button" class="btn btn-success btn-xs ml-1"
+                                    onclick="@fnSolicitar"
+                                    title="@tooltipSolicitar">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            }
+                            @if (item.FechaLimite.HasValue)
+                            {
+                                <button type="button" class="btn btn-warning btn-xs ml-1"
+                                    onclick="abrirHistorialNotificaciones('@item.GuidRegistro')"
+                                    title="Ver correos enviados">
+                                    <i class="fas fa-envelope"></i>
+                                </button>
+                            }
                         </td>
+                        <td>@item.NumeroProduccion</td>
+                        <td>@(item.DesTipoMedico ?? "-")</td>
+                        <td>@item.DesTipoProduccion</td>
+                        <td>@(item.DesTipoRubro ?? "-")</td>
+                        <td>@(item.Periodo ?? "-")</td>
+                        <td>@item.Descripcion</td>
+                        <td>@item.RazonSocial</td>
+                        <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                        <td class="text-center">
+                            <span class="badge @badgeClass">@item.DesEstado</span>
+                        </td>
+                        <td class="text-center">
+                            @if (item.FechaLimite.HasValue)
+                            {
+                                <span>@item.FechaLimite.Value.ToString("dd/MM/yyyy")</span>
+                                <br /><span class="text-muted">@item.FechaLimite.Value.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</span>
+                            }
+                            else { <span>-</span> }
+                        </td>
+                        <td class="text-center">
+                            @if (item.FacturaFechaVencimiento.HasValue)
+                            {
+                                <span>@item.FacturaFechaVencimiento.Value.ToString("dd/MM/yyyy")</span>
+                            }
+                            else { <span>-</span> }
+                        </td>
+                        <td>@(item.ComprobanteFactura ?? "-")</td>
                     </tr>
                 }
             }
             else
             {
                 <tr>
-                    <td colspan="11" class="text-center text-muted py-4">
+                    <td colspan="13" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2"></i>
                         <p class="mb-0">No se encontraron producciones</p>
                     </td>
@@ -78,11 +127,35 @@
                 </a>
             </li>
 
-            @for (int i = 1; i <= Model.TotalPages; i++)
+            @{
+                int startPage = Math.Max(1, Model.PageNumber - 2);
+                int endPage   = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+            }
+            @if (startPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(1)">1</a>
+                </li>
+                @if (startPage > 2)
+                {
+                    <li class="page-item disabled"><a class="page-link">…</a></li>
+                }
+            }
+            @for (int i = startPage; i <= endPage; i++)
             {
                 var pageNum = i;
                 <li class="page-item @(i == Model.PageNumber ? "active" : "")">
                     <a class="page-link" href="javascript:void(0)" onclick="loadList(@pageNum)">@i</a>
+                </li>
+            }
+            @if (endPage < Model.TotalPages)
+            {
+                @if (endPage < Model.TotalPages - 1)
+                {
+                    <li class="page-item disabled"><a class="page-link">…</a></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadList(@Model.TotalPages)">@Model.TotalPages</a>
                 </li>
             }
 
@@ -106,35 +179,8 @@ else if (Model.TotalCount > 0)
 @functions {
     string GetBadgeClass(string? estado)
     {
-        return estado switch
-        {
-            "FACTURA_PENDIENTE" => "badge-estado-pendiente",
-            "FACTURA_SOLICITADA" => "badge-estado-solicitada",
-            "FACTURA_ENVIADA" => "badge-estado-enviada",
-            "FACTURA_ACEPTADA" => "badge-estado-aceptada",
-            "FACTURA_LIQUIDADA" => "badge-estado-liquidada",
-            "FACTURA_PAGADA" => "badge-estado-pagada",
-            "FACTURA_DEVUELTA" => "badge-estado-devuelta",
-            _ => "badge-secondary"
-        };
+        return EstadoDescripcion.Produccion.GetBadgeClass(estado);
     }
 
-    string FormatPeriodo(string periodo)
-    {
-        // Parsear formato Oracle (DD-MON-YY) y convertir a dd/MM/yyyy
-        if (DateTime.TryParse(periodo, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out DateTime fecha))
-        {
-            return fecha.ToString("dd/MM/yyyy");
-        }
-        return periodo;
-    }
 }
 
-<script>
-    function toggleSelectAll(source) {
-        const checkboxes = document.querySelectorAll('.chk-item');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = source.checked;
-        });
-    }
-</script>

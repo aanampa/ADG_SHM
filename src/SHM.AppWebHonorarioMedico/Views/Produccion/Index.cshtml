@@ -16,8 +16,7 @@
                 </h1>
                 <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
                     <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Inicio</a></li>
-                    <li class="breadcrumb-item">Honorarios</li>
-                    <li class="breadcrumb-item active">Produccion</li>
+                    <li class="breadcrumb-item active">Producción</li>
                 </ol>
             </div>
         </div>
@@ -26,8 +25,9 @@
             <div class="container-fluid">
                 <div class="card">
                     <div class="card-header">
-                        <div class="row align-items-center">
-                            <div class="col-md-2">
+                        <!-- Fila 1: Filtros -->
+                        <div class="row align-items-end">
+                            <div class="col-md-1">
                                 <div class="form-group mb-0">
                                     <label class="mb-1 small">Produccion</label>
                                     <input type="text" id="txtProduccion" class="form-control form-control-sm"
@@ -54,21 +54,25 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <label class="mb-1 small">&nbsp;</label>
+                            <div class="col-md-5 d-flex align-items-end justify-content-between">
+                                <!-- Buscar / Limpiar -->
                                 <div>
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="searchList()">
-                                        <i class="fas fa-search mr-1"></i>Buscar
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="searchList()" title="Buscar">
+                                        <i class="fas fa-search"></i>
                                     </button>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearFilters()">
-                                        <i class="fas fa-eraser mr-1"></i>Limpiar
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearFilters()" title="Limpiar filtros">
+                                        <i class="fas fa-eraser"></i>
                                     </button>
                                 </div>
-                            </div>
-                            <div class="col-md-2 text-right">
-                                <label class="mb-1 small">&nbsp;</label>
+                                <!-- Acciones -->
                                 <div>
-                                    <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="abrirModalSolicitudFactura()" title="Solicitar factura — registros en estado Factura Pendiente">
+                                        <i class="fas fa-file-invoice-dollar mr-1"></i>Solicitar Factura
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm ml-1" onclick="abrirModalReNotificarFactura()" title="ReNotificar — registros en estado Factura Solicitada o Devuelta">
+                                        <i class="fas fa-bell mr-1"></i>ReNotificar Factura
+                                    </button>
+                                    <button type="button" class="btn btn-success btn-sm ml-1" onclick="exportToExcel()" title="Exportar">
                                         <i class="fas fa-file-excel mr-1"></i>Exportar
                                     </button>
                                 </div>
@@ -99,8 +103,10 @@
     </div>
 </div>
 
-<!-- Modal Container -->
+<!-- Modal Containers -->
 <div id="modalContainer"></div>
+<div id="modalContainer2"></div>
+<div id="modalContainer3"></div>
 
 @section Scripts {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -132,6 +138,10 @@
         .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
             font-size: 0.875rem !important;
             padding: 0.25rem 0.5rem !important;
+        }
+        /* Convertir texto a mayusculas en el campo de busqueda */
+        .select2-container--bootstrap-5 .select2-search__field {
+            text-transform: uppercase;
         }
     </style>
     <script>
@@ -289,31 +299,147 @@
             window.location.href = url;
         }
 
-        function exportToExcel() {
-            // TODO: Implementar exportacion a Excel
-            toastr.info('Funcionalidad en desarrollo', 'Exportar');
+        function abrirHistorialNotificaciones(guid) {
+            const container = document.getElementById('modalContainer');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalHistorialNotificaciones", "Produccion")?guidRegistro=' + guid)
+                .then(r => {
+                    if (!r.ok) throw new Error('Error HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(() => {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el historial.', confirmButtonColor: '#dc3545' });
+                });
         }
+
+        function abrirModalSolicitudFacturaIndividual(guid) {
+            const container = document.getElementById('modalContainer2');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")?guidRegistro=' + encodeURIComponent(guid))
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalSolicitudFactura() {
+            const container = document.getElementById('modalContainer2');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalSolicitudFactura", "Produccion")')
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalReNotificarFacturaIndividual(guid) {
+            const container = document.getElementById('modalContainer3');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalReNotificarFactura", "Produccion")' + '?guidRegistro=' + encodeURIComponent(guid))
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function abrirModalReNotificarFactura() {
+            const container = document.getElementById('modalContainer3');
+            container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            fetch('@Url.Action("GetModalReNotificarFactura", "Produccion")')
+                .then(r => {
+                    if (!r.ok) return r.text().then(txt => { throw new Error(`HTTP ${r.status}: ${txt}`); });
+                    return r.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    container.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        document.body.appendChild(newScript);
+                        document.body.removeChild(newScript);
+                    });
+                })
+                .catch(err => {
+                    container.innerHTML = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'No se pudo cargar el modal.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        function exportToExcel() {
+            const produccion = document.getElementById('txtProduccion').value.trim();
+            const estado = document.getElementById('cboEstado').value;
+            const idEntidadMedica = $('#cboCiaMedica').val() || '';
+
+            const params = new URLSearchParams();
+            if (produccion) params.set('produccion', produccion);
+            if (estado) params.set('estado', estado);
+            if (idEntidadMedica) params.set('idEntidadMedica', idEntidadMedica);
+
+            window.location.href = '@Url.Action("ExportarExcel", "Produccion")?' + params.toString();
+        }
+
+        // Mapeo de estados a clases CSS (generado desde EstadoDescripcion.Produccion)
+        const estadoBadgeMap = {
+            '@EstadoDescripcion.Produccion.FacturaPendiente': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaPendiente)',
+            '@EstadoDescripcion.Produccion.FacturaSolicitada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaSolicitada)',
+            '@EstadoDescripcion.Produccion.FacturaEnviada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaEnviada)',
+            '@EstadoDescripcion.Produccion.FacturaAceptada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaAceptada)',
+            '@EstadoDescripcion.Produccion.FacturaLiquidada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaLiquidada)',
+            '@EstadoDescripcion.Produccion.FacturaPagada': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaPagada)',
+            '@EstadoDescripcion.Produccion.FacturaDevuelta': '@EstadoDescripcion.Produccion.GetBadgeClass(EstadoDescripcion.Produccion.FacturaDevuelta)'
+        };
 
         // Funcion para obtener el color del badge segun el estado
         function getEstadoBadgeClass(estado) {
-            switch (estado) {
-                case 'FACTURA_PENDIENTE':
-                    return 'badge-estado-pendiente';
-                case 'FACTURA_SOLICITADA':
-                    return 'badge-estado-solicitada';
-                case 'FACTURA_ENVIADA':
-                    return 'badge-estado-enviada';
-                case 'FACTURA_ACEPTADA':
-                    return 'badge-estado-aceptada';
-                case 'FACTURA_LIQUIDADA':
-                    return 'badge-estado-liquidada';
-                case 'FACTURA_PAGADA':
-                    return 'badge-estado-pagada';
-                case 'FACTURA_DEVUELTA':
-                    return 'badge-estado-devuelta';
-                default:
-                    return 'badge-secondary';
-            }
+            return estadoBadgeMap[estado] || 'badge-secondary';
         }
     </script>
 }

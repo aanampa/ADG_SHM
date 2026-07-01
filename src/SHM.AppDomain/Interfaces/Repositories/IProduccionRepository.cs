@@ -9,6 +9,8 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
 /// <modified>ADG Antonio - 2026-01-20 - Agregado metodo de listado paginado con filtros</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Actualizada llave compuesta en ExistsByKeyAsync</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregado UpdateEstadoPagoAsync</modified>
 /// </summary>
 public interface IProduccionRepository
 {
@@ -43,6 +45,11 @@ public interface IProduccionRepository
     Task<IEnumerable<Produccion>> GetByEntidadMedicaAsync(int idEntidadMedica);
 
     /// <summary>
+    /// Obtiene producciones de una entidad medica filtradas por estado comprobante en Oracle.
+    /// </summary>
+    Task<IEnumerable<Produccion>> GetByEntidadMedicaYEstadoComprobanteAsync(int idEntidadMedica, string estadoComprobante);
+
+    /// <summary>
     /// Obtiene todas las producciones de un periodo especifico.
     /// </summary>
     Task<IEnumerable<Produccion>> GetByPeriodoAsync(string periodo);
@@ -68,12 +75,14 @@ public interface IProduccionRepository
     Task<bool> ExistsAsync(int id);
 
     /// <summary>
-    /// Verifica si existe una produccion con la llave compuesta (IdSede, IdEntidadMedica, CodigoProduccion).
+    /// Verifica si existe una produccion con la llave compuesta
+    /// (IdSede, IdEntidadMedica, CodigoProduccion, NumeroProduccion, TipoEntidadMedica).
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-19</created>
+    /// <modified>ADG Antonio - 2026-01-31 - Ampliada llave compuesta</modified>
     /// </summary>
-    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion);
+    Task<bool> ExistsByKeyAsync(int idSede, int idEntidadMedica, string codigoProduccion, string? numeroProduccion, string? tipoEntidadMedica);
 
     /// <summary>
     /// Obtiene el listado paginado de producciones con datos relacionados y filtros.
@@ -81,11 +90,26 @@ public interface IProduccionRepository
     /// <param name="produccion">Filtro por codigo de produccion (opcional)</param>
     /// <param name="estado">Filtro por estado del proceso (opcional)</param>
     /// <param name="idEntidadMedica">Filtro por ID de Cia Medica (opcional)</param>
+    /// <param name="idSede">Filtro por ID de Sede del usuario logueado (opcional)</param>
     /// <param name="pageNumber">Numero de pagina</param>
     /// <param name="pageSize">Tamaño de pagina</param>
     /// <returns>Tupla con lista de producciones y total de registros</returns>
     Task<(IEnumerable<ProduccionListaResponseDto> Items, int TotalCount)> GetPaginatedListAsync(
-        string? produccion, string? estado, int? idEntidadMedica, int pageNumber, int pageSize);
+        string? produccion, string? estado, int? idEntidadMedica, int? idSede, int pageNumber, int pageSize);
+
+    /// <summary>
+    /// Obtiene producciones con estado FACTURA_PENDIENTE o FACTURA_SOLICITADA para el modal
+    /// de solicitud masiva. Incluye conteo de usuarios externos y cuentas bancarias por entidad
+    /// en una sola query, evitando llamadas N+1 al controller.
+    /// </summary>
+    Task<IEnumerable<ProduccionListaResponseDto>> GetListSolicitudMasivaAsync(int? idSede);
+
+    /// <summary>
+    /// Obtiene un único registro para el modal de solicitud individual,
+    /// incluyendo conteo de usuarios externos y cuentas bancarias.
+    /// Acepta estados FACTURA_PENDIENTE, FACTURA_SOLICITADA y FACTURA_DEVUELTA.
+    /// </summary>
+    Task<ProduccionListaResponseDto?> GetSolicitudMasivaByGuidAsync(string guidRegistro);
 
     /// <summary>
     /// Obtiene una produccion por su GUID con datos relacionados (sede, entidad medica, descripciones).
@@ -102,7 +126,7 @@ public interface IProduccionRepository
     /// <param name="estado">Nuevo estado de la produccion</param>
     /// <param name="idModificador">ID del usuario que realiza la modificacion</param>
     /// <returns>True si se actualizo correctamente</returns>
-    Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador);
+    Task<bool> UpdateFechaLimiteEstadoAsync(string guidRegistro, DateTime fechaLimite, string estado, int idModificador, DateTime? fechaVencimiento = null);
 
     /// <summary>
     /// Actualiza solo el estado de una produccion.
@@ -126,10 +150,107 @@ public interface IProduccionRepository
     Task<int> GetFacturasEnviadasMesActualAsync(int idEntidadMedica);
 
     /// <summary>
+    /// Obtiene el resumen del mes actual: total facturado, cantidad procesada y tiempo promedio.
+    /// </summary>
+    Task<(decimal TotalFacturado, int FacturasProcesadas, decimal TiempoPromedioDias)> GetResumenMesActualAsync(int idEntidadMedica);
+
+    /// <summary>
     /// Obtiene datos de facturas por mes para los ultimos 6 meses.
     /// </summary>
     /// <param name="idEntidadMedica">ID de la entidad medica</param>
     /// <returns>Lista de datos por mes</returns>
     Task<IEnumerable<(int Anio, int Mes, int Enviadas, int Pendientes)>> GetFacturasPorMesAsync(int idEntidadMedica);
 
+    /// <summary>
+    /// Actualiza los datos de liquidacion de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-01-31</created>
+    /// </summary>
+    Task<bool> UpdateLiquidacionByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string numeroProduccion,
+        string tipoEntidadMedica,
+        string numeroLiquidacion,
+        string codigoLiquidacion,
+        string periodoLiquidacion,
+        string estadoLiquidacion,
+        DateTime fechaLiquidacion,
+        string descripcionLiquidacion,
+        string? tipoLiquidacion,
+        int idModificador);
+
+    /// <summary>
+    /// Actualiza el estado de una produccion por llave compuesta.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-24</created>
+    /// </summary>
+    Task<bool> UpdateEstadoByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador);
+
+    /// <summary>
+    /// Anula el comprobante de una produccion por llave compuesta.
+    /// Limpia Serie, Numero, FechaEmision, Glosa, EstadoComprobante,
+    /// FacturaFechaSolicitud, FacturaFechaEnvio, FacturaFechaAceptacion
+    /// y asigna el estado indicado.
+    /// Retorna el IdProduccion si se actualizo, null si no se encontro.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-02-25</created>
+    /// </summary>
+    Task<int?> AnularComprobanteByKeyAsync(
+        int idSede,
+        int idEntidadMedica,
+        string codigoProduccion,
+        string? numeroProduccion,
+        string? tipoEntidadMedica,
+        string estado,
+        int idModificador);
+
+    /// <summary>
+    /// Revierte los datos de comprobante de una produccion por su ID.
+    /// Limpia Serie, Numero, FechaEmision, Glosa, EstadoComprobante, FacturaFechaEnvio
+    /// y asigna el estado indicado.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-03-01</created>
+    Task<bool> RevertComprobanteByIdAsync(int idProduccion, string estado, int idModificador);
+
+    /// <summary>
+    /// Devuelve una factura por GUID: limpia comprobante, asigna ESTADO_COMPROBANTE = POR_ENVIAR
+    /// y cambia el estado a FACTURA_DEVUELTA.
+    /// </summary>
+    /// <author>ADG Vladimir D</author>
+    /// <created>2026-04-23</created>
+    Task<bool> DevolverFacturaAsync(string guidRegistro, int idModificador);
+
+    /// <summary>
+    /// Actualiza FECHA_LIMITE y FACTURA_FECHA_VENCIMIENTO de una lista de producciones
+    /// sin cambiar el estado (permanece FACTURA_PENDIENTE). Paso 1 del flujo de solicitud.
+    /// </summary>
+    Task<bool> UpdateFechasProduccionAsync(string guidRegistro, DateTime fechaLimite, DateTime fechaVencimiento, int idModificador);
+
+    /// <summary>
+    /// Actualiza los campos de estado de pago SAP de una produccion por su ID.
+    /// </summary>
+    /// <author>ADG Antonio</author>
+    /// <created>2026-04-15</created>
+    Task<bool> UpdateEstadoPagoAsync(
+        int idProduccion,
+        string? pagoEstado,
+        DateTime? pagoFecha,
+        string? pagoNumeroOperacion,
+        string? pagoBanco,
+        string? pagoCuentaDeposito,
+        decimal? pagoMontoPagado,
+        int idModificador);
 }

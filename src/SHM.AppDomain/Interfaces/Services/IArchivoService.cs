@@ -7,6 +7,7 @@ namespace SHM.AppDomain.Interfaces.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-02</created>
+/// <modified>ADG Vladimir - 2026-01-29 - Agregado soporte para almacenamiento BLOB</modified>
 /// </summary>
 public interface IArchivoService
 {
@@ -39,4 +40,14 @@ public interface IArchivoService
     /// Elimina (soft delete) un archivo.
     /// </summary>
     Task<bool> DeleteArchivoAsync(int id, int idModificador);
+
+    /// <summary>
+    /// Obtiene el contenido de un archivo (desde BLOB o sistema de archivos).
+    /// </summary>
+    Task<ArchivoContenidoDto?> GetArchivoContenidoAsync(int idArchivo);
+
+    /// <summary>
+    /// Obtiene el contenido de un archivo por su GUID.
+    /// </summary>
+    Task<ArchivoContenidoDto?> GetArchivoContenidoByGuidAsync(string guid);
 }

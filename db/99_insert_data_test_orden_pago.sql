@@ -1,0 +1,129 @@
+ 
+-- FACTURAS LIQUIDADAS : ACTUALIZACION DE ESTADO  Y NUMERACION DE FACTURAS EN SHM_PRODUCCION
+
+UPDATE SHM_PRODUCCION
+SET 
+    NUMERO_LIQUIDACION = TO_CHAR(TO_NUMBER(NUMERO_PRODUCCION) + 1),
+    CODIGO_LIQUIDACION = TO_CHAR(TO_NUMBER(CODIGO_PRODUCCION) + 1), 
+    PERIODO_LIQUIDACION = PERIODO,
+    ESTADO_LIQUIDACION = 'AUTORIZADO',
+    FECHA_LIQUIDACION = FECHA_PRODUCCION + 1,  
+    DESCRIPCION_LIQUIDACION = 'ADG, PROD ' || CODIGO_PRODUCCION,
+    ESTADO = 'FACTURA_LIQUIDADA', 
+    -- Campos de auditoría
+    ID_MODIFICADOR = 1,
+    FECHA_MODIFICACION = SYSDATE
+WHERE ID_SEDE = 11 AND ESTADO = 'FACTURA_ENVIADA' -- ID_PRODUCCION = 32
+
+---
+-- =====================================================
+-- Insert de datos de prueba para SHM_ENTIDAD_CUENTA_BANCO
+-- Genera una cuenta bancaria para cada Entidad Medica
+-- =====================================================
+
+INSERT INTO SHM_ENTIDAD_CUENTA_BANCO (
+    ID_CUENTA_BANCO,
+    ID_ENTIDAD_MEDICA,
+    ID_BANCO,
+    CUENTA_CORRIENTE,
+    CUENTA_CCI,
+    MONEDA,
+    GUID_REGISTRO,
+    ACTIVO,
+    ID_CREADOR,
+    FECHA_CREACION,
+    ID_MODIFICADOR,
+    FECHA_MODIFICACION
+)
+SELECT
+    SHM_ENTIDAD_CUENTA_BANCO_SEQ.NEXTVAL,
+    em.ID_ENTIDAD_MEDICA,
+    1,  -- ID_BANCO = 1
+    -- Cuenta Corriente: 13 digitos aleatorios
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(1000000000000, 9999999999999)), 13, '0'),
+    -- Cuenta CCI: 23 digitos aleatorios (concatenando 2 numeros)
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(100000000000, 999999999999)), 12, '0') || 
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(10000000000, 99999999999)), 11, '0'),
+    'S',  -- MONEDA = Soles
+    SYS_GUID(),
+    1,    -- ACTIVO
+    1,    -- ID_CREADOR
+    SYSDATE,
+    NULL, -- ID_MODIFICADOR
+    NULL  -- FECHA_MODIFICACION
+FROM SHM_ENTIDAD_MEDICA em
+WHERE em.ACTIVO = 1
+  AND NOT EXISTS (
+      SELECT 1 
+      FROM SHM_ENTIDAD_CUENTA_BANCO ecb 
+      WHERE ecb.ID_ENTIDAD_MEDICA = em.ID_ENTIDAD_MEDICA
+  );
+
+-- =====================================================
+-- Update de ID_BANCO en SHM_ENTIDAD_CUENTA_BANCO
+-- Distribucion por rangos ordenados por ID_CUENTA_BANCO
+-- =====================================================
+
+-- Opcion 1: Usando MERGE con ROW_NUMBER (recomendado)
+MERGE INTO SHM_ENTIDAD_CUENTA_BANCO dest
+USING (
+    SELECT 
+        ID_CUENTA_BANCO,
+        CASE 
+            WHEN rn <= 25 THEN 1      -- Primeros 25 registros
+            WHEN rn <= 40 THEN 2      -- Siguientes 15 (26-40)
+            WHEN rn <= 55 THEN 3      -- Siguientes 15 (41-55)
+            ELSE 4                     -- El resto (56+)
+        END AS NUEVO_ID_BANCO
+    FROM (
+        SELECT 
+            ID_CUENTA_BANCO,
+            ROW_NUMBER() OVER (ORDER BY ID_CUENTA_BANCO) AS rn
+        FROM SHM_ENTIDAD_CUENTA_BANCO
+    )
+) src
+ON (dest.ID_CUENTA_BANCO = src.ID_CUENTA_BANCO)
+WHEN MATCHED THEN
+    UPDATE SET dest.ID_BANCO = src.NUEVO_ID_BANCO;
+
+
+--- REGISTRA FACTURAS PDF DE PRUEBAS
+-- Factura cargada
+-- SELECT * FROM SHM_PRODUCCION WHERE ID_PRODUCCION  = 55
+-- SELECT * FROM SHM_ARCHIVO_COMPROBANTE WHERE ID_PRODUCCION  = 55
+
+-- 1. Desactivar registros existentes en SHM_ARCHIVO_COMPROBANTE para producciones liquidadas
+UPDATE SHM_ARCHIVO_COMPROBANTE
+SET ACTIVO = 0,
+    ID_MODIFICADOR = 1,
+    FECHA_MODIFICACION = SYSDATE
+WHERE ID_PRODUCCION IN (
+    SELECT ID_PRODUCCION FROM SHM_PRODUCCION WHERE ESTADO = 'FACTURA_LIQUIDADA'
+);
+
+-- 2. Insertar un registro por cada produccion liquidada
+INSERT INTO SHM_ARCHIVO_COMPROBANTE (
+    ID_ARCHIVO_COMPROBANTE,
+    ID_PRODUCCION,
+    ID_ARCHIVO,
+    TIPO_ARCHIVO,
+    DESCRIPCION,
+    GUID_REGISTRO,
+    ACTIVO,
+    ID_CREADOR,
+    FECHA_CREACION
+)
+SELECT
+    SHM_ARCHIVO_COMPROBANTE_SEQ.NEXTVAL,
+    p.ID_PRODUCCION,
+    34, -- Factura cargada
+    'PDF',
+    'Factura PDF',
+    SYS_GUID(),
+    1,
+    1,
+    SYSDATE
+FROM SHM_PRODUCCION p
+WHERE p.ESTADO = 'FACTURA_LIQUIDADA';
+
+--------

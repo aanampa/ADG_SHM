@@ -14,6 +14,11 @@ public class DashboardViewModel
     public int FacturasPendientes { get; set; }
     public int FacturasEnviadasMes { get; set; }
 
+    // Resumen del mes
+    public decimal TotalFacturadoMes { get; set; }
+    public int FacturasProcesadasMes { get; set; }
+    public decimal TiempoPromedioDias { get; set; }
+
     // Conteo por estados para grafico de dona
     public int CantidadPendienteFactura { get; set; }
     public int CantidadFacturaEnviada { get; set; }
@@ -22,6 +27,15 @@ public class DashboardViewModel
 
     // Datos para grafico de barras (ultimos 6 meses)
     public List<FacturasPorMesViewModel> FacturasPorMes { get; set; } = new();
+}
+
+/// <summary>
+/// ViewModel para la pagina de Configuracion del usuario.
+/// </summary>
+public class ConfiguracionViewModel
+{
+    public int FacturasTotal { get; set; }
+    public DateTime? UltimoAcceso { get; set; }
 }
 
 /// <summary>

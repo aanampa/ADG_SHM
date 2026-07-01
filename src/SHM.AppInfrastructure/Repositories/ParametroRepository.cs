@@ -36,7 +36,9 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -44,6 +46,7 @@ public class ParametroRepository : IParametroRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_PARAMETRO
+            WHERE ACTIVO = 1
             ORDER BY ID_PARAMETRO";
 
         return await connection.QueryAsync<Parametro>(sql);
@@ -60,7 +63,9 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -84,7 +89,9 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -108,7 +115,9 @@ public class ParametroRepository : IParametroRepository
             SELECT
                 ID_PARAMETRO as IdParametro,
                 CODIGO as Codigo,
+                DESCRIPCION as Descripcion,
                 VALOR as Valor,
+                TIPO_PARAMETRO as TipoParametro,
                 GUID_REGISTRO as GuidRegistro,
                 ACTIVO as Activo,
                 ID_CREADOR as IdCreador,
@@ -116,7 +125,7 @@ public class ParametroRepository : IParametroRepository
                 ID_MODIFICADOR as IdModificador,
                 FECHA_MODIFICACION as FechaModificacion
             FROM SHM_PARAMETRO
-            WHERE CODIGO = :Codigo";
+            WHERE CODIGO = :Codigo AND ACTIVO = 1";
 
         return await connection.QueryFirstOrDefaultAsync<Parametro>(sql, new { Codigo = codigo });
     }
@@ -132,7 +141,9 @@ public class ParametroRepository : IParametroRepository
             INSERT INTO SHM_PARAMETRO (
                 ID_PARAMETRO,
                 CODIGO,
+                DESCRIPCION,
                 VALOR,
+                TIPO_PARAMETRO,
                 GUID_REGISTRO,
                 ACTIVO,
                 ID_CREADOR,
@@ -140,7 +151,9 @@ public class ParametroRepository : IParametroRepository
             ) VALUES (
                 SHM_PARAMETRO_SEQ.NEXTVAL,
                 :Codigo,
+                :Descripcion,
                 :Valor,
+                :TipoParametro,
                 SYS_GUID(),
                 1,
                 :IdCreador,
@@ -150,7 +163,9 @@ public class ParametroRepository : IParametroRepository
 
         var parameters = new DynamicParameters();
         parameters.Add("Codigo", parametro.Codigo);
+        parameters.Add("Descripcion", parametro.Descripcion);
         parameters.Add("Valor", parametro.Valor);
+        parameters.Add("TipoParametro", parametro.TipoParametro);
         parameters.Add("IdCreador", parametro.IdCreador);
         parameters.Add("IdParametro", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
 
@@ -170,7 +185,9 @@ public class ParametroRepository : IParametroRepository
             UPDATE SHM_PARAMETRO
             SET
                 CODIGO = :Codigo,
+                DESCRIPCION = :Descripcion,
                 VALOR = :Valor,
+                TIPO_PARAMETRO = :TipoParametro,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -180,7 +197,9 @@ public class ParametroRepository : IParametroRepository
         {
             IdParametro = id,
             parametro.Codigo,
+            parametro.Descripcion,
             parametro.Valor,
+            parametro.TipoParametro,
             parametro.Activo,
             parametro.IdModificador
         });

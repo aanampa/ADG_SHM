@@ -26,7 +26,7 @@
                     }
                     @if (!string.IsNullOrEmpty(item.Icono))
                     {
-                        <i class="@item.Icono mr-2 text-primary"></i>
+                        <span class="mr-2 text-primary">@Html.Raw(item.Icono)</span>
                     }
                     else if (hasChildren)
                     {
@@ -51,7 +51,7 @@
                 <td class="text-center">
                     @if (!string.IsNullOrEmpty(item.Icono))
                     {
-                        <i class="@item.Icono"></i>
+                        @Html.Raw(item.Icono)
                         <small class="d-block text-muted">@item.Icono</small>
                     }
                     else

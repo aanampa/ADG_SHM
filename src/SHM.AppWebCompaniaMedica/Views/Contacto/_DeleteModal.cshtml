@@ -1,0 +1,66 @@
+@model SHM.AppWebCompaniaMedica.Models.ContactoDeleteViewModel
+
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: #dc3545; color: #fff; border-radius: 12px 12px 0 0; padding: 1rem 1.5rem;">
+                <h6 class="modal-title mb-0 fw-semibold">
+                    <i class="bi bi-trash-fill me-2"></i>Eliminar Contacto
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="deleteGuid" value="@Model.GuidRegistro" />
+
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1rem;">
+                    El contacto dejará de recibir notificaciones del sistema.
+                </p>
+                <div style="background: var(--bg-main); border-radius: 8px; padding: 1rem;">
+                    <div style="font-weight: 600; color: var(--text-primary);">@Model.NombreCompleto</div>
+                    <div style="color: var(--text-secondary); font-size: 0.85rem;">@Model.Email</div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border); padding: 1rem 1.5rem;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="submitEliminar()">
+                    <i class="bi bi-trash-fill me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const el = document.getElementById('modalEliminar');
+        const modal = new bootstrap.Modal(el);
+        el.addEventListener('hidden.bs.modal', () => el.remove());
+        modal.show();
+    })();
+
+    function submitEliminar() {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch('@Url.Action("Delete", "Contacto")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ guidRegistro: document.getElementById('deleteGuid').value })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const el = document.getElementById('modalEliminar');
+                bootstrap.Modal.getInstance(el)?.hide();
+                Swal.fire({ icon: 'success', title: 'Exito', text: data.message,
+                    confirmButtonColor: '#f26522', timer: 1500, showConfirmButton: false });
+                cargarLista();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#f26522' });
+            }
+        })
+        .catch(() => {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud.', confirmButtonColor: '#f26522' });
+        });
+    }
+</script>

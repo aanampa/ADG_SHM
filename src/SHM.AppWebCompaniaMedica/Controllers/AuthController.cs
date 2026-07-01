@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHM.AppDomain.Entities;
 using SHM.AppDomain.Interfaces.Services;
 
 namespace SHM.AppWebCompaniaMedica.Controllers;
@@ -9,16 +11,25 @@ namespace SHM.AppWebCompaniaMedica.Controllers;
 public class AuthController : Controller
 {
     private readonly IUsuarioService _usuarioService;
+    private readonly IEntidadMedicaService _entidadMedicaService;
     private readonly IEmailService _emailService;
+    private readonly ISegAccesoService _segAccesoService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IUsuarioService usuarioService,
+        IEntidadMedicaService entidadMedicaService,
         IEmailService emailService,
+        ISegAccesoService segAccesoService,
+        IConfiguration configuration,
         ILogger<AuthController> logger)
     {
         _usuarioService = usuarioService;
+        _entidadMedicaService = entidadMedicaService;
         _emailService = emailService;
+        _segAccesoService = segAccesoService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -28,7 +39,7 @@ public class AuthController : Controller
         // Si ya está autenticado, redirigir al Dashboard
         if (User.Identity?.IsAuthenticated == true)
         {
-            return RedirectToAction("Dashboard", "Home");
+            return RedirectToAction("Inicio", "Home");
         }
 
         return View();
@@ -40,6 +51,12 @@ public class AuthController : Controller
     {
         try
         {
+            string instancia = _configuration["AppSettings:InstanceName"] ?? "";
+
+            // Quitar espacios al inicio y al final
+            username = username?.Trim() ?? "";
+            password = password?.Trim() ?? "";
+
             _logger.LogInformation("Intento de login para usuario: {Username}", username);
 
             // Validar campos requeridos
@@ -49,22 +66,43 @@ public class AuthController : Controller
                 return View();
             }
 
-            // Validar CAPTCHA
-            if (string.IsNullOrEmpty(captchaAnswer) ||
-                !captchaAnswer.Equals(captchaExpected, StringComparison.OrdinalIgnoreCase))
+            // Validar CAPTCHA solo en PROD
+            if (instancia == "PROD")
             {
-                ViewBag.Error = "El código de verificación es incorrecto";
-                return View();
+                if (string.IsNullOrEmpty(captchaAnswer) ||
+                    !captchaAnswer.Equals(captchaExpected, StringComparison.OrdinalIgnoreCase))
+                {
+                    ViewBag.Error = "El código de verificación es incorrecto";
+                    return View();
+                }
             }
 
-            // Validar credenciales contra la base de datos
-            var usuario = await _usuarioService.ValidarCredencialesAsync(username, password);
+            // En PROD validar credenciales con BCrypt, en otros entornos solo verificar que el usuario exista
+            var usuario = instancia == "PROD"
+                ? await _usuarioService.ValidarCredencialesAsync(username, password)
+                : await _usuarioService.GetUsuarioByLoginAsync(username);
 
             if (usuario == null)
             {
                 _logger.LogWarning("Intento de login fallido para usuario: {Username}", username);
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, username, ObtenerIp(), ObtenerUserAgent(), null, "Credenciales incorrectas");
                 ViewBag.Error = "Usuario o contraseña incorrectos";
                 return View();
+            }
+
+            if (usuario.Activo != 1)
+            {
+                await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginFail, username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario, "Usuario inactivo");
+                ViewBag.Error = "Usuario inactivo";
+                return View();
+            }
+
+            // Obtener razon social de la entidad medica
+            string razonSocial = "";
+            if (usuario.IdEntidadMedica.HasValue && usuario.IdEntidadMedica.Value > 0)
+            {
+                var entidadMedica = await _entidadMedicaService.GetEntidadMedicaByIdAsync(usuario.IdEntidadMedica.Value);
+                razonSocial = entidadMedica?.RazonSocial ?? "";
             }
 
             // Crear Claims para el usuario autenticado
@@ -76,7 +114,9 @@ public class AuthController : Controller
                 new Claim("ApellidoPaterno", usuario.ApellidoPaterno ?? ""),
                 new Claim("ApellidoMaterno", usuario.ApellidoMaterno ?? ""),
                 new Claim(ClaimTypes.Email, usuario.Email ?? ""),
-                new Claim("TipoUsuario", usuario.TipoUsuario)
+                new Claim("TipoUsuario", usuario.TipoUsuario),
+                new Claim("RazonSocial", razonSocial),
+                new Claim("FechaLogin", DateTime.Now.ToString("o"))
             };
 
             if (usuario.IdEntidadMedica.HasValue)
@@ -86,6 +126,10 @@ public class AuthController : Controller
 
             if (usuario.IdRol.HasValue)
                 claims.Add(new Claim(ClaimTypes.Role, usuario.IdRol.Value.ToString()));
+
+            // Verificar si tiene clave temporal
+            if (usuario.FlagPasswordTemporal == 1)
+                claims.Add(new Claim("PasswordTemporal", "1"));
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var authProperties = new AuthenticationProperties
@@ -100,8 +144,13 @@ public class AuthController : Controller
                 authProperties);
 
             _logger.LogInformation("Login exitoso para usuario: {Username} (ID: {UserId})", username, usuario.IdUsuario);
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.LoginOk, username, ObtenerIp(), ObtenerUserAgent(), usuario.IdUsuario);
 
-            return RedirectToAction("Dashboard", "Home");
+            // Redirigir a cambiar clave si es temporal
+            if (usuario.FlagPasswordTemporal == 1)
+                return RedirectToAction("CambiarClave", "Auth");
+
+            return RedirectToAction("Inicio", "Home");
         }
         catch (Exception ex)
         {
@@ -114,8 +163,11 @@ public class AuthController : Controller
     // GET: Auth/Logout
     public async Task<IActionResult> Logout()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userLogin = User.FindFirstValue(ClaimTypes.Name);
+        var userId    = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userLogin = User.FindFirstValue(ClaimTypes.Name) ?? "";
+
+        if (int.TryParse(userId, out var idUsuario))
+            await _segAccesoService.RegistrarAsync(TipoEventoAcceso.Logout, userLogin, ObtenerIp(), ObtenerUserAgent(), idUsuario);
 
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
@@ -123,6 +175,17 @@ public class AuthController : Controller
 
         return RedirectToAction("Login");
     }
+
+    private string ObtenerIp()
+    {
+        var forwarded = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwarded))
+            return forwarded.Split(',')[0].Trim();
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
+    }
+
+    private string? ObtenerUserAgent() =>
+        HttpContext.Request.Headers["User-Agent"].FirstOrDefault();
 
     // GET: Auth/AccesoDenegado
     public IActionResult AccesoDenegado()
@@ -199,6 +262,87 @@ public class AuthController : Controller
 
         ViewBag.Token = token;
         return View();
+    }
+
+    // GET: Auth/CambiarClave
+    [Authorize]
+    public IActionResult CambiarClave()
+    {
+        ViewBag.Username = User.FindFirstValue(ClaimTypes.Name) ?? "";
+        return View();
+    }
+
+    // POST: Auth/CambiarClave
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> CambiarClave(string currentPassword, string newPassword, string confirmPassword)
+    {
+        ViewBag.Username = User.FindFirstValue(ClaimTypes.Name) ?? "";
+
+        try
+        {
+            if (string.IsNullOrEmpty(currentPassword))
+            {
+                ViewBag.Error = "La contraseña actual es requerida";
+                return View();
+            }
+
+            if (string.IsNullOrEmpty(newPassword) || string.IsNullOrEmpty(confirmPassword))
+            {
+                ViewBag.Error = "La nueva contraseña es requerida";
+                return View();
+            }
+
+            if (newPassword != confirmPassword)
+            {
+                ViewBag.Error = "Las contraseñas no coinciden";
+                return View();
+            }
+
+            if (newPassword.Length < 6)
+            {
+                ViewBag.Error = "La contraseña debe tener al menos 6 caracteres";
+                return View();
+            }
+
+            var idUsuario = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+
+            var (success, errorMessage) = await _usuarioService.CambiarPasswordAsync(
+                idUsuario, currentPassword, newPassword);
+
+            if (!success)
+            {
+                ViewBag.Error = errorMessage;
+                return View();
+            }
+
+            _logger.LogInformation("Usuario {Username} cambió su contraseña temporal exitosamente",
+                User.FindFirstValue(ClaimTypes.Name));
+
+            // Re-autenticar sin el claim PasswordTemporal
+            var claims = User.Claims
+                .Where(c => c.Type != "PasswordTemporal")
+                .ToList();
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties
+                {
+                    IsPersistent = false,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                });
+
+            return RedirectToAction("Inicio", "Home");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar contraseña temporal");
+            ViewBag.Error = "Ocurrió un error al procesar la solicitud. Por favor intente nuevamente.";
+            return View();
+        }
     }
 
     // POST: Auth/RestablecerClave

@@ -9,4 +9,5 @@ namespace SHM.AppDomain.DTOs.Produccion;
 public class CambioEstadoFacturaDto
 {
     public string? GuidRegistro { get; set; }
+    public string? MotivoDevolucion { get; set; }
 }

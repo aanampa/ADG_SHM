@@ -49,4 +49,9 @@ public interface IBancoRepository
     /// Verifica si existe un banco con el identificador especificado.
     /// </summary>
     Task<bool> ExistsAsync(int id);
+
+    /// <summary>
+    /// Obtiene los bancos que tienen al menos una cuenta registrada en SHM_ENTIDAD_CUENTA_BANCO.
+    /// </summary>
+    Task<IEnumerable<Banco>> GetBancosConCuentasAsync();
 }

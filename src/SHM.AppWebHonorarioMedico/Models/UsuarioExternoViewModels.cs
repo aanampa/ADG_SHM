@@ -23,6 +23,7 @@ public class UsuarioExternoItemViewModel
     public string? Celular { get; set; }
     public string? EntidadMedicaNombre { get; set; }
     public string? RolDescripcion { get; set; }
+    public DateTime? UltimoAcceso { get; set; }
     public int Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }
@@ -63,9 +64,11 @@ public class UsuarioExternoCreateViewModel
     [Display(Name = "Celular")]
     public string? Celular { get; set; }
 
-    [Required(ErrorMessage = "Debe seleccionar una entidad medica")]
     [Display(Name = "Entidad Medica")]
     public int? IdEntidadMedica { get; set; }
+
+    /// <summary>Nombre de la entidad cuando viene pre-seleccionada desde el modal de entidad.</summary>
+    public string? EntidadMedicaNombre { get; set; }
 
     [Required(ErrorMessage = "Debe seleccionar un rol")]
     [Display(Name = "Rol")]
@@ -75,6 +78,14 @@ public class UsuarioExternoCreateViewModel
     public bool EnviarCorreo { get; set; } = true;
 
     public List<SelectListItem> Roles { get; set; } = new();
+}
+
+public class UsuariosEntidadViewModel
+{
+    public string EntidadGuid { get; set; } = string.Empty;
+    public int IdEntidadMedica { get; set; }
+    public string EntidadRazonSocial { get; set; } = string.Empty;
+    public List<UsuarioExternoItemViewModel> Items { get; set; } = new();
 }
 
 public class UsuarioExternoEditViewModel

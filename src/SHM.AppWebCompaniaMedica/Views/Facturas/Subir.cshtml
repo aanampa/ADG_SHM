@@ -1,312 +1,1264 @@
-@model SHM.AppWebCompaniaMedica.Models.SubirFacturaViewModel
+﻿@model SHM.AppWebCompaniaMedica.Models.SubirFacturaViewModel
+@using static SHM.AppDomain.Constants.AppConstants
 @{
-    ViewData["Title"] = "Subir Factura";
+    ViewData["Title"] = "Enviar Factura";
+    var tipoNombre = Model.TipoComprobante switch { "1" => "Factura", "22" => "Recibo por Honorarios", _ => Model.TipoComprobante ?? "-" };
 }
 
-<div class="table-card fade-in">
+<style>
+    /* Sin scroll de página en paso 2 */
+    html, body { overflow: hidden !important; height: 100% !important; }
+    /* Pasos 1, 3 y 4 necesitan scroll por el contenido extenso */
+    html.paso-1, html.paso-1 body,
+    html.paso-3, html.paso-3 body,
+    html.paso-4, html.paso-4 body { overflow: auto !important; height: auto !important; }
+
+    /* === Wizard Stepper === */
+    .wizard-steps {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 0.75rem 1rem 0.625rem;
+        background: transparent;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1.25rem;
+    }
+    .step-indicator {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        min-width: 80px;
+    }
+    .step-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+        background: #dee2e6;
+        color: #6c757d;
+        transition: all 0.3s ease;
+    }
+    .step-indicator.active .step-circle {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 3px 10px rgba(242,101,34,0.35);
+    }
+    .step-indicator.completed .step-circle {
+        background: #28a745;
+        color: #fff;
+    }
+    .step-label {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-align: center;
+        line-height: 1.25;
+    }
+    .step-indicator.active .step-label  { color: var(--accent); font-weight: 700; }
+    .step-indicator.completed .step-label { color: #28a745; font-weight: 600; }
+    .step-connector {
+        flex: 1;
+        height: 2px;
+        background: #dee2e6;
+        margin: 0 0.4rem;
+        margin-top: 17px;
+        max-width: 120px;
+        transition: background 0.3s ease;
+    }
+    .step-connector.completed { background: #28a745; }
+
+    /* === Mini resumen Paso 2 === */
+    .mini-resumen {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 0.875rem 1.25rem;
+        background: var(--bg-main);
+        border-radius: 10px;
+        border-left: 4px solid var(--accent);
+        font-size: 0.875rem;
+        flex-wrap: wrap;
+    }
+    .mini-resumen .sep {
+        color: var(--border);
+        font-size: 1.1rem;
+    }
+
+    /* === Copy button === */
+    .btn-copiar-concepto {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 8px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        line-height: 1;
+    }
+    .btn-copiar-concepto:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-copiar-concepto.copiado { border-color: #28a745; color: #28a745; }
+
+    /* === Info card reusable === */
+    .info-card {
+        padding: 0.35rem 0.75rem;
+        background: var(--bg-main);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        height: 100%;
+    }
+    .info-card .lbl { color: var(--text-secondary); font-size: 0.75rem; display: block; margin-bottom: 0.15rem; }
+    .info-card .val { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); }
+    .info-card .val.mono { font-family: 'JetBrains Mono', monospace; }
+    .info-card .val.accent { color: var(--accent); font-size: 0.95rem; }
+
+    /* === Section title === */
+    .section-title {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.875rem;
+    }
+
+    /* === Sticky footer === */
+    .wizard-footer {
+        position: fixed;
+        bottom: 0;
+        left: 280px;
+        right: 0;
+        background: #fff;
+        border-top: 1px solid var(--border);
+        padding: 0.875rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        z-index: 200;
+    }
+    @@media (max-width: 992px) {
+        .wizard-footer { left: 0; }
+    }
+    .btn-nav-back {
+        background: transparent;
+        color: var(--text-primary);
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        padding: 0.65rem 1.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+    .btn-nav-back:hover { border-color: var(--text-secondary); background: var(--bg-main); color: var(--text-primary); }
+    .btn-nav-next {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 0.65rem 1.75rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-nav-next:hover:not(:disabled) { background: #d4541c; }
+    .btn-nav-next:disabled { background: #6c757d; cursor: not-allowed; }
+    .step-counter {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    /* === btn-nav-confirm (Paso 4) === */
+    .btn-nav-confirm {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 0.65rem 1.75rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 15px rgba(242,101,34,0.25);
+    }
+    .btn-nav-confirm:hover:not(:disabled) { background: #d4541c; }
+    .btn-nav-confirm:disabled { background: #6c757d; cursor: not-allowed; box-shadow: none; }
+
+    /* === PDF Fullscreen (Paso 3) === */
+    .pdf-fullscreen {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        height: calc(100vh - 310px);
+        min-height: 420px;
+    }
+    .pdf-fullscreen-inner {
+        width: 100%;
+        max-width: 900px;
+        height: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+        border: 1px solid var(--border);
+    }
+    .pdf-fullscreen-inner iframe { width: 100%; height: 100%; border: none; display: block; }
+
+    /* === Validacion (Paso 4) === */
+    .validation-panel { max-width: 860px; margin: 0 auto; }
+    .xml-section { margin-bottom: 1.25rem; }
+    .xml-section-title { font-weight:700; color:var(--primary); font-size:0.875rem; margin-bottom:0.75rem; padding-bottom:0.5rem; border-bottom:2px solid var(--accent); display:flex; align-items:center; gap:0.5rem; }
+    .xml-data-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
+    .xml-field { background:var(--bg-main); padding:0.65rem 0.75rem; border-radius:8px; }
+    .xml-label { font-size:0.72rem; color:var(--text-secondary); display:block; margin-bottom:0.2rem; }
+    .xml-value { font-weight:600; font-size:0.875rem; color:var(--text-primary); }
+    .xml-value.mono { font-family:'JetBrains Mono',monospace; }
+    .total-highlight { background:rgba(242,101,34,0.1); padding:0.875rem; border-radius:10px; margin-top:0.6rem; }
+    .total-amount { font-size:1.35rem; font-weight:700; color:var(--accent); }
+    .item-row { padding:0.65rem 0.75rem; border-radius:8px; margin-bottom:0.4rem; font-size:0.82rem; }
+    .item-row:nth-child(odd)  { background:var(--bg-main); }
+    .item-row:nth-child(even) { background:white; border:1px solid var(--border); }
+    .validation-section { background:white; border-radius:12px; padding:1.25rem; margin-bottom:1.25rem; border:2px solid var(--border); }
+    .validation-section.has-errors { border-color:#dc3545; background:rgba(220,53,69,0.03); }
+    .validation-section.all-valid  { border-color:#28a745; background:rgba(40,167,69,0.03); }
+    .validation-title { font-weight:700; font-size:0.95rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; }
+    .validation-title.error   { color:#dc3545; }
+    .validation-title.success { color:#28a745; }
+    .validation-row { display:flex; align-items:stretch; margin-bottom:0.75rem; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
+    .validation-label { flex:0 0 100px; background:var(--bg-main); padding:0.75rem; font-weight:600; font-size:0.8rem; display:flex; align-items:center; border-right:1px solid var(--border); }
+    .validation-values { flex:1; display:flex; }
+    .validation-col { flex:1; padding:0.75rem; text-align:center; }
+    .validation-col-header { font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.25rem; }
+    .validation-col-value { font-weight:600; font-size:0.85rem; font-family:'JetBrains Mono',monospace; }
+    .validation-col:first-child { border-right:1px solid var(--border); }
+    .validation-status { flex:0 0 50px; display:flex; align-items:center; justify-content:center; font-size:1.25rem; }
+    .validation-status.valid   { background:rgba(40,167,69,0.1);  color:#28a745; }
+    .validation-status.invalid { background:rgba(220,53,69,0.1);  color:#dc3545; }
+    .validation-status.warning { background:rgba(255,193,7,0.15); color:#e6a000; }
+    .error-alert { background:rgba(220,53,69,0.1); border:1px solid rgba(220,53,69,0.3); border-radius:10px; padding:1rem; margin-top:1rem; display:flex; align-items:flex-start; gap:0.75rem; }
+    .error-alert i { color:#dc3545; font-size:1.25rem; margin-top:0.1rem; }
+    .error-alert-text { flex:1; }
+    .error-alert-text strong { color:#dc3545; display:block; margin-bottom:0.25rem; }
+    .error-alert-text p { margin:0; color:var(--text-secondary); font-size:0.85rem; }
+
+    @@media (max-width: 768px) { .pdf-fullscreen { height: calc(100vh - 240px); } }
+
+    /* === Campos obligatorios con estado visual === */
+    .form-control.campo-lleno {
+        border-color: #28a745;
+        background-color: rgba(40,167,69,0.04);
+    }
+    .form-control.campo-lleno:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.15);
+    }
+</style>
+
+<div class="table-card fade-in" style="margin-bottom: 0;">
     <div class="table-header">
         <h3>
             <i class="bi bi-file-earmark-arrow-up"></i>
-            Subir Factura - @Model.CodigoProduccion
+            Enviar Factura &mdash; Producci&oacute;n @Model.NumeroProduccion
         </h3>
     </div>
-    <div style="padding: 2rem;">
+    <div style="padding: 1.25rem 1.5rem 0.75rem;">
+
         @if (TempData["Error"] != null)
         {
             <div class="alert alert-danger" style="border-radius: 12px; margin-bottom: 1.5rem;">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                @TempData["Error"]
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
             </div>
         }
 
-        <!-- Seccion de Informacion (Solo Lectura) -->
-        <div class="mb-4">
-            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
-                <i class="bi bi-info-circle me-2"></i>Informacion de la Produccion
-            </h6>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Sede</span>
-                        <span style="font-weight: 600;">@Model.NombreSede</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Produccion</span>
-                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@Model.CodigoProduccion</span>
-                    </div>
-                </div>
-                <div class="col-md-12">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Concepto</span>
-                        <span style="font-weight: 600;">@(Model.Concepto ?? "-")</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Importe</span>
-                        <span style="font-weight: 700; color: var(--accent); font-size: 1.25rem;">S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Fecha Limite</span>
-                        <span style="font-weight: 600; color: var(--danger);">@(Model.FechaLimite?.ToString("dd/MM/yyyy") ?? "-")</span>
-                    </div>
-                </div>
+        <!-- ===== STEPPER ===== -->
+        <div class="wizard-steps" id="wizardStepper" style="max-width:820px;margin-left:auto;margin-right:auto;">
+            <div class="step-indicator active" id="si-1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Revisar<br>Datos</div>
+            </div>
+            <div class="step-connector" id="sc-1"></div>
+            <div class="step-indicator" id="si-2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Adjuntar<br>Comprobante</div>
+            </div>
+            <div class="step-connector" id="sc-2"></div>
+            <div class="step-indicator" id="si-3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Ver<br>PDF</div>
+            </div>
+            <div class="step-connector" id="sc-3"></div>
+            <div class="step-indicator" id="si-4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Validar<br>y Enviar</div>
             </div>
         </div>
 
-        <hr style="margin: 2rem 0; border-color: var(--border);">
+        <!-- ===================================================== -->
+        <!-- PANEL PASO 1: Revisar Datos                           -->
+        <!-- ===================================================== -->
+        <div id="panel-paso-1" style="padding-bottom: 5rem;">
 
-        <!-- Seccion de Datos Bancarios -->
-        <div class="mb-4">
-            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
-                <i class="bi bi-bank me-2"></i>Datos Bancarios para Pago
-            </h6>
             @if (!Model.TieneCuentaBancaria)
             {
-                @if (Model.RequiereValidacionCuenta)
+                if (Model.RequiereValidacionCuenta)
                 {
-                    <div class="alert alert-danger" style="border-radius: 12px; background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.3);">
+                    <div class="alert alert-danger" style="border-radius: 12px; margin-bottom: 1rem;">
                         <i class="bi bi-x-circle-fill me-2"></i>
-                        <strong>No puede enviar facturas.</strong> No tiene cuenta bancaria registrada. Por favor contacte al administrador.
+                        <strong>No puede enviar facturas.</strong> No tiene cuenta bancaria registrada. Contacte al administrador.
                     </div>
                 }
                 else
                 {
-                    <div class="alert alert-warning" style="border-radius: 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3);">
+                    <div class="alert alert-warning" style="border-radius: 12px; margin-bottom: 1rem;">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        No tiene cuenta bancaria registrada. Por favor contacte al administrador.
+                        No tiene cuenta bancaria registrada. Contacte al administrador.
                     </div>
                 }
             }
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Banco</span>
-                        <span style="font-weight: 600;">@(Model.NombreBanco ?? "-")</span>
+
+            @* Fecha límite *@
+            @if (Model.FechaLimite.HasValue)
+            {
+                <div style="max-width:820px;margin:0 auto .875rem;">
+                    <div style="display:flex;align-items:center;gap:.6rem;
+                                background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;
+                                padding:.6rem .9rem;font-size:.82rem;">
+                        <i class="bi bi-alarm-fill" style="color:#e6a000;font-size:1.1rem;flex-shrink:0;"></i>
+                        <span><strong style="color:#856404;">Fecha l&iacute;mite:</strong> tienes hasta esta fecha para adjuntar tu comprobante.</span>
+                        <div style="margin-left:auto;font-weight:800;color:#856404;font-size:.95rem;white-space:nowrap;">
+                            <i class="bi bi-calendar-event" style="margin-right:.25rem;"></i>@Model.FechaLimite.Value.ToString("dd/MM/yyyy HH:mm")
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Cuenta Corriente</span>
-                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@(Model.CuentaCorriente ?? "-")</span>
+            }
+
+            @* Referencia de la Producción *@
+            <div style="max-width:820px;margin:0 auto .875rem;">
+                <div style="background:#fff;border-radius:12px;border:1px solid #c9d3e0;overflow:hidden;">
+                    <div style="background:#dde4ef;border-bottom:1px solid #c9d3e0;
+                                padding:.5rem 1rem;font-size:.88rem;font-weight:600;
+                                color:#3d4f66;
+                                display:flex;align-items:center;gap:.35rem;">
+                        <i class="bi bi-info-circle" style="color:#5a7290;"></i> Producci&oacute;n y Cuenta Bancaria
+                    </div>
+                    <div style="padding:.55rem 1rem .45rem;display:flex;gap:2rem;">
+                        <span style="font-size:.85rem;color:var(--text-secondary);">Producci&oacute;n
+                            <strong style="color:var(--text-primary);margin-left:.3rem;">@Model.NumeroProduccion</strong>
+                        </span>
+                        <span style="font-size:.85rem;color:var(--text-secondary);">Sede
+                            <strong style="color:var(--text-primary);margin-left:.3rem;">@(Model.NombreSede ?? "-")</strong>
+                        </span>
+                    </div>
+                    <div style="padding:.45rem 1rem .55rem;display:flex;flex-wrap:wrap;gap:.3rem 2rem;border-top:1px solid #e8ecf2;">
+                        @if (!string.IsNullOrEmpty(Model.NombreBanco))
+                        {
+                            <span style="font-size:.85rem;color:var(--text-secondary);">Banco
+                                <strong style="color:var(--text-primary);margin-left:.3rem;">@Model.NombreBanco</strong>
+                            </span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.CuentaCorriente))
+                        {
+                            <span style="font-size:.85rem;color:var(--text-secondary);">Cuenta corriente
+                                <strong style="color:var(--text-primary);font-family:monospace;margin-left:.3rem;">@Model.CuentaCorriente</strong>
+                            </span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Moneda))
+                        {
+                            <span style="font-size:.85rem;color:var(--text-secondary);">Moneda
+                                <strong style="color:var(--text-primary);margin-left:.3rem;">@MonedaConstants.GetDescripcion(Model.Moneda)</strong>
+                            </span>
+                        }
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Cuenta CCI</span>
-                        <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@(Model.CuentaCci ?? "-")</span>
+            </div>
+
+            @* Ficha *@
+            <div style="max-width:820px;margin:0 auto;">
+
+                @* Ficha principal *@
+                <div style="flex:1;background:#fff;border-radius:14px;border:1px solid var(--border);overflow:hidden;">
+
+                    @* Encabezado ficha *@
+                    <div style="background:var(--primary);color:#fff;padding:.75rem 1.25rem;
+                                display:flex;align-items:center;gap:.5rem;
+                                font-weight:700;font-size:.9rem;">
+                        <i class="bi bi-receipt"></i> Datos para emitir tu Factura Electr&oacute;nica
+                    </div>
+
+                    @* CSS de ficha *@
+                    <style>
+                        .p1-sec { border-bottom: 1px solid var(--border); }
+                        .p1-sec:last-child { border-bottom: none; }
+                        .p1-sec-head {
+                            display: flex; align-items: center; gap: .5rem;
+                            padding: .45rem 1.25rem;
+                            background: rgba(90,17,96,.03);
+                            border-bottom: 1px solid var(--border);
+                            font-size: .72rem; font-weight: 800; color: var(--primary);
+                            text-transform: uppercase; letter-spacing: .06em;
+                        }
+                        .p1-row {
+                            display: flex; align-items: baseline;
+                            padding: .5rem 1.25rem;
+                            border-bottom: 1px solid rgba(0,0,0,.04);
+                        }
+                        .p1-row:last-child { border-bottom: none; }
+                        .p1-num {
+                            width: 22px; flex-shrink: 0; margin-right: .5rem;
+                            font-size: .75rem; font-weight: 800;
+                            color: var(--accent); text-align: right; line-height: 1.6;
+                        }
+                        .p1-lbl {
+                            width: 185px; flex-shrink: 0;
+                            font-size: .85rem; color: var(--text-secondary); line-height: 1.5;
+                        }
+                        .p1-val {
+                            flex: 1; font-size: .9rem; font-weight: 700;
+                            color: var(--text-primary);
+                            display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+                        }
+                        .p1-val.mono { font-family: 'JetBrains Mono', monospace; }
+                        .p1-copy {
+                            border: none; background: rgba(242,101,34,.1); color: var(--accent);
+                            border-radius: 5px; padding: .15rem .4rem;
+                            font-size: .62rem; font-weight: 400; cursor: pointer;
+                            display: inline-flex; align-items: center; gap: .2rem;
+                            transition: all .15s; white-space: nowrap;
+                        }
+                        .p1-copy:hover { background: var(--accent); color: #fff; }
+                        .p1-copied {
+                            display: none; font-size: .62rem; color: #28a745;
+                            font-weight: 700; align-items: center; gap: .2rem;
+                        }
+                        .p1-alert {
+                            margin: .4rem 1.25rem .2rem;
+                            background: rgba(255,193,7,.1); border: 1px solid rgba(255,193,7,.4);
+                            border-radius: 7px; padding: .4rem .65rem;
+                            font-size: .72rem; color: #856404;
+                            display: flex; align-items: flex-start; gap: .35rem;
+                        }
+                    </style>
+
+                    @* ── Receptor ── *@
+                    <div class="p1-sec">
+                        <div class="p1-sec-head"><i class="bi bi-building"></i> A qui&eacute;n emites la factura (Receptor)</div>
+                        <div class="p1-row">
+                            <div class="p1-num">1</div>
+                            <div class="p1-lbl">RUC</div>
+                            <div class="p1-val mono">
+                                @(Model.ReceptorRuc ?? "-")
+                                @if (!string.IsNullOrEmpty(Model.ReceptorRuc))
+                                {
+                                    <button class="p1-copy" onclick="p1Copiar('@Model.ReceptorRuc','cp-ruc')">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
+                                    <span class="p1-copied" id="cp-ruc"><i class="bi bi-check-circle-fill"></i> Copiado</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="p1-row">
+                            <div class="p1-num">2</div>
+                            <div class="p1-lbl">Raz&oacute;n Social</div>
+                            <div class="p1-val">@(Model.ReceptorNombre ?? "-")</div>
+                        </div>
+                    </div>
+
+                    @* ── Comprobante ── *@
+                    <div class="p1-sec">
+                        <div class="p1-sec-head"><i class="bi bi-file-earmark-text"></i> Datos del Comprobante</div>
+                        <div class="p1-row">
+                            <div class="p1-num">3</div>
+                            <div class="p1-lbl">Tipo de Comprobante</div>
+                            <div class="p1-val">@tipoNombre</div>
+                        </div>
+                        <div class="p1-row">
+                            <div class="p1-num">4</div>
+                            <div class="p1-lbl">Descripci&oacute;n del &Iacute;tem</div>
+                            <div class="p1-val" style="flex-direction:column;align-items:flex-start;gap:.3rem;">
+                                <span id="conceptoTexto">@(Model.Concepto ?? "-")</span>
+                                @if (!string.IsNullOrEmpty(Model.Concepto))
+                                {
+                                    <div style="display:flex;align-items:center;gap:.4rem;">
+                                        <button class="p1-copy" onclick="p1Copiar('@Model.Concepto','cp-concepto')">
+                                            <i class="bi bi-clipboard"></i> Copiar
+                                        </button>
+                                        <span class="p1-copied" id="cp-concepto"><i class="bi bi-check-circle-fill"></i> Copiado</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Importes ── *@
+                    <div class="p1-sec">
+                        <div class="p1-sec-head"><i class="bi bi-calculator"></i> Importes</div>
+                        <div class="p1-row">
+                            <div class="p1-num">5</div>
+                            <div class="p1-lbl">Sub Total Ventas</div>
+                            <div class="p1-val mono">S/ @(Model.MtoSubtotal?.ToString("N2") ?? "0.00")</div>
+                        </div>
+                        <div class="p1-row">
+                            <div class="p1-num">6</div>
+                            @if (Model.TipoComprobante == "22")
+                            {
+                                <div class="p1-lbl">Retenci&oacute;n</div>
+                                <div class="p1-val mono">S/ @(Model.MtoRenta?.ToString("N2") ?? "0.00")</div>
+                            }
+                            else
+                            {
+                                <div class="p1-lbl">IGV (18%)</div>
+                                <div class="p1-val mono">S/ @(Model.MtoIgv?.ToString("N2") ?? "0.00")</div>
+                            }
+                        </div>
+                        <div class="p1-row">
+                            <div class="p1-num">7</div>
+                            <div class="p1-lbl">Importe Total</div>
+                            <div class="p1-val mono">
+                                S/ @(Model.MtoTotal?.ToString("N2") ?? "0.00")
+                                @if (Model.MtoTotal.HasValue)
+                                {
+                                    <button class="p1-copy" onclick="p1Copiar('@Model.MtoTotal.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)','cp-total')">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
+                                    <span class="p1-copied" id="cp-total"><i class="bi bi-check-circle-fill"></i> Copiado</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Detracción (condicional) ── *@
+                    @if (Model.MtoDetraccion.HasValue && Model.MtoDetraccion > 0)
+                    {
+                        <div class="p1-sec">
+                            <div class="p1-sec-head"><i class="bi bi-bank2"></i> Datos de la Detracci&oacute;n</div>
+                            <div class="p1-row">
+                                <div class="p1-num">8</div>
+                                <div class="p1-lbl">Tipo de Operaci&oacute;n</div>
+                                <div class="p1-val" style="font-size:.82rem;">@FacturacionConstants.DescTipoOperacion</div>
+                            </div>
+                            <div class="p1-row">
+                                <div class="p1-num">9</div>
+                                <div class="p1-lbl">C&oacute;digo Bien / Servicio</div>
+                                <div class="p1-val mono">@FacturacionConstants.CodigoConceptoDetraccion
+                                    <span style="font-family:inherit;font-weight:400;color:var(--text-secondary);font-size:.8rem;">— @FacturacionConstants.DescConceptoDetraccion</span>
+                                </div>
+                            </div>
+                            <div class="p1-row">
+                                <div class="p1-num">10</div>
+                                <div class="p1-lbl">Medio de Pago</div>
+                                <div class="p1-val mono">@FacturacionConstants.CodigoMedioPago
+                                    <span style="font-family:inherit;font-weight:400;color:var(--text-secondary);font-size:.8rem;">— @FacturacionConstants.DescMedioPago</span>
+                                </div>
+                            </div>
+                            <div class="p1-row">
+                                <div class="p1-num">11</div>
+                                <div class="p1-lbl">Porcentaje de Detracci&oacute;n</div>
+                                <div class="p1-val">@(Model.PorcDetraccion?.ToString("N0") ?? "0")%</div>
+                            </div>
+                            <div class="p1-row">
+                                <div class="p1-num">12</div>
+                                <div class="p1-lbl">Monto de la Detracci&oacute;n</div>
+                                <div class="p1-val mono">
+                                    S/ @(Model.MtoDetraccion?.ToString("N2") ?? "0.00")
+                                    @if (Model.MtoDetraccion.HasValue)
+                                    {
+                                        <button class="p1-copy" onclick="p1Copiar('@Model.MtoDetraccion.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)','cp-det')">
+                                            <i class="bi bi-clipboard"></i> Copiar
+                                        </button>
+                                        <span class="p1-copied" id="cp-det"><i class="bi bi-check-circle-fill"></i> Copiado</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p1-sec">
+                            <div class="p1-sec-head"><i class="bi bi-bank2"></i> Datos de la Detracci&oacute;n</div>
+                            <div class="p1-row">
+                                <div class="p1-num" style="color:#28a745;">✓</div>
+                                <div class="p1-val" style="flex-direction:column;align-items:flex-start;gap:.15rem;">
+                                    <span style="color:#28a745;font-weight:700;">No aplica para esta factura</span>
+                                    <span style="font-size:.72rem;color:var(--text-secondary);font-weight:400;">
+                                        El importe no supera el m&iacute;nimo sujeto a detracci&oacute;n.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* ── Crédito y Cuotas ── *@
+                    <div class="p1-sec">
+                        <div class="p1-sec-head"><i class="bi bi-credit-card"></i> Informaci&oacute;n de Cr&eacute;dito y Cuotas</div>
+                        @{ int numBase = (Model.MtoDetraccion.HasValue && Model.MtoDetraccion > 0) ? 13 : 8; }
+                        <div class="p1-row">
+                            <div class="p1-num">@numBase</div>
+                            <div class="p1-lbl">Forma de Pago</div>
+                            <div class="p1-val">@FacturacionConstants.FormaPago</div>
+                        </div>
+                        <div class="p1-row">
+                            <div class="p1-num">@(numBase + 1)</div>
+                            <div class="p1-lbl">N&uacute;mero de Cuotas</div>
+                            <div class="p1-val">@FacturacionConstants.NroCuotas</div>
+                        </div>
+                        <div class="p1-row">
+                            <div class="p1-num">@(numBase + 2)</div>
+                            <div class="p1-lbl">Fecha de Vencimiento</div>
+                            <div class="p1-val mono">
+                                @(Model.FacturaFechaVencimiento.HasValue ? Model.FacturaFechaVencimiento.Value.ToString("dd/MM/yyyy") : "-")
+                                @if (Model.FacturaFechaVencimiento.HasValue)
+                                {
+                                    <button class="p1-copy" onclick="p1Copiar('@Model.FacturaFechaVencimiento.Value.ToString("dd/MM/yyyy")','cp-fv')">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
+                                    <span class="p1-copied" id="cp-fv"><i class="bi bi-check-circle-fill"></i> Copiado</span>
+                                }
+                            </div>
+                        </div>
+                        @if (Model.MtoTotal.HasValue)
+                        {
+                            var montoDetrac = Model.MtoDetraccion ?? 0;
+                            var montoCuota  = Model.MtoTotal.Value - montoDetrac;
+                            <div class="p1-row">
+                                <div class="p1-num">@(numBase + 3)</div>
+                                <div class="p1-lbl">Monto de la Cuota</div>
+                                <div class="p1-val mono">
+                                    S/ @montoCuota.ToString("N2")
+                                    @if (montoDetrac > 0)
+                                    {
+                                        <span style="font-size:.7rem;color:var(--text-secondary);font-weight:400;">
+                                            (Importe Total &minus; Monto de la Detracci&oacute;n)
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                </div>@* /ficha *@
+            </div>@* /wrapper *@
+
+        </div><!-- /panel-paso-1 -->
+
+        <!-- ===================================================== -->
+        <!-- PANEL PASO 2: Adjuntar Comprobante                    -->
+        <!-- ===================================================== -->
+        <div id="panel-paso-2" style="display: none;">
+
+            <form id="uploadForm" asp-controller="Facturas" asp-action="PrepararVistaPrevia" method="post" enctype="multipart/form-data" novalidate>
+                <input type="hidden" name="guidRegistro" value="@Model.GuidRegistro" />
+                <input type="hidden" id="tipoComprobante" name="tipoComprobante" value="@Model.TipoComprobante" />
+
+                <div class="row g-0">
+
+                    <!-- ── Columna izquierda: datos del comprobante ── -->
+                    <div class="col-lg-5 col-md-5" style="background: #fff; border-radius: 12px 0 0 12px; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-right: none;">
+
+                        <div class="section-title" style="margin-bottom: 0.875rem;"><i class="bi bi-card-list"></i>Datos del Comprobante</div>
+
+                        <div style="background: linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(90,17,96,0.04) 100%); border: 1px solid #3B82F6; border-radius: 8px; padding: 0.55rem 0.875rem; margin-bottom: 1rem; font-size: 0.78rem; color: #1E40AF; display: flex; gap: 0.5rem; align-items: center;">
+                            <i class="bi bi-info-circle-fill" style="color: #3B82F6; flex-shrink: 0;"></i>
+                            Ingrese los datos exactamente como aparecen en su comprobante electr&oacute;nico.
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">
+                                    Tipo Comprobante <i class="bi bi-lock-fill" style="font-size: 0.7rem; color: var(--text-secondary);"></i>
+                                </label>
+                                <input type="text" class="form-control" readonly value="@tipoNombre" style="background-color: var(--bg-main); cursor: default;" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Fecha Emisi&oacute;n <span style="color: var(--danger);">*</span></label>
+                                <input type="date" class="form-control" id="fechaEmision" name="fechaEmision" max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Serie <span style="color: var(--danger);">*</span></label>
+                                <input type="text" class="form-control" id="serie" name="serie" placeholder="Ej: E001" maxlength="4" required style="text-transform: uppercase;" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">N&uacute;mero <span style="color: var(--danger);">*</span></label>
+                                <input type="text" class="form-control" id="numero" name="numero" placeholder="Ej: 1234" maxlength="8" required pattern="[0-9]*" inputmode="numeric" />
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- ── Columna derecha: archivos ── -->
+                    <div class="col-lg-7 col-md-7" style="background: #fff; border-radius: 0 12px 12px 0; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-left: 1px solid var(--border);">
+
+                        <div class="section-title" style="margin-bottom: 0.875rem;"><i class="bi bi-file-earmark-arrow-up"></i>Documentos Electr&oacute;nicos</div>
+
+                        <!-- PDF + XML en fila -->
+                        <div class="row g-3 mb-3">
+                            <div class="@(Model.RequiereCdr ? "col-6" : "col-6")">
+                                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Archivo PDF <span style="color: var(--danger);">*</span></label>
+                                <div class="file-upload-area" id="pdfArea"
+                                     style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 140px; display: flex; flex-direction: column; justify-content: center;">
+                                    <i class="bi bi-file-earmark-pdf" style="font-size: 2.25rem; color: var(--danger); margin-bottom: 0.5rem;"></i>
+                                    <p class="mb-1" style="font-weight: 600; font-size: 0.85rem;">Factura PDF</p>
+                                    <p class="text-muted mb-0" style="font-size: 0.72rem;">Click o arrastre aqu&iacute;</p>
+                                </div>
+                                <input type="file" id="archivoPdf" name="archivoPdf" accept=".pdf" style="display: none;" required />
+                                <div id="pdfFileName" class="mt-1" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <i class="bi bi-check-circle-fill me-1"></i><span id="pdfFileNameText"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Archivo XML <span style="color: var(--danger);">*</span></label>
+                                <div class="file-upload-area" id="xmlArea"
+                                     style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 140px; display: flex; flex-direction: column; justify-content: center;">
+                                    <i class="bi bi-file-earmark-code" style="font-size: 2.25rem; color: var(--warning); margin-bottom: 0.5rem;"></i>
+                                    <p class="mb-1" style="font-weight: 600; font-size: 0.85rem;">Factura XML</p>
+                                    <p class="text-muted mb-0" style="font-size: 0.72rem;">Click o arrastre aqu&iacute;</p>
+                                </div>
+                                <input type="file" id="archivoXml" name="archivoXml" accept=".xml" style="display: none;" required />
+                                <div id="xmlFileName" class="mt-1" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <i class="bi bi-check-circle-fill me-1"></i><span id="xmlFileNameText"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (Model.RequiereCdr)
+                        {
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Archivo CDR <span style="color: var(--danger);">*</span></label>
+                                    <div class="file-upload-area" id="cdrArea"
+                                         style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 140px; display: flex; flex-direction: column; justify-content: center;">
+                                        <i class="bi bi-file-earmark-zip" style="font-size: 2.25rem; color: var(--primary); margin-bottom: 0.5rem;"></i>
+                                        <p class="mb-1" style="font-weight: 600; font-size: 0.85rem;">Constancia CDR</p>
+                                        <p class="text-muted mb-0" style="font-size: 0.72rem;">Click o arrastre aqu&iacute;</p>
+                                    </div>
+                                    <input type="file" id="archivoCdr" name="archivoCdr" accept=".zip,.xml" style="display: none;" required />
+                                    <div id="cdrFileName" class="mt-1" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <i class="bi bi-check-circle-fill me-1"></i><span id="cdrFileNameText"></span>
+                                    </div>
+                                </div>
+                                <div class="col-6 d-flex align-items-end">
+                                    <div style="padding: 0.875rem; background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.4); border-radius: 10px; font-size: 0.78rem; color: #856404; width: 100%;">
+                                        <i class="bi bi-shield-check me-1"></i>
+                                        El CDR (Constancia de Recepci&oacute;n) es el archivo <strong>.zip</strong> que emite SUNAT confirmando la aceptaci&oacute;n del comprobante.
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                        }
+
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Moneda</span>
-                        <span style="font-weight: 600;">@(Model.Moneda ?? "-")</span>
+
+            </form>
+
+        </div><!-- /panel-paso-2 -->
+
+        <!-- ===================================================== -->
+        <!-- PANEL PASO 3: Ver PDF + Datos XML                    -->
+        <!-- ===================================================== -->
+        <div id="panel-paso-3" style="display:none; padding-bottom: 5rem;">
+            <div class="row g-4">
+                <!-- PDF -->
+                <div class="col-lg-7" style="border-right: 1px solid var(--border); padding-right: 1.5rem;">
+                    <div class="section-title"><i class="bi bi-file-earmark-pdf"></i>Vista Previa del Comprobante</div>
+                    <div class="pdf-fullscreen">
+                        <div class="pdf-fullscreen-inner">
+                            <iframe id="pdfIframe" src="about:blank" title="Vista previa del PDF"></iframe>
+                        </div>
+                    </div>
+                </div>
+                <!-- Datos XML -->
+                <div class="col-lg-5" style="padding-left: 1.5rem;">
+                    <div class="section-title"><i class="bi bi-file-earmark-code"></i>Datos Extra&iacute;dos del XML</div>
+                    <div id="datosXmlContainer">
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-hourglass-split" style="font-size:2rem;"></i>
+                            <p class="mt-2">Cargando datos del XML...</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <hr style="margin: 2rem 0; border-color: var(--border);">
-
-        <!-- Formulario de Datos de la Factura -->
-        <form id="uploadForm" asp-controller="Facturas" asp-action="PrepararVistaPrevia" method="post" enctype="multipart/form-data">
-            <input type="hidden" id="guidRegistro" name="guidRegistro" value="@Model.GuidRegistro" />
-
-            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
-                <i class="bi bi-pencil-square me-2"></i>Datos de la Factura
-            </h6>
-
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Tipo Comprobante <span style="color: var(--danger);">*</span></label>
-                    <select class="form-control" id="tipoComprobante" name="tipoComprobante" required>
-                        <option value="">Seleccione...</option>
-                        <option value="01">Factura</option>
-                        <option value="03">Boleta</option>
-                        <option value="02">Recibo por Honorarios</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Fecha de Emision <span style="color: var(--danger);">*</span></label>
-                    <input type="date" class="form-control" id="fechaEmision" name="fechaEmision" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Serie <span style="color: var(--danger);">*</span></label>
-                    <input type="text" class="form-control" id="serie" name="serie" placeholder="Ej: F001" maxlength="4" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" style="font-weight: 600;">Numero <span style="color: var(--danger);">*</span></label>
-                    <input type="text" class="form-control" id="numero" name="numero" placeholder="Ej: 00001234" maxlength="8" required>
+        <!-- ===================================================== -->
+        <!-- PANEL PASO 4: Validar y Enviar                        -->
+        <!-- ===================================================== -->
+        <div id="panel-paso-4" style="display:none; padding-bottom: 5rem;">
+            <div class="section-title"><i class="bi bi-shield-check"></i>Validaci&oacute;n del Comprobante</div>
+            <div id="validacionContainer">
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-hourglass-split" style="font-size:2rem;"></i>
+                    <p class="mt-2">Cargando validaciones...</p>
                 </div>
             </div>
+        </div>
 
-            <hr style="margin: 2rem 0; border-color: var(--border);">
+    </div>
+</div>
 
-            <!-- Seccion de Archivos -->
-            <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
-                <i class="bi bi-file-earmark-arrow-up me-2"></i>Documentos Electronicos
-            </h6>
+<!-- ===== STICKY FOOTER ===== -->
+<div class="wizard-footer">
+    <!-- Izquierda -->
+    <div id="footer-left">
+        <a asp-controller="Facturas" asp-action="Pendientes" id="btnCancelar" class="btn-nav-back">
+            <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+        <button type="button" id="btnAnterior" class="btn-nav-back" onclick="irAtras()" style="display:none;">
+            <i class="bi bi-arrow-left"></i> Anterior
+        </button>
+    </div>
 
-            <div class="row g-3 mb-4">
-                <!-- PDF -->
-                <div class="col-md-4">
-                    <label class="form-label" style="font-weight: 600;">Archivo PDF <span style="color: var(--danger);">*</span></label>
-                    <div class="file-upload-area" id="pdfArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="bi bi-file-earmark-pdf" style="font-size: 2.5rem; color: var(--danger); margin-bottom: 0.75rem;"></i>
-                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Factura PDF</p>
-                        <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
-                    </div>
-                    <input type="file" id="archivoPdf" name="archivoPdf" accept=".pdf" style="display: none;" required>
-                    <div id="pdfFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span id="pdfFileNameText"></span>
-                    </div>
-                </div>
+    <span class="step-counter" id="footerStepCounter">Paso 1 de 4</span>
 
-                <!-- XML -->
-                <div class="col-md-4">
-                    <label class="form-label" style="font-weight: 600;">Archivo XML <span style="color: var(--danger);">*</span></label>
-                    <div class="file-upload-area" id="xmlArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="bi bi-file-earmark-code" style="font-size: 2.5rem; color: var(--warning); margin-bottom: 0.75rem;"></i>
-                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Factura XML</p>
-                        <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
-                    </div>
-                    <input type="file" id="archivoXml" name="archivoXml" accept=".xml" style="display: none;" required>
-                    <div id="xmlFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span id="xmlFileNameText"></span>
-                    </div>
-                </div>
-
-                <!-- CDR -->
-                <div class="col-md-4">
-                    <label class="form-label" style="font-weight: 600;">Archivo CDR <span style="color: var(--danger);">*</span></label>
-                    <div class="file-upload-area" id="cdrArea" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s ease; cursor: pointer; background: var(--bg-main); min-height: 180px; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="bi bi-file-earmark-zip" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 0.75rem;"></i>
-                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Constancia CDR</p>
-                        <p class="text-muted mb-0" style="font-size: 0.75rem;">Click para seleccionar</p>
-                    </div>
-                    <input type="file" id="archivoCdr" name="archivoCdr" accept=".zip,.xml" style="display: none;" required>
-                    <div id="cdrFileName" class="mt-2" style="display: none; color: var(--accent); font-weight: 600; font-size: 0.85rem;">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span id="cdrFileNameText"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex gap-2 mt-4">
-                <a asp-controller="Facturas" asp-action="Pendientes" class="btn btn-secondary" style="border-radius: 12px; padding: 0.875rem 2rem;">
-                    <i class="bi bi-arrow-left me-2"></i>Cancelar
-                </a>
-                @if (Model.PuedeSubirFactura)
-                {
-                    <button type="submit" id="btnVistaPrevia" class="btn-submit flex-grow-1"
-                            style="background: var(--accent); color: white; border: none; border-radius: 12px; padding: 0.875rem 2rem; font-weight: 600; transition: all 0.3s ease;">
-                        <i class="bi bi-eye-fill me-2"></i>Vista Previa y Enviar
-                    </button>
-                }
-                else
-                {
-                    <button type="button" disabled class="btn-submit flex-grow-1" style="background: #6c757d; color: white; border: none; border-radius: 12px; padding: 0.875rem 2rem; font-weight: 600; cursor: not-allowed;">
-                        <i class="bi bi-lock-fill me-2"></i>No puede enviar factura (Sin cuenta bancaria)
-                    </button>
-                }
-            </div>
-        </form>
+    <!-- Derecha -->
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+        @if (Model.PuedeSubirFactura)
+        {
+            <button type="button" id="btnSiguiente" class="btn-nav-next" onclick="irPaso(2)">
+                Siguiente <i class="bi bi-arrow-right"></i>
+            </button>
+        }
+        else
+        {
+            <button type="button" disabled class="btn-nav-next" title="Sin cuenta bancaria">
+                <i class="bi bi-lock-fill"></i> Sin cuenta bancaria
+            </button>
+        }
+        <button type="button" id="btnSubirArchivos" class="btn-nav-next" onclick="irPaso(3)" style="display:none;">
+            Siguiente <i class="bi bi-arrow-right"></i>
+        </button>
+        <button type="button" id="btnIrPaso4" class="btn-nav-next" onclick="mostrarPanel(4)" style="display:none;">
+            Siguiente <i class="bi bi-arrow-right"></i>
+        </button>
+        <button type="button" id="btnConfirmarEnvio" class="btn-nav-confirm" style="display:none;">
+            <i class="bi bi-send-fill"></i> Confirmar y Enviar
+        </button>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Referencias DOM
-            var form = document.getElementById('uploadForm');
-            var btnVistaPrevia = document.getElementById('btnVistaPrevia');
-            var pdfInput = document.getElementById('archivoPdf');
-            var xmlInput = document.getElementById('archivoXml');
-            var cdrInput = document.getElementById('archivoCdr');
+        // Estado del wizard
+        var sessionIdActual = null;
+        var esDirty = true; // true = necesita subir archivos
+        var pasoActual = 1;
+        var guidRegistro = '@Model.GuidRegistro';
+        var confirmUrl   = '@Url.Action("ConfirmarEnvio", "Facturas")';
+        var urlEnviadas  = '@Url.Action("Enviadas", "Facturas")';
 
-            // Click en areas de upload
-            document.getElementById('pdfArea').addEventListener('click', function() { pdfInput.click(); });
-            document.getElementById('xmlArea').addEventListener('click', function() { xmlInput.click(); });
-            document.getElementById('cdrArea').addEventListener('click', function() { cdrInput.click(); });
+        document.addEventListener('DOMContentLoaded', function () {
+            // Paso 1 requiere scroll (contenido extenso)
+            document.documentElement.classList.add('paso-1');
 
-            // Cambio de archivos
-            pdfInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    document.getElementById('pdfFileNameText').textContent = this.files[0].name;
-                    document.getElementById('pdfFileName').style.display = 'block';
-                    document.getElementById('pdfArea').style.borderColor = 'var(--accent)';
+            var pdfInput    = document.getElementById('archivoPdf');
+            var xmlInput    = document.getElementById('archivoXml');
+            var cdrInput    = document.getElementById('archivoCdr');
+            var requiereCdr = @(Model.RequiereCdr ? "true" : "false");
+
+            // === Opción A: Detectar estado inconsistente (ej. pestaña duplicada) ===
+            // El navegador restaura campos de texto pero nunca file inputs (política de seguridad).
+            // Si hay texto en los campos pero no hay archivos, el estado es inválido → limpiar.
+            (function detectarEstadoInconsistente() {
+                var tieneTexto = document.getElementById('serie').value.trim() !== '' ||
+                                 document.getElementById('numero').value.trim() !== '' ||
+                                 document.getElementById('fechaEmision').value !== '';
+                var tieneArchivos = (pdfInput && pdfInput.files && pdfInput.files.length > 0) ||
+                                    (xmlInput && xmlInput.files && xmlInput.files.length > 0);
+                if (tieneTexto && !tieneArchivos) {
+                    document.getElementById('serie').value = '';
+                    document.getElementById('numero').value = '';
+                    document.getElementById('fechaEmision').value = '';
+                    ['serie', 'numero', 'fechaEmision'].forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) el.classList.remove('campo-lleno');
+                    });
                 }
-            });
+            })();
 
-            xmlInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    document.getElementById('xmlFileNameText').textContent = this.files[0].name;
-                    document.getElementById('xmlFileName').style.display = 'block';
-                    document.getElementById('xmlArea').style.borderColor = 'var(--accent)';
-                }
-            });
+            // === Click en áreas de upload ===
+            document.getElementById('pdfArea').addEventListener('click', function () { pdfInput.click(); });
+            document.getElementById('xmlArea').addEventListener('click', function () { xmlInput.click(); });
+            if (requiereCdr && document.getElementById('cdrArea')) {
+                document.getElementById('cdrArea').addEventListener('click', function () { cdrInput.click(); });
+            }
 
-            cdrInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    document.getElementById('cdrFileNameText').textContent = this.files[0].name;
-                    document.getElementById('cdrFileName').style.display = 'block';
-                    document.getElementById('cdrArea').style.borderColor = 'var(--accent)';
-                }
-            });
-
-            // Hover en areas de upload
-            document.querySelectorAll('.file-upload-area').forEach(function(area) {
-                area.addEventListener('mouseenter', function() {
-                    if (this.style.borderColor !== 'var(--accent)') {
-                        this.style.borderColor = 'var(--primary)';
-                        this.style.background = 'rgba(242, 101, 34, 0.05)';
-                    }
-                });
-                area.addEventListener('mouseleave', function() {
-                    if (this.style.borderColor !== 'var(--accent)') {
-                        this.style.borderColor = 'var(--border)';
-                        this.style.background = 'var(--bg-main)';
-                    }
-                });
-            });
-
-            // Validar formulario antes de enviar
-            form.addEventListener('submit', function(e) {
-                var errores = [];
-
-                if (!document.getElementById('tipoComprobante').value) errores.push('Seleccione el tipo de comprobante');
-                if (!document.getElementById('fechaEmision').value) errores.push('Ingrese la fecha de emision');
-                if (!document.getElementById('serie').value.trim()) errores.push('Ingrese la serie del comprobante');
-                if (!document.getElementById('numero').value.trim()) errores.push('Ingrese el numero del comprobante');
-                if (!pdfInput.files[0]) errores.push('Seleccione el archivo PDF');
-                if (!xmlInput.files[0]) errores.push('Seleccione el archivo XML');
-                if (!cdrInput.files[0]) errores.push('Seleccione el archivo CDR');
-
-                if (errores.length > 0) {
+            // === Drag & Drop ===
+            function bindUploadArea(areaId, inputEl, nameId, nameTextId) {
+                var area = document.getElementById(areaId);
+                if (!area) return;
+                area.addEventListener('mouseenter', function () { if (area.dataset.hasFile !== '1') { area.style.borderColor = 'var(--primary)'; area.style.background = 'rgba(242,101,34,0.05)'; } });
+                area.addEventListener('mouseleave', function () { if (area.dataset.hasFile !== '1') { area.style.borderColor = 'var(--border)'; area.style.background = 'var(--bg-main)'; } });
+                area.addEventListener('dragover',   function (e) { e.preventDefault(); area.style.borderColor = 'var(--accent)'; area.style.background = 'rgba(242,101,34,0.08)'; });
+                area.addEventListener('dragleave',  function (e) { if (!area.contains(e.relatedTarget) && area.dataset.hasFile !== '1') { area.style.borderColor = 'var(--border)'; area.style.background = 'var(--bg-main)'; } });
+                area.addEventListener('drop', function (e) {
                     e.preventDefault();
+                    if (e.dataTransfer.files.length > 0) { var dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]); inputEl.files = dt.files; inputEl.dispatchEvent(new Event('change')); }
+                });
+                inputEl.addEventListener('change', function () {
+                    if (this.files.length > 0) {
+                        document.getElementById(nameTextId).textContent = this.files[0].name;
+                        document.getElementById(nameId).style.display = 'block';
+                        area.style.borderColor = 'var(--accent)'; area.style.background = 'rgba(40,167,69,0.05)'; area.dataset.hasFile = '1';
+                        esDirty = true;
+                    }
+                });
+            }
+            bindUploadArea('pdfArea', pdfInput, 'pdfFileName', 'pdfFileNameText');
+            bindUploadArea('xmlArea', xmlInput, 'xmlFileName', 'xmlFileNameText');
+            if (requiereCdr && cdrInput) bindUploadArea('cdrArea', cdrInput, 'cdrFileName', 'cdrFileNameText');
+
+            // === Opción C: Deshabilitar botón Siguiente hasta que archivos requeridos estén cargados ===
+            function actualizarEstadoBotonSubir() {
+                var btnSubir = document.getElementById('btnSubirArchivos');
+                if (!btnSubir) return;
+                var tienePdf = pdfInput && pdfInput.files && pdfInput.files.length > 0;
+                var tieneXml = xmlInput && xmlInput.files && xmlInput.files.length > 0;
+                var tieneCdr = !requiereCdr || (cdrInput && cdrInput.files && cdrInput.files.length > 0);
+                var habilitado = tienePdf && tieneXml && tieneCdr;
+                btnSubir.disabled = !habilitado;
+                btnSubir.style.opacity = habilitado ? '1' : '0.45';
+                btnSubir.style.cursor  = habilitado ? 'pointer' : 'not-allowed';
+            }
+            pdfInput.addEventListener('change', actualizarEstadoBotonSubir);
+            xmlInput.addEventListener('change', actualizarEstadoBotonSubir);
+            if (cdrInput) cdrInput.addEventListener('change', actualizarEstadoBotonSubir);
+            actualizarEstadoBotonSubir(); // estado inicial
+
+            // === Dirty tracking + estado visual en campos obligatorios ===
+            ['fechaEmision','serie','numero'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                function actualizarEstado() {
+                    el.classList.toggle('campo-lleno', el.value.trim() !== '');
+                    esDirty = true;
+                }
+                el.addEventListener('input',  actualizarEstado);
+                el.addEventListener('change', actualizarEstado);
+                actualizarEstado();
+            });
+
+            // === Formato de campos ===
+            document.getElementById('serie').addEventListener('input', function () { this.value = this.value.toUpperCase(); });
+            document.getElementById('numero').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').replace(/^0+(\d)/, '$1'); });
+
+            // === Confirmar Envío ===
+            var btnConfirmar = document.getElementById('btnConfirmarEnvio');
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', function () {
+                    if (btnConfirmar.disabled) return;
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'Campos Requeridos',
-                        html: '<ul style="text-align: left; margin: 0; padding-left: 1.5rem;">' +
-                              errores.map(function(err) { return '<li>' + err + '</li>'; }).join('') + '</ul>',
-                        confirmButtonText: 'Entendido',
-                        confirmButtonColor: '#f26522'
+                        title: 'Confirmar Envio',
+                        text: '\u00bfEst\u00e1 seguro de enviar esta factura? Esta acci\u00f3n no se puede deshacer.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#f26522',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'S\u00ed, Enviar',
+                        cancelButtonText: 'Cancelar'
+                    }).then(function (result) {
+                        if (!result.isConfirmed) return;
+                        btnConfirmar.disabled = true;
+                        Swal.fire({ title: 'Enviando...', text: 'Por favor espere.', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: function() { Swal.showLoading(); } });
+                        var fd = new FormData();
+                        fd.append('sessionId', sessionIdActual);
+                        fetch(confirmUrl, { method: 'POST', body: fd })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                if (data.success) {
+                                    Swal.fire({ icon: 'success', title: 'Factura Enviada', text: data.message, confirmButtonColor: '#28a745', allowOutsideClick: false })
+                                        .then(function () { window.location.href = urlEnviadas; });
+                                } else {
+                                    Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#dc3545' });
+                                    btnConfirmar.disabled = false;
+                                }
+                            })
+                            .catch(function () {
+                                Swal.fire({ icon: 'error', title: 'Error', text: 'Ocurri\u00f3 un error al enviar.', confirmButtonColor: '#dc3545' });
+                                btnConfirmar.disabled = false;
+                            });
+                    });
+                });
+            }
+
+            // Ajustar footer cuando el sidebar se oculta/muestra
+            (function () {
+                var sidebar = document.getElementById('sidebar');
+                if (!sidebar) return;
+                var footer = document.querySelector('.wizard-footer');
+                if (!footer) return;
+                var observer = new MutationObserver(function () {
+                    footer.style.left = (window.innerWidth > 992 && !sidebar.classList.contains('hidden')) ? '280px' : '0';
+                });
+                observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+            })();
+        });
+
+        // === Validacion de formulario Paso 2 ===
+        function validarFormularioPaso2() {
+            var pdfInput    = document.getElementById('archivoPdf');
+            var xmlInput    = document.getElementById('archivoXml');
+            var cdrInput    = document.getElementById('archivoCdr');
+            var requiereCdr = @(Model.RequiereCdr ? "true" : "false");
+            var errores = [];
+            if (!document.getElementById('fechaEmision').value) {
+                errores.push('Ingrese la fecha de emisi\u00f3n');
+            } else {
+                var fe = new Date(document.getElementById('fechaEmision').value + 'T00:00:00');
+                var hoy = new Date(); hoy.setHours(0,0,0,0);
+                if (fe > hoy) errores.push('La fecha de emisi\u00f3n no puede ser futura');
+            }
+            if (!document.getElementById('serie').value.trim())  errores.push('Ingrese la serie');
+            var numeroVal = document.getElementById('numero').value.trim();
+            if (!numeroVal)                     errores.push('Ingrese el número');
+            else if (parseInt(numeroVal) === 0) errores.push('El número de factura no puede ser cero');
+            if (!pdfInput || !pdfInput.files[0])  errores.push('Seleccione el archivo PDF');
+            if (!xmlInput || !xmlInput.files[0])  errores.push('Seleccione el archivo XML');
+            if (requiereCdr && cdrInput && !cdrInput.files[0]) errores.push('Seleccione el archivo CDR');
+            return errores;
+        }
+
+        // === Navegar hacia atrás ===
+        function irAtras() {
+            if (pasoActual > 1) mostrarPanel(pasoActual - 1);
+        }
+
+        // === irPaso: entrada principal de navegación ===
+        function irPaso(paso) {
+            if (paso === 3) {
+                // Validar formulario primero
+                var errores = validarFormularioPaso2();
+                if (errores.length > 0) {
+                    Swal.fire({
+                        icon: 'warning', title: 'Campos Requeridos',
+                        html: '<ul style="text-align:left;margin:0;padding-left:1.5rem;">' + errores.map(function(e){ return '<li>'+e+'</li>'; }).join('') + '</ul>',
+                        confirmButtonText: 'Entendido', confirmButtonColor: '#f26522'
                     });
                     return;
                 }
-
-                // Mostrar loading
-                if (btnVistaPrevia) {
-                    btnVistaPrevia.disabled = true;
-                    btnVistaPrevia.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+                // Si no hay cambios y ya tenemos sesion, ir directo
+                if (!esDirty && sessionIdActual) {
+                    mostrarPanel(3);
+                    return;
                 }
+                // Subir archivos por AJAX
+                subirArchivosAjax();
+                return;
+            }
+            mostrarPanel(paso);
+        }
+
+        // === AJAX Upload ===
+        function subirArchivosAjax() {
+            Swal.fire({ title: 'Procesando...', text: 'Validando archivos, por favor espere.', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: function() { Swal.showLoading(); } });
+
+            var pdfInput = document.getElementById('archivoPdf');
+            var xmlInput = document.getElementById('archivoXml');
+            var cdrInput = document.getElementById('archivoCdr');
+            var fd = new FormData();
+            fd.append('guidRegistro',    guidRegistro);
+            fd.append('tipoComprobante', document.getElementById('tipoComprobante').value);
+            fd.append('serie',           document.getElementById('serie').value);
+            fd.append('numero',          document.getElementById('numero').value);
+            fd.append('fechaEmision',    document.getElementById('fechaEmision').value);
+            fd.append('archivoPdf',      pdfInput.files[0]);
+            fd.append('archivoXml',      xmlInput.files[0]);
+            if (cdrInput && cdrInput.files[0]) fd.append('archivoCdr', cdrInput.files[0]);
+            if (sessionIdActual) fd.append('sessionIdAnterior', sessionIdActual);
+
+            fetch('@Url.Action("PrepararVistaPreviaAjax", "Facturas")', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    Swal.close();
+                    if (data.success) {
+                        sessionIdActual = data.sessionId;
+                        esDirty = false;
+                        var pdfSrc = '/Facturas/ObtenerPdfTemporal?sessionId=' + sessionIdActual;
+                        document.getElementById('pdfIframe').src = pdfSrc;
+                        mostrarPanel(3);
+                        cargarDatosXml();
+                        cargarValidacion();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#dc3545' });
+                    }
+                })
+                .catch(function() {
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar los archivos.', confirmButtonColor: '#dc3545' });
+                });
+        }
+
+        // === Cargar datos XML del Paso 3 vía AJAX ===
+        function cargarDatosXml() {
+            fetch('/Facturas/DatosXmlPartial?sessionId=' + sessionIdActual)
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    document.getElementById('datosXmlContainer').innerHTML = html;
+                });
+        }
+
+        // === Cargar validaciones vía AJAX ===
+        function cargarValidacion() {
+            fetch('/Facturas/ValidacionPartial?sessionId=' + sessionIdActual)
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    document.getElementById('validacionContainer').innerHTML = html;
+                    var content = document.getElementById('validacionContent');
+                    var puedeEnviar = content && content.dataset.puedeEnviar === 'true';
+                    var btnConfirmar = document.getElementById('btnConfirmarEnvio');
+                    if (btnConfirmar) {
+                        btnConfirmar.disabled = !puedeEnviar;
+                        if (!puedeEnviar) {
+                            btnConfirmar.innerHTML = '<i class="bi bi-lock-fill"></i> No puede enviar';
+                            btnConfirmar.title = 'Corrija los errores para poder enviar';
+                        } else {
+                            btnConfirmar.innerHTML = '<i class="bi bi-send-fill"></i> Confirmar y Enviar';
+                            btnConfirmar.title = '';
+                        }
+                    }
+                });
+        }
+
+        // === Mostrar panel y actualizar stepper + footer ===
+        function mostrarPanel(paso) {
+            pasoActual = paso;
+            document.dispatchEvent(new CustomEvent('pasoCambiado', { detail: paso }));
+            [1,2,3,4].forEach(function(p) {
+                document.getElementById('panel-paso-' + p).style.display = p === paso ? 'block' : 'none';
             });
-        });
+            for (var i = 1; i <= 4; i++) {
+                var si = document.getElementById('si-' + i);
+                si.classList.remove('active','completed');
+                if (i < paso)  si.classList.add('completed');
+                if (i === paso) si.classList.add('active');
+            }
+            for (var j = 1; j <= 3; j++) {
+                document.getElementById('sc-' + j).classList.toggle('completed', j < paso);
+            }
+            var btnCancelar  = document.getElementById('btnCancelar');
+            var btnAnterior  = document.getElementById('btnAnterior');
+            var btnSiguiente = document.getElementById('btnSiguiente');
+            var btnSubir     = document.getElementById('btnSubirArchivos');
+            var btnIrP4      = document.getElementById('btnIrPaso4');
+            var btnConfirmar = document.getElementById('btnConfirmarEnvio');
+            var counter      = document.getElementById('footerStepCounter');
+
+            if (btnCancelar)  btnCancelar.style.display  = paso === 1 ? 'inline-flex' : 'none';
+            if (btnAnterior)  btnAnterior.style.display  = paso > 1  ? 'inline-flex' : 'none';
+            if (btnSiguiente) btnSiguiente.style.display = paso === 1 ? 'inline-flex' : 'none';
+            if (btnSubir)     btnSubir.style.display     = paso === 2 ? 'inline-flex' : 'none';
+            if (btnIrP4)      btnIrP4.style.display      = paso === 3 ? 'inline-flex' : 'none';
+            if (btnConfirmar) btnConfirmar.style.display = paso === 4 ? 'inline-flex' : 'none';
+            if (counter)      counter.textContent        = 'Paso ' + paso + ' de 4';
+
+            document.documentElement.classList.toggle('paso-1', paso === 1);
+            document.documentElement.classList.toggle('paso-3', paso === 3);
+            document.documentElement.classList.toggle('paso-4', paso === 4);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // === Globo de llamada paso 1 (fixed, fuera del overflow:hidden) ===
+        (function () {
+            var bubble = document.createElement('div');
+            bubble.id = 'calloutPaso1';
+            bubble.innerHTML =
+                'Al emitir en SUNAT, ingresa estos datos exactamente como se muestran.' +
+                '<span style="position:absolute;right:-11px;top:50%;transform:translateY(-50%);' +
+                'width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;' +
+                'border-left:11px solid #ffa040;display:block;"></span>';
+            Object.assign(bubble.style, {
+                position:    'fixed',
+                width:       '170px',
+                background:  '#ffa040',
+                color:       '#fff',
+                borderRadius:'14px',
+                padding:     '.8rem .9rem',
+                fontSize:    '.88rem',
+                fontWeight:  '600',
+                textAlign:   'center',
+                lineHeight:  '1.6',
+                boxShadow:   '0 3px 10px rgba(255,160,64,.35)',
+                zIndex:      '500',
+                display:     'none',
+                pointerEvents: 'none'
+            });
+            document.body.appendChild(bubble);
+
+            function posicionarGlobo() {
+                var panel = document.getElementById('panel-paso-1');
+                var ficha = panel ? panel.querySelector('[style*="flex:1"]') : null;
+                if (!ficha) ficha = panel;
+                if (!panel || !bubble) return;
+
+                var panelRect = panel.getBoundingClientRect();
+                var visible   = panelRect.top < window.innerHeight && panelRect.bottom > 0;
+
+                if (!visible) { bubble.style.display = 'none'; return; }
+
+                // Posicionar a la izquierda de la ficha
+                var fichaRect = ficha ? ficha.getBoundingClientRect() : panelRect;
+                var leftPos   = fichaRect.left - 170 - 28; // 170px ancho + 28px margen
+                if (leftPos < 4) leftPos = 4;
+
+                // Centrar verticalmente en la zona visible del panel
+                var midPanel  = Math.max(panelRect.top, 0) + Math.min(panelRect.bottom, window.innerHeight);
+                var topPos    = midPanel / 2 - bubble.offsetHeight / 2;
+
+                bubble.style.left    = leftPos + 'px';
+                bubble.style.top     = topPos  + 'px';
+                bubble.style.display = 'block';
+            }
+
+            window.addEventListener('scroll', posicionarGlobo, { passive: true });
+            window.addEventListener('resize', posicionarGlobo, { passive: true });
+
+            // Disparar después de que el DOM esté listo
+            setTimeout(posicionarGlobo, 300);
+
+            // Ocultar cuando no es paso 1
+            document.addEventListener('pasoCambiado', function (e) {
+                bubble.style.display = (e.detail === 1) ? '' : 'none';
+                setTimeout(posicionarGlobo, 100);
+            });
+        })();
+
+        // === Copiar (paso 1) ===
+        function p1Copiar(texto, feedbackId) {
+            var fn = function () {
+                var el = document.getElementById(feedbackId);
+                if (!el) return;
+                el.style.display = 'flex';
+                setTimeout(function () { el.style.display = 'none'; }, 2500);
+            };
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(texto).then(fn).catch(fn);
+            } else {
+                var t = document.createElement('textarea');
+                t.value = texto; document.body.appendChild(t);
+                t.select(); document.execCommand('copy');
+                document.body.removeChild(t); fn();
+            }
+        }
     </script>
 }

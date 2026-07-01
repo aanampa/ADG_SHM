@@ -16,6 +16,7 @@ public class FacturaXmlData
     public DesgloseTotales DesgloseTotales { get; set; } = new();
     public List<DetalleItem> DetalleItems { get; set; } = new();
     public FirmaElectronica? FirmaElectronica { get; set; }
+    public Detraccion? Detraccion { get; set; }
 }
 
 public class DatosGenerales
@@ -73,6 +74,8 @@ public class Impuestos
     public decimal TotalExonerado { get; set; }
     public decimal TotalInafecto { get; set; }
     public decimal TotalGratuito { get; set; }
+    public decimal Retencion { get; set; }
+    public decimal PorcentajeRetencion { get; set; }
 }
 
 public class DesgloseTotales
@@ -82,6 +85,7 @@ public class DesgloseTotales
     public decimal ImporteTotal { get; set; }
     public decimal Descuentos { get; set; }
     public decimal OtrosCargos { get; set; }
+    public decimal Retencion { get; set; }
 }
 
 public class DetalleItem
@@ -106,4 +110,13 @@ public class FirmaElectronica
     public bool FirmaValida { get; set; }
     public string DigestValue { get; set; } = string.Empty;
     public string SignatureValue { get; set; } = string.Empty;
+}
+
+public class Detraccion
+{
+    public string CodigoMedioPago    { get; set; } = string.Empty;
+    public string NumeroCuenta       { get; set; } = string.Empty;
+    public string CodigoBienServicio { get; set; } = string.Empty;
+    public decimal Porcentaje        { get; set; }
+    public decimal Monto             { get; set; }
 }

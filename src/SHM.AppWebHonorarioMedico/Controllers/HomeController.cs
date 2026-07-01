@@ -19,6 +19,9 @@ public class HomeController : Controller
         _usuarioService = usuarioService;
     }
 
+    [HttpGet]
+    [Route("Home")]
+    [Route("Home/Index")]
     public IActionResult Index()
     {
         _logger.LogInformation("Accediendo a la página principal");
@@ -126,7 +129,7 @@ public class HomeController : Controller
                 model.NumeroDocumento,
                 model.Celular);
 
-            if (!successDatos)
+            if (!successDatos)  
             {
                 _logger.LogWarning("Error al actualizar datos del usuario {IdUsuario}: {Error}", idUsuario, errorDatos);
                 ViewBag.ErrorMessage = errorDatos;

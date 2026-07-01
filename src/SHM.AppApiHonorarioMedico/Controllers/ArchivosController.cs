@@ -13,6 +13,7 @@ namespace SHM.AppApiHonorarioMedico.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[ApiExplorerSettings(IgnoreApi = true)] // ← Oculta todo el controlador
 public class ArchivosController : ControllerBase
 {
     private readonly IArchivoService _archivoService;

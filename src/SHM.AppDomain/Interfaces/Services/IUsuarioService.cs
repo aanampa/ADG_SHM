@@ -110,4 +110,24 @@ public interface IUsuarioService
     /// Resetea la clave de un usuario y opcionalmente envia notificacion por correo.
     /// </summary>
     Task<(bool Success, string? ErrorMessage, string? GeneratedPassword)> ResetearClaveUsuarioAsync(int idUsuario, int idModificador, bool enviarCorreo);
+
+    /// <summary>
+    /// Obtiene los IDs de sedes asignadas a un usuario interno.
+    /// </summary>
+    Task<IEnumerable<int>> GetSedesUsuarioInternoAsync(int idUsuario);
+
+    /// <summary>
+    /// Actualiza las sedes de un usuario interno.
+    /// </summary>
+    Task<bool> UpdateSedesUsuarioInternoAsync(int idUsuario, List<int>? idsSedesSeleccionadas, int idModificador);
+
+    /// <summary>
+    /// Obtiene los usuarios externos asociados a una entidad medica.
+    /// </summary>
+    Task<IEnumerable<UsuarioResponseDto>> GetUsuariosByEntidadMedicaAsync(int idEntidadMedica);
+
+    /// <summary>
+    /// Invierte el estado activo de un usuario externo (activo↔inactivo).
+    /// </summary>
+    Task<bool> ToggleActivoUsuarioAsync(string guidRegistro, int idModificador);
 }

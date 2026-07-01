@@ -1,0 +1,69 @@
+@model List<SHM.AppWebHonorarioMedico.Models.LiquidacionItemViewModel>
+
+<div class="p-3">
+<div class="table-responsive">
+    <table class="table table-hover table-sm" style="font-size: 0.85rem;">
+        <thead class="thead-light">
+            <tr>
+                <th style="width: 30px;" class="text-center">#</th>
+                <th>Cia Medica</th>
+                <th style="width: 120px;">Banco</th>
+                <th style="width: 100px;">Comprobante</th>
+                <th style="width: 100px;" class="text-right">Total S/.</th>
+                <th style="width: 60px;" class="text-center">PDF</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Any())
+            {
+                var idx = 1;
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="text-center">@(idx++)</td>
+                        <td>@(item.CiaCompuesta ?? "-")</td>
+                        <td>@(item.NombreBanco ?? "-")</td>
+                        <td>@(item.ComprobanteFactura ?? "-")</td>
+                        <td class="text-right font-weight-bold">@(item.MtoTotal?.ToString("N2") ?? "-")</td>
+                        <td class="text-center">
+                            @if (!string.IsNullOrEmpty(item.GuidArchivoFactura))
+                            {
+                                <a href="@Url.Action("Descargar", "Archivo", new { guid = item.GuidArchivoFactura })"
+                                   class="btn btn-outline-danger btn-xs" target="_blank" title="Ver Factura PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                <tr class="table-warning">
+                    <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                    <td class="text-right"><strong>S/. @Model.Sum(x => x.MtoTotal ?? 0).ToString("N2")</strong></td>
+                    <td></td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">No se encontraron facturas</p>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Any())
+{
+    <div class="text-muted small mt-2">
+        <i class="fas fa-info-circle mr-1"></i>
+        @Model.Count factura(s) encontrada(s)
+    </div>
+}
+</div>

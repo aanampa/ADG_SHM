@@ -26,7 +26,6 @@
     </div>
 
     <div id="listContainer">
-        @await Html.PartialAsync("_ListEnviadasPartial", Model)
     </div>
 </div>
 
@@ -35,6 +34,10 @@
         var searchTimeout;
         var currentPage = @Model.PageNumber;
         var pageSize = @Model.PageSize;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadList();
+        });
 
         // Search functionality con debounce
         document.getElementById('searchInput').addEventListener('input', function (e) {

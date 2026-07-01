@@ -8,65 +8,49 @@
 </div>
 <form id="createForm">
     @Html.AntiForgeryToken()
-    <div class="modal-body">
+    <div class="modal-body py-2">
         <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
+
+            @* Columna izquierda: datos del usuario *@
+            <div class="col-md-6 border-right">
+                <div class="form-group mb-2">
                     <label for="Login">Login <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="Login" name="Login"
-                           maxlength="50" required placeholder="Usuario de acceso">
+                           maxlength="50" placeholder="Usuario de acceso">
                 </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="Email">Email <span class="text-danger">*</span></label>
                     <input type="email" class="form-control" id="Email" name="Email"
-                           maxlength="200" required placeholder="correo@ejemplo.com">
+                           maxlength="200" placeholder="correo@ejemplo.com">
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="Nombres">Nombres <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="Nombres" name="Nombres"
-                           maxlength="100" required>
+                           maxlength="100">
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="ApellidoPaterno">Apellido Paterno <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="ApellidoPaterno" name="ApellidoPaterno"
-                           maxlength="100" required>
+                           maxlength="100">
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="ApellidoMaterno">Apellido Materno</label>
                     <input type="text" class="form-control" id="ApellidoMaterno" name="ApellidoMaterno"
                            maxlength="100">
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="NumeroDocumento">N° Documento</label>
                     <input type="text" class="form-control" id="NumeroDocumento" name="NumeroDocumento"
                            maxlength="20" placeholder="DNI/CE">
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="Celular">Celular</label>
                     <input type="text" class="form-control" id="Celular" name="Celular"
-                           maxlength="20">
+                           maxlength="9" placeholder="9 digitos">
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="IdRol">Rol <span class="text-danger">*</span></label>
-                    <select class="form-control" id="IdRol" name="IdRol" required>
+                    <select class="form-control" id="IdRol" name="IdRol">
                         <option value="">-- Seleccione --</option>
                         @foreach (var rol in Model.Roles)
                         {
@@ -74,11 +58,7 @@
                         }
                     </select>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="form-group">
+                <div class="form-group mt-2">
                     <div class="custom-control custom-checkbox">
                         <input type="checkbox" class="custom-control-input" id="EnviarCorreo" name="EnviarCorreo" checked>
                         <label class="custom-control-label" for="EnviarCorreo">
@@ -90,6 +70,24 @@
                     </small>
                 </div>
             </div>
+
+            @* Columna derecha: sedes *@
+            <div class="col-md-6">
+                <div class="form-group h-100 d-flex flex-column">
+                    <label for="IdsSedesSeleccionadas">
+                        Sedes <span class="text-danger">*</span>
+                        <small class="text-muted font-weight-normal"> (seleccione una o mas)</small>
+                    </label>
+                    <select class="form-control select2-sedes" id="IdsSedesSeleccionadas"
+                            name="IdsSedesSeleccionadas" multiple="multiple" style="width: 100%; flex: 1;">
+                        @foreach (var sede in Model.SedesDisponibles)
+                        {
+                            <option value="@sede.Value">@sede.Text</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
         </div>
     </div>
     <div class="modal-footer">
@@ -101,3 +99,14 @@
         </button>
     </div>
 </form>
+
+<script>
+    $(document).ready(function() {
+        $('#IdsSedesSeleccionadas').select2({
+            placeholder: 'Seleccione las sedes',
+            allowClear: true,
+            dropdownParent: $('#modalContainer'),
+            width: '100%'
+        });
+    });
+</script>

@@ -9,7 +9,7 @@
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0">Usuarios Internos</h1>
+                <h1 class="m-0"><i class="fas fa-user-shield mr-2"></i>Usuarios Internos</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
@@ -70,7 +70,19 @@
     </div>
 </div>
 
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--bootstrap4 .select2-selection--multiple {
+            min-height: calc(2.25rem + 2px) !important;
+        }
+    </style>
+}
+
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
     <script>
         let currentPage = 1;
         const pageSize = 10;
@@ -171,10 +183,105 @@
                 });
         }
 
+        function openPerfilAprobacionModal(guid) {
+            fetch('@Url.Action("GetPerfilAprobacionModal")?guid=' + encodeURIComponent(guid))
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                    $('#modalContainer').modal('show');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error al cargar el formulario', 'error');
+                });
+        }
+
+        function submitAsignarPerfil() {
+            var idPerfil = document.getElementById('pa_IdPerfilAprobacion').value;
+            if (!idPerfil) {
+                showToast('Debe seleccionar un perfil', 'error');
+                return;
+            }
+
+            var idSede = document.getElementById('pa_IdSede').value;
+
+            var formData = {
+                guidRegistro: document.getElementById('pa_GuidRegistro').value,
+                idPerfilAprobacion: parseInt(idPerfil),
+                idSede: idSede ? parseInt(idSede) : null
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("AsignarPerfil")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Recargar el modal para mostrar la lista actualizada
+                    var guid = document.getElementById('pa_GuidRegistro').value;
+                    openPerfilAprobacionModal(guid);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
+        function submitQuitarPerfil(idPerfilAprobacion, idUsuario) {
+            var formData = {
+                idPerfilAprobacion: idPerfilAprobacion,
+                idUsuario: idUsuario
+            };
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('@Url.Action("QuitarPerfil")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Recargar el modal para mostrar la lista actualizada
+                    var guid = document.getElementById('pa_GuidRegistro').value;
+                    openPerfilAprobacionModal(guid);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error al procesar la solicitud', 'error');
+            });
+        }
+
         function submitCreate() {
             var form = document.getElementById('createForm');
             if (!form.checkValidity()) {
                 form.reportValidity();
+                return;
+            }
+
+            // Obtener sedes seleccionadas del Select2
+            var sedesSeleccionadas = $('#IdsSedesSeleccionadas').val();
+            if (!sedesSeleccionadas || sedesSeleccionadas.length === 0) {
+                showToast('Debe seleccionar al menos una sede', 'error');
                 return;
             }
 
@@ -187,10 +294,20 @@
                 numeroDocumento: document.getElementById('NumeroDocumento').value,
                 celular: document.getElementById('Celular').value,
                 idRol: document.getElementById('IdRol').value || null,
-                enviarCorreo: document.getElementById('EnviarCorreo').checked
+                enviarCorreo: document.getElementById('EnviarCorreo').checked,
+                idsSedesSeleccionadas: sedesSeleccionadas.map(Number)
             };
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            Swal.fire({
+                title: 'Guardando...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
 
             fetch('@Url.Action("CreateInterno")', {
                 method: 'POST',
@@ -202,6 +319,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     loadList(currentPage);
@@ -216,6 +334,7 @@
                 }
             })
             .catch(error => {
+                Swal.close();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });
@@ -225,6 +344,13 @@
             var form = document.getElementById('editForm');
             if (!form.checkValidity()) {
                 form.reportValidity();
+                return;
+            }
+
+            // Obtener sedes seleccionadas del Select2
+            var sedesSeleccionadas = $('#IdsSedesSeleccionadas').val();
+            if (!sedesSeleccionadas || sedesSeleccionadas.length === 0) {
+                showToast('Debe seleccionar al menos una sede', 'error');
                 return;
             }
 
@@ -238,10 +364,20 @@
                 numeroDocumento: document.getElementById('NumeroDocumento').value,
                 celular: document.getElementById('Celular').value,
                 idRol: document.getElementById('IdRol').value || null,
-                activo: parseInt(document.getElementById('Activo').value)
+                activo: parseInt(document.getElementById('Activo').value),
+                idsSedesSeleccionadas: sedesSeleccionadas.map(Number)
             };
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            Swal.fire({
+                title: 'Actualizando...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
 
             fetch('@Url.Action("EditInterno")', {
                 method: 'POST',
@@ -253,6 +389,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     loadList(currentPage);
@@ -262,6 +399,7 @@
                 }
             })
             .catch(error => {
+                Swal.close();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });
@@ -306,6 +444,7 @@
 
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+            f_loading();
             fetch('@Url.Action("ResetClaveInterno")', {
                 method: 'POST',
                 headers: {
@@ -316,6 +455,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                f_remove_loading();
                 if (data.success) {
                     $('#modalContainer').modal('hide');
                     showToast(data.message, 'success');
@@ -329,6 +469,7 @@
                 }
             })
             .catch(error => {
+                f_remove_loading();
                 console.error('Error:', error);
                 showToast('Error al procesar la solicitud', 'error');
             });

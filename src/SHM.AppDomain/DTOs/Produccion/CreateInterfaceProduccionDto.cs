@@ -8,6 +8,9 @@ namespace SHM.AppDomain.DTOs.Produccion;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-01-19</created>
+/// <modified>ADG Antonio - 2026-01-31 - Agregado campo FechaProduccion</modified>
+/// <modified>ADG Antonio - 2026-01-31 - Quitado FechaCreacion, Concepto y campos liquidacion, nueva llave compuesta</modified>
+/// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
 /// </summary>
 public class CreateInterfaceProduccionDto
 {
@@ -20,8 +23,13 @@ public class CreateInterfaceProduccionDto
     [Required]
     public string CodigoProduccion { get; set; } = string.Empty;
 
+    public string? NumeroProduccion { get; set; }
+
     [Required]
     public string TipoProduccion { get; set; } = string.Empty;
+
+    [Required]
+    public string TipoEntidadMedica { get; set; } = string.Empty;
 
     [Required]
     public string TipoMedico { get; set; } = string.Empty;
@@ -36,10 +44,10 @@ public class CreateInterfaceProduccionDto
     public string Periodo { get; set; } = string.Empty;
 
     [Required]
-    public string EstadoProduccion { get; set; } = string.Empty;
+    public string FechaProduccion { get; set; } = string.Empty;
 
     [Required]
-    public string FechaCreacion { get; set; } = string.Empty;
+    public string EstadoProduccion { get; set; } = string.Empty;
 
     [Required]
     public decimal MtoConsumo { get; set; }
@@ -59,6 +67,6 @@ public class CreateInterfaceProduccionDto
     [Required]
     public decimal MtoTotal { get; set; }
 
-    [Required]
-    public string Concepto { get; set; } = string.Empty;
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
 }
