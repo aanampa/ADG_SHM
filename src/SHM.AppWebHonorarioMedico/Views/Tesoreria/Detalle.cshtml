@@ -304,9 +304,8 @@
                                         var idxDet = 1;
                                         @foreach (var det in detalleLiquidaciones)
                                         {
-                                            var numComp = (int.TryParse(det.Numero, out int nParsed) ? nParsed : 0).ToString("D7");
-                                            var comprobante = !string.IsNullOrEmpty(det.TipoComprobante) && !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
-                                                ? $"{det.TipoComprobante.PadLeft(2, '0')}-0{det.Serie}-{numComp}"
+                                            var comprobante = !string.IsNullOrEmpty(det.Serie) && !string.IsNullOrEmpty(det.Numero)
+                                                ? $"{det.Serie}-{(int.TryParse(det.Numero, out int nParsed) ? nParsed.ToString() : det.Numero)}"
                                                 : "-";
                                             <tr data-numliq="@(det.NumeroLiquidacion ?? "")">
                                                 <td class="text-center" style="display:none;">
@@ -393,7 +392,7 @@
                                     <tfoot class="bg-light font-weight-bold">
                                         <tr>
                                             <td style="display:none;"></td>
-                                            <td colspan="10" class="text-right">TOTAL GENERAL:</td>
+                                            <td colspan="12" class="text-right">TOTAL GENERAL:</td>
                                             <td id="tfSubtotal" class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoSubtotal ?? 0).ToString("N2"))</td>
                                             <td id="tfIgv"      class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoIgv ?? 0).ToString("N2"))</td>
                                             <td id="tfRenta"    class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoRenta ?? 0).ToString("N2"))</td>
