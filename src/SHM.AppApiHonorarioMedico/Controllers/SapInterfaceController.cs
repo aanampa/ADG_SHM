@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SHM.AppDomain.DTOs.Banco;
+using SHM.AppDomain.DTOs.Bitacora;
 using SHM.AppDomain.DTOs.Common;
 using SHM.AppDomain.DTOs.SapApi;
 using SHM.AppDomain.Interfaces.Repositories;
@@ -14,15 +15,24 @@ namespace SHM.AppApiHonorarioMedico.Controllers;
 /// <author>ADG Antonio</author>
 /// <created>2026-03-07</created>
 /// <modified>ADG Antonio - 2026-04-15 - Agregado endpoint estado-pago</modified>
+/// <modified>ADG Antonio - 2026-07-18 - Agregado endpoint actualizar-estado-pago-masivo</modified>
+/// <modified>ADG Antonio - 2026-07-21 - Registro en bitacora al actualizar estado de pago</modified>
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class SapInterfaceController : ControllerBase
 {
+    /// <summary>
+    /// Id de usuario "sistema" usado como creador de los registros de bitacora
+    /// generados por procesos automaticos (tarea programada / interfaz SAP).
+    /// </summary>
+    private const int IdCreadorSistema = 1;
+
     private readonly ISapApiService _sapApiService;
     private readonly IBancoService _bancoService;
     private readonly IOrdenPagoProduccionRepository _ordenPagoProduccionRepository;
     private readonly IProduccionService _produccionService;
+    private readonly IBitacoraService _bitacoraService;
     private readonly ILogger<SapInterfaceController> _logger;
 
     public SapInterfaceController(
@@ -30,13 +40,33 @@ public class SapInterfaceController : ControllerBase
         IBancoService bancoService,
         IOrdenPagoProduccionRepository ordenPagoProduccionRepository,
         IProduccionService produccionService,
+        IBitacoraService bitacoraService,
         ILogger<SapInterfaceController> logger)
     {
         _sapApiService = sapApiService;
         _bancoService = bancoService;
         _ordenPagoProduccionRepository = ordenPagoProduccionRepository;
         _produccionService = produccionService;
+        _bitacoraService = bitacoraService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Registra en bitacora la actualizacion del estado de pago de una produccion.
+    /// </summary>
+    private async Task RegistrarBitacoraEstadoPagoAsync(
+        int idProduccion, string? tipoComprobante, string? serie, string? numero, SapDatosFacturaDto datos)
+    {
+        await _bitacoraService.CreateBitacoraAsync(new CreateBitacoraDto
+        {
+            Entidad     = "SHM_PRODUCCION",
+            IdEntidad   = idProduccion,
+            Accion      = "ACTUALIZAR_ESTADO_PAGO",
+            Descripcion = $"Estado de pago actualizado desde SAP. Comprobante {tipoComprobante} {serie}-{numero}: " +
+                          $"EstadoPago={datos.EstadoPago}, FechaPago={datos.FechaPago}, Monto={datos.MontoPagado}, " +
+                          $"Operacion={datos.NumeroOperacion}, Banco={datos.Banco}",
+            FechaAccion = DateTime.Now
+        }, IdCreadorSistema);
     }
 
     /// <summary>
@@ -329,7 +359,7 @@ public class SapInterfaceController : ControllerBase
                         out var montoParsed)
                         ? montoParsed : null;
 
-                    await _produccionService.UpdateEstadoPagoAsync(
+                    var actualizado = await _produccionService.UpdateEstadoPagoAsync(
                         idProduccion:        comp.IdProduccion,
                         pagoEstado:          datos.EstadoPago,
                         pagoFecha:           pagoFecha,
@@ -337,7 +367,13 @@ public class SapInterfaceController : ControllerBase
                         pagoBanco:           datos.Banco,
                         pagoCuentaDeposito:  datos.CtaBanDeposito,
                         pagoMontoPagado:     pagoMonto,
-                        idModificador:       1);
+                        idModificador:       IdCreadorSistema);
+
+                    if (actualizado)
+                    {
+                        await RegistrarBitacoraEstadoPagoAsync(
+                            comp.IdProduccion, comp.TipoComprobante, comp.Serie, comp.Numero, datos);
+                    }
                 }
                 else
                 {
@@ -360,6 +396,157 @@ public class SapInterfaceController : ControllerBase
         {
             _logger.LogError(ex, "Error al consultar estado de pago de orden {GuidOrdenPago}", guidOrdenPago);
             return StatusCode(500, ApiResponseDto<SapEstadoPagoOrdenDto>.Error(
+                "Error interno del servidor.", ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Procesa y actualiza el estado de pago de todos los comprobantes pendientes:
+    /// producciones de ordenes de pago con ESTADO = APROBADO cuyo PAGO_ESTADO aun es nulo.
+    /// Consulta SAP secuencialmente por cada comprobante y persiste el resultado en SHM_PRODUCCION.
+    /// Los comprobantes sin datos suficientes se marcan como SIN_COMPROBANTE y los que no
+    /// tienen CodigoAcreedor en la entidad medica se marcan como SIN_ACREEDOR; ninguno de los
+    /// dos casos detiene el proceso del resto de comprobantes.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-07-18</created>
+    /// </summary>
+    [HttpPost("actualizar-estado-pago-masivo")]
+    [ProducesResponseType(typeof(ApiResponseDto<SapActualizarEstadoPagoMasivoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponseDto<SapActualizarEstadoPagoMasivoDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ApiResponseDto<SapActualizarEstadoPagoMasivoDto>>> ActualizarEstadoPagoMasivo()
+    {
+        try
+        {
+            _logger.LogInformation("Inicio de actualizacion masiva de estado de pago");
+
+            var comprobantes = (await _ordenPagoProduccionRepository
+                .GetComprobantesPendientesPagoAsync()).ToList();
+
+            var resultado = new SapActualizarEstadoPagoMasivoDto
+            {
+                TotalComprobantes = comprobantes.Count
+            };
+
+            var ordenesPorId = comprobantes
+                .GroupBy(c => new { c.IdOrdenPago, c.GuidOrdenPago, c.NumeroOrdenPago });
+
+            foreach (var grupoOrden in ordenesPorId)
+            {
+                var ordenResultado = new SapEstadoPagoOrdenDto
+                {
+                    GuidOrdenPago      = grupoOrden.Key.GuidOrdenPago,
+                    TotalComprobantes  = grupoOrden.Count()
+                };
+
+                foreach (var comp in grupoOrden)
+                {
+                    var item = new SapEstadoPagoItemDto
+                    {
+                        IdProduccion    = comp.IdProduccion,
+                        GuidProduccion  = comp.GuidProduccion,
+                        TipoComprobante = comp.TipoComprobante,
+                        Serie           = comp.Serie,
+                        Numero          = comp.Numero,
+                        RazonSocial     = comp.RazonSocial,
+                        Ruc             = comp.Ruc
+                    };
+
+                    if (string.IsNullOrWhiteSpace(comp.CodigoAcreedor))
+                    {
+                        item.Estado  = "SIN_ACREEDOR";
+                        item.Mensaje = "La entidad medica no tiene CodigoAcreedor registrado";
+                        ordenResultado.Errores++;
+                        resultado.Errores++;
+                        ordenResultado.Items.Add(item);
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(comp.Serie) ||
+                        string.IsNullOrWhiteSpace(comp.Numero) ||
+                        comp.FechaEmision == null ||
+                        string.IsNullOrWhiteSpace(comp.TipoComprobante))
+                    {
+                        item.Estado  = "SIN_COMPROBANTE";
+                        item.Mensaje = "La produccion no tiene comprobante emitido (Serie/Numero/FechaEmision/TipoComprobante)";
+                        ordenResultado.SinComprobante++;
+                        resultado.SinComprobante++;
+                        ordenResultado.Items.Add(item);
+                        continue;
+                    }
+
+                    var datos = await _sapApiService.GetDatosFacturaAsync(
+                        comp.CodigoAcreedor,
+                        comp.TipoComprobante,
+                        comp.Serie,
+                        comp.Numero,
+                        comp.FechaEmision.Value);
+
+                    if (datos != null)
+                    {
+                        item.Estado          = "OK";
+                        item.EstadoPago      = datos.EstadoPago;
+                        item.FechaPago       = datos.FechaPago;
+                        item.MontoPagado     = datos.MontoPagado;
+                        item.NumeroOperacion = datos.NumeroOperacion;
+                        item.Banco           = datos.Banco;
+                        item.CtaBanDeposito  = datos.CtaBanDeposito;
+                        ordenResultado.ConsultadosEnSap++;
+                        resultado.ConsultadosEnSap++;
+
+                        DateTime? pagoFecha = DateTime.TryParse(datos.FechaPago, out var fechaParsed)
+                            ? fechaParsed : null;
+                        decimal? pagoMonto = decimal.TryParse(
+                            datos.MontoPagado,
+                            NumberStyles.Any,
+                            CultureInfo.InvariantCulture,
+                            out var montoParsed)
+                            ? montoParsed : null;
+
+                        var actualizado = await _produccionService.UpdateEstadoPagoAsync(
+                            idProduccion:        comp.IdProduccion,
+                            pagoEstado:          datos.EstadoPago,
+                            pagoFecha:           pagoFecha,
+                            pagoNumeroOperacion: datos.NumeroOperacion,
+                            pagoBanco:           datos.Banco,
+                            pagoCuentaDeposito:  datos.CtaBanDeposito,
+                            pagoMontoPagado:     pagoMonto,
+                            idModificador:       IdCreadorSistema);
+
+                        if (actualizado)
+                        {
+                            resultado.Actualizados++;
+                            await RegistrarBitacoraEstadoPagoAsync(
+                                comp.IdProduccion, comp.TipoComprobante, comp.Serie, comp.Numero, datos);
+                        }
+                    }
+                    else
+                    {
+                        item.Estado  = "ERROR_SAP";
+                        item.Mensaje = "No se encontraron datos en SAP para este comprobante";
+                        ordenResultado.Errores++;
+                        resultado.Errores++;
+                    }
+
+                    ordenResultado.Items.Add(item);
+                }
+
+                resultado.Ordenes.Add(ordenResultado);
+            }
+
+            resultado.TotalOrdenes = resultado.Ordenes.Count;
+
+            _logger.LogInformation(
+                "Actualizacion masiva de estado de pago finalizada. Ordenes: {Ordenes}, Comprobantes: {Total}, Actualizados: {Actualizados}, SinComprobante: {Sin}, Errores: {Err}",
+                resultado.TotalOrdenes, resultado.TotalComprobantes, resultado.Actualizados,
+                resultado.SinComprobante, resultado.Errores);
+
+            return Ok(ApiResponseDto<SapActualizarEstadoPagoMasivoDto>.Success(resultado, "Proceso completado."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar estado de pago masivo");
+            return StatusCode(500, ApiResponseDto<SapActualizarEstadoPagoMasivoDto>.Error(
                 "Error interno del servidor.", ex.Message));
         }
     }

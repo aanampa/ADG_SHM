@@ -89,6 +89,8 @@ try
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
     builder.Services.AddScoped<IArchivoComprobanteRepository, ArchivoComprobanteRepository>();
+    builder.Services.AddScoped<IBitacoraRepository, BitacoraRepository>();
+    builder.Services.AddScoped<IBitacoraService, BitacoraService>();
     
 
     // Configuracion del API externo de San Pablo

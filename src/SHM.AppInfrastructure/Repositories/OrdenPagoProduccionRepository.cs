@@ -15,6 +15,7 @@ namespace SHM.AppInfrastructure.Repositories;
 /// <created>2026-02-03</created>
 /// <modified>ADG Antonio - 2026-02-07 - Renombrado de OrdenPagoLiquidacion a OrdenPagoProduccion</modified>
 /// <modified>ADG Antonio - 2026-04-15 - Agregado GetComprobantesParaSapByOrdenPagoGuidAsync</modified>
+/// <modified>ADG Antonio - 2026-07-18 - Agregado GetComprobantesPendientesPagoAsync</modified>
 /// </summary>
 public class OrdenPagoProduccionRepository : IOrdenPagoProduccionRepository
 {
@@ -331,5 +332,43 @@ public class OrdenPagoProduccionRepository : IOrdenPagoProduccionRepository
             ORDER BY opp.ID_ORDEN_PAGO_PRODUCCION";
 
         return await connection.QueryAsync<OrdenPagoComprobanteQueryDto>(sql, new { GuidOrdenPago = guidOrdenPago });
+    }
+
+    /// <summary>
+    /// Obtiene los comprobantes pendientes de actualizar estado de pago: producciones
+    /// de ordenes de pago con ESTADO = APROBADO cuyo PAGO_ESTADO aun es nulo.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-07-18</created>
+    /// </summary>
+    public async Task<IEnumerable<OrdenPagoComprobantePendientePagoQueryDto>> GetComprobantesPendientesPagoAsync()
+    {
+        using var connection = new OracleConnection(_connectionString);
+
+        var sql = @"
+            SELECT
+                op.ID_ORDEN_PAGO      AS IdOrdenPago,
+                op.GUID_REGISTRO      AS GuidOrdenPago,
+                op.NUMERO_ORDEN_PAGO  AS NumeroOrdenPago,
+                p.ID_PRODUCCION       AS IdProduccion,
+                p.GUID_REGISTRO       AS GuidProduccion,
+                p.TIPO_COMPROBANTE    AS TipoComprobante,
+                p.SERIE               AS Serie,
+                p.NUMERO              AS Numero,
+                p.FECHA_EMISION       AS FechaEmision,
+                em.CODIGO_ACREEDOR    AS CodigoAcreedor,
+                em.RAZON_SOCIAL       AS RazonSocial,
+                em.RUC                AS Ruc
+            FROM SHM_ORDEN_PAGO op
+            INNER JOIN SHM_ORDEN_PAGO_PRODUCCION opp ON opp.ID_ORDEN_PAGO = op.ID_ORDEN_PAGO
+                                                     AND opp.ACTIVO = 1
+            INNER JOIN SHM_PRODUCCION p              ON p.ID_PRODUCCION = opp.ID_PRODUCCION
+            INNER JOIN SHM_ENTIDAD_MEDICA em         ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+            WHERE op.ACTIVO = 1
+              AND op.ESTADO = 'APROBADO'
+              AND p.PAGO_ESTADO IS NULL
+            ORDER BY op.NUMERO_ORDEN_PAGO, opp.ID_ORDEN_PAGO_PRODUCCION";
+
+        return await connection.QueryAsync<OrdenPagoComprobantePendientePagoQueryDto>(sql);
     }
 }

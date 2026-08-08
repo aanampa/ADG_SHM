@@ -1,6 +1,4 @@
-using System.Security.Claims;
-using System.Text.Json;
-using System.Transactions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SHM.AppDomain.Constants;
 using SHM.AppDomain.DTOs.Archivo;
@@ -11,6 +9,9 @@ using SHM.AppDomain.DTOs.SanPabloApi;
 using SHM.AppDomain.Interfaces.Services;
 using SHM.AppWebCompaniaMedica.Models;
 using SHM.AppWebCompaniaMedica.Services;
+using System.Security.Claims;
+using System.Text.Json;
+using System.Transactions;
 
 namespace SHM.AppWebCompaniaMedica.Controllers;
 
@@ -270,7 +271,8 @@ public class FacturasController : BaseController
                 Serie = p.Serie,
                 Numero = p.Numero,
                 EstadoComprobante = p.EstadoComprobante,
-                GuidRegistro = p.GuidRegistro
+                GuidRegistro = p.GuidRegistro,
+                PagoFecha = p.PagoFecha
             }).ToList();
 
             if (!string.IsNullOrWhiteSpace(busqueda))
@@ -568,6 +570,11 @@ public class FacturasController : BaseController
                 CuentaCorriente = cuentaCorriente,
                 CuentaCci = cuentaCci,
                 Moneda = moneda,
+                PagoFecha = produccion.PagoFecha,
+                PagoNumeroOperacion = produccion.PagoNumeroOperacion,
+                PagoBanco = produccion.PagoBanco,
+                PagoCuentaDeposito = produccion.PagoCuentaDeposito,
+                PagoMontoPagado = produccion.PagoMontoPagado,
                 Bitacora = bitacora
             };
 

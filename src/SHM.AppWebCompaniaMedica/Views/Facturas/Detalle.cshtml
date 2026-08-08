@@ -295,6 +295,50 @@
             </div>
         }
 
+        @if (Model.PagoFecha.HasValue)
+        {
+            <hr style="margin: 2rem 0; border-color: var(--border);">
+
+            <!-- Seccion de Datos del Pago -->
+            <div class="mb-4">
+                <h6 class="mb-3" style="font-weight: 700; color: var(--primary);">
+                    <i class="bi bi-cash-coin me-2"></i>Datos del Pago
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                            <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Fecha de Pago</span>
+                            <span style="font-weight: 600;">@Model.PagoFecha?.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                            <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">N&deg; Operacion</span>
+                            <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@(Model.PagoNumeroOperacion ?? "-")</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                            <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Banco</span>
+                            <span style="font-weight: 600;">@(Model.PagoBanco ?? "-")</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                            <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Cuenta de Deposito</span>
+                            <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">@(Model.PagoCuentaDeposito ?? "-")</span>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div style="padding: 1rem; background: var(--bg-main); border-radius: 12px;">
+                            <span style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Monto Pagado</span>
+                            <span style="font-weight: 700; font-size: 1.1rem; color: var(--accent);">S/ @(Model.PagoMontoPagado?.ToString("N2") ?? "0.00")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <hr style="margin: 2rem 0; border-color: var(--border);">
 
         <!-- Seccion de Bitacora -->

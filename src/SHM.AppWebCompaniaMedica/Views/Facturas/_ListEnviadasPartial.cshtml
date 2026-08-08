@@ -36,7 +36,14 @@
                             }
                         </td>
                         <td>
+                            @if (factura.PagoFecha.HasValue)
+                            {
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                            else
+                            {
                                 <span class="badge badge-sent">Enviado</span>
+                            }
                         </td>
                         <td>
                             <a asp-controller="Facturas" asp-action="Detalle" asp-route-guid="@factura.GuidRegistro" class="btn-action" style="border-color: var(--text-secondary); color: var(--text-secondary);">

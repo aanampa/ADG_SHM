@@ -42,6 +42,7 @@ public class FacturaEnviadaViewModel
     public string? Numero { get; set; }
     public string? EstadoComprobante { get; set; }
     public string? GuidRegistro { get; set; }
+    public DateTime? PagoFecha { get; set; }
 }
 
 public class FacturasEnviadasViewModel
@@ -132,6 +133,13 @@ public class DetalleFacturaViewModel
     public string? CuentaCorriente { get; set; }
     public string? CuentaCci { get; set; }
     public string? Moneda { get; set; }
+
+    // Datos de pago (sincronizados desde SAP)
+    public DateTime? PagoFecha { get; set; }
+    public string? PagoNumeroOperacion { get; set; }
+    public string? PagoBanco { get; set; }
+    public string? PagoCuentaDeposito { get; set; }
+    public decimal? PagoMontoPagado { get; set; }
 
     // Bitacora de acciones
     public List<BitacoraItemViewModel> Bitacora { get; set; } = new();

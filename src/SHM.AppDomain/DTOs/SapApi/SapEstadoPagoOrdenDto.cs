@@ -43,3 +43,21 @@ public class SapEstadoPagoItemDto
     public string? Banco { get; set; }
     public string? CtaBanDeposito { get; set; }
 }
+
+/// <summary>
+/// DTO de respuesta del endpoint actualizar-estado-pago-masivo.
+/// Contiene el resumen global y el detalle agrupado por orden de pago.
+///
+/// <author>ADG Antonio</author>
+/// <created>2026-07-18</created>
+/// </summary>
+public class SapActualizarEstadoPagoMasivoDto
+{
+    public int TotalOrdenes { get; set; }
+    public int TotalComprobantes { get; set; }
+    public int ConsultadosEnSap { get; set; }
+    public int Actualizados { get; set; }
+    public int SinComprobante { get; set; }
+    public int Errores { get; set; }
+    public List<SapEstadoPagoOrdenDto> Ordenes { get; set; } = new();
+}

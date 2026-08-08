@@ -9,6 +9,7 @@ namespace SHM.AppDomain.Interfaces.Repositories;
 /// <author>ADG Antonio</author>
 /// <created>2026-02-03</created>
 /// <modified>ADG Antonio - 2026-04-15 - Agregado GetComprobantesParaSapByOrdenPagoGuidAsync</modified>
+/// <modified>ADG Antonio - 2026-07-18 - Agregado GetComprobantesPendientesPagoAsync</modified>
 /// </summary>
 public interface IOrdenPagoProduccionRepository
 {
@@ -30,4 +31,10 @@ public interface IOrdenPagoProduccionRepository
     /// incluyendo los campos necesarios para consultar el estado de pago en SAP.
     /// </summary>
     Task<IEnumerable<OrdenPagoComprobanteQueryDto>> GetComprobantesParaSapByOrdenPagoGuidAsync(string guidOrdenPago);
+
+    /// <summary>
+    /// Obtiene los comprobantes pendientes de actualizar estado de pago: producciones
+    /// de ordenes de pago con ESTADO = APROBADO cuyo PAGO_ESTADO aun es nulo.
+    /// </summary>
+    Task<IEnumerable<OrdenPagoComprobantePendientePagoQueryDto>> GetComprobantesPendientesPagoAsync();
 }
