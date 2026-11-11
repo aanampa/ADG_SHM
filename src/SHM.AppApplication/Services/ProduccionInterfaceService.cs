@@ -355,6 +355,7 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
     /// <author>ADG Antonio</author>
     /// <created>2026-01-31</created>
     /// <modified>ADG Antonio - 2026-02-08 - Detalle de estado por registro, sin abortar ante errores individuales</modified>
+    /// <modified>ADG Antonio - 2026-11-05 - Datos SAP: codigos de factura/detraccion y sobrescritura de monto y porcentaje de detraccion</modified>
     /// </summary>
     public async Task<InterfaceProduccionResultDto> UpdateLiquidacionesAsync(IEnumerable<UpdateInterfaceLiquidacionDto> updateDtos, int idModificador)
     {
@@ -373,6 +374,23 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
 
             try
             {
+                // Validar y normalizar los datos SAP (codigos, monto y porcentaje de detraccion)
+                var errorSap = ValidarDatosSapLiquidacion(
+                    updateDto,
+                    out var codSapCpm,
+                    out var codSapDetrac,
+                    out var mtoDetraccion,
+                    out var porcDetraccion);
+
+                if (errorSap != null)
+                {
+                    detalle.Estado = "ER";
+                    detalle.Mensaje = errorSap;
+                    result.CantidadErrores++;
+                    result.Detalle.Add(detalle);
+                    continue;
+                }
+
                 // Obtener IdSede a partir del CodigoSede
                 var sede = await _sedeRepository.GetByCodigoAsync(updateDto.CodigoSede.Trim());
                 if (sede == null)
@@ -439,6 +457,10 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
                     fechaLiquidacion,
                     updateDto.DescripcionLiquidacion.Trim(),
                     updateDto.TipoLiquidacion ?? "".Trim(),
+                    codSapCpm,
+                    codSapDetrac,
+                    mtoDetraccion,
+                    porcDetraccion,
                     idModificador);
 
                 if (actualizado)
@@ -469,6 +491,48 @@ public class ProduccionInterfaceService : IProduccionInterfaceService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Valida y normaliza los datos SAP recibidos con la liquidacion.
+    /// - Los codigos se recortan; vacios se convierten en null.
+    /// - Monto y porcentaje de detraccion nulos equivalen a 0 (factura no afecta).
+    /// Retorna el mensaje de error, o null si los datos son validos.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-11-05</created>
+    /// </summary>
+    private static string? ValidarDatosSapLiquidacion(
+        UpdateInterfaceLiquidacionDto dto,
+        out string? codSapCpm,
+        out string? codSapDetrac,
+        out decimal mtoDetraccion,
+        out decimal porcDetraccion)
+    {
+        codSapCpm = string.IsNullOrWhiteSpace(dto.CodSapCpm) ? null : dto.CodSapCpm.Trim();
+        codSapDetrac = string.IsNullOrWhiteSpace(dto.CodSapDetrac) ? null : dto.CodSapDetrac.Trim();
+        mtoDetraccion = dto.MtoDetraccion ?? 0m;
+        porcDetraccion = dto.PorcDetraccion ?? 0m;
+
+        if (codSapCpm != null && codSapCpm.Length > 18)
+            return "codSapCpm excede la longitud maxima de 18 caracteres";
+
+        if (codSapDetrac != null && codSapDetrac.Length > 20)
+            return "codSapDetrac excede la longitud maxima de 20 caracteres";
+
+        if (mtoDetraccion < 0)
+            return "mtoDetraccion no puede ser negativo";
+
+        if (Math.Round(mtoDetraccion, 2) != mtoDetraccion)
+            return "mtoDetraccion admite como maximo 2 decimales";
+
+        if (porcDetraccion < 0 || porcDetraccion > 100)
+            return "porcDetraccion debe estar entre 0 y 100";
+
+        if (Math.Round(porcDetraccion, 2) != porcDetraccion)
+            return "porcDetraccion admite como maximo 2 decimales";
+
+        return null;
     }
 
     /// <summary>

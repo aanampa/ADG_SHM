@@ -80,6 +80,8 @@ public class ProduccionRepository : IProduccionRepository
         FECHA_LIQUIDACION as FechaLiquidacion,
         DESCRIPCION_LIQUIDACION as DescripcionLiquidacion,
         TIPO_LIQUIDACION as TipoLiquidacion,
+        CODSAP_CPM as CodSapCpm,
+        CODSAP_DETRAC as CodSapDetrac,
         PAGO_ESTADO as PagoEstado,
         PAGO_FECHA as PagoFecha,
         PAGO_NUMERO_OPERACION as PagoNumeroOperacion,
@@ -1035,9 +1037,12 @@ public class ProduccionRepository : IProduccionRepository
 
     /// <summary>
     /// Actualiza los datos de liquidacion de una produccion por llave compuesta.
+    /// Incluye los datos SAP: codigos de factura y detraccion, y monto y porcentaje de
+    /// detraccion, que sobrescriben los valores existentes (SAP es la fuente oficial).
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-31</created>
+    /// <modified>ADG Antonio - 2026-11-05 - Agregados codSapCpm, codSapDetrac, mtoDetraccion y porcDetraccion</modified>
     /// </summary>
     public async Task<bool> UpdateLiquidacionByKeyAsync(
         int idSede,
@@ -1052,6 +1057,10 @@ public class ProduccionRepository : IProduccionRepository
         DateTime fechaLiquidacion,
         string descripcionLiquidacion,
         string? tipoLiquidacion,
+        string? codSapCpm,
+        string? codSapDetrac,
+        decimal mtoDetraccion,
+        decimal porcDetraccion,
         int idModificador)
     {
         using var connection = new OracleConnection(_connectionString);
@@ -1066,6 +1075,10 @@ public class ProduccionRepository : IProduccionRepository
                 FECHA_LIQUIDACION = :FechaLiquidacion,
                 DESCRIPCION_LIQUIDACION = :DescripcionLiquidacion,
                 TIPO_LIQUIDACION = :TipoLiquidacion,
+                CODSAP_CPM = :CodSapCpm,
+                CODSAP_DETRAC = :CodSapDetrac,
+                MTO_DETRACCION = :MtoDetraccion,
+                PORC_DETRACCION = :PorcDetraccion,
                 ESTADO = :Estado,
                 ID_MODIFICADOR = :IdModificador,
                 FECHA_MODIFICACION = SYSDATE
@@ -1090,6 +1103,10 @@ public class ProduccionRepository : IProduccionRepository
             FechaLiquidacion = fechaLiquidacion,
             DescripcionLiquidacion = descripcionLiquidacion,
             TipoLiquidacion = tipoLiquidacion,
+            CodSapCpm = codSapCpm,
+            CodSapDetrac = codSapDetrac,
+            MtoDetraccion = mtoDetraccion,
+            PorcDetraccion = porcDetraccion,
             Estado = EstadoDescripcion.Produccion.FacturaLiquidada,
             EstadoRequerido = EstadoDescripcion.Produccion.FacturaEnviadaHhmm,
             IdModificador = idModificador

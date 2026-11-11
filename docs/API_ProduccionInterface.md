@@ -33,7 +33,7 @@
 | **Modulo** | API Interface de Produccion |
 | **Cliente** | Complejo Hospitalario San Pablo |
 | **Desarrollador** | ADG Systems |
-| **Version** | 4.0 |
+| **Version** | 5.0 |
 
 ---
 
@@ -237,7 +237,7 @@ Todos los endpoints devuelven una respuesta con la siguiente estructura:
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
 | `cantidadCreados` | int | Cantidad de registros creados/actualizados exitosamente |
-| `cantidadObviados` | int | Cantidad de registros omitidos (duplicados o no encontrados) |
+| `cantidadObviados` | int | Cantidad de registros omitidos por ya existir (solo `/producciones`). En `/liquidaciones` no se usa y siempre es `0` |
 | `cantidadErrores` | int | Cantidad de registros con error |
 | `totalProcesados` | int | Total de registros procesados (creados + obviados + errores) |
 | `detalle` | array | Lista con el estado de proceso de cada registro recibido |
@@ -471,7 +471,12 @@ El endpoint recibe un **array JSON** de objetos con la siguiente estructura:
     "periodoLiquidacion": "string",
     "estadoLiquidacion": "string",
     "fechaLiquidacion": "string",
-    "descripcionLiquidacion": "string"
+    "descripcionLiquidacion": "string",
+    "tipoLiquidacion": "string",
+    "codSapCpm": "string",
+    "codSapDetrac": "string",
+    "mtoDetraccion": 0.00,
+    "porcDetraccion": 0.00
   }
 ]
 ```
@@ -491,6 +496,19 @@ El endpoint recibe un **array JSON** de objetos con la siguiente estructura:
 | `estadoLiquidacion` | string | Si | Estado de la liquidacion (ej: "PROCESADO", "PENDIENTE"). |
 | `fechaLiquidacion` | string | Si | Fecha de liquidacion en formato `dd/MM/yyyy HH:mm:ss`. |
 | `descripcionLiquidacion` | string | Si | Descripcion de la liquidacion. |
+| `tipoLiquidacion` | string | No | Tipo de liquidacion. |
+| `codSapCpm` | string | No | Codigo SAP (numero de documento) que representa a la factura. Maximo 18 caracteres. |
+| `codSapDetrac` | string | No | Codigo SAP (numero de documento) que representa a la detraccion de la factura. Maximo 20 caracteres. Omitir, enviar `null` o vacio si la factura no esta afecta a detraccion. |
+| `mtoDetraccion` | decimal | No | Monto de la detraccion. Mayor o igual a 0, hasta 2 decimales, con punto decimal. `null` o ausente equivale a `0`. |
+| `porcDetraccion` | decimal | No | Porcentaje de la detraccion (ej: `12.00`). Entre 0 y 100, hasta 2 decimales, con punto decimal. `null` o ausente equivale a `0`. |
+
+**Datos SAP (`codSapCpm`, `codSapDetrac`, `mtoDetraccion`, `porcDetraccion`):**
+
+- SAP es la fuente oficial de la detraccion: `mtoDetraccion` y `porcDetraccion` **sobrescriben** siempre los valores que tenia la produccion al registrarse. Si no se envian, la produccion queda con detraccion `0`.
+- Los codigos se guardan sin espacios al inicio ni al final. Un codigo vacio se guarda como `NULL`.
+- Estos datos se muestran a Tesoreria en la orden de pago (pantalla, PDF y Excel).
+- Si un valor no cumple las reglas, ese registro responde `ER` con el mensaje correspondiente (por ejemplo `codSapCpm excede la longitud maxima de 18 caracteres`) y el resto del lote se procesa con normalidad.
+- Solo se actualizan producciones en estado `FACTURA_ENVIADA_HHMM`. Una produccion ya liquidada responde `ER`, por lo que estos datos no se pueden corregir reenviando la liquidacion.
 
 ### Llave de Busqueda (Liquidaciones)
 
@@ -502,7 +520,9 @@ La combinacion de los siguientes campos se usa para **localizar** la produccion 
 - `numeroProduccion`
 - `tipoEntidadMedica`
 
-Si la produccion **no existe**, el registro sera **omitido** (cantidadObviados).
+Si la produccion **no existe**, el registro responde `estado: "ER"` con el mensaje `Produccion no encontrada`. El resto del lote se procesa con normalidad. En este endpoint `cantidadObviados` no se usa.
+
+Solo se actualizan producciones en estado `FACTURA_ENVIADA_HHMM`. Si la produccion existe pero esta en otro estado, el registro responde `estado: "ER"` con el mensaje `No se pudo actualizar la produccion. Solo se pueden liquidar producciones en estado FACTURA_ENVIADA_HHMM`.
 
 ### Respuesta Exitosa (HTTP 200 OK)
 
@@ -512,8 +532,8 @@ Si la produccion **no existe**, el registro sera **omitido** (cantidadObviados).
   "message": "Correcto.",
   "data": {
     "cantidadCreados": 4,
-    "cantidadObviados": 1,
-    "cantidadErrores": 1,
+    "cantidadObviados": 0,
+    "cantidadErrores": 2,
     "totalProcesados": 6,
     "detalle": [
       {
@@ -529,8 +549,8 @@ Si la produccion **no existe**, el registro sera **omitido** (cantidadObviados).
         "codigoEntidad": "0994",
         "codigoProduccion": "NO_EXISTE",
         "tipoEntidadMedica": "1",
-        "estado": "OK",
-        "mensaje": "Produccion no encontrada, omitido"
+        "estado": "ER",
+        "mensaje": "Produccion no encontrada"
       },
       {
         "codigoSede": "01",
@@ -560,7 +580,7 @@ Si la produccion **no existe**, el registro sera **omitido** (cantidadObviados).
 }
 ```
 
-> **Nota:** Los errores de sede no encontrada, produccion no encontrada o formato de fecha invalido ya no devuelven HTTP 400. Estos errores ahora se reportan por registro dentro del campo `detalle` con `estado: "ER"` (o `"OK"` con mensaje "omitido" en caso de produccion no encontrada).
+> **Nota:** Los errores de sede no encontrada, produccion no encontrada o formato de fecha invalido ya no devuelven HTTP 400. Estos errores ahora se reportan por registro dentro del campo `detalle` con `estado: "ER"`.
 
 ---
 
@@ -576,12 +596,12 @@ Ambos endpoints procesan cada registro de forma **individual**, capturando el re
    - Si un registro falla, **no afecta a los demas registros**
 
 2. **Detalle de estado por registro**: Cada registro procesado genera una entrada en el array `detalle` con:
-   - `estado: "OK"` → Registro creado/actualizado exitosamente, o registro omitido (duplicado/no encontrado)
-   - `estado: "ER"` → Error al procesar el registro (sede no encontrada, entidad no encontrada, formato de fecha invalido, etc.)
+   - `estado: "OK"` → Registro creado/actualizado exitosamente, o registro omitido por duplicado (solo `/producciones`)
+   - `estado: "ER"` → Error al procesar el registro (sede no encontrada, entidad no encontrada, formato de fecha invalido, produccion no encontrada o en estado no permitido, datos SAP invalidos, etc.)
 
 3. **Contadores de resumen**:
    - `cantidadCreados`: Registros creados (producciones) o actualizados (liquidaciones) exitosamente
-   - `cantidadObviados`: Registros omitidos (ya existen en producciones, o no encontrados en liquidaciones)
+   - `cantidadObviados`: Registros omitidos porque ya existen (solo en producciones). En liquidaciones siempre es `0`
    - `cantidadErrores`: Registros con error de validacion o procesamiento
    - `totalProcesados`: Suma total (creados + obviados + errores)
 
@@ -748,10 +768,33 @@ Content-Type: application/json
     "periodoLiquidacion": "10/10/2025",
     "estadoLiquidacion": "AUTORIZADO",
     "fechaLiquidacion": "31/01/2026 18:00:00",
-    "descripcionLiquidacion": "CREDITO / 3RA SEMANA DICIEMBRE 2025, PROD:20251227"
+    "descripcionLiquidacion": "CREDITO / 3RA SEMANA DICIEMBRE 2025, PROD:20251227",
+    "codSapCpm": "5100012345",
+    "codSapDetrac": "5200067890",
+    "mtoDetraccion": 81.31,
+    "porcDetraccion": 12.00
+  },
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251018",
+    "numeroProduccion": "20251040",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251018",
+    "codigoLiquidacion": "20251018",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "31/01/2026 18:00:00",
+    "descripcionLiquidacion": "CREDITO / 3RA SEMANA DICIEMBRE 2025, PROD:20251228",
+    "codSapCpm": "5100012346",
+    "codSapDetrac": null,
+    "mtoDetraccion": null,
+    "porcDetraccion": null
   }
 ]
 ```
+
+El primer registro corresponde a una factura afecta a detraccion; el segundo, a una factura no afecta (los campos de detraccion llegan nulos y la produccion queda con detraccion `0`).
 
 **Response (200 OK):**
 ```json
@@ -759,15 +802,23 @@ Content-Type: application/json
   "isSuccess": true,
   "message": "Correcto.",
   "data": {
-    "cantidadCreados": 1,
+    "cantidadCreados": 2,
     "cantidadObviados": 0,
     "cantidadErrores": 0,
-    "totalProcesados": 1,
+    "totalProcesados": 2,
     "detalle": [
       {
         "codigoSede": "01",
         "codigoEntidad": "0994",
         "codigoProduccion": "20251017",
+        "tipoEntidadMedica": "1",
+        "estado": "OK",
+        "mensaje": "Actualizado"
+      },
+      {
+        "codigoSede": "01",
+        "codigoEntidad": "0994",
+        "codigoProduccion": "20251018",
         "tipoEntidadMedica": "1",
         "estado": "OK",
         "mensaje": "Actualizado"
@@ -949,15 +1000,15 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 ]
 ```
 
-**Response (200 OK):** *(el registro se omite, no genera error)*
+**Response (200 OK):** *(el registro se reporta con estado `ER`; el resto del lote se procesa)*
 ```json
 {
   "isSuccess": true,
   "message": "Correcto.",
   "data": {
     "cantidadCreados": 0,
-    "cantidadObviados": 1,
-    "cantidadErrores": 0,
+    "cantidadObviados": 0,
+    "cantidadErrores": 1,
     "totalProcesados": 1,
     "detalle": [
       {
@@ -965,8 +1016,8 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
         "codigoEntidad": "ENT001",
         "codigoProduccion": "PROD_NO_EXISTE",
         "tipoEntidadMedica": "MEDICO",
-        "estado": "OK",
-        "mensaje": "Produccion no encontrada, omitido"
+        "estado": "ER",
+        "mensaje": "Produccion no encontrada"
       }
     ]
   },
@@ -1009,7 +1060,8 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |----------|-------|
 | **Autor** | ADG Antonio |
 | **Fecha de Creacion** | 2026-01-19 |
-| **Version** | 4.0 |
+| **Ultima Actualizacion** | 2026-11-11 |
+| **Version** | 5.0 |
 | **Proyecto** | SHM.AppApiHonorarioMedico |
 
 ---
@@ -1034,3 +1086,14 @@ Cuando se intenta actualizar liquidacion de una produccion que no existe:
 |     |            | - Eliminado comportamiento transaccional (abort-all), reemplazado por procesamiento por registro |
 |     |            | - Log de errores mejorado con campo CantidadErrores |
 | 4.0 | 2026-04-15 | - Nuevos campos `mtoDetraccion` y `porcDetraccion` en endpoint `/producciones` |
+| 5.0 | 2026-11-11 | **Endpoint `/liquidaciones`:** |
+|     |            | - Nuevos campos opcionales `codSapCpm` (codigo SAP de la factura, max. 18 caracteres) y `codSapDetrac` (codigo SAP de la detraccion, max. 20 caracteres) |
+|     |            | - Nuevos campos opcionales `mtoDetraccion` y `porcDetraccion` (mismos nombres que en `/producciones`) |
+|     |            | - **Importante:** `mtoDetraccion` y `porcDetraccion` **sobrescriben** siempre los valores de la produccion (SAP es la fuente oficial). Si no se envian, la produccion queda con detraccion `0` |
+|     |            | - Nuevas validaciones por registro (longitud de codigos, monto no negativo, porcentaje entre 0 y 100, maximo 2 decimales), con estado `ER` y mensaje |
+|     |            | - Documentado el campo opcional `tipoLiquidacion`, que ya existia |
+|     |            | - Los valores numericos deben enviarse como numero JSON con punto decimal. Un valor de tipo incorrecto (por ejemplo texto) rechaza toda la solicitud con HTTP 400 |
+|     |            | **Correcciones de documentacion:** |
+|     |            | - Una produccion no encontrada en `/liquidaciones` responde `estado: "ER"` (antes se documentaba como `OK` omitido). `cantidadObviados` no se usa en este endpoint |
+|     |            | - Documentado que solo se liquidan producciones en estado `FACTURA_ENVIADA_HHMM` |
+|     |            | - Actualizados el Ejemplo 2 y el Ejemplo 7 |

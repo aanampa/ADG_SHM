@@ -163,9 +163,12 @@ public interface IProduccionRepository
 
     /// <summary>
     /// Actualiza los datos de liquidacion de una produccion por llave compuesta.
+    /// Incluye los datos SAP: codigos de factura y detraccion, y monto y porcentaje de
+    /// detraccion, que sobrescriben los valores existentes (SAP es la fuente oficial).
     ///
     /// <author>ADG Antonio</author>
     /// <created>2026-01-31</created>
+    /// <modified>ADG Antonio - 2026-11-05 - Agregados codSapCpm, codSapDetrac, mtoDetraccion y porcDetraccion</modified>
     /// </summary>
     Task<bool> UpdateLiquidacionByKeyAsync(
         int idSede,
@@ -180,6 +183,10 @@ public interface IProduccionRepository
         DateTime fechaLiquidacion,
         string descripcionLiquidacion,
         string? tipoLiquidacion,
+        string? codSapCpm,
+        string? codSapDetrac,
+        decimal mtoDetraccion,
+        decimal porcDetraccion,
         int idModificador);
 
     /// <summary>

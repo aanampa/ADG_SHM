@@ -12,6 +12,7 @@ namespace SHM.AppDomain.Entities;
 /// <modified>ADG Antonio - 2026-04-15 - Agregados campos MtoDetraccion y PorcDetraccion</modified>
 /// <modified>ADG Antonio - 2026-04-15 - Agregados campos de estado de pago SAP (PAGO_*)</modified>
 /// <modified>ADG Antonio - 2026-04-25 - Agregado campo FacturaFechaVencimiento</modified>
+/// <modified>ADG Antonio - 2026-11-05 - Agregados campos CodSapCpm y CodSapDetrac (codigos SAP de la liquidacion)</modified>
 /// </summary>
 public class Produccion
 {
@@ -62,6 +63,10 @@ public class Produccion
     public DateTime? FechaLiquidacion { get; set; }
     public string? DescripcionLiquidacion { get; set; }
     public string? TipoLiquidacion { get; set; }
+
+    // Codigos SAP recibidos con la liquidacion
+    public string? CodSapCpm { get; set; }
+    public string? CodSapDetrac { get; set; }
 
     // Campos de Estado de Pago (sincronizados desde SAP)
     public string? PagoEstado { get; set; }

@@ -251,9 +251,10 @@ public class OrdenPagoDocument : IDocument
                     cols.RelativeColumn(2);
                     cols.RelativeColumn(2);
                     cols.RelativeColumn(2);
+                    cols.RelativeColumn(2);
                 });
 
-                var hdrs = new[] { "#", "Liquidación", "RUC", "Cod. Acreedor", "Cía Médica", "Banco", "Comprobante", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Total S/." };
+                var hdrs = new[] { "#", "Liquidación", "RUC", "Cod. Acreedor", "Cía Médica", "Banco", "Comprobante", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Detracción S/.", "Total S/." };
                 foreach (var h in hdrs)
                     EncabezadoCelda(table, h);
 
@@ -271,12 +272,13 @@ public class OrdenPagoDocument : IDocument
                     FilaCelda(table, det.CodigoAcreedor ?? "-", bg, center: true);
                     FilaCelda(table, det.RazonSocial ?? "-", bg);
                     FilaCelda(table, det.NombreBanco ?? "-", bg);
-                    FilaCelda(table, comprobante, bg, center: true);
+                    FilaCelda(table, string.IsNullOrEmpty(det.CodSapCpm) ? comprobante : $"{comprobante}\nSAP: {det.CodSapCpm}", bg, center: true);
                     FilaCelda(table, det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-", bg, center: true);
                     FilaCelda(table, EstadoDescripcion.Produccion.GetDescripcion(det.Estado), bg, center: true);
                     FilaCeldaMonto(table, det.MtoSubtotal, bg);
                     FilaCeldaMonto(table, det.MtoIgv, bg);
                     FilaCeldaMonto(table, det.MtoRenta, bg);
+                    FilaCeldaDetraccion(table, det, bg);
                     FilaCeldaMonto(table, det.MtoTotal, bg, bold: true);
                     idx++;
                 }
@@ -286,6 +288,7 @@ public class OrdenPagoDocument : IDocument
                 FilaCeldaMonto(table, _detalle.Sum(d => d.MtoSubtotal ?? 0), ColorHeaderFila, bold: true);
                 FilaCeldaMonto(table, _detalle.Sum(d => d.MtoIgv ?? 0), ColorHeaderFila, bold: true);
                 FilaCeldaMonto(table, _detalle.Sum(d => d.MtoRenta ?? 0), ColorHeaderFila, bold: true);
+                FilaCeldaMonto(table, _detalle.Sum(d => d.MtoDetraccion ?? 0), ColorHeaderFila, bold: true);
                 FilaCeldaMonto(table, _detalle.Sum(d => d.MtoTotal ?? 0), ColorHeaderFila, bold: true);
             });
         });
@@ -407,6 +410,28 @@ public class OrdenPagoDocument : IDocument
         var cell = table.Cell().Background(bg).BorderBottom(1).BorderColor(ColorBorde).Padding(3);
         var txt  = cell.Text(valor?.ToString("N2") ?? "--").FontSize(7).AlignRight();
         if (bold) txt.Bold();
+    }
+
+    /// <summary>
+    /// Celda de detraccion: monto, porcentaje y codigo SAP. Muestra "-" si la factura no tiene detraccion.
+    /// </summary>
+    private static void FilaCeldaDetraccion(TableDescriptor table, DetalleLiquidacionItemDto det, string bg)
+    {
+        var cell = table.Cell().Background(bg).BorderBottom(1).BorderColor(ColorBorde).Padding(3);
+
+        if (!det.TieneDetraccion)
+        {
+            cell.Text("-").FontSize(7).AlignRight();
+            return;
+        }
+
+        cell.Column(col =>
+        {
+            col.Item().Text((det.MtoDetraccion ?? 0).ToString("N2")).FontSize(7).AlignRight();
+            col.Item().Text($"{(det.PorcDetraccion ?? 0):N2}%").FontSize(6).FontColor(Colors.Grey.Darken1).AlignRight();
+            if (!string.IsNullOrEmpty(det.CodSapDetrac))
+                col.Item().Text($"SAP: {det.CodSapDetrac}").FontSize(6).FontColor(Colors.Grey.Darken1).AlignRight();
+        });
     }
 
     private static void FilaCeldaBold(TableDescriptor table, string valor, string bg)

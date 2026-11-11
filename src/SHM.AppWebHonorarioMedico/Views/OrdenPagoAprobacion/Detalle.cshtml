@@ -311,6 +311,7 @@
                                     <th class="text-right" style="width: 100px;">Sub Total<br/>S/.</th>
                                     <th class="text-right" style="width: 80px;">IGV<br/>S/.</th>
                                     <th class="text-right" style="width: 90px;">Imp. Renta<br/>S/.</th>
+                                    <th class="text-right" style="width: 90px;">Detracci&oacute;n<br/>S/.</th>
                                     <th class="text-right" style="width: 100px;">Total<br/>S/.</th>
                                 </tr>
                             </thead>
@@ -333,7 +334,7 @@
                                             <td>@(det.DesTipoEntidadMedica ?? det.TipoEntidadMedica ?? "-")</td>
                                             <td>@(det.RazonSocial ?? "-")</td>
                                             <td>@(det.NombreBanco ?? "-")</td>
-                                            <td class="text-center">@comprobante</td>
+                                            <td class="text-center">@comprobante@if (!string.IsNullOrEmpty(det.CodSapCpm)) { <br/><small class="text-muted">SAP: @det.CodSapCpm</small> }</td>
                                             <td class="text-center">
                                                 @if (!string.IsNullOrEmpty(det.GuidArchivoFactura))
                                                 {
@@ -350,14 +351,26 @@
                                             <td class="text-right">@(det.MtoSubtotal?.ToString("N2") ?? "--")</td>
                                             <td class="text-right">@(det.MtoIgv?.ToString("N2") ?? "--")</td>
                                             <td class="text-right">@(det.MtoRenta?.ToString("N2") ?? "--")</td>
-                                            <td class="text-right font-weight-bold">@(det.MtoTotal?.ToString("N2") ?? "--")</td>
+                                            <td class="text-right" data-monto="@((det.MtoDetraccion ?? 0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))">
+                                                    @if (det.TieneDetraccion)
+                                                    {
+                                                        <div>@((det.MtoDetraccion ?? 0).ToString("N2"))</div>
+                                                        <small class="text-muted d-block">@((det.PorcDetraccion ?? 0).ToString("N2"))%</small>
+                                                        @if (!string.IsNullOrEmpty(det.CodSapDetrac)) { <small class="text-muted d-block">SAP: @det.CodSapDetrac</small> }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td class="text-right font-weight-bold">@(det.MtoTotal?.ToString("N2") ?? "--")</td>
                                         </tr>
                                     }
                                 }
                                 else
                                 {
                                     <tr>
-                                        <td colspan="15" class="text-center text-muted py-3">
+                                        <td colspan="16" class="text-center text-muted py-3">
                                             <i class="fas fa-inbox fa-2x mb-2"></i>
                                             <p class="mb-0">No hay detalle de liquidaciones</p>
                                         </td>
@@ -372,6 +385,7 @@
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoSubtotal ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoIgv ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoRenta ?? 0).ToString("N2"))</td>
+                                            <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoDetraccion ?? 0).ToString("N2"))</td>
                                         <td class="text-right">@(detalleLiquidaciones.Sum(d => d.MtoTotal ?? 0).ToString("N2"))</td>
                                     </tr>
                                 </tfoot>

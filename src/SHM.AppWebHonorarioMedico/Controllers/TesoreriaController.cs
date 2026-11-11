@@ -315,7 +315,7 @@ public class TesoreriaController : Controller
 
             // --- Logo ---
             ws.Row(1).Height = 36;
-            ws.Range(1, 1, 1, 14).Merge();
+            ws.Range(1, 1, 1, 17).Merge();
             if (System.IO.File.Exists(logoPath))
             {
                 using var imgStream = new FileStream(logoPath, FileMode.Open, FileAccess.Read);
@@ -323,7 +323,7 @@ public class TesoreriaController : Controller
             }
 
             // --- Título ---
-            ws.Range(2, 1, 2, 14).Merge();
+            ws.Range(2, 1, 2, 17).Merge();
             ws.Cell(2, 1).Value = $"ORDEN DE PAGO  N° {ordenPago.NumeroOrdenPago ?? "-"}  —  {ordenPago.NombreSede ?? "-"}";
             ws.Cell(2, 1).Style.Font.Bold = true;
             ws.Cell(2, 1).Style.Font.FontSize = 13;
@@ -368,7 +368,8 @@ public class TesoreriaController : Controller
             // --- Encabezado tabla ---
             int rH = 9;
             var hdrs = new[] { "#", "Liquidación", "RUC", "Cod. Acreedor", "Cía Médica", "Banco",
-                               "Comprobante", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Detracción S/.", "Total S/." };
+                               "Comprobante", "Cód. SAP Factura", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.",
+                               "Cód. SAP Detracción", "% Detracción", "Detracción S/.", "Total S/." };
             ws.Row(rH).Height = 28;
             for (int i = 0; i < hdrs.Length; i++)
             {
@@ -401,16 +402,26 @@ public class TesoreriaController : Controller
                 ws.Cell(row, 5).Value  = det.RazonSocial ?? "-";
                 ws.Cell(row, 6).Value  = det.NombreBanco ?? "-";
                 ws.Cell(row, 7).Value  = comprobante;
-                ws.Cell(row, 8).Value  = det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-";
-                ws.Cell(row, 9).Value  = EstadoDescripcion.Produccion.GetDescripcion(det.Estado);
-                ws.Cell(row, 10).Value = det.MtoSubtotal ?? 0;
-                ws.Cell(row, 11).Value = det.MtoIgv ?? 0;
-                ws.Cell(row, 12).Value = det.MtoRenta ?? 0;
-                ws.Cell(row, 13).Value = 0;  // MtoDetraccion — campo futuro
-                ws.Cell(row, 14).Value = det.MtoTotal ?? 0;
+                ws.Cell(row, 8).Value  = string.IsNullOrEmpty(det.CodSapCpm) ? "-" : det.CodSapCpm;
+                ws.Cell(row, 9).Value  = det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-";
+                ws.Cell(row, 10).Value = EstadoDescripcion.Produccion.GetDescripcion(det.Estado);
+                ws.Cell(row, 11).Value = det.MtoSubtotal ?? 0;
+                ws.Cell(row, 12).Value = det.MtoIgv ?? 0;
+                ws.Cell(row, 13).Value = det.MtoRenta ?? 0;
+                ws.Cell(row, 14).Value = string.IsNullOrEmpty(det.CodSapDetrac) ? "-" : det.CodSapDetrac;
+                if (det.TieneDetraccion)
+                    ws.Cell(row, 15).Value = det.PorcDetraccion ?? 0;
+                else
+                    ws.Cell(row, 15).Value = "-";
+                ws.Cell(row, 16).Value = det.MtoDetraccion ?? 0;
+                ws.Cell(row, 17).Value = det.MtoTotal ?? 0;
 
-                for (int c = 10; c <= 14; c++)
+                foreach (var c in new[] { 11, 12, 13, 15, 17 })
                     ws.Cell(row, c).Style.NumberFormat.Format = "#,##0.00";
+                // Detraccion en cero se muestra como "-" (la suma sigue siendo numerica)
+                ws.Cell(row, 16).Style.NumberFormat.Format = "#,##0.00;-#,##0.00;\"-\"";
+                foreach (var c in new[] { 8, 14, 15 })
+                    ws.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
                 ws.Row(row).Height = 15;
                 for (int c = 1; c <= hdrs.Length; c++)
@@ -426,11 +437,11 @@ public class TesoreriaController : Controller
 
             // --- Fila de totales ---
             int rTot = row;
-            ws.Cell(rTot, 9).Value = "TOTAL:";
-            ws.Cell(rTot, 9).Style.Font.Bold = true;
-            ws.Cell(rTot, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            ws.Cell(rTot, 10).Value = "TOTAL:";
+            ws.Cell(rTot, 10).Style.Font.Bold = true;
+            ws.Cell(rTot, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
 
-            var totalCols = new[] { 10, 11, 12, 13, 14 };
+            var totalCols = new[] { 11, 12, 13, 16, 17 };
             foreach (var tc in totalCols)
             {
                 ws.Cell(rTot, tc).FormulaA1 = $"SUM({ws.Cell(rH + 1, tc).Address}:{ws.Cell(row - 1, tc).Address})";
@@ -440,7 +451,7 @@ public class TesoreriaController : Controller
                 ws.Cell(rTot, tc).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             }
 
-            ws.Range(rTot, 1, rTot, 9).Style.Fill.BackgroundColor = XLColor.FromHtml("#e9ecef");
+            ws.Range(rTot, 1, rTot, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#e9ecef");
             ws.Columns().AdjustToContents(5, 60);
 
             using var ms = new MemoryStream();
@@ -570,14 +581,14 @@ public class TesoreriaController : Controller
             var ws2 = workbook.Worksheets.Add("Detalle de Liquidaciones");
 
             ws2.Row(1).Height = 36;
-            ws2.Range(1, 1, 1, 16).Merge();
+            ws2.Range(1, 1, 1, 20).Merge();
             if (System.IO.File.Exists(imagePath))
             {
                 using var imgStream2 = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
                 ws2.AddPicture(imgStream2).MoveTo(ws2.Cell("A1")).WithSize(120, 32);
             }
 
-            ws2.Range(2, 1, 2, 16).Merge();
+            ws2.Range(2, 1, 2, 20).Merge();
             ws2.Cell(2, 1).Value = "Reporte de Tesorería - Detalle de Liquidaciones";
             ws2.Cell(2, 1).Style.Font.Bold = true;
             ws2.Cell(2, 1).Style.Font.FontSize = 14;
@@ -589,12 +600,13 @@ public class TesoreriaController : Controller
             ws2.Cell(3, 1).Value = $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}";
             ws2.Cell(3, 1).Style.Font.Italic = true;
             ws2.Cell(3, 1).Style.Font.FontSize = 9;
-            ws2.Range(3, 1, 3, 16).Merge();
+            ws2.Range(3, 1, 3, 20).Merge();
 
             int rH2 = 5;
             var hdrs2 = new[] { "#", "N° Orden de Pago", "Liquidación", "Tipo Liquidación", "Período",
                                 "RUC", "Cod. Acreedor", "Cía Médica", "Banco",
-                                "Comprobante", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.", "Total S/." };
+                                "Comprobante", "Cód. SAP Factura", "F. Emisión", "Estado", "Sub Total S/.", "IGV S/.", "Imp. Renta S/.",
+                                "Cód. SAP Detracción", "% Detracción", "Detracción S/.", "Total S/." };
             ws2.Row(rH2).Height = 28;
             for (int i = 0; i < hdrs2.Length; i++)
             {
@@ -632,14 +644,25 @@ public class TesoreriaController : Controller
                     ws2.Cell(row2, 8).Value  = det.RazonSocial ?? "-";
                     ws2.Cell(row2, 9).Value  = det.NombreBanco ?? "-";
                     ws2.Cell(row2, 10).Value = comprobante;
-                    ws2.Cell(row2, 11).Value = det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-";
-                    ws2.Cell(row2, 12).Value = EstadoDescripcion.Produccion.GetDescripcion(det.Estado);
-                    ws2.Cell(row2, 13).Value = det.MtoSubtotal ?? 0;
-                    ws2.Cell(row2, 14).Value = det.MtoIgv ?? 0;
-                    ws2.Cell(row2, 15).Value = det.MtoRenta ?? 0;
-                    ws2.Cell(row2, 16).Value = det.MtoTotal ?? 0;
-                    for (int c = 13; c <= 16; c++)
+                    ws2.Cell(row2, 11).Value = string.IsNullOrEmpty(det.CodSapCpm) ? "-" : det.CodSapCpm;
+                    ws2.Cell(row2, 12).Value = det.FechaEmision?.ToString("dd/MM/yyyy") ?? "-";
+                    ws2.Cell(row2, 13).Value = EstadoDescripcion.Produccion.GetDescripcion(det.Estado);
+                    ws2.Cell(row2, 14).Value = det.MtoSubtotal ?? 0;
+                    ws2.Cell(row2, 15).Value = det.MtoIgv ?? 0;
+                    ws2.Cell(row2, 16).Value = det.MtoRenta ?? 0;
+                    ws2.Cell(row2, 17).Value = string.IsNullOrEmpty(det.CodSapDetrac) ? "-" : det.CodSapDetrac;
+                    if (det.TieneDetraccion)
+                        ws2.Cell(row2, 18).Value = det.PorcDetraccion ?? 0;
+                    else
+                        ws2.Cell(row2, 18).Value = "-";
+                    ws2.Cell(row2, 19).Value = det.MtoDetraccion ?? 0;
+                    ws2.Cell(row2, 20).Value = det.MtoTotal ?? 0;
+                    foreach (var c in new[] { 14, 15, 16, 18, 20 })
                         ws2.Cell(row2, c).Style.NumberFormat.Format = "#,##0.00";
+                    // Detraccion en cero se muestra como "-" (la suma sigue siendo numerica)
+                    ws2.Cell(row2, 19).Style.NumberFormat.Format = "#,##0.00;-#,##0.00;\"-\"";
+                    foreach (var c in new[] { 11, 17, 18 })
+                        ws2.Cell(row2, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     ws2.Row(row2).Height = 15;
                     for (int c = 1; c <= hdrs2.Length; c++)
                     {

@@ -46,6 +46,19 @@ public class DetalleLiquidacionItemDto
     public DateTime? PagoFecha { get; set; }
     public string? PagoNumeroOperacion { get; set; }
 
+    // Datos SAP recibidos con la liquidacion (informativos)
+    public string? CodSapCpm { get; set; }
+    public string? CodSapDetrac { get; set; }
+    public decimal? MtoDetraccion { get; set; }
+    public decimal? PorcDetraccion { get; set; }
+
+    /// <summary>
+    /// Indica si la factura tiene detraccion: tiene codigo SAP de detraccion o monto mayor a 0.
+    /// Las salidas muestran "-" cuando es false.
+    /// </summary>
+    public bool TieneDetraccion =>
+        !string.IsNullOrWhiteSpace(CodSapDetrac) || (MtoDetraccion ?? 0) > 0;
+
     // Montos (Produccion)
     public decimal? MtoSubtotal { get; set; }
     public decimal? MtoIgv { get; set; }

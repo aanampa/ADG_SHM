@@ -356,6 +356,10 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 T1.MTO_IGV AS MtoIgv,
                 T1.MTO_RENTA AS MtoRenta,
                 T1.MTO_TOTAL AS MtoTotal,
+                T1.CODSAP_CPM AS CodSapCpm,
+                T1.CODSAP_DETRAC AS CodSapDetrac,
+                T1.MTO_DETRACCION AS MtoDetraccion,
+                T1.PORC_DETRACCION AS PorcDetraccion,
                 AR.GUID_REGISTRO  AS GuidArchivoFactura,
                 ARX.GUID_REGISTRO AS GuidArchivoXml
             FROM SHM_ORDEN_PAGO_PRODUCCION OPP
