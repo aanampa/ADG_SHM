@@ -46,4 +46,11 @@ public interface ISapApiService
         string serie,
         string numeroComprobante,
         DateTime fechaEmision);
+
+    /// <summary>
+    /// Libera pagos en SAP (LIBERA_PAGO_CABSet): obtiene el token CSRF y envia la orden
+    /// con todos sus documentos. Nunca lanza excepciones: ante un fallo devuelve Exito = false
+    /// con el mensaje y la respuesta cruda de SAP.
+    /// </summary>
+    Task<SapLiberaPagoResultadoDto> LiberarPagoAsync(SapLiberaPagoRequestDto request);
 }

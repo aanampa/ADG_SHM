@@ -58,6 +58,8 @@
         <section class="content py-0">
             <div class="container-fluid">
 
+            @await Html.PartialAsync("_LiberacionSapCard", (SHM.AppWebHonorarioMedico.Models.LiberacionSapViewModel)ViewBag.Liberacion)
+
             <!-- Datos de Orden de Pago -->
             <div class="card card-compact mb-2 w-75">
                 <div class="card-header bg-light">

@@ -345,6 +345,8 @@ public class OrdenPagoLiquidacionRepository : IOrdenPagoLiquidacionRepository
                 EM.RAZON_SOCIAL AS RazonSocial,
                 B.NOMBRE_BANCO AS NombreBanco,
                 T1.GUID_REGISTRO AS GuidRegistro,
+                T1.ID_PRODUCCION AS IdProduccion,
+                ECB.MONEDA AS Moneda,
                 T1.ESTADO AS Estado,
                 T1.PAGO_FECHA AS PagoFecha,
                 T1.PAGO_NUMERO_OPERACION AS PagoNumeroOperacion,

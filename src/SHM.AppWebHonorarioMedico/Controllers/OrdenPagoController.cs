@@ -25,6 +25,7 @@ public class OrdenPagoController : Controller
     private readonly IBancoService _bancoService;
     private readonly IBitacoraService _bitacoraService;
     private readonly ITablaDetalleService _tablaDetalleService;
+    private readonly IOrdenPagoLiberacionService _ordenPagoLiberacionService;
 
     public OrdenPagoController(
        ILogger<OrdenPagoController> logger,
@@ -33,7 +34,8 @@ public class OrdenPagoController : Controller
        IOrdenPagoAprobacionService ordenPagoAprobacionService,
        IBancoService bancoService,
        IBitacoraService bitacoraService,
-       ITablaDetalleService tablaDetalleService)
+       ITablaDetalleService tablaDetalleService,
+       IOrdenPagoLiberacionService ordenPagoLiberacionService)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
@@ -42,6 +44,7 @@ public class OrdenPagoController : Controller
         _bancoService = bancoService;
         _bitacoraService = bitacoraService;
         _tablaDetalleService = tablaDetalleService;
+        _ordenPagoLiberacionService = ordenPagoLiberacionService;
     }
 
     /// <summary>
@@ -156,6 +159,16 @@ public class OrdenPagoController : Controller
             // Cargar detalle de liquidaciones (producciones por liquidacion)
             var detalleLiquidaciones = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
             ViewBag.DetalleLiquidaciones = detalleLiquidaciones.ToList();
+
+            // Estado de la liberacion de pagos en SAP (solo lectura)
+            ViewBag.Liberacion = new LiberacionSapViewModel
+            {
+                GuidOrdenPago    = ordenPago.GuidRegistro ?? string.Empty,
+                EstadoOrden      = ordenPago.Estado,
+                CantComprobantes = ((List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.DetalleLiquidacionItemDto>)ViewBag.DetalleLiquidaciones).Count,
+                Items            = (await _ordenPagoLiberacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago)).ToList(),
+                PermiteReintento = false
+            };
 
             // Cargar bitacora de la orden de pago
             var bitacoras = await _bitacoraService.GetBitacorasByEntidadYIdAsync("SHM_ORDEN_PAGO", ordenPago.IdOrdenPago);

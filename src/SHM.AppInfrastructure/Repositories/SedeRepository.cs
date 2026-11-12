@@ -39,6 +39,7 @@ public class SedeRepository : ISedeRepository
                 CODIGO as Codigo,
                 NOMBRE as Nombre,
                 RUC as Ruc,
+                CODIGO_SOCIEDAD_SAP as CodigoSociedadSap,
                 DIRECCION as Direccion,
                 ACTIVO as Activo,
                 GUID_REGISTRO as GuidRegistro,
@@ -67,6 +68,7 @@ public class SedeRepository : ISedeRepository
                 CODIGO as Codigo,
                 NOMBRE as Nombre,
                 RUC as Ruc,
+                CODIGO_SOCIEDAD_SAP as CodigoSociedadSap,
                 DIRECCION as Direccion,
                 ACTIVO as Activo,
                 GUID_REGISTRO as GuidRegistro,
@@ -94,6 +96,7 @@ public class SedeRepository : ISedeRepository
                 CODIGO as Codigo,
                 NOMBRE as Nombre,
                 RUC as Ruc,
+                CODIGO_SOCIEDAD_SAP as CodigoSociedadSap,
                 DIRECCION as Direccion,
                 ACTIVO as Activo,
                 GUID_REGISTRO as GuidRegistro,
@@ -122,6 +125,7 @@ public class SedeRepository : ISedeRepository
                 CODIGO,
                 NOMBRE,
                 RUC,
+                CODIGO_SOCIEDAD_SAP,
                 DIRECCION,
                 ACTIVO,
                 GUID_REGISTRO,
@@ -133,6 +137,7 @@ public class SedeRepository : ISedeRepository
                 :Codigo,
                 :Nombre,
                 :Ruc,
+                :CodigoSociedadSap,
                 :Direccion,
                 1,
                 SYS_GUID(),
@@ -146,6 +151,7 @@ public class SedeRepository : ISedeRepository
         parameters.Add("Codigo", sede.Codigo);
         parameters.Add("Nombre", sede.Nombre);
         parameters.Add("Ruc", sede.Ruc);
+        parameters.Add("CodigoSociedadSap", sede.CodigoSociedadSap);
         parameters.Add("Direccion", sede.Direccion);
         parameters.Add("IdCreador", sede.IdCreador);
         parameters.Add("IdSede", dbType: System.Data.DbType.Int32, direction: System.Data.ParameterDirection.Output);
@@ -169,6 +175,7 @@ public class SedeRepository : ISedeRepository
                 CODIGO = :Codigo,
                 NOMBRE = :Nombre,
                 RUC = :Ruc,
+                CODIGO_SOCIEDAD_SAP = :CodigoSociedadSap,
                 DIRECCION = :Direccion,
                 ACTIVO = :Activo,
                 ID_MODIFICADOR = :IdModificador,
@@ -182,6 +189,7 @@ public class SedeRepository : ISedeRepository
             sede.Codigo,
             sede.Nombre,
             sede.Ruc,
+            sede.CodigoSociedadSap,
             sede.Direccion,
             sede.Activo,
             sede.IdModificador
@@ -237,6 +245,7 @@ public class SedeRepository : ISedeRepository
                 CODIGO as Codigo,
                 NOMBRE as Nombre,
                 RUC as Ruc,
+                CODIGO_SOCIEDAD_SAP as CodigoSociedadSap,
                 DIRECCION as Direccion,
                 ACTIVO as Activo,
                 GUID_REGISTRO as GuidRegistro,

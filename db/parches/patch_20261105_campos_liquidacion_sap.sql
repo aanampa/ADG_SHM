@@ -9,7 +9,7 @@
 --               sobrescriben con el valor de SAP al recibir la liquidacion.
 --               Ver docs/requerimientos/01_campos_liquidacion/
 -- Autor       : ADG Antonio
--- Fecha       : 2026-11-05
+-- Fecha       : 2026-11-09
 -- Ambiente    : Todos
 -- Base        : XEPDB1 / usuario shm_dev
 -- Impacto     : Columnas NULL sin DEFAULT. En Oracle 11g solo modifica el

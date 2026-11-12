@@ -30,6 +30,8 @@ public class DetalleLiquidacionItemDto
 
     // Produccion
     public string? GuidRegistro { get; set; }
+    public int IdProduccion { get; set; }
+    public string? Moneda { get; set; }
 
     // Comprobante (Produccion)
     public string? TipoComprobante { get; set; }

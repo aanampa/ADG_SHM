@@ -21,6 +21,9 @@ public class UpdateSedeDto
     [MaxLength(20)]
     public string? Ruc { get; set; }
 
+    [MaxLength(4)]
+    public string? CodigoSociedadSap { get; set; }
+
     [MaxLength(300)]
     public string? Direccion { get; set; }
 

@@ -141,6 +141,8 @@ try
     builder.Services.AddScoped<IOrdenPagoProduccionService, OrdenPagoProduccionService>();
     builder.Services.AddScoped<IOrdenPagoAprobacionService, OrdenPagoAprobacionService>();
     builder.Services.AddScoped<IOrdenPagoLiquidacionService, OrdenPagoLiquidacionService>();
+    builder.Services.AddScoped<IOrdenPagoLiberacionRepository, OrdenPagoLiberacionRepository>();
+    builder.Services.AddScoped<IOrdenPagoLiberacionService, OrdenPagoLiberacionService>();
     builder.Services.AddScoped<IPerfilAprobacionService, PerfilAprobacionService>();
     builder.Services.AddScoped<IPerfilAprobacionUsuarioService, PerfilAprobacionUsuarioService>();
     builder.Services.AddScoped<ILiquidacionService, LiquidacionService>();

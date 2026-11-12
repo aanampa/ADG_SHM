@@ -33,6 +33,7 @@ public class TesoreriaController : Controller
     private readonly IWebHostEnvironment _env;
     private readonly ISapApiService _sapApiService;
     private readonly IOrdenPagoProduccionRepository _ordenPagoProduccionRepository;
+    private readonly IOrdenPagoLiberacionService _ordenPagoLiberacionService;
 
     public TesoreriaController(
         ILogger<TesoreriaController> logger,
@@ -44,7 +45,8 @@ public class TesoreriaController : Controller
         IOrdenPagoAprobacionService ordenPagoAprobacionService,
         IWebHostEnvironment env,
         ISapApiService sapApiService,
-        IOrdenPagoProduccionRepository ordenPagoProduccionRepository)
+        IOrdenPagoProduccionRepository ordenPagoProduccionRepository,
+        IOrdenPagoLiberacionService ordenPagoLiberacionService)
     {
         _logger = logger;
         _ordenPagoService = ordenPagoService;
@@ -56,6 +58,7 @@ public class TesoreriaController : Controller
         _env = env;
         _sapApiService = sapApiService;
         _ordenPagoProduccionRepository = ordenPagoProduccionRepository;
+        _ordenPagoLiberacionService = ordenPagoLiberacionService;
     }
 
     /// <summary>
@@ -164,6 +167,16 @@ public class TesoreriaController : Controller
             var detalleLiquidaciones = await _ordenPagoLiquidacionService.GetDetalleLiquidacionesByOrdenPagoIdAsync(ordenPago.IdOrdenPago);
             ViewBag.DetalleLiquidaciones = detalleLiquidaciones.ToList();
 
+            // Estado de la liberacion de pagos en SAP
+            ViewBag.Liberacion = new LiberacionSapViewModel
+            {
+                GuidOrdenPago    = ordenPago.GuidRegistro ?? string.Empty,
+                EstadoOrden      = ordenPago.Estado,
+                CantComprobantes = ((List<SHM.AppDomain.DTOs.OrdenPagoLiquidacion.DetalleLiquidacionItemDto>)ViewBag.DetalleLiquidaciones).Count,
+                Items            = (await _ordenPagoLiberacionService.GetByOrdenPagoIdAsync(ordenPago.IdOrdenPago)).ToList(),
+                PermiteReintento = true
+            };
+
             return View(ordenPago);
         }
         catch (Exception ex)
@@ -172,6 +185,40 @@ public class TesoreriaController : Controller
             TempData["APP_RESPONSE"] = "ERROR";
             TempData["APP_MESSAGE"] = "Error al obtener la orden de pago.";
             return RedirectToAction("Index");
+        }
+    }
+
+    /// <summary>
+    /// Reintenta (o realiza por primera vez) la liberacion de los pagos de la orden en SAP.
+    /// Envia todos los comprobantes de la orden en un solo envio.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-11-11</created>
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReintentarLiberacion([FromBody] ReintentarLiberacionRequest request)
+    {
+        try
+        {
+            var idUsuario = GetCurrentUserId();
+            if (idUsuario == null)
+                return Unauthorized();
+
+            if (request == null || string.IsNullOrEmpty(request.GuidOrdenPago))
+                return Json(new { success = false, message = "Orden de pago no especificada." });
+
+            var ordenPago = await _ordenPagoService.GetByGuidAsync(request.GuidOrdenPago);
+            if (ordenPago == null)
+                return Json(new { success = false, message = "Orden de pago no encontrada." });
+
+            var (exito, mensaje) = await _ordenPagoLiberacionService.LiberarAsync(ordenPago.IdOrdenPago, idUsuario.Value);
+            return Json(new { success = exito, message = mensaje });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reintentar la liberacion en SAP de la orden {Guid}", request?.GuidOrdenPago);
+            return Json(new { success = false, message = "Error interno al liberar los pagos en SAP." });
         }
     }
 

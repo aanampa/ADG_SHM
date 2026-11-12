@@ -1,0 +1,204 @@
+# =============================================================================
+# Pruebas del servicio SAP de liberacion de pagos (ZODGS_PORTAL_HHMM_SRV)
+# Especificacion: documentacion_api_servicio_liberacion_pagos.md
+# =============================================================================
+# Uso (extension "REST Client" de VS Code, o Visual Studio / Rider):
+#   1. Completar @password (valor de SapApi:Password en appsettings.json).
+#      No guardar la contrasena en este archivo si se va a commitear.
+#   2. Ejecutar en orden: 1) token, 2) csrf, 3) liberar.
+#      Los pasos 2 y 3 toman el token y el CSRF de las respuestas anteriores.
+#   3. El servidor SAP usa un certificado propio. En VS Code agregar a settings.json:
+#        "rest-client.insecureSSL": true
+#      (la aplicacion SHM tambien acepta cualquier certificado para SAP)
+#   4. REST Client conserva las cookies entre peticiones: es necesario, porque el
+#      token CSRF esta ligado a la cookie de sesion que devuelve el paso 2.
+#
+# CUIDADO: el paso 3 libera pagos de verdad en el ambiente (QAS). Usar solo
+# documentos de prueba que el equipo SAP haya indicado.
+# =============================================================================
+
+@host = https://190.12.87.190:8124
+@service = /sap/opu/odata/sap/ZODGS_PORTAL_HHMM_SRV
+@user = OZUNIGA_OAUT
+@password = 987654321
+@scope = ZODGS_PORTAL_HHMM_SRV_0001
+
+
+### -----------------------------------------------------------------------------
+### 1. Token OAuth2 (client_credentials)
+### Esperado: 200 OK con access_token, token_type Bearer, expires_in 3600
+### -----------------------------------------------------------------------------
+# @name token
+POST {{host}}/sap/bc/sec/oauth2/token
+Authorization: Basic {{user}}:{{password}}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&scope={{scope}}
+
+
+### -----------------------------------------------------------------------------
+### 2. Token CSRF
+### Esperado: 200 OK. El token viene en el header de respuesta x-csrf-token
+### -----------------------------------------------------------------------------
+@accessToken = {{token.response.body.access_token}}
+
+# @name csrf
+GET {{host}}{{service}}/$metadata
+Authorization: Bearer {{accessToken}}
+x-csrf-token: fetch
+
+
+### -----------------------------------------------------------------------------
+### 3. Liberar pago - orden con 2 comprobantes (ejemplo de la especificacion)
+### Esperado: 201 Created con d.Status = "OK" y d.Mensaje = "Documentos recibidos"
+### Cambiar IdOrden, Documento, Ejercicio, etc. por documentos de prueba reales.
+### -----------------------------------------------------------------------------
+@csrfToken = {{csrf.response.headers.x-csrf-token}}
+
+# @name liberar
+POST {{host}}{{service}}/LIBERA_PAGO_CABSet
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json
+x-csrf-token: {{csrfToken}}
+
+{
+  "IdOrden": "1234567890",
+  "Fecha": "2026-11-05",
+  "Documentos": [
+    {
+      "IdOrden": "1234567890",
+      "Sociedad": "1001",
+      "Documento": "5100000000",
+      "Ejercicio": "2026",
+      "DocumentoDt": "1000000001",
+      "Referencia": "01-F001-0004521",
+      "Ruc": "20100070970",
+      "ProveedorName": "SERVICIOS LOGISTICOS GLOBALES S.A.C.",
+      "TipoComprobante": "01",
+      "FechaEmision": "2026-11-01",
+      "Importe": "12500.500",
+      "Moneda": "PEN",
+      "UserLiberador": "SP_CONSULT",
+      "FechaLibera": "2026-11-05",
+      "HoraLibera": "15:05:20",
+      "Estado": "APROBADO"
+    },
+    {
+      "IdOrden": "1234567890",
+      "Sociedad": "1001",
+      "Documento": "5100000001",
+      "Ejercicio": "2026",
+      "DocumentoDt": "1000000002",
+      "Referencia": "01-F001-0004522",
+      "Ruc": "20555888123",
+      "ProveedorName": "DISTRIBUIDORA INDUSTRIAL DEL SUR S.A.",
+      "TipoComprobante": "01",
+      "FechaEmision": "2026-11-02",
+      "Importe": "8320.000",
+      "Moneda": "PEN",
+      "UserLiberador": "SP_CONSULT",
+      "FechaLibera": "2026-11-05",
+      "HoraLibera": "15:05:20",
+      "Estado": "APROBADO"
+    }
+  ]
+}
+
+
+### -----------------------------------------------------------------------------
+### 4. Liberar pago - un comprobante sin detraccion y en dolares
+### Igual a lo que envia SHM: DocumentoDt va como cadena vacia.
+### Sirve para ver como responde SAP a Moneda = USD (pregunta 8.13 de la propuesta).
+### -----------------------------------------------------------------------------
+POST {{host}}{{service}}/LIBERA_PAGO_CABSet
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json
+x-csrf-token: {{csrfToken}}
+
+{
+  "IdOrden": "OP-TEST-0002",
+  "Fecha": "2026-11-11",
+  "Documentos": [
+    {
+      "IdOrden": "OP-TEST-0002",
+      "Sociedad": "1001",
+      "Documento": "5100000002",
+      "Ejercicio": "2026",
+      "DocumentoDt": "",
+      "Referencia": "01-F001-0004600",
+      "Ruc": "20100070970",
+      "ProveedorName": "PROVEEDOR DE PRUEBA S.A.C.",
+      "TipoComprobante": "01",
+      "FechaEmision": "2026-11-10",
+      "Importe": "1500.000",
+      "Moneda": "USD",
+      "UserLiberador": "SP_CONSULT",
+      "FechaLibera": "2026-11-11",
+      "HoraLibera": "10:30:00",
+      "Estado": "APROBADO"
+    }
+  ]
+}
+
+
+### -----------------------------------------------------------------------------
+### 5. Prueba de error: sin token CSRF
+### Esperado: 403 Forbidden (CSRF token validation failed).
+### Confirma que el reintento de SHM ante un 403 es necesario.
+### -----------------------------------------------------------------------------
+POST {{host}}{{service}}/LIBERA_PAGO_CABSet
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "IdOrden": "OP-TEST-0003",
+  "Fecha": "2026-11-11",
+  "Documentos": []
+}
+
+
+### -----------------------------------------------------------------------------
+### 6. Prueba de error: documento inexistente
+### Para conocer el formato de respuesta de error de SAP (pregunta 8.4).
+### Anotar el codigo HTTP, d.Status y d.Mensaje que devuelve.
+### -----------------------------------------------------------------------------
+POST {{host}}{{service}}/LIBERA_PAGO_CABSet
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json
+x-csrf-token: {{csrfToken}}
+
+{
+  "IdOrden": "OP-TEST-0004",
+  "Fecha": "2026-11-11",
+  "Documentos": [
+    {
+      "IdOrden": "OP-TEST-0004",
+      "Sociedad": "1001",
+      "Documento": "9999999999",
+      "Ejercicio": "2026",
+      "DocumentoDt": "",
+      "Referencia": "01-F001-0000001",
+      "Ruc": "20100070970",
+      "ProveedorName": "DOCUMENTO INEXISTENTE",
+      "TipoComprobante": "01",
+      "FechaEmision": "2026-11-10",
+      "Importe": "1.000",
+      "Moneda": "PEN",
+      "UserLiberador": "SP_CONSULT",
+      "FechaLibera": "2026-11-11",
+      "HoraLibera": "10:30:00",
+      "Estado": "APROBADO"
+    }
+  ]
+}
+
+
+### -----------------------------------------------------------------------------
+### 7. Prueba de reenvio: repetir el paso 3 con el mismo IdOrden
+### Para conocer si SAP acepta o rechaza un documento ya liberado (pregunta 8.5).
+### Ejecutar el paso 3 dos veces y comparar las respuestas.
+### -----------------------------------------------------------------------------

@@ -378,4 +378,170 @@ public class SapApiService : ISapApiService
             return null;
         }
     }
+
+    /// <summary>
+    /// Libera pagos en SAP (LIBERA_PAGO_CABSet).
+    /// Pasos: token OAuth2, token CSRF (GET $metadata con x-csrf-token: fetch) y POST de la orden.
+    /// El token CSRF esta ligado a la cookie de sesion del mismo GET; el HttpClientHandler
+    /// conserva las cookies, por lo que el POST las reenvia. Si SAP responde 403 se obtiene
+    /// otro token y se reintenta una vez.
+    /// El exito se determina por HTTP 2xx y d.Status = "OK" (el 201 solo indica recepcion).
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-11-11</created>
+    /// </summary>
+    public async Task<SapLiberaPagoResultadoDto> LiberarPagoAsync(SapLiberaPagoRequestDto request)
+    {
+        try
+        {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+                return new SapLiberaPagoResultadoDto { Mensaje = "No se pudo obtener el token de acceso de SAP" };
+
+            var json = JsonSerializer.Serialize(request);
+            _logger.LogInformation("Liberando pago en SAP. IdOrden: {IdOrden}, Documentos: {Cantidad}",
+                request.IdOrden, request.Documentos.Count);
+            _logger.LogDebug("Request de liberacion SAP: {Json}", json);
+
+            for (var intento = 1; intento <= 2; intento++)
+            {
+                var csrf = await ObtenerTokenCsrfAsync(token);
+                if (string.IsNullOrEmpty(csrf))
+                    return new SapLiberaPagoResultadoDto { Mensaje = "No se pudo obtener el token CSRF de SAP" };
+
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _settings.EndpointLiberaPago);
+                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                httpRequest.Headers.Add("x-csrf-token", csrf);
+                httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("Respuesta de liberacion SAP. StatusCode: {StatusCode}, Body: {Body}",
+                    response.StatusCode, body);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden && intento == 1)
+                {
+                    _logger.LogWarning("SAP rechazo el token CSRF (403). Se obtiene otro y se reintenta");
+                    continue;
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _cachedToken = null;
+                    _tokenExpiration = DateTime.MinValue;
+                }
+
+                var resultado = InterpretarRespuestaLiberaPago(response.StatusCode, body);
+                if (resultado.Exito)
+                    _logger.LogInformation(
+                        "Liberacion SAP exitosa. IdOrden: {IdOrden}, HTTP: {Http}, Status: {Status}, Mensaje: {Mensaje}",
+                        request.IdOrden, resultado.HttpStatus, resultado.Status, resultado.Mensaje);
+                else
+                    _logger.LogWarning(
+                        "Liberacion SAP no confirmada. IdOrden: {IdOrden}, HTTP: {Http}, Status: {Status}, Mensaje: {Mensaje}, Respuesta: {Respuesta}",
+                        request.IdOrden, resultado.HttpStatus, resultado.Status, resultado.Mensaje,
+                        body.Length > 2000 ? body[..2000] : body);
+                return resultado;
+            }
+
+            return new SapLiberaPagoResultadoDto { Mensaje = "SAP rechazo el token CSRF" };
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error de conexion al liberar pago en SAP. IdOrden: {IdOrden}", request.IdOrden);
+            return new SapLiberaPagoResultadoDto { Mensaje = "Error de conexion con SAP: " + ex.Message };
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout al liberar pago en SAP. IdOrden: {IdOrden}", request.IdOrden);
+            return new SapLiberaPagoResultadoDto { Mensaje = "Tiempo de espera agotado al llamar a SAP" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al liberar pago en SAP. IdOrden: {IdOrden}", request.IdOrden);
+            return new SapLiberaPagoResultadoDto { Mensaje = "Error inesperado al llamar a SAP: " + ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el token CSRF de SAP consultando $metadata con el header x-csrf-token: fetch.
+    /// </summary>
+    private async Task<string?> ObtenerTokenCsrfAsync(string token)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, _settings.EndpointMetadata);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("x-csrf-token", "fetch");
+
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Error al obtener el token CSRF de SAP. StatusCode: {StatusCode}", response.StatusCode);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                _cachedToken = null;
+                _tokenExpiration = DateTime.MinValue;
+            }
+            return null;
+        }
+
+        return response.Headers.TryGetValues("x-csrf-token", out var values) ? values.FirstOrDefault() : null;
+    }
+
+    /// <summary>
+    /// Interpreta la respuesta de la liberacion. Exito solo si HTTP 2xx y d.Status = "OK".
+    /// </summary>
+    private static SapLiberaPagoResultadoDto InterpretarRespuestaLiberaPago(System.Net.HttpStatusCode statusCode, string body)
+    {
+        var codigo = (int)statusCode;
+        var resultado = new SapLiberaPagoResultadoDto { HttpStatus = codigo, RespuestaRaw = body };
+        var esHttpOk = codigo >= 200 && codigo <= 299;
+
+        static string? Texto(JsonElement padre, string propiedad) =>
+            padre.ValueKind == JsonValueKind.Object &&
+            padre.TryGetProperty(propiedad, out var v) &&
+            v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var raiz = doc.RootElement;
+
+            if (!esHttpOk)
+            {
+                // Error OData: { "error": { "message": { "value": "..." } } }
+                string? detalle = null;
+                if (raiz.ValueKind == JsonValueKind.Object && raiz.TryGetProperty("error", out var error) &&
+                    error.ValueKind == JsonValueKind.Object && error.TryGetProperty("message", out var message))
+                {
+                    detalle = message.ValueKind == JsonValueKind.Object ? Texto(message, "value") : Texto(error, "message");
+                }
+                resultado.Mensaje = $"SAP respondio HTTP {codigo}" + (string.IsNullOrEmpty(detalle) ? "" : ": " + detalle);
+                return resultado;
+            }
+
+            if (raiz.ValueKind == JsonValueKind.Object && raiz.TryGetProperty("d", out var d))
+            {
+                resultado.Status = Texto(d, "Status");
+                resultado.Mensaje = Texto(d, "Mensaje");
+            }
+
+            resultado.Exito = string.Equals(resultado.Status, "OK", StringComparison.OrdinalIgnoreCase);
+            if (!resultado.Exito && string.IsNullOrEmpty(resultado.Mensaje))
+            {
+                resultado.Mensaje = string.IsNullOrEmpty(resultado.Status)
+                    ? "La respuesta de SAP no incluye Status"
+                    : $"SAP respondio con Status '{resultado.Status}'";
+            }
+        }
+        catch (JsonException)
+        {
+            resultado.Mensaje = esHttpOk
+                ? "La respuesta de SAP no tiene el formato esperado"
+                : $"SAP respondio HTTP {codigo}";
+        }
+
+        return resultado;
+    }
 }

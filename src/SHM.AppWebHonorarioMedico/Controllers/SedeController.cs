@@ -42,6 +42,7 @@ public class SedeController : Controller
                     Codigo = s.Codigo,
                     Nombre = s.Nombre,
                     Ruc = s.Ruc,
+                    CodigoSociedadSap = s.CodigoSociedadSap,
                     Direccion = s.Direccion,
                     Activo = s.Activo
                 }).ToList()
@@ -96,6 +97,7 @@ public class SedeController : Controller
                 Codigo = model.Codigo!,
                 Nombre = model.Nombre!,
                 Ruc = model.Ruc,
+                CodigoSociedadSap = model.CodigoSociedadSap,
                 Direccion = model.Direccion
             };
 
@@ -129,6 +131,7 @@ public class SedeController : Controller
                 Codigo = sede.Codigo,
                 Nombre = sede.Nombre,
                 Ruc = sede.Ruc,
+                CodigoSociedadSap = sede.CodigoSociedadSap,
                 Direccion = sede.Direccion,
                 Activo = sede.Activo
             };
@@ -181,6 +184,7 @@ public class SedeController : Controller
                 Codigo = model.Codigo,
                 Nombre = model.Nombre,
                 Ruc = model.Ruc,
+                CodigoSociedadSap = model.CodigoSociedadSap,
                 Direccion = model.Direccion,
                 Activo = model.Activo
             };

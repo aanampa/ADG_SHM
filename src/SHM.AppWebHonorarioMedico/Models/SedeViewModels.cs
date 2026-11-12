@@ -14,6 +14,7 @@ public class SedeItemViewModel
     public string? Codigo { get; set; }
     public string? Nombre { get; set; }
     public string? Ruc { get; set; }
+    public string? CodigoSociedadSap { get; set; }
     public string? Direccion { get; set; }
     public int Activo { get; set; }
 }
@@ -33,6 +34,10 @@ public class SedeCreateViewModel
     [StringLength(20, ErrorMessage = "El RUC no puede exceder 20 caracteres")]
     [Display(Name = "RUC")]
     public string? Ruc { get; set; }
+
+    [StringLength(4, ErrorMessage = "La sociedad SAP no puede exceder 4 caracteres")]
+    [Display(Name = "Sociedad SAP")]
+    public string? CodigoSociedadSap { get; set; }
 
     [StringLength(300, ErrorMessage = "La direccion no puede exceder 300 caracteres")]
     [Display(Name = "Direccion")]
@@ -56,6 +61,10 @@ public class SedeEditViewModel
     [StringLength(20, ErrorMessage = "El RUC no puede exceder 20 caracteres")]
     [Display(Name = "RUC")]
     public string? Ruc { get; set; }
+
+    [StringLength(4, ErrorMessage = "La sociedad SAP no puede exceder 4 caracteres")]
+    [Display(Name = "Sociedad SAP")]
+    public string? CodigoSociedadSap { get; set; }
 
     [StringLength(300, ErrorMessage = "La direccion no puede exceder 300 caracteres")]
     [Display(Name = "Direccion")]

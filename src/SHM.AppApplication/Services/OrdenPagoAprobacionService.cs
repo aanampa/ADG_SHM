@@ -23,6 +23,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IEmailService _emailService;
     private readonly IParametroRepository _parametroRepository;
+    private readonly IOrdenPagoLiberacionService _liberacionService;
     private readonly ILogger<OrdenPagoAprobacionService> _logger;
 
     public OrdenPagoAprobacionService(
@@ -32,6 +33,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         IUsuarioRepository usuarioRepository,
         IEmailService emailService,
         IParametroRepository parametroRepository,
+        IOrdenPagoLiberacionService liberacionService,
         ILogger<OrdenPagoAprobacionService> logger)
     {
         _repository = repository;
@@ -40,6 +42,7 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
         _usuarioRepository = usuarioRepository;
         _emailService = emailService;
         _parametroRepository = parametroRepository;
+        _liberacionService = liberacionService;
         _logger = logger;
     }
 
@@ -126,7 +129,13 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
             // Todos los niveles aprobados: actualizar estado de la orden y notificar a Tesoreria
             await _ordenPagoRepository.UpdateEstadoAsync(idOrdenPago, EstadoDescripcion.OrdenPago.Aprobado, idUsuario);
             await NotificarTesoreriaAsync(idOrdenPago, aprobaciones.ToList());
-            return (true, "Orden de pago aprobada exitosamente. Todos los niveles han sido completados.");
+            // Liberar en SAP los comprobantes. Un fallo no revierte la aprobacion: queda registrado para reintento.
+            var (liberado, mensajeSap) = await LiberarPagoSapAsync(idOrdenPago, idUsuario);
+            var mensajeFinal = "Orden de pago aprobada exitosamente. Todos los niveles han sido completados.";
+            mensajeFinal += liberado
+                ? " Los pagos fueron liberados en SAP."
+                : " No se pudo liberar en SAP: " + mensajeSap + " Puede reintentar desde la orden de pago.";
+            return (true, mensajeFinal);
         }
 
         // Notificar al siguiente nivel de aprobacion
@@ -410,5 +419,25 @@ public class OrdenPagoAprobacionService : IOrdenPagoAprobacionService
             FechaCreacion = entity.FechaCreacion,
             FechaModificacion = entity.FechaModificacion
         };
+    }
+
+    /// <summary>
+    /// Libera en SAP los comprobantes de la orden recien aprobada.
+    /// Nunca lanza excepciones: un fallo no debe revertir la aprobacion.
+    ///
+    /// <author>ADG Antonio</author>
+    /// <created>2026-11-11</created>
+    /// </summary>
+    private async Task<(bool Exito, string Mensaje)> LiberarPagoSapAsync(int idOrdenPago, int idUsuario)
+    {
+        try
+        {
+            return await _liberacionService.LiberarAsync(idOrdenPago, idUsuario);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al liberar pagos en SAP para la orden de pago {IdOrdenPago}", idOrdenPago);
+            return (false, "Error inesperado al liberar en SAP.");
+        }
     }
 }

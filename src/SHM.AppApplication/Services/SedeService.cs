@@ -67,6 +67,7 @@ public class SedeService : ISedeService
             Codigo = createDto.Codigo,
             Nombre = createDto.Nombre,
             Ruc = createDto.Ruc,
+            CodigoSociedadSap = createDto.CodigoSociedadSap,
             Direccion = createDto.Direccion,
             IdCreador = idCreador,
             Activo = 1
@@ -98,6 +99,9 @@ public class SedeService : ISedeService
 
         if (updateDto.Ruc != null)
             sedeExistente.Ruc = updateDto.Ruc;
+
+        if (updateDto.CodigoSociedadSap != null)
+            sedeExistente.CodigoSociedadSap = updateDto.CodigoSociedadSap;
 
         if (updateDto.Direccion != null)
             sedeExistente.Direccion = updateDto.Direccion;
@@ -131,6 +135,7 @@ public class SedeService : ISedeService
             Codigo = sede.Codigo,
             Nombre = sede.Nombre,
             Ruc = sede.Ruc,
+            CodigoSociedadSap = sede.CodigoSociedadSap,
             Direccion = sede.Direccion,
             Activo = sede.Activo,
             GuidRegistro = sede.GuidRegistro,

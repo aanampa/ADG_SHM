@@ -13,6 +13,7 @@ public class SedeResponseDto
     public string? Codigo { get; set; }
     public string? Nombre { get; set; }
     public string? Ruc { get; set; }
+    public string? CodigoSociedadSap { get; set; }
     public string? Direccion { get; set; }
     public int Activo { get; set; }
     public string? GuidRegistro { get; set; }

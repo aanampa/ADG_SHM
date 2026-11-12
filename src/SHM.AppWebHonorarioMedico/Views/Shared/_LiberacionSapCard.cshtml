@@ -1,0 +1,101 @@
+@model SHM.AppWebHonorarioMedico.Models.LiberacionSapViewModel
+@using SHM.AppDomain.Constants
+
+@if (Model != null &&
+     (Model.EstadoOrden == EstadoDescripcion.OrdenPago.Aprobado || Model.EstadoOrden == EstadoDescripcion.OrdenPago.Pagado))
+{
+    var estado = Model.EstadoGeneral;
+    var mensajes = Model.Items
+        .Where(i => i.EstadoLiberacion == EstadoLiberacion.Error && !string.IsNullOrWhiteSpace(i.MensajeSap))
+        .Select(i => i.MensajeSap!)
+        .Distinct()
+        .Take(10)
+        .ToList();
+
+    <div class="card card-compact mb-2 w-75">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h3 class="card-title">
+                <i class="fas fa-link mr-1"></i>Liberación de pagos en SAP
+                <span class="badge @EstadoLiberacion.GetBadgeClass(estado) ml-2">@EstadoLiberacion.GetDescripcion(estado)</span>
+            </h3>
+            @if (Model.PermiteReintento && estado != EstadoLiberacion.Liberado &&
+                 Model.EstadoOrden == EstadoDescripcion.OrdenPago.Aprobado)
+            {
+                <button type="button" id="btnReintentarLiberacion" class="btn btn-sm btn-warning"
+                        onclick="reintentarLiberacionSap()">
+                    <i class="fas fa-redo mr-1"></i>@(estado == EstadoLiberacion.Error ? "Reintentar liberación" : "Liberar en SAP")
+                </button>
+            }
+        </div>
+        <div class="card-body">
+            <div style="font-size: 0.85rem;">
+                @Model.Liberados de @Model.CantComprobantes comprobante(s) liberados en SAP.
+                @if (estado == EstadoLiberacion.Pendiente)
+                {
+                    <span class="text-muted">Aún no se envió a SAP.</span>
+                }
+            </div>
+            @if (mensajes.Count > 0)
+            {
+                <ul class="mb-0 mt-1 text-danger" style="font-size: 0.8rem;">
+                    @foreach (var m in mensajes)
+                    {
+                        <li>@m</li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    @if (Model.PermiteReintento)
+    {
+        <script>
+            function reintentarLiberacionSap() {
+                Swal.fire({
+                    icon: 'question',
+                    title: '¿Liberar pagos en SAP?',
+                    text: 'Se enviarán a SAP todos los comprobantes de la orden de pago.',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f26522',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, liberar',
+                    cancelButtonText: 'Cancelar'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+
+                    const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (!tokenEl) {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Token de seguridad no encontrado. Recargue la página.', confirmButtonColor: '#dc3545' });
+                        return;
+                    }
+
+                    const btn = document.getElementById('btnReintentarLiberacion');
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>Liberando...';
+
+                    fetch('@Url.Action("ReintentarLiberacion", "Tesoreria")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': tokenEl.value
+                        },
+                        body: JSON.stringify({ guidOrdenPago: '@Model.GuidOrdenPago' })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        Swal.fire({
+                            icon: data.success ? 'success' : 'error',
+                            title: data.success ? 'Pagos liberados' : 'No se pudo liberar',
+                            text: data.message,
+                            confirmButtonColor: data.success ? '#28a745' : '#dc3545'
+                        }).then(() => window.location.reload());
+                    })
+                    .catch(() => {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión al liberar los pagos.', confirmButtonColor: '#dc3545' })
+                            .then(() => window.location.reload());
+                    });
+                });
+            }
+        </script>
+    }
+}

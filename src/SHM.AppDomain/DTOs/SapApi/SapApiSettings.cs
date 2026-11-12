@@ -18,4 +18,6 @@ public class SapApiSettings
     public string EndpointBancos { get; set; } = "/sap/opu/odata/sap/ZODGS_PORTAL_HHMM_SRV/COD_BANCOSet";
     public string EndpointCuentasAcreedor { get; set; } = "/sap/opu/odata/sap/ZODGS_PORTAL_HHMM_SRV/CTA_ACREEDORSet";
     public string EndpointDatosFactura { get; set; } = "/sap/opu/odata/sap/ZODGS_PORTAL_HHMM_SRV/DatosFacturaSet";
+    public string EndpointMetadata { get; set; } = "/sap/opu/odata/sap/ZODGS_PORTAL_HHMM_SRV/$metadata";
+    public string EndpointLiberaPago { get; set; } = "/sap/opu/odata/sap/ZODGS_PORTAL_HHMM_SRV/LIBERA_PAGO_CABSet";
 }
