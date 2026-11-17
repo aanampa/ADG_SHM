@@ -1,0 +1,417 @@
+# =============================================================================
+# Pruebas del API de envio de producciones
+# Endpoint: POST /api/ProduccionInterface/producciones   (sin autenticacion)
+# Especificacion: docs/API_ProduccionInterface.md, seccion 2
+# =============================================================================
+# Uso (extension "REST Client" de VS Code, o Visual Studio / Rider):
+#   1. Levantar el API:  cd src/SHM.AppApiHonorarioMedico && dotnet run
+#      Ajustar @host al puerto que muestre la consola (5001 segun CLAUDE.md,
+#      o 5271 segun launchSettings.json).
+#   2. Antes de procesar el lote, el API verifica los servicios externos
+#      (API de San Pablo y SAP). Si alguno no responde devuelve 503 y no
+#      procesa nada. Para las pruebas deben estar accesibles.
+#   3. Por cada entidad medica, el API sincroniza sus cuentas bancarias desde SAP.
+#      Una entidad que no existe localmente se busca en el API de San Pablo
+#      y, si existe alli, se registra.
+#   4. Usar codigos de sede y entidad que existan (los del ejemplo son de la
+#      documentacion: sede "01", entidades "0994" y "0995").
+#   5. CODIGO_PRODUCCION admite hasta 8 caracteres y NUMERO_PRODUCCION hasta 10.
+#      Los codigos "T1000001"... son de prueba; cambiarlos para repetir una
+#      prueba de creacion (la llave repetida se omite).
+#   6. Verificar lo grabado:
+#        SELECT ID_PRODUCCION, CODIGO_PRODUCCION, NUMERO_PRODUCCION, TIPO_ENTIDAD_MEDICA,
+#               TIPO_COMPROBANTE, ESTADO, ESTADO_COMPROBANTE, MTO_TOTAL,
+#               MTO_DETRACCION, PORC_DETRACCION, CONCEPTO
+#          FROM SHM_PRODUCCION
+#         WHERE CODIGO_PRODUCCION LIKE 'T10000%';
+#
+# Importante: una produccion creada aqui queda en FACTURA_PENDIENTE. Para poder
+# liquidarla con api_liquidaciones.http debe pasar antes por el flujo de factura
+# (el portal de companias la envia) hasta FACTURA_ENVIADA_HHMM. Si se intenta
+# liquidar en FACTURA_PENDIENTE, el API responde "ER" ("Solo se pueden liquidar
+# producciones en estado FACTURA_ENVIADA_HHMM").
+# =============================================================================
+
+@host = http://localhost:5001
+@url = {{host}}/api/ProduccionInterface/producciones
+
+
+### -----------------------------------------------------------------------------
+### 1. Lote correcto: una factura con detraccion y un RHE sin detraccion
+### tipoEntidadMedica "1" genera comprobante tipo 1 (factura); otro valor, tipo 22.
+### Esperado: 201 Created, cantidadCreados 2, ambos detalles "OK" / "Creado exitosamente".
+### BD: estado FACTURA_PENDIENTE, ESTADO_COMPROBANTE POR_ENVIAR. El 1ro con
+###     MTO_DETRACCION 81.31 y PORC_DETRACCION 12.00; el 2do con 0.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000001",
+    "numeroProduccion": "T100000001",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA FACTURA CON DETRACCION",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 1368.46,
+    "mtoDescuento": 794.23,
+    "mtoSubtotal": 574.23,
+    "mtoRenta": 0,
+    "mtoIgv": 103.36,
+    "mtoTotal": 677.59,
+    "mtoDetraccion": 81.31,
+    "porcDetraccion": 12.00
+  },
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0995",
+    "codigoProduccion": "T1000002",
+    "numeroProduccion": "T100000002",
+    "tipoProduccion": "01",
+    "tipoEntidadMedica": "0",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA RHE SIN DETRACCION",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 14:00:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 200,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 200,
+    "mtoRenta": 16,
+    "mtoIgv": 0,
+    "mtoTotal": 184,
+    "mtoDetraccion": 0,
+    "porcDetraccion": 0
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 2. Reenvio del mismo lote (duplicados)
+### Ejecutar despues del paso 1, con el mismo cuerpo.
+### Esperado: 201, cantidadCreados 0, cantidadObviados 2,
+### mensaje "Registro ya existe, obviado". No se crean duplicados.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000001",
+    "numeroProduccion": "T100000001",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA FACTURA CON DETRACCION",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 1368.46,
+    "mtoDescuento": 794.23,
+    "mtoSubtotal": 574.23,
+    "mtoRenta": 0,
+    "mtoIgv": 103.36,
+    "mtoTotal": 677.59,
+    "mtoDetraccion": 81.31,
+    "porcDetraccion": 12.00
+  },
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0995",
+    "codigoProduccion": "T1000002",
+    "numeroProduccion": "T100000002",
+    "tipoProduccion": "01",
+    "tipoEntidadMedica": "0",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA RHE SIN DETRACCION",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 14:00:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 200,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 200,
+    "mtoRenta": 16,
+    "mtoIgv": 0,
+    "mtoTotal": 184,
+    "mtoDetraccion": 0,
+    "porcDetraccion": 0
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 3. Sin los campos de detraccion (son opcionales)
+### Esperado: 201, "Creado exitosamente". MTO_DETRACCION y PORC_DETRACCION (el INSERT
+### no aplica valor por defecto) quedan en NULL hasta que llegue la liquidacion.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000003",
+    "numeroProduccion": "T100000003",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA SIN CAMPOS DE DETRACCION",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 11:00:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 100,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 4. Anular una produccion (estadoProduccion "0")
+### Anula la produccion T1000003 creada en el paso 3.
+### Esperado: 201, "Produccion anulada exitosamente". BD: ESTADO PRODUCCION_ANULADA.
+### Si la produccion no existe responde OK con "Produccion a anular no encontrada, obviado".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000003",
+    "numeroProduccion": "T100000003",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "ANULACION DE PRODUCCION",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 11:00:00",
+    "estadoProduccion": "0",
+    "mtoConsumo": 100,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 5. Anular el comprobante (estadoProduccion "9")
+### Para una produccion que ya tenia factura cargada: vuelve a FACTURA_PENDIENTE y
+### desactiva sus archivos (PDF y XML).
+### Esperado: "Comprobante anulado exitosamente. N archivo(s) desactivado(s)", o
+### "Produccion para anular comprobante no encontrada, obviado".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000001",
+    "numeroProduccion": "T100000001",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "ANULACION DE COMPROBANTE",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "9",
+    "mtoConsumo": 1368.46,
+    "mtoDescuento": 794.23,
+    "mtoSubtotal": 574.23,
+    "mtoRenta": 0,
+    "mtoIgv": 103.36,
+    "mtoTotal": 677.59
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 6. estadoProduccion invalido
+### Esperado: 201 con el detalle en "ER":
+### "EstadoProduccion '5' no valido. Solo se acepta 0 (anular produccion), 2 (crear) o 9 (anular comprobante)"
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000004",
+    "numeroProduccion": "T100000004",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA ESTADO INVALIDO",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "5",
+    "mtoConsumo": 100,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 7. Sede inexistente
+### Esperado: 201 con el detalle en "ER": "Sede con codigo 'XX' no encontrada".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "XX",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000005",
+    "numeroProduccion": "T100000005",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA SEDE INEXISTENTE",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 100,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 8. Entidad medica inexistente (ni local ni en el API de San Pablo)
+### Esperado: 201 con el detalle en "ER": "Entidad medica con codigo 'NOEXISTE'
+### no encontrada localmente ni en el API de San Pablo".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "NOEXISTE",
+    "codigoProduccion": "T1000006",
+    "numeroProduccion": "T100000006",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA ENTIDAD INEXISTENTE",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 100,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 9. Falta un campo obligatorio (tipoRubro)
+### Esperado: 400 Bad Request, "Error de validacion.", con "The TipoRubro field is required."
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000007",
+    "numeroProduccion": "T100000007",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "descripcion": "PRUEBA SIN TIPO DE RUBRO",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": 100,
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 10. Monto enviado como texto en lugar de numero
+### Esperado: 400 Bad Request. Un tipo equivocado rechaza TODO el lote antes de
+### procesarlo. Pendiente de verificar el mensaje exacto.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "T1000008",
+    "numeroProduccion": "T100000008",
+    "tipoProduccion": "02",
+    "tipoEntidadMedica": "1",
+    "tipoMedico": "02",
+    "tipoRubro": "03",
+    "descripcion": "PRUEBA MONTO COMO TEXTO",
+    "periodo": "07/11/2026",
+    "fechaProduccion": "07/11/2026 10:30:00",
+    "estadoProduccion": "2",
+    "mtoConsumo": "abc",
+    "mtoDescuento": 0,
+    "mtoSubtotal": 100,
+    "mtoRenta": 0,
+    "mtoIgv": 18,
+    "mtoTotal": 118
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 11. Lote vacio
+### Esperado: 400 Bad Request, "La coleccion de producciones no puede estar vacia".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[]

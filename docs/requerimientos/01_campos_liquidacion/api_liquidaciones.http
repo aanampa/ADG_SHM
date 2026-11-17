@@ -1,0 +1,298 @@
+# =============================================================================
+# Pruebas del API de envio de liquidaciones (con los campos SAP del Req 01)
+# Endpoint: POST /api/ProduccionInterface/liquidaciones   (sin autenticacion)
+# Especificacion: docs/API_ProduccionInterface.md, seccion 3
+# =============================================================================
+# Uso (extension "REST Client" de VS Code, o Visual Studio / Rider):
+#   1. Levantar el API:  cd src/SHM.AppApiHonorarioMedico && dotnet run
+#      Ajustar @host al puerto que muestre la consola (5001 segun CLAUDE.md,
+#      o 5271 segun launchSettings.json).
+#   2. Cambiar la llave de busqueda de cada registro por producciones reales de
+#      la base de datos de prueba. Deben estar en estado FACTURA_ENVIADA_HHMM:
+#        SELECT p.ID_PRODUCCION, s.CODIGO AS SEDE, em.CODIGO_ENTIDAD AS ENTIDAD,
+#               p.CODIGO_PRODUCCION, p.NUMERO_PRODUCCION, p.TIPO_ENTIDAD_MEDICA, p.ESTADO
+#          FROM SHM_PRODUCCION p
+#          JOIN SHM_SEDE s ON s.ID_SEDE = p.ID_SEDE
+#          JOIN SHM_ENTIDAD_MEDICA em ON em.ID_ENTIDAD_MEDICA = p.ID_ENTIDAD_MEDICA
+#         WHERE p.ESTADO = 'FACTURA_ENVIADA_HHMM' AND p.ACTIVO = 1;
+#   3. Una produccion ya liquidada responde ER si se vuelve a enviar: para repetir
+#      una prueba hay que usar otra produccion en FACTURA_ENVIADA_HHMM.
+#   4. Verificar lo grabado:
+#        SELECT ID_PRODUCCION, ESTADO, NUMERO_LIQUIDACION, CODSAP_CPM, CODSAP_DETRAC,
+#               MTO_DETRACCION, PORC_DETRACCION
+#          FROM SHM_PRODUCCION WHERE NUMERO_LIQUIDACION = '<numero enviado>';
+# =============================================================================
+
+@host = http://localhost:5001
+@url = {{host}}/api/ProduccionInterface/liquidaciones
+
+
+### -----------------------------------------------------------------------------
+### 1. Lote correcto: una factura con detraccion y una sin detraccion
+### Esperado: 200, isSuccess true, cantidadCreados 2, ambos detalles "OK"
+### BD: el 1ro queda con CODSAP_CPM, CODSAP_DETRAC, MTO 81.31 y PORC 12.00;
+###     el 2do con CODSAP_DETRAC NULL y MTO/PORC = 0. Ambos en FACTURA_LIQUIDADA.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251017",
+    "numeroProduccion": "20251039",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251017",
+    "codigoLiquidacion": "20251017",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "CREDITO / PRUEBA CON DETRACCION",
+    "tipoLiquidacion": "1",
+    "codSapCpm": "5100012345",
+    "codSapDetrac": "5200067890",
+    "mtoDetraccion": 81.31,
+    "porcDetraccion": 12.00
+  },
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251018",
+    "numeroProduccion": "20251040",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251018",
+    "codigoLiquidacion": "20251018",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "CREDITO / PRUEBA SIN DETRACCION",
+    "tipoLiquidacion": "1",
+    "codSapCpm": "5100012346",
+    "codSapDetrac": null,
+    "mtoDetraccion": null,
+    "porcDetraccion": null
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 2. Compatibilidad: sin ningun campo SAP (como enviaba el emisor antes)
+### Esperado: 200, "OK". CODSAP_* quedan NULL y MTO/PORC_DETRACCION en 0.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251019",
+    "numeroProduccion": "20251041",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251019",
+    "codigoLiquidacion": "20251019",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "CREDITO / PRUEBA SIN CAMPOS SAP"
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 3. Codigos demasiado largos
+### codSapCpm tiene 19 caracteres (maximo 18) y codSapDetrac 21 (maximo 20).
+### Esperado: 200 con cantidadErrores 1 y el detalle en "ER" con el mensaje
+### "codSapCpm excede la longitud maxima de 18 caracteres".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251020",
+    "numeroProduccion": "20251042",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251020",
+    "codigoLiquidacion": "20251020",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA CODIGOS LARGOS",
+    "codSapCpm": "5100012345678901234",
+    "codSapDetrac": "520006789012345678901",
+    "mtoDetraccion": 10.00,
+    "porcDetraccion": 12.00
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 4. Monto negativo
+### Esperado: "ER" con "mtoDetraccion no puede ser negativo".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251021",
+    "numeroProduccion": "20251043",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251021",
+    "codigoLiquidacion": "20251021",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA MONTO NEGATIVO",
+    "codSapCpm": "5100012347",
+    "mtoDetraccion": -1,
+    "porcDetraccion": 12.00
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 5. Porcentaje fuera de rango
+### Esperado: "ER" con "porcDetraccion debe estar entre 0 y 100".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251021",
+    "numeroProduccion": "20251043",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251021",
+    "codigoLiquidacion": "20251021",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA PORCENTAJE 101",
+    "codSapCpm": "5100012347",
+    "mtoDetraccion": 10.00,
+    "porcDetraccion": 101
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 6. Mas de 2 decimales
+### Esperado: "ER" con "mtoDetraccion admite como maximo 2 decimales".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251021",
+    "numeroProduccion": "20251043",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251021",
+    "codigoLiquidacion": "20251021",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA TRES DECIMALES",
+    "codSapCpm": "5100012347",
+    "mtoDetraccion": 81.315,
+    "porcDetraccion": 12.00
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 7. Produccion que no existe
+### Esperado: 200 con el detalle en "ER" (produccion no encontrada); el resto
+### del lote no se ve afectado.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "NOEXISTE",
+    "numeroProduccion": "99999999",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "99999999",
+    "codigoLiquidacion": "99999999",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA PRODUCCION INEXISTENTE",
+    "codSapCpm": "5100012348"
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 8. Falta un campo obligatorio (codigoSede)
+### Esperado: 400 Bad Request, "Error de validacion."
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251022",
+    "numeroProduccion": "20251044",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251022",
+    "codigoLiquidacion": "20251022",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA SIN SEDE"
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 9. Monto enviado como texto en lugar de numero
+### Esperado: 400 Bad Request. Un tipo equivocado rechaza TODO el lote antes de
+### procesarlo (no es un error por registro). Pendiente de verificar el mensaje.
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[
+  {
+    "codigoSede": "01",
+    "codigoEntidad": "0994",
+    "codigoProduccion": "20251022",
+    "numeroProduccion": "20251044",
+    "tipoEntidadMedica": "1",
+    "numeroLiquidacion": "20251022",
+    "codigoLiquidacion": "20251022",
+    "periodoLiquidacion": "10/10/2025",
+    "estadoLiquidacion": "AUTORIZADO",
+    "fechaLiquidacion": "13/11/2026 10:00:00",
+    "descripcionLiquidacion": "PRUEBA MONTO COMO TEXTO",
+    "codSapCpm": "5100012349",
+    "mtoDetraccion": "abc",
+    "porcDetraccion": 12.00
+  }
+]
+
+
+### -----------------------------------------------------------------------------
+### 10. Lote vacio
+### Esperado: 400 Bad Request, "La coleccion de liquidaciones no puede estar vacia".
+### -----------------------------------------------------------------------------
+POST {{url}}
+Content-Type: application/json
+
+[]

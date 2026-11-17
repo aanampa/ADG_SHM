@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PROTOTIPO - Seguimiento de Facturas Pendientes - SHM</title>
+    <!--
+      PROTOTIPO (no es la pantalla final). Datos de ejemplo. "Hoy" = 15/11/2026 en el prototipo.
+      Reutiliza los estilos reales del Portal Administrativo (AdminLTE), referenciados desde el repositorio:
+      abrir este archivo desde la carpeta del repositorio para que se vea con el diseño real.
+    -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/dist/css/adminlte.css">
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/plugins/sweetalert2/sweetalert2.min.css">
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/css/site.css" />
+    <style>
+        .titulo-formulario { color: #844484; font-size: 25px !important; font-weight: bold; }
+        .btn-morado { color: #fff; background-color: #5d1665; border-color: #5d1665; box-shadow: none; }
+        .btn-morado:hover { color: #fff; background-color: #5a1160; border-color: #5a1160; }
+        .layout-navbar-fixed .content-wrapper { margin-top: 0 !important; padding-top: 20px !important; }
+        .content-header { padding: 0 0.5rem !important; }
+        .table td, .table th { vertical-align: middle; font-size: .875rem; white-space: nowrap; }
+        .table td.wrap { white-space: normal; }
+        .row-eliminada td { background: #f8f9fa; }
+        .row-archived td { color: #6c757d; background: #f1f3f5; }
+        .scope-banner { font-size: .85rem; }
+        .kpi { border-left: 4px solid #5d1665; }
+        .kpi .n { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+        .kpi.rojo { border-left-color: #dc3545; } .kpi.gris { border-left-color: #6c757d; } .kpi.verde { border-left-color: #28a745; }
+        /* Controles del prototipo (no forman parte de la pantalla) */
+        .proto-bar {
+            position: fixed; right: 1rem; bottom: 1rem; z-index: 2000; background: #0F172A; color: #fff;
+            border-radius: 12px; padding: .6rem .8rem; font-size: .8rem; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+        }
+        .proto-bar b { color: #FBBF24; }
+        .proto-bar select { font-size: .8rem; margin-left: .4rem; border-radius: 6px; border: 0; padding: .15rem .3rem; }
+    </style>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
+
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+        <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a></li>
+            <li class="nav-item d-none d-sm-inline-block"><a href="#" class="nav-link">Inicio</a></li>
+            <li class="nav-item"><a class="nav-link text-primary" href="#"><i class="fas fa-hospital mr-1"></i>Sede: <span id="navSede">Sede Surco</span></a></li>
+        </ul>
+        <ul class="navbar-nav ml-auto align-items-center">
+            <li class="nav-item"><span class="nav-link text-primary">Bienvenido <span id="navUsuario">JEFE.SEDE</span></span></li>
+            <li class="nav-item"><a class="nav-link" href="#" title="Salir"><i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i></a></li>
+        </ul>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4 sidebar-mini" style="background-color:#5d1665; height:auto">
+        <a href="#" class="brand-link" style="background-color:#ffffff!important">
+            <span class="brand-text" style="color: #5d1665; font-size:1rem; margin-left: .75rem;">Sistema de Honorarios M.</span>
+        </a>
+        <div class="sidebar">
+            <nav class="mt-2">
+                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                    <li class="nav-item menu-open">
+                        <a href="#" class="nav-link"><i class="nav-icon fas fa-file-invoice-dollar"></i><p>HONORARIOS<i class="right fas fa-angle-left"></i></p></a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Producciones</p></a></li>
+                            <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Orden de Pago</p></a></li>
+                            <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Aprobacion</p></a></li>
+                            <!-- OPCIÓN NUEVA -->
+                            <li class="nav-item"><a href="#" class="nav-link active"><i class="far fa-circle nav-icon"></i><p>Seguimiento Facturas</p></a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <div class="wrapper">
+        <div class="content-wrapper">
+
+            <div class="content-header py-2">
+                <div class="container-fluid">
+                    <h1 class="m-0 titulo-formulario" style="font-size: 1.2rem;">
+                        <i class="fas fa-clipboard-list mr-2"></i>Seguimiento de Facturas Pendientes
+                    </h1>
+                    <ol class="breadcrumb m-0 bg-transparent p-0 mt-1" style="font-size: 0.8rem;">
+                        <li class="breadcrumb-item"><a href="#">Inicio</a></li>
+                        <li class="breadcrumb-item active">Seguimiento de Facturas Pendientes</li>
+                    </ol>
+                </div>
+            </div>
+
+            <section class="content">
+                <div class="container-fluid">
+
+                    <!-- Estado: sin perfil Jefe de Sede -->
+                    <div id="sinAcceso" class="card" style="display:none;">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-lock fa-3x text-muted mb-3"></i>
+                            <h5>Acceso restringido</h5>
+                            <p class="text-muted mb-0">Esta opción es solo para usuarios con el perfil de aprobación <strong>Jefe de Sede</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div id="contenido">
+                        <div class="alert alert-light border scope-banner py-2" id="alcance"></div>
+
+                        <!-- Resumen -->
+                        <div class="row">
+                            <div class="col-md-4"><div class="card kpi verde mb-2"><div class="card-body py-2">
+                                <div class="n" id="kVigentes">0</div><small class="text-muted">Solicitadas, aún sin enviar (vigentes)</small></div></div></div>
+                            <div class="col-md-4"><div class="card kpi rojo mb-2"><div class="card-body py-2">
+                                <div class="n" id="kVencidas">0</div><small class="text-muted">Vigentes con la fecha límite vencida</small></div></div></div>
+                            <div class="col-md-4"><div class="card kpi gris mb-2"><div class="card-body py-2">
+                                <div class="n" id="kEliminadas">0</div><small class="text-muted">Eliminadas por Honorarios, sin archivar</small></div></div></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="row align-items-end">
+                                    <div class="col-md-2">
+                                        <div class="form-group mb-0">
+                                            <label class="mb-1 small">Sede</label>
+                                            <select id="fSede" class="form-control form-control-sm"></select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-0">
+                                            <label class="mb-1 small">Compañía / Producción</label>
+                                            <input type="text" id="fTexto" class="form-control form-control-sm" placeholder="Buscar...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group mb-0">
+                                            <label class="mb-1 small">Situación</label>
+                                            <select id="fSit" class="form-control form-control-sm">
+                                                <option value="">- Todas -</option>
+                                                <option value="VIGENTE">Vigentes</option>
+                                                <option value="ELIMINADA">Eliminadas</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group mb-0">
+                                            <label class="mb-1 small">Estado</label>
+                                            <select id="fEstado" class="form-control form-control-sm">
+                                                <option value="">- Todos -</option>
+                                                <option value="SOLICITADA">Por Enviar</option>
+                                                <option value="DEVUELTA">Devuelta</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <div class="form-group mb-0">
+                                            <label class="mb-1 small">Archivadas</label>
+                                            <select id="fArch" class="form-control form-control-sm">
+                                                <option value="NO" selected>No</option>
+                                                <option value="SI">Sí</option>
+                                                <option value="TODAS">Todas</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="renderizar()"><i class="fas fa-search mr-1"></i>Buscar</button>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="limpiar()"><i class="fas fa-eraser mr-1"></i>Limpiar</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0 table-responsive">
+                                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                                    <small class="text-muted" id="resumen"></small>
+                                    <button type="button" id="btnMasivo" class="btn btn-morado btn-sm" onclick="archivarSeleccionadas()" disabled>
+                                        <i class="fas fa-archive mr-1"></i>Archivar seleccionadas (<span id="cantSel">0</span>)
+                                    </button>
+                                </div>
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:36px;"><input type="checkbox" id="chkTodos" onchange="seleccionarTodos(this.checked)" title="Seleccionar las eliminadas visibles"></th>
+                                            <th>Compañía</th>
+                                            <th>Sede</th>
+                                            <th>Producción</th>
+                                            <th class="text-right">Importe</th>
+                                            <th>Estado</th>
+                                            <th>Fecha límite</th>
+                                            <th>Situación</th>
+                                            <th>Notificaciones a la compañía</th>
+                                            <th>Archivada</th>
+                                            <th class="text-center" style="width:100px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody"></tbody>
+                                </table>
+                            </div>
+                            <div class="card-footer small text-muted">
+                                <strong>Vigente:</strong> se solicitó la factura (o se devolvió) y la compañía aún no la envió; sigue activa en el portal de la compañía.
+                                <strong>Eliminada:</strong> Honorarios Médicos eliminó la producción antes de que la compañía enviara la factura; solo la ve el Jefe de Sede hasta archivarla.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="proto-bar">
+        <b>PROTOTIPO</b> Simular usuario:
+        <select id="selUsuario" onchange="cambiarUsuario()">
+            <option value="sede">Jefe de Sede (Sede Surco)</option>
+            <option value="todas">Jefe de Sede (todas las sedes)</option>
+            <option value="sinperfil">Sin perfil Jefe de Sede</option>
+        </select>
+    </div>
+
+    <script src="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/plugins/jquery/jquery.min.js"></script>
+    <script src="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/dist/js/adminlte.min.js"></script>
+    <script src="../../../../src/SHM.AppWebHonorarioMedico/wwwroot/vendor/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+    <script>
+        // Datos de ejemplo.
+        //  VIGENTE   = SHM_PRODUCCION con ACTIVO = 1, ESTADO_COMPROBANTE = 'POR_ENVIAR' y ESTADO en
+        //              (FACTURA_SOLICITADA, FACTURA_DEVUELTA): lo mismo que ve la compañía en "Facturas Pendientes".
+        //  ELIMINADA = lo mismo pero con ACTIVO = 0 (eliminada por el sistema de Honorarios).
+        // El archivado (solo eliminadas) escribe FLAG_ARCHIVADO = 1, FECHA_ARCHIVADO e ID_USUARIO_ARCHIVADO.
+        // Las notificaciones salen de SHM_EMAIL_LOG (ENTIDAD_REFERENCIA = 'SHM_PRODUCCION', ID_REFERENCIA = id de la
+        // producción), igual que el "Historial de notificaciones" que ya existe en la pantalla Producción.
+        const HOY = new Date(2026, 10, 15);
+        const SEDES = ['Sede Surco', 'Sede San Borja', 'Sede Sur'];
+        const CIA_TO = { 'CLÍNICA ODONTOLÓGICA SAN JUAN S.A.C.': 'admin@sanjuan-dental.pe, facturacion@sanjuan-dental.pe', 'CENTRO DE DIAGNÓSTICO POR IMÁGENES S.A.C.': 'cobranzas@cdi.pe', 'MÉDICOS ASOCIADOS DEL SUR S.R.L.': 'contabilidad@medicossur.pe' };
+        const CIA_CC = { 'CLÍNICA ODONTOLÓGICA SAN JUAN S.A.C.': 'gerencia@sanjuan-dental.pe', 'CENTRO DE DIAGNÓSTICO POR IMÁGENES S.A.C.': '', 'MÉDICOS ASOCIADOS DEL SUR S.R.L.': 'contador.externo@gmail.com' };
+        const SJ = 'CLÍNICA ODONTOLÓGICA SAN JUAN S.A.C.', CDI = 'CENTRO DE DIAGNÓSTICO POR IMÁGENES S.A.C.', MAS = 'MÉDICOS ASOCIADOS DEL SUR S.R.L.';
+        const DATOS = [
+            // Vigentes: solicitadas a la compañía y aún sin enviar
+            { id: 101, sit: 'VIGENTE', cia: CDI, sede: 'Sede Surco',     prod: '20260420', importe: 3200.50, estado: 'SOLICITADA', limite: [20,11,2026], eliminada: null, arch: null,
+              n: [{ f: '12/11/2026 09:00', t: 'Solicitud de factura', e: 'ENVIADO' }] },
+            { id: 102, sit: 'VIGENTE', cia: MAS, sede: 'Sede San Borja', prod: '20260415', importe: 1250.00, estado: 'DEVUELTA',   limite: [13,11,2026], eliminada: null, arch: null,
+              n: [{ f: '01/11/2026 10:02', t: 'Solicitud de factura', e: 'ENVIADO' }, { f: '09/11/2026 12:30', t: 'Factura devuelta', e: 'ENVIADO' }] },
+            { id: 103, sit: 'VIGENTE', cia: SJ,  sede: 'Sede Sur',       prod: '20260430', importe: 980.00,  estado: 'SOLICITADA', limite: [30,11,2026], eliminada: null, arch: null,
+              n: [{ f: '14/11/2026 08:15', t: 'Solicitud de factura', e: 'ENVIADO' }] },
+            { id: 104, sit: 'VIGENTE', cia: SJ,  sede: 'Sede Surco',     prod: '20260422', importe: 450.00,  estado: 'SOLICITADA', limite: [10,11,2026], eliminada: null, arch: null,
+              n: [{ f: '03/11/2026 09:15', t: 'Solicitud de factura', e: 'ENVIADO' }, { f: '10/11/2026 08:00', t: 'Solicitud de factura (renotificación)', e: 'ERROR' }] },
+            // Eliminadas por Honorarios
+            { id: 1, sit: 'ELIMINADA', cia: SJ,  sede: 'Sede Surco',     prod: '20260412', importe: 1368.46, estado: 'SOLICITADA', limite: [28,11,2026], eliminada: '12/11/2026 16:40', arch: null,
+              n: [{ f: '03/11/2026 09:15', t: 'Solicitud de factura', e: 'ENVIADO' }, { f: '10/11/2026 08:00', t: 'Solicitud de factura (renotificación)', e: 'ENVIADO' }] },
+            { id: 2, sit: 'ELIMINADA', cia: SJ,  sede: 'Sede Surco',     prod: '20260413', importe: 2210.00, estado: 'DEVUELTA',   limite: [28,11,2026], eliminada: '12/11/2026 16:41', arch: null,
+              n: [{ f: '03/11/2026 09:15', t: 'Solicitud de factura', e: 'ENVIADO' }, { f: '08/11/2026 12:30', t: 'Factura devuelta', e: 'ENVIADO' }] },
+            { id: 3, sit: 'ELIMINADA', cia: CDI, sede: 'Sede Surco',     prod: '20260399', importe: 5120.30, estado: 'SOLICITADA', limite: [25,11,2026], eliminada: '10/11/2026 09:12', arch: null,
+              n: [{ f: '05/11/2026 10:00', t: 'Solicitud de factura', e: 'ENVIADO' }] },
+            { id: 4, sit: 'ELIMINADA', cia: MAS, sede: 'Sede San Borja', prod: '20260388', importe: 677.59,  estado: 'SOLICITADA', limite: [25,11,2026], eliminada: '09/11/2026 11:05', arch: null,
+              n: [{ f: '01/11/2026 10:02', t: 'Solicitud de factura', e: 'ENVIADO' }] },
+            { id: 5, sit: 'ELIMINADA', cia: MAS, sede: 'Sede San Borja', prod: '20260391', importe: 184.00,  estado: 'SOLICITADA', limite: [25,11,2026], eliminada: '09/11/2026 11:06', arch: null,
+              n: [{ f: '01/11/2026 10:02', t: 'Solicitud de factura', e: 'ERROR' }] },
+            { id: 6, sit: 'ELIMINADA', cia: SJ,  sede: 'Sede Sur',       prod: '20260275', importe: 3950.80, estado: 'DEVUELTA',   limite: [15,11,2026], eliminada: '30/10/2026 15:20', arch: null,
+              n: [{ f: '20/10/2026 08:30', t: 'Solicitud de factura', e: 'ENVIADO' }, { f: '27/10/2026 15:10', t: 'Factura devuelta', e: 'ENVIADO' }] },
+            { id: 7, sit: 'ELIMINADA', cia: CDI, sede: 'Sede Surco',     prod: '20260301', importe: 890.00,  estado: 'SOLICITADA', limite: [10,11,2026], eliminada: '28/10/2026 10:00', arch: { fecha: '05/11/2026 08:45', usuario: 'JEFE.SEDE' },
+              n: [{ f: '15/10/2026 09:00', t: 'Solicitud de factura', e: 'ENVIADO' }] },
+            { id: 8, sit: 'ELIMINADA', cia: MAS, sede: 'Sede Sur',       prod: '20260260', importe: 450.25,  estado: 'DEVUELTA',   limite: [05,11,2026], eliminada: '20/10/2026 14:30', arch: { fecha: '02/11/2026 17:20', usuario: 'JEFE.SEDE' },
+              n: [{ f: '10/10/2026 11:00', t: 'Solicitud de factura', e: 'ENVIADO' }, { f: '17/10/2026 11:00', t: 'Solicitud de factura (renotificación)', e: 'ENVIADO' }] }
+        ];
+        let usuario = 'sede';
+        let seleccion = new Set();
+
+        const soles = n => 'S/ ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const p2 = x => String(x).padStart(2, '0');
+        const ahora = () => { const d = new Date(); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); };
+        const sedeUsuario = () => usuario === 'sede' ? 'Sede Surco' : null;
+        const diasHasta = f => Math.round((new Date(f[2], f[1] - 1, f[0]) - HOY) / 86400000);
+        const fmtLimite = f => p2(f[0]) + '/' + p2(f[1]) + '/' + f[2] + ' 18:00';
+
+        function cambiarUsuario() {
+            usuario = document.getElementById('selUsuario').value;
+            seleccion.clear();
+            const restr = usuario === 'sinperfil';
+            document.getElementById('sinAcceso').style.display = restr ? '' : 'none';
+            document.getElementById('contenido').style.display = restr ? 'none' : '';
+            document.getElementById('navSede').textContent = usuario === 'sede' ? 'Sede Surco' : 'Todas';
+            document.getElementById('alcance').innerHTML = usuario === 'sede'
+                ? '<i class="fas fa-user-shield mr-1"></i>Perfil <strong>Jefe de Sede</strong> asignado a <strong>Sede Surco</strong>: solo ve las facturas de esa sede, y solo él puede archivar las eliminadas.'
+                : '<i class="fas fa-user-shield mr-1"></i>Perfil <strong>Jefe de Sede</strong> sin sede asignada: ve las facturas de <strong>todas las sedes</strong>.';
+            const sel = document.getElementById('fSede');
+            sel.innerHTML = '';
+            if (sedeUsuario()) { sel.innerHTML = '<option>' + sedeUsuario() + '</option>'; sel.disabled = true; }
+            else { sel.disabled = false; sel.innerHTML = '<option value="">- Todas -</option>' + SEDES.map(s => '<option>' + s + '</option>').join(''); }
+            renderizar();
+        }
+
+        const enAlcance = () => DATOS.filter(f => !sedeUsuario() || f.sede === sedeUsuario());
+
+        function visibles() {
+            const sede = document.getElementById('fSede').value;
+            const txt = document.getElementById('fTexto').value.trim().toLowerCase();
+            const sit = document.getElementById('fSit').value;
+            const est = document.getElementById('fEstado').value;
+            const arch = document.getElementById('fArch').value;
+            return enAlcance().filter(f =>
+                (!sede || sedeUsuario() || f.sede === sede) &&
+                (!txt || (f.cia + ' ' + f.prod).toLowerCase().includes(txt)) &&
+                (!sit || f.sit === sit) &&
+                (!est || f.estado === est) &&
+                (arch === 'TODAS' || (arch === 'SI' ? (f.sit === 'ELIMINADA' && !!f.arch) : !f.arch)));
+        }
+
+        function limiteHtml(f) {
+            const d = diasHasta(f.limite);
+            let extra = '';
+            if (f.sit === 'VIGENTE') {
+                if (d < 0) extra = '<br><span class="badge badge-danger">Vencida hace ' + Math.abs(d) + ' día(s)</span>';
+                else if (d <= 3) extra = '<br><span class="badge badge-warning">Vence en ' + d + ' día(s)</span>';
+                else extra = '<br><small class="text-muted">Faltan ' + d + ' días</small>';
+            }
+            return fmtLimite(f.limite) + extra;
+        }
+
+        function renderizar() {
+            const todo = enAlcance();
+            document.getElementById('kVigentes').textContent = todo.filter(f => f.sit === 'VIGENTE').length;
+            document.getElementById('kVencidas').textContent = todo.filter(f => f.sit === 'VIGENTE' && diasHasta(f.limite) < 0).length;
+            document.getElementById('kEliminadas').textContent = todo.filter(f => f.sit === 'ELIMINADA' && !f.arch).length;
+
+            const filas = visibles();
+            seleccion = new Set([...seleccion].filter(id => filas.some(f => f.id === id && f.sit === 'ELIMINADA' && !f.arch)));
+            let html = '';
+            if (filas.length === 0) {
+                html = '<tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No hay facturas pendientes con estos filtros</td></tr>';
+            } else {
+                filas.forEach(f => {
+                    const elim = f.sit === 'ELIMINADA';
+                    const badge = f.estado === 'DEVUELTA' ? 'badge-danger' : 'badge-warning';
+                    const texto = f.estado === 'DEVUELTA' ? 'Devuelta' : 'Por Enviar';
+                    const sitCell = elim ? '<span class="badge badge-secondary">Eliminada</span><br><small class="text-muted">' + f.eliminada + '</small>'
+                                         : '<span class="badge badge-success">Vigente</span><br><small class="text-muted">Sin enviar factura</small>';
+                    const errores = f.n.filter(n => n.e === 'ERROR').length;
+                    const notifCell = '<a href="#" onclick="verNotificaciones(' + f.id + '); return false;"><i class="far fa-envelope mr-1"></i>' + f.n.length + ' correo(s)</a>' +
+                        '<br><small class="text-muted">Último: ' + f.n[f.n.length - 1].f + '</small>' +
+                        (errores ? '<br><small class="text-danger"><i class="fas fa-exclamation-triangle mr-1"></i>' + errores + ' con error</small>' : '');
+                    const archCell = !elim ? '<span class="text-muted">—</span>' : (f.arch ? '<span class="badge badge-secondary">Archivada</span><br><small>' + f.arch.fecha + ' · ' + f.arch.usuario + '</small>' : '<span class="text-muted">—</span>');
+                    const chk = (elim && !f.arch) ? '<input type="checkbox" ' + (seleccion.has(f.id) ? 'checked' : '') + ' onchange="marcar(' + f.id + ', this.checked)">' : '';
+                    const acc = (elim && !f.arch) ? '<button class="btn btn-outline-secondary btn-xs" onclick="archivarUna(' + f.id + ')"><i class="fas fa-archive mr-1"></i>Archivar</button>' : '';
+                    html += '<tr class="' + (elim ? (f.arch ? 'row-archived' : 'row-eliminada') : '') + '"><td>' + chk + '</td><td class="wrap">' + f.cia + '</td><td>' + f.sede + '</td><td>' + f.prod +
+                        '</td><td class="text-right">' + soles(f.importe) + '</td><td><span class="badge ' + badge + '">' + texto + '</span></td><td>' + limiteHtml(f) +
+                        '</td><td>' + sitCell + '</td><td>' + notifCell + '</td><td>' + archCell + '</td><td class="text-center">' + acc + '</td></tr>';
+                });
+            }
+            document.getElementById('tbody').innerHTML = html;
+            document.getElementById('resumen').textContent = filas.length + ' factura(s) pendiente(s) · ' +
+                filas.filter(f => f.sit === 'VIGENTE').length + ' vigente(s) · ' + filas.filter(f => f.sit === 'ELIMINADA').length + ' eliminada(s)';
+            actualizarSeleccion();
+        }
+
+        function verNotificaciones(id) {
+            const f = DATOS.find(x => x.id === id);
+            const filas = f.n.map(n =>
+                '<tr><td>' + n.f + '</td><td>' + n.t + '</td><td>' + CIA_TO[f.cia] + '</td><td>' + (CIA_CC[f.cia] || '—') + '</td>' +
+                '<td><span class="badge ' + (n.e === 'ENVIADO' ? 'badge-success' : 'badge-danger') + '">' + (n.e === 'ENVIADO' ? 'Enviado' : 'Error') + '</span></td></tr>').join('');
+            const situacion = f.sit === 'ELIMINADA'
+                ? '<span class="text-danger">Producción eliminada el ' + f.eliminada + '. La compañía no llegó a enviar la factura.</span>'
+                : '<span class="text-danger">La compañía aún no envió la factura. Fecha límite: ' + fmtLimite(f.limite) + '.</span>';
+            Swal.fire({
+                title: 'Notificaciones a la compañía',
+                width: 900,
+                confirmButtonColor: '#5d1665',
+                confirmButtonText: 'Cerrar',
+                html: '<div style="text-align:left;font-size:.88rem;margin-bottom:.5rem;"><strong>' + f.cia + '</strong><br>Producción ' + f.prod + ' · ' + f.sede + '<br>' + situacion + '</div>' +
+                      '<div style="max-height:320px;overflow:auto;"><table class="table table-sm table-bordered" style="font-size:.8rem;text-align:left;">' +
+                      '<thead class="thead-light"><tr><th>Fecha</th><th>Tipo</th><th>Para</th><th>Con copia</th><th>Estado</th></tr></thead><tbody>' + filas + '</tbody></table></div>'
+            });
+        }
+
+        function limpiar() {
+            document.getElementById('fTexto').value = '';
+            document.getElementById('fSit').value = '';
+            document.getElementById('fEstado').value = '';
+            document.getElementById('fArch').value = 'NO';
+            if (!sedeUsuario()) document.getElementById('fSede').value = '';
+            renderizar();
+        }
+
+        function marcar(id, on) { on ? seleccion.add(id) : seleccion.delete(id); actualizarSeleccion(); }
+        function seleccionarTodos(on) {
+            seleccion.clear();
+            if (on) visibles().filter(f => f.sit === 'ELIMINADA' && !f.arch).forEach(f => seleccion.add(f.id));
+            renderizar();
+        }
+        function actualizarSeleccion() {
+            document.getElementById('cantSel').textContent = seleccion.size;
+            document.getElementById('btnMasivo').disabled = seleccion.size === 0;
+            const pend = visibles().filter(f => f.sit === 'ELIMINADA' && !f.arch);
+            document.getElementById('chkTodos').checked = pend.length > 0 && seleccion.size === pend.length;
+        }
+
+        function confirmarArchivado(ids) {
+            const items = DATOS.filter(f => ids.includes(f.id));
+            const lista = items.slice(0, 5).map(f => '<li>' + f.prod + ' — ' + f.cia + '</li>').join('') + (items.length > 5 ? '<li>… y ' + (items.length - 5) + ' más</li>' : '');
+            return Swal.fire({
+                icon: 'warning',
+                title: items.length === 1 ? '¿Archivar la producción eliminada?' : '¿Archivar ' + items.length + ' producciones eliminadas?',
+                html: '<ul style="text-align:left;font-size:.9rem;">' + lista + '</ul>' +
+                      '<p style="font-size:.9rem;">Dejarán de mostrarse a las compañías médicas. <strong>El archivado es definitivo: no se puede deshacer.</strong></p>',
+                showCancelButton: true,
+                confirmButtonColor: '#f26522',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, archivar',
+                cancelButtonText: 'Cancelar'
+            });
+        }
+
+        function ejecutarArchivado(ids) {
+            confirmarArchivado(ids).then(r => {
+                if (!r.isConfirmed) return;
+                DATOS.filter(f => ids.includes(f.id)).forEach(f => { f.arch = { fecha: ahora(), usuario: 'JEFE.SEDE' }; });
+                ids.forEach(id => seleccion.delete(id));
+                renderizar();
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', timer: 2500, showConfirmButton: false,
+                    title: ids.length === 1 ? 'Producción archivada' : ids.length + ' producciones archivadas' });
+            });
+        }
+        function archivarUna(id) { ejecutarArchivado([id]); }
+        function archivarSeleccionadas() { ejecutarArchivado([...seleccion]); }
+
+        cambiarUsuario();
+    </script>
+</body>
+</html>

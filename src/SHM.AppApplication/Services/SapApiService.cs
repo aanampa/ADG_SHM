@@ -401,7 +401,7 @@ public class SapApiService : ISapApiService
             var json = JsonSerializer.Serialize(request);
             _logger.LogInformation("Liberando pago en SAP. IdOrden: {IdOrden}, Documentos: {Cantidad}",
                 request.IdOrden, request.Documentos.Count);
-            _logger.LogDebug("Request de liberacion SAP: {Json}", json);
+            _logger.LogInformation("Request de liberacion SAP. IdOrden: {IdOrden}, Json: {Json}", request.IdOrden, json);
 
             for (var intento = 1; intento <= 2; intento++)
             {
@@ -439,9 +439,9 @@ public class SapApiService : ISapApiService
                         request.IdOrden, resultado.HttpStatus, resultado.Status, resultado.Mensaje);
                 else
                     _logger.LogWarning(
-                        "Liberacion SAP no confirmada. IdOrden: {IdOrden}, HTTP: {Http}, Status: {Status}, Mensaje: {Mensaje}, Respuesta: {Respuesta}",
+                        "Liberacion SAP no confirmada. IdOrden: {IdOrden}, HTTP: {Http}, Status: {Status}, Mensaje: {Mensaje}, Respuesta: {Respuesta}, Request: {Request}",
                         request.IdOrden, resultado.HttpStatus, resultado.Status, resultado.Mensaje,
-                        body.Length > 2000 ? body[..2000] : body);
+                        body.Length > 2000 ? body[..2000] : body, json);
                 return resultado;
             }
 

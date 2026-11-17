@@ -42,7 +42,7 @@ El body es una **cabecera con una lista de documentos** (`IdOrden`, `Fecha`, `Do
 | `Documento` | 10 | Key | `SHM_PRODUCCION.CODSAP_CPM` (Req 01) | Disponible desde Req 01. Las producciones anteriores no lo tienen |
 | `Ejercicio` | 4 | Key | Año de `FechaEmision` del comprobante (decidido) | Disponible, se calcula |
 | `DocumentoDt` | 10 | Opc. | `SHM_PRODUCCION.CODSAP_DETRAC` (Req 01) | Disponible. Solo si la factura tiene detracción |
-| `Referencia` | 16 | Opc. | `{TipoComprobante}-{Serie}-{Numero}` (ej. `01-F001-0004521`, decidido) | Disponible. Usa el mismo tipo de 2 dígitos que `TipoComprobante`. Máx. 16 caracteres: serie de 4 y número de hasta 8 dígitos |
+| `Referencia` | 16 | Opc. | `{tipo}-{Serie}-{Numero}` con el tipo de comprobante SUNAT: factura `01`, recibo por honorarios `02` (ej. `01-F001-0004521`, `02-E001-0000502`, decidido). El número lleva ceros a la izquierda hasta 7 dígitos | Disponible. **El código de tipo de la Referencia es distinto del campo `TipoComprobante`** (ahí el recibo por honorarios sigue como `03`). Máx. 16 caracteres: serie de 4 y número de hasta 8 dígitos |
 | `Ruc` | 20 | Opc. | RUC de la entidad médica | Disponible |
 | `ProveedorName` | 35 | Opc. | Razón social de la entidad médica | Disponible. **Truncar a 35** |
 | `TipoComprobante` | 2 | Opc. | Tipo del comprobante: `1` → `01`, `22` → `03` (decidido) | Disponible. Un tipo distinto de `1` y `22` se marca como error de validación |
@@ -194,8 +194,8 @@ Si el tiempo de respuesta de SAP es un problema, la variante es lanzar la libera
 | 8.4 | ¿La operación es atómica (todo o nada)? ¿Cómo responde ante un error: HTTP 4xx/5xx, o `201` con `Status` distinto de `OK`? ¿Qué valores puede tener `Status`? La respuesta de éxito ya se conoce (`Status: OK`, `Documentos.results` vacío) | SAP | Define cómo se detecta el fallo y cómo se reintenta |
 | 8.5 | ¿Es seguro volver a enviar un documento ya liberado (idempotente) o responde error? | SAP | Define el reintento |
 | 8.6 | ~~Valor de `UserLiberador`~~ | SAP | **Resuelto**: login del último aprobador, truncado a 12 caracteres si es más largo |
-| 8.7 | ~~Códigos de `TipoComprobante`~~ | SAP | **Resuelto**: `1` → `01`, `22` → `03`. Se aplica también al prefijo de `Referencia` |
-| 8.8 | ~~Formato de `Referencia`~~ | SAP | **Resuelto**: lleva el tipo de comprobante al inicio (`01-F001-0004521`) |
+| 8.7 | ~~Códigos de `TipoComprobante`~~ | SAP | **Resuelto**: en el campo `TipoComprobante`, `1` → `01` y `22` → `03`. **No se aplica a la Referencia**, que usa `01` para factura y `02` para recibo por honorarios (pruebas con SAP, 2026-11-16). Pendiente de confirmar si `TipoComprobante` del recibo por honorarios también debe ser `02` |
+| 8.8 | ~~Formato de `Referencia`~~ | SAP | **Resuelto**: lleva el código de tipo al inicio: `01-F001-0004521` (factura) y `02-E001-0000502` (recibo por honorarios) |
 | 8.9 | ~~Headers y respuesta de los pasos 1 a 3~~ | SAP | **Resuelto** con `documentacion_api_servicio_liberacion_pagos.md` |
 | 8.10 | ¿Qué pasa con las órdenes ya aprobadas antes de publicar? ¿Se liberan de forma masiva o solo las nuevas? | Negocio | Si es masiva, hace falta una opción para liberar en lote |
 | 8.11 | ¿Quién puede reintentar la liberación (rol)? | Negocio | Permisos del botón |

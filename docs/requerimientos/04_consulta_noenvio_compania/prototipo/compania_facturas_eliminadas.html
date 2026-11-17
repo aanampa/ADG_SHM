@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PROTOTIPO - Facturas Eliminadas - Portal de Honorarios Médicos</title>
+    <!--
+      PROTOTIPO (no es la pantalla final). Datos de ejemplo.
+      Reutiliza los estilos reales del Portal de Compañías, referenciados desde el repositorio:
+      abrir este archivo desde la carpeta del repositorio para que se vea con el diseño real.
+    -->
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/lib/bootstrap-icons/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/css/site.css" />
+    <link rel="stylesheet" href="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/lib/sweetalert2/sweetalert2.min.css">
+    <style>
+        .badge-deleted { background: #E2E8F0; color: #475569; }
+        .invoice-table tbody tr.row-deleted td { color: #64748B; }
+        .invoice-table tbody tr.row-deleted td strong { color: #475569; }
+        .info-banner {
+            display: flex; gap: .75rem; align-items: flex-start;
+            background: rgba(242, 101, 34, 0.08); border: 1px solid rgba(242, 101, 34, 0.35);
+            border-radius: 10px; padding: .85rem 1rem; margin: 0 0 1rem 0; color: var(--text-primary); font-size: .92rem;
+        }
+        .info-banner i { color: var(--accent); font-size: 1.25rem; margin-top: .05rem; }
+        .btn-detail {
+            display: inline-flex; align-items: center; gap: .4rem; padding: .4rem .85rem;
+            border: 1px solid var(--border, #E2E8F0); background: #fff; color: var(--primary);
+            border-radius: 8px; font-weight: 600; font-size: .85rem; cursor: pointer;
+        }
+        .btn-detail:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-detail, .invoice-table td strong { white-space: nowrap; }
+        .invoice-table td:nth-child(1), .invoice-table td:nth-child(4), .invoice-table td:nth-child(7) { white-space: nowrap; }
+        /* Línea de tiempo del detalle */
+        .timeline { list-style: none; margin: 0; padding: 0 0 0 .25rem; text-align: left; }
+        .timeline li { position: relative; padding: 0 0 .9rem 1.6rem; font-size: .88rem; }
+        .timeline li::before { content: ""; position: absolute; left: .35rem; top: .35rem; width: .7rem; height: .7rem; border-radius: 50%; background: #94A3B8; }
+        .timeline li::after { content: ""; position: absolute; left: .62rem; top: 1.05rem; bottom: -.1rem; width: 2px; background: #E2E8F0; }
+        .timeline li:last-child::after { display: none; }
+        .timeline li.last::before { background: #DC2626; }
+        .timeline .t-date { color: #64748B; font-size: .8rem; display: block; }
+        .detalle-grid { display: grid; grid-template-columns: 9.5rem 1fr; row-gap: .35rem; text-align: left; font-size: .9rem; }
+        .detalle-grid .k { font-weight: 600; color: #64748B; font-size: .82rem; }
+        .detalle-grid .v { font-weight: 600; color: #0F172A; }
+        /* Controles del prototipo (no forman parte de la pantalla) */
+        .proto-bar {
+            position: fixed; right: 1rem; bottom: 1rem; z-index: 2000; background: #0F172A; color: #fff;
+            border-radius: 12px; padding: .6rem .8rem; font-size: .8rem; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+        }
+        .proto-bar b { color: #FBBF24; }
+        .proto-bar button { border: 0; background: #334155; color: #fff; padding: .25rem .6rem; border-radius: 6px; margin-left: .3rem; }
+        .proto-bar button.on { background: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <div class="navbar-left">
+            <img src="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/images/logo-navbar.png" alt="Grupo San Pablo" class="navbar-logo">
+        </div>
+        <div class="navbar-right">
+            <div class="navbar-user-info">
+                <div style="text-align: right;">
+                    <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">CLÍNICA ODONTOLÓGICA SAN JUAN S.A.C.</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                        <i class="bi bi-person-circle" style="margin-right: 0.25rem;"></i>usuario.demo
+                    </div>
+                </div>
+                <div class="user-avatar">CO</div>
+            </div>
+            <button class="navbar-logout-btn" title="Cerrar Sesión"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <p style="font-size: 1rem; color: var(--text-primary); margin: 0; text-align: center; font-weight: 600;">CLÍNICA ODONTOLÓGICA SAN JUAN S.A.C.</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#"><i class="bi bi-grid-fill"></i><span>Inicio</span></a></li>
+            <li><a href="#"><i class="bi bi-file-earmark-text-fill"></i><span>Facturas Pendientes</span></a></li>
+            <li><a href="#"><i class="bi bi-send-check-fill"></i><span>Facturas Enviadas</span></a></li>
+            <!-- OPCIÓN NUEVA -->
+            <li><a href="#" class="active"><i class="bi bi-file-earmark-x-fill"></i><span>Facturas Eliminadas</span></a></li>
+            <li><a href="#"><i class="bi bi-file-earmark-code-fill"></i><span>Evaluador XML</span></a></li>
+            <li><a href="#"><i class="bi bi-person-lines-fill"></i><span>Mis Contactos</span></a></li>
+            <li><a href="#"><i class="bi bi-person-circle"></i><span>Mi Perfil</span></a></li>
+            <li><a href="#"><i class="bi bi-book-fill"></i><span>Manual de Usuario</span></a></li>
+            <li><a href="#" style="margin-top: 2rem;"><i class="bi bi-box-arrow-left"></i><span>Cerrar Sesión</span></a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="table-card fade-in">
+            <div class="table-header">
+                <h3>
+                    <i class="bi bi-file-earmark-x-fill"></i>
+                    Facturas Eliminadas
+                    <span class="badge badge-deleted ms-2" id="contador">0</span>
+                </h3>
+                <div class="table-actions">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Buscar producciones..." id="searchInput">
+                    </div>
+                    <button class="filter-btn" onclick="renderizar()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+                    </button>
+                </div>
+            </div>
+
+            <div class="info-banner">
+                <i class="bi bi-info-circle-fill"></i>
+                <div>
+                    <strong>Estas producciones fueron eliminadas por el área de Honorarios Médicos.</strong>
+                    Tenían una factura pendiente de envío y <strong>ya no es necesario enviarla</strong>.
+                    Si tiene consultas, comuníquese con la sede correspondiente.
+                </div>
+            </div>
+
+            <div id="listContainer"></div>
+        </div>
+    </main>
+
+    <div class="proto-bar">
+        <b>PROTOTIPO</b> &nbsp;Datos de ejemplo
+        <button id="btnDatos" class="on" onclick="setModo('datos')">Con datos</button>
+        <button id="btnVacio" onclick="setModo('vacio')">Sin datos</button>
+    </div>
+
+    <script src="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../../../src/SHM.AppWebCompaniaMedica/wwwroot/lib/sweetalert2/sweetalert2.all.min.js"></script>
+    <script>
+        // Datos de ejemplo. En la pantalla real salen de SHM_PRODUCCION con ACTIVO = 0,
+        // ESTADO_COMPROBANTE = 'POR_ENVIAR' y ESTADO en (FACTURA_SOLICITADA, FACTURA_DEVUELTA), sin archivar.
+        const DATOS = [
+            { sede: 'Sede Surco',     prod: '20260412', concepto: 'PRODUCCION 20260412 - CONSULTAS',   importe: 1368.46, limite: '28/11/2026 18:00', estado: 'SOLICITADA', solicitada: '03/11/2026 09:15', eliminada: '12/11/2026 16:40' },
+            { sede: 'Sede Surco',     prod: '20260413', concepto: 'PRODUCCION 20260413 - PROCEDIMIENTOS', importe: 2210.00, limite: '28/11/2026 18:00', estado: 'DEVUELTA',   solicitada: '03/11/2026 09:15', eliminada: '12/11/2026 16:41' },
+            { sede: 'Sede San Borja', prod: '20260388', concepto: 'PRODUCCION 20260388 - CONSULTAS',   importe: 677.59,  limite: '25/11/2026 18:00', estado: 'SOLICITADA', solicitada: '01/11/2026 10:02', eliminada: '09/11/2026 11:05' },
+            { sede: 'Sede San Borja', prod: '20260391', concepto: 'PRODUCCION 20260391 - INTERCONSULTAS', importe: 184.00,  limite: '25/11/2026 18:00', estado: 'SOLICITADA', solicitada: '01/11/2026 10:02', eliminada: '09/11/2026 11:06' },
+            { sede: 'Sede Sur',       prod: '20260275', concepto: 'PRODUCCION 20260275 - PROCEDIMIENTOS', importe: 3950.80, limite: '15/11/2026 18:00', estado: 'DEVUELTA',   solicitada: '20/10/2026 08:30', eliminada: '30/10/2026 15:20' }
+        ];
+        let modo = 'datos';
+
+        function soles(n) { return 'S/ ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+        function renderizar() {
+            const q = document.getElementById('searchInput').value.trim().toLowerCase();
+            let filas = modo === 'vacio' ? [] : DATOS;
+            const hayFiltro = q !== '';
+            if (hayFiltro) filas = filas.filter(f => (f.sede + ' ' + f.prod + ' ' + f.concepto).toLowerCase().includes(q));
+            document.getElementById('contador').textContent = (modo === 'vacio' ? 0 : DATOS.length);
+
+            let html = '<div class="table-responsive"><table class="invoice-table"><thead><tr>' +
+                '<th>Sede</th><th>Producción</th><th>Concepto</th><th>Importe</th><th>Fecha Límite</th>' +
+                '<th>Estaba en</th><th>Eliminada el</th><th style="text-align:center;">Acción</th></tr></thead><tbody>';
+
+            if (filas.length === 0) {
+                html += '<tr><td colspan="8" class="text-center py-5"><i class="bi bi-inbox" style="font-size:3rem;color:var(--text-secondary);"></i>' +
+                    '<p class="mt-3 mb-0" style="color:var(--text-secondary);">' +
+                    (hayFiltro ? 'No se encontraron producciones que coincidan con "<strong>' + q + '</strong>"'
+                               : 'No tiene facturas eliminadas') + '</p></td></tr>';
+            } else {
+                filas.forEach(f => {
+                    const idx = DATOS.indexOf(f);
+                    const badge = f.estado === 'DEVUELTA' ? 'badge-rejected' : 'badge-pending';
+                    const texto = f.estado === 'DEVUELTA' ? 'Devuelta' : 'Por Enviar';
+                    html += '<tr class="row-deleted"><td><strong>' + f.sede + '</strong></td><td>' + f.prod + '</td><td>' + f.concepto + '</td>' +
+                        '<td><strong>' + soles(f.importe) + '</strong></td><td>' + f.limite + '</td>' +
+                        '<td><span class="badge ' + badge + '">' + texto + '</span></td>' +
+                        '<td>' + f.eliminada + '</td>' +
+                        '<td style="text-align:center;"><button class="btn-detail" onclick="verDetalle(' + idx + ')"><i class="bi bi-eye"></i> Ver detalle</button></td></tr>';
+                });
+            }
+            html += '</tbody></table></div>';
+            if (filas.length > 0) {
+                html += '<div class="pagination-container"><div class="pagination-info">Mostrando <strong>' + filas.length +
+                    '</strong> de <strong>' + DATOS.length + '</strong> registros</div></div>';
+            }
+            document.getElementById('listContainer').innerHTML = html;
+        }
+
+        function verDetalle(i) {
+            const f = DATOS[i];
+            const estadoTxt = f.estado === 'DEVUELTA' ? 'Factura devuelta (por corregir)' : 'Factura solicitada (por enviar)';
+            Swal.fire({
+                title: 'Producción eliminada',
+                width: 560,
+                confirmButtonColor: '#f26522',
+                confirmButtonText: 'Cerrar',
+                html:
+                    '<div class="detalle-grid">' +
+                    '<span class="k">Sede</span><span class="v">' + f.sede + '</span>' +
+                    '<span class="k">Producción</span><span class="v">' + f.prod + '</span>' +
+                    '<span class="k">Concepto</span><span class="v">' + f.concepto + '</span>' +
+                    '<span class="k">Importe</span><span class="v">' + soles(f.importe) + '</span>' +
+                    '<span class="k">Fecha límite</span><span class="v">' + f.limite + '</span>' +
+                    '<span class="k">Estado al eliminarse</span><span class="v">' + estadoTxt + '</span></div>' +
+                    '<hr><div style="text-align:left;font-weight:700;color:#5a1160;margin-bottom:.5rem;"><i class="bi bi-clock-history"></i> Seguimiento</div>' +
+                    '<ul class="timeline">' +
+                    '<li><span>Factura solicitada</span><span class="t-date">' + f.solicitada + '</span></li>' +
+                    '<li class="last"><span><strong>Producción eliminada</strong> por Honorarios Médicos</span><span class="t-date">' + f.eliminada + '</span></li></ul>' +
+                    '<p style="text-align:left;color:#64748B;font-size:.82rem;margin:.25rem 0 0;">No es necesario enviar factura por esta producción.</p>'
+            });
+        }
+
+        function setModo(m) {
+            modo = m;
+            document.getElementById('btnDatos').classList.toggle('on', m === 'datos');
+            document.getElementById('btnVacio').classList.toggle('on', m === 'vacio');
+            renderizar();
+        }
+        document.getElementById('searchInput').addEventListener('input', renderizar);
+        renderizar();
+    </script>
+</body>
+</html>

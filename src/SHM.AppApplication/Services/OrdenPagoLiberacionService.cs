@@ -18,6 +18,7 @@ namespace SHM.AppApplication.Services;
 ///
 /// <author>ADG Antonio</author>
 /// <created>2026-11-11</created>
+/// <modified>ADG Antonio - 2026-11-14 - Reenvio forzado, regeneracion de la trama y busqueda por numero de orden</modified>
 /// </summary>
 public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
 {
@@ -63,15 +64,102 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
     }
 
     /// <summary>
+    /// Resultado de validar y armar el envio de una orden. Request es nulo si hay errores.
+    /// </summary>
+    private sealed class EnvioPreparado
+    {
+        public SapLiberaPagoRequestDto? Request { get; set; }
+        public string? Sociedad { get; set; }
+        public Dictionary<int, string> ErroresPorProduccion { get; } = new();
+        public List<string> ErroresGenerales { get; } = new();
+        public bool Valido => ErroresPorProduccion.Count == 0 && ErroresGenerales.Count == 0;
+    }
+
+    /// <summary>
     /// Obtiene el resultado de liberacion de los comprobantes de una orden de pago.
     /// </summary>
     public Task<IEnumerable<OrdenPagoLiberacion>> GetByOrdenPagoIdAsync(int idOrdenPago)
         => _liberacionRepository.GetByOrdenPagoIdAsync(idOrdenPago);
 
     /// <summary>
+    /// Obtiene el resultado de liberacion de los comprobantes de una orden, por su numero.
+    /// </summary>
+    public async Task<IEnumerable<OrdenPagoLiberacion>> GetByNumeroOrdenPagoAsync(string numeroOrdenPago)
+    {
+        var orden = await _ordenPagoRepository.GetByNumeroOrdenPagoAsync(numeroOrdenPago?.Trim() ?? string.Empty);
+        return orden == null
+            ? Enumerable.Empty<OrdenPagoLiberacion>()
+            : await _liberacionRepository.GetByOrdenPagoIdAsync(orden.IdOrdenPago);
+    }
+
+    /// <summary>
+    /// Libera en SAP, buscando la orden por su numero.
+    /// </summary>
+    public async Task<(bool Exito, string Mensaje)> LiberarPorNumeroAsync(string numeroOrdenPago, int idUsuario, bool forzar = false)
+    {
+        var orden = await _ordenPagoRepository.GetByNumeroOrdenPagoAsync(numeroOrdenPago?.Trim() ?? string.Empty);
+        if (orden == null)
+            return (false, "Orden de pago no encontrada.");
+
+        return await LiberarAsync(orden.IdOrdenPago, idUsuario, forzar);
+    }
+
+    /// <summary>
+    /// Regenera la trama que se enviaria a SAP con los datos actuales, sin enviarla.
+    /// Usa la misma validacion y el mismo armado que el envio real.
+    /// </summary>
+    public async Task<LiberacionTramaDto> GenerarTramaAsync(string numeroOrdenPago)
+    {
+        var resultado = new LiberacionTramaDto { NumeroOrden = numeroOrdenPago?.Trim() };
+
+        try
+        {
+            var orden = await _ordenPagoRepository.GetByNumeroOrdenPagoAsync(resultado.NumeroOrden ?? string.Empty);
+            if (orden == null)
+            {
+                resultado.Errores.Add("Orden de pago no encontrada.");
+                return resultado;
+            }
+
+            resultado.EstadoOrden = orden.Estado;
+            if (orden.Estado != EstadoDescripcion.OrdenPago.Aprobado && orden.Estado != EstadoDescripcion.OrdenPago.Pagado)
+            {
+                resultado.Errores.Add($"La orden de pago no esta aprobada (estado {orden.Estado}).");
+                return resultado;
+            }
+
+            var comprobantes = (await _ordenPagoLiquidacionRepository
+                .GetDetalleLiquidacionesByOrdenPagoIdAsync(orden.IdOrdenPago)).ToList();
+            if (comprobantes.Count == 0)
+            {
+                resultado.Errores.Add("La orden de pago no tiene comprobantes.");
+                return resultado;
+            }
+
+            var envio = await PrepararEnvioAsync(orden, comprobantes);
+            if (!envio.Valido)
+            {
+                resultado.Errores.AddRange(envio.ErroresGenerales);
+                resultado.Errores.AddRange(envio.ErroresPorProduccion.Values);
+                return resultado;
+            }
+
+            resultado.Valida = true;
+            resultado.Request = envio.Request;
+            return resultado;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar la trama de liberacion. Orden {NumeroOrden}", numeroOrdenPago);
+            resultado.Errores.Add("Error inesperado al generar la trama.");
+            return resultado;
+        }
+    }
+
+    /// <summary>
     /// Libera en SAP todos los comprobantes de la orden de pago.
     /// </summary>
-    public async Task<(bool Exito, string Mensaje)> LiberarAsync(int idOrdenPago, int idUsuario)
+    public async Task<(bool Exito, string Mensaje)> LiberarAsync(int idOrdenPago, int idUsuario, bool forzar = false)
     {
         OrdenPago? ordenPago = null;
         try
@@ -88,65 +176,32 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
             if (comprobantes.Count == 0)
                 return (false, "La orden de pago no tiene comprobantes.");
 
-            // Si todos ya estan liberados no se vuelve a enviar
+            // Si todos ya estan liberados no se vuelve a enviar (salvo reenvio forzado)
             var previos = (await _liberacionRepository.GetByOrdenPagoIdAsync(idOrdenPago)).ToList();
-            if (previos.Count >= comprobantes.Count &&
+            if (!forzar &&
+                previos.Count >= comprobantes.Count &&
                 comprobantes.All(c => previos.Any(p => p.IdProduccion == c.IdProduccion &&
                                                         p.EstadoLiberacion == EstadoLiberacion.Liberado)))
             {
                 return (true, "Los pagos de la orden ya estan liberados en SAP.");
             }
 
-            var sede = await _sedeRepository.GetByIdAsync(ordenPago.IdSede);
-            var sociedad = sede?.CodigoSociedadSap?.Trim();
-
-            var (loginAprobador, fechaAprobacion) = await ObtenerUltimaAprobacionAsync(idOrdenPago, ordenPago);
-
-            // 1. Validar y armar los documentos
-            var errores = new Dictionary<int, string>();
-            var documentos = new List<SapLiberaPagoDocumentoDto>();
-            var idOrdenSap = (ordenPago.NumeroOrdenPago ?? string.Empty).Trim();
-
-            var errorGeneral = new List<string>();
-            if (string.IsNullOrEmpty(idOrdenSap))
-                errorGeneral.Add("La orden de pago no tiene numero");
-            else if (idOrdenSap.Length > MaxIdOrden)
-                errorGeneral.Add($"El numero de orden excede {MaxIdOrden} caracteres");
-            if (string.IsNullOrEmpty(sociedad))
-                errorGeneral.Add($"La sede '{sede?.Nombre ?? ordenPago.NombreSede}' no tiene Sociedad SAP configurada");
-            else if (sociedad.Length > 4)
-                errorGeneral.Add("La Sociedad SAP de la sede excede 4 caracteres");
-            if (string.IsNullOrEmpty(loginAprobador))
-                errorGeneral.Add("No se pudo determinar el usuario del ultimo aprobador");
-
-            foreach (var c in comprobantes)
+            if (forzar)
             {
-                var errorComp = ValidarComprobante(c);
-                if (errorComp != null)
-                {
-                    errores[c.IdProduccion] = errorComp;
-                    continue;
-                }
-
-                documentos.Add(ConstruirDocumento(c, idOrdenSap, sociedad ?? string.Empty,
-                    loginAprobador ?? string.Empty, fechaAprobacion));
+                _logger.LogWarning("Reenvio forzado de la liberacion SAP. Orden {NumeroOP}, usuario {IdUsuario}",
+                    ordenPago.NumeroOrdenPago, idUsuario);
             }
 
-            if (errorGeneral.Count > 0 || errores.Count > 0)
+            // 1. Validar y armar los documentos
+            var envio = await PrepararEnvioAsync(ordenPago, comprobantes);
+            if (!envio.Valido)
             {
-                return await RegistrarFalloValidacionAsync(ordenPago, comprobantes, errores, errorGeneral,
-                    sociedad, idUsuario);
+                return await RegistrarFalloValidacionAsync(ordenPago, comprobantes, envio.ErroresPorProduccion,
+                    envio.ErroresGenerales, envio.Sociedad, idUsuario);
             }
 
             // 2. Enviar a SAP (un solo envio con todos los comprobantes)
-            var request = new SapLiberaPagoRequestDto
-            {
-                IdOrden = idOrdenSap,
-                Fecha = fechaAprobacion.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                Documentos = documentos
-            };
-
-            var resultado = await _sapApiService.LiberarPagoAsync(request);
+            var resultado = await _sapApiService.LiberarPagoAsync(envio.Request!);
 
             // 3. Guardar el resultado en cada comprobante
             var estado = resultado.Exito ? EstadoLiberacion.Liberado : EstadoLiberacion.Error;
@@ -160,7 +215,7 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
                 {
                     IdOrdenPago = idOrdenPago,
                     IdProduccion = c.IdProduccion,
-                    Sociedad = sociedad,
+                    Sociedad = envio.Sociedad,
                     Documento = c.CodSapCpm?.Trim(),
                     Ejercicio = c.FechaEmision?.Year.ToString(CultureInfo.InvariantCulture),
                     DocumentoDt = string.IsNullOrWhiteSpace(c.CodSapDetrac) ? null : c.CodSapDetrac.Trim(),
@@ -171,7 +226,8 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
                 }, 1, idUsuario);
             }
 
-            await RegistrarBitacoraAsync(ordenPago, idUsuario, resultado.Exito, mensaje);
+            await RegistrarBitacoraAsync(ordenPago, idUsuario, resultado.Exito,
+                (forzar ? "[Reenvio forzado] " : string.Empty) + mensaje);
 
             _logger.LogInformation(
                 "Liberacion SAP orden {NumeroOP}: {Estado}. Comprobantes: {Cantidad}. Mensaje: {Mensaje}",
@@ -186,6 +242,59 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
             _logger.LogError(ex, "Error inesperado al liberar pagos en SAP. IdOrdenPago: {IdOrdenPago}", idOrdenPago);
             return (false, "Error inesperado al liberar los pagos en SAP.");
         }
+    }
+
+    /// <summary>
+    /// Valida los datos de la orden y sus comprobantes y arma el request para SAP.
+    /// Es la unica fuente del armado: lo usan el envio real y la regeneracion de la trama.
+    /// </summary>
+    private async Task<EnvioPreparado> PrepararEnvioAsync(OrdenPago ordenPago, List<DetalleLiquidacionItemDto> comprobantes)
+    {
+        var envio = new EnvioPreparado();
+
+        var sede = await _sedeRepository.GetByIdAsync(ordenPago.IdSede);
+        var sociedad = sede?.CodigoSociedadSap?.Trim();
+        envio.Sociedad = sociedad;
+
+        var (loginAprobador, fechaAprobacion) = await ObtenerUltimaAprobacionAsync(ordenPago.IdOrdenPago, ordenPago);
+        var idOrdenSap = (ordenPago.NumeroOrdenPago ?? string.Empty).Trim();
+
+        if (string.IsNullOrEmpty(idOrdenSap))
+            envio.ErroresGenerales.Add("La orden de pago no tiene numero");
+        else if (idOrdenSap.Length > MaxIdOrden)
+            envio.ErroresGenerales.Add($"El numero de orden excede {MaxIdOrden} caracteres");
+        if (string.IsNullOrEmpty(sociedad))
+            envio.ErroresGenerales.Add($"La sede '{sede?.Nombre ?? ordenPago.NombreSede}' no tiene Sociedad SAP configurada");
+        else if (sociedad.Length > 4)
+            envio.ErroresGenerales.Add("La Sociedad SAP de la sede excede 4 caracteres");
+        if (string.IsNullOrEmpty(loginAprobador))
+            envio.ErroresGenerales.Add("No se pudo determinar el usuario del ultimo aprobador");
+
+        var documentos = new List<SapLiberaPagoDocumentoDto>();
+        foreach (var c in comprobantes)
+        {
+            var errorComp = ValidarComprobante(c);
+            if (errorComp != null)
+            {
+                envio.ErroresPorProduccion[c.IdProduccion] = errorComp;
+                continue;
+            }
+
+            documentos.Add(ConstruirDocumento(c, idOrdenSap, sociedad ?? string.Empty,
+                loginAprobador ?? string.Empty, fechaAprobacion));
+        }
+
+        if (envio.Valido)
+        {
+            envio.Request = new SapLiberaPagoRequestDto
+            {
+                IdOrden = idOrdenSap,
+                Fecha = fechaAprobacion.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                Documentos = documentos
+            };
+        }
+
+        return envio;
     }
 
     /// <summary>
@@ -260,12 +369,25 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
     };
 
     /// <summary>
+    /// Codigo de tipo de comprobante que lleva el prefijo de la Referencia (tipo SUNAT):
+    /// 1 (factura) -> 01, 22 (recibo por honorarios) -> 02.
+    /// Es distinto del campo TipoComprobante del envio, donde 22 -> 03.
+    /// </summary>
+    private static string? MapearTipoReferencia(string? tipo) => tipo?.Trim() switch
+    {
+        "1" => "01",
+        "22" => "02",
+        _ => null
+    };
+
+    /// <summary>
     /// Referencia: {tipo}-{serie}-{numero con ceros a la izquierda hasta 7 digitos}.
+    /// Ej.: factura 01-F001-0004521, recibo por honorarios 02-E001-0000502.
     /// </summary>
     private static string ConstruirReferencia(DetalleLiquidacionItemDto c)
     {
         var numero = (c.Numero ?? string.Empty).Trim().TrimStart('0').PadLeft(7, '0');
-        return $"{MapearTipoComprobante(c.TipoComprobante)}-{c.Serie?.Trim()}-{numero}";
+        return $"{MapearTipoReferencia(c.TipoComprobante)}-{c.Serie?.Trim()}-{numero}";
     }
 
     private static SapLiberaPagoDocumentoDto ConstruirDocumento(

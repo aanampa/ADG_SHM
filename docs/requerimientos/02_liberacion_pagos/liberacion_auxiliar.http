@@ -1,0 +1,77 @@
+# =============================================================================
+# Herramienta auxiliar de la liberacion de pagos en SAP (casos puntuales)
+# Portal Administrativo: /api/auxiliar/liberacion
+# =============================================================================
+# Para que sirve:
+#   - Regenerar la trama JSON de una orden, para enviarla al equipo SAP
+#     (por ejemplo cuando su programa fallo al procesarla).
+#   - Reenviar la liberacion de una orden.
+#
+# Como habilitarla (viene DESHABILITADA):
+#   En el appsettings.json del Portal Administrativo del servidor, definir una clave:
+#       "AuxiliarApi": { "ApiKey": "<clave larga y secreta>", "IdUsuario": 1 }
+#   y reciclar el Application Pool. Sin ApiKey los endpoints responden 404.
+#   Usar la misma clave en el header X-Api-Key de abajo.
+#   IdUsuario es el usuario que figura en la auditoria y la bitacora (1 por defecto).
+#   Recomendado: quitar la clave del appsettings cuando termine de usarla.
+#
+# Respuestas posibles:
+#   404  herramienta deshabilitada (no hay ApiKey configurada)
+#   401  clave incorrecta o ausente
+#   422  la orden no cumple las validaciones, o SAP no confirmo (ver el cuerpo)
+#   200  correcto
+#
+# Notas:
+#   - La trama se arma con los datos ACTUALES de la orden, con la misma logica del
+#     envio real. Es lo que se enviaria hoy; si un dato cambio despues del envio
+#     original, puede diferir de lo que se envio en su momento.
+#   - El reenvio queda registrado: tabla SHM_ORDEN_PAGO_LIBERACION (INTENTOS), bitacora
+#     de la orden y log de la aplicacion (trama enviada y respuesta de SAP).
+#   - Las llamadas con clave invalida y los reenvios se registran en el log con la IP.
+# =============================================================================
+
+@host = http://localhost:5002
+@clave = <ApiKey configurada en AuxiliarApi>
+@orden = OP-09-20261104
+
+
+### -----------------------------------------------------------------------------
+### 1. Regenerar la trama JSON (no envia nada a SAP ni modifica datos)
+### Esperado: 200 con el JSON listo para enviar a SAP, en una sola linea
+### (el mismo formato del envio real).
+### Si la orden no cumple las validaciones: 422 con la lista de errores
+### (por ejemplo "no tiene Sociedad SAP configurada").
+### -----------------------------------------------------------------------------
+GET {{host}}/api/auxiliar/liberacion/{{orden}}/trama
+X-Api-Key: {{clave}}
+
+
+### -----------------------------------------------------------------------------
+### 2. Regenerar la trama con sangria (solo para leerla)
+### -----------------------------------------------------------------------------
+GET {{host}}/api/auxiliar/liberacion/{{orden}}/trama?indentado=true
+X-Api-Key: {{clave}}
+
+
+### -----------------------------------------------------------------------------
+### 3. Reenviar la liberacion (sin forzar)
+### Si la orden esta en error o pendiente, la envia a SAP.
+### Si todos los comprobantes ya figuran como liberados, NO la reenvia y responde
+### "Los pagos de la orden ya estan liberados en SAP."
+### Esperado: 200 con success true y el estado por comprobante.
+### Si SAP no la confirma o hay datos invalidos: 422 con el motivo.
+### -----------------------------------------------------------------------------
+POST {{host}}/api/auxiliar/liberacion/{{orden}}/reenviar
+X-Api-Key: {{clave}}
+
+
+### -----------------------------------------------------------------------------
+### 4. Reenviar FORZANDO (aunque ya figure como liberada)
+### Solo para casos puntuales: por ejemplo, SAP recibio la trama pero necesita que
+### se vuelva a enviar para reprocesarla. Antes de forzar, confirmar con SAP que
+### aceptan recibir la misma orden otra vez (no se sabe si la rechazan o duplican).
+### El resultado de este envio reemplaza el estado guardado de la orden: si SAP
+### responde error, la orden pasa a "Con error" aunque antes estuviera liberada.
+### -----------------------------------------------------------------------------
+POST {{host}}/api/auxiliar/liberacion/{{orden}}/reenviar?forzar=true
+X-Api-Key: {{clave}}
