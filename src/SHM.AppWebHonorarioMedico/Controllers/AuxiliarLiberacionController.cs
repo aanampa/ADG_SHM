@@ -41,7 +41,8 @@ public class AuxiliarLiberacionController : ControllerBase
     /// <summary>
     /// Regenera la trama JSON que se enviaria a SAP para la orden, con los datos actuales.
     /// No envia nada a SAP ni modifica datos. Si la orden es valida responde el JSON tal
-    /// como se enviaria; si no, responde 422 con los errores.
+    /// como se enviaria. Si algunos comprobantes tienen errores devuelve la trama de los validos
+    /// y los errores en el header X-Comprobantes-Sin-Enviar; si ninguno es valido, responde 422.
     /// </summary>
     /// <param name="numeroOrden">Numero de la orden de pago (ej. OP-09-20261104).</param>
     /// <param name="indentado">true para devolver el JSON con sangria (solo para leerlo).</param>
@@ -55,7 +56,7 @@ public class AuxiliarLiberacionController : ControllerBase
             numeroOrden, HttpContext.Connection.RemoteIpAddress);
 
         var trama = await _liberacionService.GenerarTramaAsync(numeroOrden);
-        if (!trama.Valida)
+        if (trama.Request == null)
         {
             return UnprocessableEntity(new
             {
@@ -65,6 +66,10 @@ public class AuxiliarLiberacionController : ControllerBase
                 errores = trama.Errores
             });
         }
+
+        // Liberacion parcial: la trama lleva solo los comprobantes validos; los errores van en un header
+        if (!trama.Valida)
+            Response.Headers["X-Comprobantes-Sin-Enviar"] = string.Join(" | ", trama.Errores).Replace("\r", " ").Replace("\n", " ");
 
         // Misma serializacion que usa el envio real (propiedades en PascalCase)
         var json = JsonSerializer.Serialize(trama.Request, new JsonSerializerOptions { WriteIndented = indentado });

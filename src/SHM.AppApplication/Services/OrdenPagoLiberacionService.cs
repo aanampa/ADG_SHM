@@ -72,7 +72,10 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
         public string? Sociedad { get; set; }
         public Dictionary<int, string> ErroresPorProduccion { get; } = new();
         public List<string> ErroresGenerales { get; } = new();
+        /// <summary>Todos los comprobantes y los datos generales son validos.</summary>
         public bool Valido => ErroresPorProduccion.Count == 0 && ErroresGenerales.Count == 0;
+        /// <summary>Hay al menos un documento valido y no hay errores generales: se puede enviar (total o parcial).</summary>
+        public bool Enviable => ErroresGenerales.Count == 0 && Request != null && Request.Documentos.Count > 0;
     }
 
     /// <summary>
@@ -137,14 +140,13 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
             }
 
             var envio = await PrepararEnvioAsync(orden, comprobantes);
-            if (!envio.Valido)
-            {
-                resultado.Errores.AddRange(envio.ErroresGenerales);
-                resultado.Errores.AddRange(envio.ErroresPorProduccion.Values);
+            resultado.Errores.AddRange(envio.ErroresGenerales);
+            resultado.Errores.AddRange(envio.ErroresPorProduccion.Values);
+            if (!envio.Enviable)
                 return resultado;
-            }
 
-            resultado.Valida = true;
+            // Con errores en algunos comprobantes la trama incluye solo los validos (liberacion parcial)
+            resultado.Valida = envio.Valido;
             resultado.Request = envio.Request;
             return resultado;
         }
@@ -176,15 +178,14 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
             if (comprobantes.Count == 0)
                 return (false, "La orden de pago no tiene comprobantes.");
 
-            // Si todos ya estan liberados no se vuelve a enviar (salvo reenvio forzado)
+            // Solo se envian los comprobantes que aun no estan liberados (salvo reenvio forzado)
             var previos = (await _liberacionRepository.GetByOrdenPagoIdAsync(idOrdenPago)).ToList();
-            if (!forzar &&
-                previos.Count >= comprobantes.Count &&
-                comprobantes.All(c => previos.Any(p => p.IdProduccion == c.IdProduccion &&
-                                                        p.EstadoLiberacion == EstadoLiberacion.Liberado)))
-            {
+            var pendientes = forzar
+                ? comprobantes
+                : comprobantes.Where(c => !previos.Any(p => p.IdProduccion == c.IdProduccion &&
+                                                            p.EstadoLiberacion == EstadoLiberacion.Liberado)).ToList();
+            if (pendientes.Count == 0)
                 return (true, "Los pagos de la orden ya estan liberados en SAP.");
-            }
 
             if (forzar)
             {
@@ -192,15 +193,16 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
                     ordenPago.NumeroOrdenPago, idUsuario);
             }
 
-            // 1. Validar y armar los documentos
-            var envio = await PrepararEnvioAsync(ordenPago, comprobantes);
-            if (!envio.Valido)
+            // 1. Validar y armar los documentos (los invalidos quedan fuera del envio)
+            var envio = await PrepararEnvioAsync(ordenPago, pendientes);
+            if (!envio.Enviable)
             {
-                return await RegistrarFalloValidacionAsync(ordenPago, comprobantes, envio.ErroresPorProduccion,
+                // Error general o ningun comprobante valido: no se llama a SAP
+                return await RegistrarFalloValidacionAsync(ordenPago, pendientes, envio.ErroresPorProduccion,
                     envio.ErroresGenerales, envio.Sociedad, idUsuario);
             }
 
-            // 2. Enviar a SAP (un solo envio con todos los comprobantes)
+            // 2. Enviar a SAP (un solo envio con los comprobantes validos)
             var resultado = await _sapApiService.LiberarPagoAsync(envio.Request!);
 
             // 3. Guardar el resultado en cada comprobante
@@ -209,8 +211,12 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
                           (resultado.Exito ? "Documentos recibidos" : "SAP no confirmo la liberacion");
             var respuesta = Truncar(resultado.RespuestaRaw, MaxRespuesta);
 
-            foreach (var c in comprobantes)
+            var enviados = 0;
+            foreach (var c in pendientes)
             {
+                var sinEnviar = envio.ErroresPorProduccion.TryGetValue(c.IdProduccion, out var errorPropio);
+                if (!sinEnviar) enviados++;
+
                 await _liberacionRepository.SaveResultadoAsync(new OrdenPagoLiberacion
                 {
                     IdOrdenPago = idOrdenPago,
@@ -219,23 +225,30 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
                     Documento = c.CodSapCpm?.Trim(),
                     Ejercicio = c.FechaEmision?.Year.ToString(CultureInfo.InvariantCulture),
                     DocumentoDt = string.IsNullOrWhiteSpace(c.CodSapDetrac) ? null : c.CodSapDetrac.Trim(),
-                    EstadoLiberacion = estado,
-                    FechaLiberacion = resultado.Exito ? DateTime.Now : null,
-                    MensajeSap = mensaje,
-                    RespuestaSap = respuesta
-                }, 1, idUsuario);
+                    EstadoLiberacion = sinEnviar ? EstadoLiberacion.Error : estado,
+                    FechaLiberacion = !sinEnviar && resultado.Exito ? DateTime.Now : null,
+                    MensajeSap = sinEnviar ? Truncar("No enviado: " + errorPropio, MaxMensaje) : mensaje,
+                    RespuestaSap = sinEnviar ? null : respuesta
+                }, sinEnviar ? 0 : 1, idUsuario);
             }
 
-            await RegistrarBitacoraAsync(ordenPago, idUsuario, resultado.Exito,
-                (forzar ? "[Reenvio forzado] " : string.Empty) + mensaje);
+            var rechazados = envio.ErroresPorProduccion.Count;
+            var detalleErrores = string.Join(" | ", envio.ErroresPorProduccion.Values);
+            var detalleBitacora = (forzar ? "[Reenvio forzado] " : string.Empty) + mensaje +
+                                  (rechazados > 0 ? $". Liberacion parcial, sin enviar: {detalleErrores}" : string.Empty);
+            await RegistrarBitacoraAsync(ordenPago, idUsuario, resultado.Exito && rechazados == 0, detalleBitacora);
 
             _logger.LogInformation(
-                "Liberacion SAP orden {NumeroOP}: {Estado}. Comprobantes: {Cantidad}. Mensaje: {Mensaje}",
-                ordenPago.NumeroOrdenPago, estado, comprobantes.Count, mensaje);
+                "Liberacion SAP orden {NumeroOP}: {Estado}. Enviados: {Enviados}, sin enviar: {Rechazados}. Mensaje: {Mensaje}",
+                ordenPago.NumeroOrdenPago, estado, enviados, rechazados, mensaje);
 
-            return resultado.Exito
-                ? (true, $"Pagos liberados en SAP ({comprobantes.Count} comprobante(s)).")
-                : (false, $"SAP no libero los pagos: {mensaje}");
+            if (!resultado.Exito)
+                return (false, $"SAP no libero los pagos: {mensaje}" +
+                               (rechazados > 0 ? $". Ademas {rechazados} comprobante(s) no se enviaron: {detalleErrores}" : string.Empty));
+
+            return rechazados == 0
+                ? (true, $"Pagos liberados en SAP ({enviados} comprobante(s)).")
+                : (false, $"Liberacion parcial: {enviados} comprobante(s) liberado(s) en SAP; {rechazados} sin enviar: {detalleErrores}. Corrija los datos y reintente desde Tesoreria.");
         }
         catch (Exception ex)
         {
@@ -284,7 +297,9 @@ public class OrdenPagoLiberacionService : IOrdenPagoLiberacionService
                 loginAprobador ?? string.Empty, fechaAprobacion));
         }
 
-        if (envio.Valido)
+        // Liberacion parcial: se arma el request con los comprobantes validos
+        // aunque otros tengan errores (siempre que los datos generales esten bien)
+        if (envio.ErroresGenerales.Count == 0 && documentos.Count > 0)
         {
             envio.Request = new SapLiberaPagoRequestDto
             {

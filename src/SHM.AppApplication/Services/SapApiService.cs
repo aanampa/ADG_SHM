@@ -320,9 +320,12 @@ public class SapApiService : ISapApiService
 
             var url = $"{_settings.EndpointDatosFactura}(CodigoAcreedor='{codigoAcreedor}',TipoComprobante='{tipoSap}',Serie='{serieSap}',NumeroComprobante='{numeroSap}',Anio='{anioSap}')";
 
+            // URL absoluta (host del HttpClient + ruta) para el log
+            var urlCompleta = _httpClient.BaseAddress != null ? new Uri(_httpClient.BaseAddress, url).ToString() : url;
+
             _logger.LogInformation(
-                "Consultando datos de factura en SAP. Acreedor: {Acreedor}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}, Anio: {Anio}",
-                codigoAcreedor, tipoSap, serieSap, numeroSap, anioSap);
+                "Consultando datos de factura en SAP. Acreedor: {Acreedor}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}, Anio: {Anio}, Url: {Url}",
+                codigoAcreedor, tipoSap, serieSap, numeroSap, anioSap, urlCompleta);
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -334,8 +337,8 @@ public class SapApiService : ISapApiService
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning(
-                    "Error al consultar datos de factura en SAP. StatusCode: {StatusCode}, Response: {Response}",
-                    response.StatusCode, errorContent);
+                    "Error al consultar datos de factura en SAP. StatusCode: {StatusCode}, Url: {Url}, Response: {Response}",
+                    response.StatusCode, urlCompleta, errorContent);
 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
@@ -347,7 +350,8 @@ public class SapApiService : ISapApiService
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.LogDebug("Respuesta de datos de factura SAP: {Response}", responseContent);
+            _logger.LogInformation("Respuesta de datos de factura SAP. HTTP: {StatusCode}, Url: {Url}, Response: {Response}",
+                (int)response.StatusCode, urlCompleta, responseContent);
 
             var odataResponse = JsonSerializer.Deserialize<SapODataSingleResponseDto<SapDatosFacturaDto>>(responseContent, _jsonOptions);
 

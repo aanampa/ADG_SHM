@@ -127,7 +127,7 @@ El estado de la orden de pago **no cambia** (sigue `APROBADO`). `PAGADO` se mant
 ### 3.5 Reglas de negocio propuestas
 
 1. Se liberan **todos** los comprobantes activos de la orden en un solo POST.
-2. Antes de llamar a SAP se valida que cada comprobante tenga `Documento` (`CODSAP_CPM`), `FechaEmision` (para el `Ejercicio`) y que su sede tenga `Sociedad`. Si falta alguno, no se llama a SAP, se marca `ERROR` con el detalle de qué comprobante y qué dato falta.
+2. Antes de llamar a SAP se valida que cada comprobante tenga `Documento` (`CODSAP_CPM`), `FechaEmision` (para el `Ejercicio`) y que su sede tenga `Sociedad`. El comprobante que no cumple se marca `ERROR` con el detalle de qué dato falta y **no se envía**; los demás sí (ver "Liberación parcial" en la sección 10).
 3. Un `ERROR` se puede reintentar. Un `LIBERADO` no se vuelve a enviar.
 4. SAP responde por orden y no por documento. Por eso el resultado (`Status` y `Mensaje`) se guarda igual en todos los comprobantes de esa orden, y el reintento vuelve a enviar la orden completa.
 5. Cada intento deja un registro en bitácora (`SHM_ORDEN_PAGO`, acción `LIBERACION_SAP`).
@@ -224,7 +224,7 @@ Implementado y compilado. Pendiente de probar contra SAP QAS y Oracle.
 - La tabla **no guarda `REQUEST_JSON`**: un envío de varios comprobantes supera los 4000 caracteres de un `VARCHAR2`. Se guarda `RESPUESTA_SAP` (truncada a 4000) y `MENSAJE_SAP`. El request se puede ver con el log en nivel Debug.
 - **No se envía correo a Tesorería** cuando falla. El fallo queda en la tabla, en la bitácora de la orden (`LIBERACION_SAP` / `LIBERACION_SAP_ERROR`) y en la pantalla. Se puede agregar si se necesita.
 - El botón de reintento está solo en Tesorería, y solo para órdenes en estado `APROBADO`. También sirve para liberar órdenes aprobadas antes de publicar esta versión (punto 8.10).
-- Si falla la validación de un comprobante, no se envía ninguno: todos quedan en `ERROR`, cada uno con su detalle.
+- **Liberación parcial (2026-11-19):** si un comprobante no pasa la validación (por ejemplo, una factura antigua sin `CODSAP_CPM`), se envían igual los comprobantes válidos. El inválido queda en `ERROR` con el mensaje "No enviado: ...". La aprobación de la OP no se toca. El reintento desde Tesorería envía solo los comprobantes que no están `LIBERADO`. Si el error es general (sede sin sociedad, orden sin aprobador) o ningún comprobante es válido, no se llama a SAP y todos quedan en `ERROR`. **Pendiente confirmar con SAP:** que aceptan una orden con menos documentos y un segundo envío con el mismo `IdOrden` para el resto.
 - La referencia completa el número con ceros a la izquierda hasta 7 dígitos (`F001-0004521`).
 - El éxito se determina con HTTP 2xx **y** `d.Status = "OK"`. Cualquier otra respuesta se trata como error (punto 8.4 pendiente).
 

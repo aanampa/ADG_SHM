@@ -774,6 +774,9 @@ public class TesoreriaController : Controller
                 // Validar datos minimos para poder consultar SAP
                 if (string.IsNullOrWhiteSpace(comp.CodigoAcreedor))
                 {
+                    _logger.LogWarning(
+                        "SincronizarPagoFacturas: no se consulto SAP, la compania no tiene Codigo de Acreedor. IdProduccion: {IdProduccion}, Serie: {Serie}, Numero: {Numero}",
+                        comp.IdProduccion, comp.Serie, comp.Numero);
                     errores++;
                     continue;
                 }
@@ -783,6 +786,9 @@ public class TesoreriaController : Controller
                     comp.FechaEmision == null ||
                     string.IsNullOrWhiteSpace(comp.TipoComprobante))
                 {
+                    _logger.LogWarning(
+                        "SincronizarPagoFacturas: no se consulto SAP, comprobante incompleto. IdProduccion: {IdProduccion}, Tipo: {Tipo}, Serie: {Serie}, Numero: {Numero}, FechaEmision: {Fecha}",
+                        comp.IdProduccion, comp.TipoComprobante, comp.Serie, comp.Numero, comp.FechaEmision);
                     sinComprobante++;
                     continue;
                 }
